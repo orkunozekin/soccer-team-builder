@@ -22,18 +22,22 @@ const useTeamsStore = create<TeamsState>(set => ({
       ]
     }
 
-    // Adjust the number of teams and player count if there are fewer players available
-    teamSize = Math.min(
-      teamSize,
-      Math.ceil(shuffledPlayers.length / playerCount)
-    )
-    playerCount = Math.min(
-      playerCount,
-      Math.ceil(shuffledPlayers.length / teamSize)
-    )
+    // Determine the number of teams
+    let numberOfTeams = 2
+    if (teamSize && teamSize > 2) {
+      numberOfTeams = Math.min(
+        teamSize,
+        Math.ceil(shuffledPlayers.length / playerCount)
+      )
+    } else if (shuffledPlayers.length > playerCount * 2) {
+      numberOfTeams = Math.ceil(shuffledPlayers.length / playerCount)
+    }
+
+    // Ensure at least two teams are created
+    numberOfTeams = Math.max(2, numberOfTeams)
 
     // Generate teams
-    const teams: Team[] = Array.from({ length: teamSize }, (_, index) => ({
+    const teams: Team[] = Array.from({ length: numberOfTeams }, (_, index) => ({
       id: `team-${index + 1}`,
       name: `Team ${index + 1}`,
       players: [],
@@ -41,11 +45,12 @@ const useTeamsStore = create<TeamsState>(set => ({
 
     // Distribute players evenly among teams
     shuffledPlayers.forEach((player, index) => {
-      teams[index % teamSize].players.push(player)
+      teams[index % numberOfTeams].players.push(player)
     })
 
     set({ teams })
   },
+
   clearTeams: () => set({ teams: [] }),
 }))
 
