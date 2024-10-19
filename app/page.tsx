@@ -14,7 +14,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { capitalizeFirstLetter } from '@/lib/stringUtils'
 import { usePlayersStore } from '@/store/usePlayerStore'
-import AllPlayersScrollArea from '@/components/AllPlayersScrollArea'
+import AllPlayersScrollArea from '@/components/all-players/AllPlayersScrollArea'
 
 export default function Home() {
   const { players, addPlayers, clearPlayers } = usePlayersStore()
