@@ -1,9 +1,11 @@
+import { cn } from '@/lib/utils'
+
 type Props = {
   onClick?: () => void
-  size?: string
+  className?: string
 }
 
-const TrashIcon = ({ onClick, size = '4' }: Props) => {
+const TrashIcon = ({ onClick, className = '' }: Props) => {
   return (
     <svg
       onClick={onClick}
@@ -12,7 +14,7 @@ const TrashIcon = ({ onClick, size = '4' }: Props) => {
       viewBox="0 0 24 24"
       strokeWidth={1.5}
       stroke="currentColor"
-      className={`size-${size}`}
+      className={cn('size-4', className)}
     >
       <path
         strokeLinecap="round"
