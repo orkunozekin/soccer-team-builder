@@ -10,6 +10,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        'neutral-10': '#11151B',
+        'neutral-20': '#232C35',
+        'neutral-30': '#36444D',
+        'neutral-40': '#4A5C64',
+        'neutral-50': '#657A80',
+        'neutral-60': '#8E9FA4',
+        'neutral-70': '#A9B9BC',
+        'neutral-80': '#C4D1D4',
+        'neutral-90': '#E1E8EA',
+        'neutral-95': '#F0F4F5',
+        'neutral-98': '#F9FBFB',
         'red-10': '#250704',
         'red-20': '#570F0C',
         'red-30': '#861719',

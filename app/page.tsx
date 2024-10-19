@@ -2,10 +2,12 @@
 
 import AllPlayersScrollArea from '@/components/all-players/AllPlayersScrollArea'
 import PlayerForm from '@/components/player-form/PlayerForm'
+import GenerateTeamsButton from '@/components/teams/GenerateTeamsButton'
+import TeamsContainer from '@/components/teams/TeamsContainer'
 
 export default function Home() {
   return (
-    <section>
+    <section className="pb-4">
       <header className="mb-4 flex items-center justify-center bg-red-50 py-2 font-semibold text-white">
         Pickup Soccer Team Builder
       </header>
@@ -13,6 +15,8 @@ export default function Home() {
         <p>Add player name(s) below to quickly form randomized teams</p>
         <PlayerForm />
         <AllPlayersScrollArea />
+        <GenerateTeamsButton />
+        <TeamsContainer />
       </section>
     </section>
   )
