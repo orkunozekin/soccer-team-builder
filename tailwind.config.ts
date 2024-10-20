@@ -21,6 +21,9 @@ const config: Config = {
         'neutral-90': '#E1E8EA',
         'neutral-95': '#F0F4F5',
         'neutral-98': '#F9FBFB',
+        'pinny-orange': '#FF8641',
+        'pinny-green': '#BAE87B',
+        'pinny-blue': '#8BC3DC',
         'red-10': '#250704',
         'red-20': '#570F0C',
         'red-30': '#861719',
@@ -76,6 +79,28 @@ const config: Config = {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      keyframes: {
+        'accordion-down': {
+          from: {
+            height: '0',
+          },
+          to: {
+            height: 'var(--radix-accordion-content-height)',
+          },
+        },
+        'accordion-up': {
+          from: {
+            height: 'var(--radix-accordion-content-height)',
+          },
+          to: {
+            height: '0',
+          },
+        },
+      },
+      animation: {
+        'accordion-down': 'accordion-down 0.2s ease-out',
+        'accordion-up': 'accordion-up 0.2s ease-out',
       },
     },
   },

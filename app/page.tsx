@@ -12,7 +12,9 @@ export default function Home() {
         Pickup Soccer Team Builder
       </header>
       <section className="flex flex-col gap-2 px-4">
-        <p>Add player name(s) below to quickly form randomized teams</p>
+        <p className="font-medium">
+          Add player name(s) below to quickly form randomized teams
+        </p>
         <PlayerForm />
         <AllPlayersScrollArea />
         <GenerateTeamsButton />

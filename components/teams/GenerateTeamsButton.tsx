@@ -11,8 +11,16 @@ export default function GenerateTeamsButton() {
   const buttonLabel = teams.length > 0 ? 'Shuffle Teams' : 'Generate Teams'
 
   const handleGenerateTeams = () => {
-    generateTeams(players, 5)
+    generateTeams(players)
   }
 
-  return <Button onClick={handleGenerateTeams}>{buttonLabel}</Button>
+  const playerCount = players.length
+  const shouldDisplayButton = playerCount >= 4
+  return (
+    <>
+      {shouldDisplayButton ? (
+        <Button onClick={handleGenerateTeams}>{buttonLabel}</Button>
+      ) : null}
+    </>
+  )
 }

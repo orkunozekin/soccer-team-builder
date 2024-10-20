@@ -1,17 +1,22 @@
 import { Player } from '@/interfaces/Player.interface'
-import { Team } from '@/interfaces/Team.interface'
+import { Team, TeamColor } from '@/interfaces/Team.interface'
 import { create } from 'zustand'
 
 interface TeamsState {
   teams: Team[]
-  generateTeams: (players: Player[], teamSize: number) => void
+  generateTeams: (
+    players: Player[],
+    teamCount?: number,
+    playerCount?: number
+  ) => void
   clearTeams: () => void
 }
 
 const useTeamsStore = create<TeamsState>(set => ({
   teams: [],
 
-  generateTeams: (players, teamSize = 2, playerCount = 11) => {
+  generateTeams: (players, teamCount = 2, playerCount = 11) => {
+    if (!players.length) return
     // Shuffle players using Fisher-Yates algorithm
     const shuffledPlayers = [...players]
     for (let i = shuffledPlayers.length - 1; i > 0; i--) {
@@ -24,9 +29,9 @@ const useTeamsStore = create<TeamsState>(set => ({
 
     // Determine the number of teams
     let numberOfTeams = 2
-    if (teamSize && teamSize > 2) {
+    if (teamCount && teamCount > 2) {
       numberOfTeams = Math.min(
-        teamSize,
+        teamCount,
         Math.ceil(shuffledPlayers.length / playerCount)
       )
     } else if (shuffledPlayers.length > playerCount * 2) {
@@ -36,11 +41,15 @@ const useTeamsStore = create<TeamsState>(set => ({
     // Ensure at least two teams are created
     numberOfTeams = Math.max(2, numberOfTeams)
 
-    // Generate teams
+    // Define possible colors for teams
+    const colors = ['ORANGE', 'GREEN', 'BLUE'] // Orange, Green, Light Blue
+
+    // Generate teams with random colors
     const teams: Team[] = Array.from({ length: numberOfTeams }, (_, index) => ({
       id: `team-${index + 1}`,
       name: `Team ${index + 1}`,
       players: [],
+      color: colors[index % colors.length] as TeamColor,
     }))
 
     // Distribute players evenly among teams
