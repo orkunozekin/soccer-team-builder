@@ -1,21 +1,20 @@
 import { Player } from '@/interfaces/Player.interface'
 import { Team, TeamColor } from '@/interfaces/Team.interface'
+import { capitalizeFirstLetter } from '@/lib/stringUtils'
 import { create } from 'zustand'
 
 interface TeamsState {
   teams: Team[]
-  generateTeams: (
-    players: Player[],
-    teamCount?: number,
-    playerCount?: number
-  ) => void
+  generateTeams: (players: Player[], teamCount?: number) => void
+  removeTeam: (teamId: string) => void
+  reassignPlayer: (playerId: string, targetTeamId: string) => void
   clearTeams: () => void
 }
 
 const useTeamsStore = create<TeamsState>(set => ({
   teams: [],
 
-  generateTeams: (players, teamCount = 2, playerCount = 11) => {
+  generateTeams: (players, teamCount = 2) => {
     if (!players.length) return
     // Shuffle players using Fisher-Yates algorithm
     const shuffledPlayers = [...players]
@@ -28,26 +27,22 @@ const useTeamsStore = create<TeamsState>(set => ({
     }
 
     // Determine the number of teams
-    let numberOfTeams = 2
-    if (teamCount && teamCount > 2) {
-      numberOfTeams = Math.min(
-        teamCount,
-        Math.ceil(shuffledPlayers.length / playerCount)
-      )
-    } else if (shuffledPlayers.length > playerCount * 2) {
-      numberOfTeams = Math.ceil(shuffledPlayers.length / playerCount)
+    let numberOfTeams = teamCount
+    if (!teamCount) numberOfTeams = 2
+    else if (shuffledPlayers.length > 11 * teamCount) {
+      numberOfTeams = Math.ceil(shuffledPlayers.length / 11)
     }
 
     // Ensure at least two teams are created
     numberOfTeams = Math.max(2, numberOfTeams)
 
     // Define possible colors for teams
-    const colors = ['ORANGE', 'GREEN', 'BLUE'] // Orange, Green, Light Blue
+    const colors = ['ORANGE', 'GREEN', 'BLUE', 'SHIRTS'] // Orange, Green, Light Blue
 
     // Generate teams with random colors
     const teams: Team[] = Array.from({ length: numberOfTeams }, (_, index) => ({
       id: `team-${index + 1}`,
-      name: `Team ${index + 1}`,
+      name: `${capitalizeFirstLetter(colors[index % colors.length].toLowerCase()) as TeamColor} Team`,
       players: [],
       color: colors[index % colors.length] as TeamColor,
     }))
@@ -60,6 +55,37 @@ const useTeamsStore = create<TeamsState>(set => ({
     set({ teams })
   },
 
+  removeTeam: teamId =>
+    set(state => ({
+      teams: state.teams.filter(team => team.id !== teamId),
+    })),
+  reassignPlayer: (playerId, targetTeamId) =>
+    set(state => {
+      // Remove player from their current team
+      let playerToReassign: Player | null = null
+      const updatedTeams = state.teams.map(team => {
+        const filteredPlayers = team.players.filter(player => {
+          if (player.id === playerId) {
+            playerToReassign = player
+            return false
+          }
+          return true
+        })
+        return { ...team, players: filteredPlayers }
+      })
+
+      // Add player to the target team
+      if (playerToReassign) {
+        const targetTeamIndex = updatedTeams.findIndex(
+          team => team.id === targetTeamId
+        )
+        if (targetTeamIndex !== -1) {
+          updatedTeams[targetTeamIndex].players.push(playerToReassign)
+        }
+      }
+
+      return { teams: updatedTeams }
+    }),
   clearTeams: () => set({ teams: [] }),
 }))
 

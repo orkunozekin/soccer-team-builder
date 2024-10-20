@@ -1,4 +1,4 @@
-import { Team, TeamColor } from '@/interfaces/Team.interface'
+import { Team } from '@/interfaces/Team.interface'
 import {
   Accordion,
   AccordionContent,
@@ -6,6 +6,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { cn } from '@/lib/utils'
+import TeamPlayerRow from './TeamPlayerRow'
 
 type Props = {
   team: Team
@@ -13,18 +14,18 @@ type Props = {
 
 export default function TeamCard({ team }: Props) {
   const colors = {
-    ORANGE: { bg: 'bg-pinny-orange', text: 'text-white' },
-    GREEN: { bg: 'bg-pinny-green', text: 'text-black' },
-    BLUE: { bg: 'bg-pinny-blue', text: 'text-white' },
+    ORANGE: 'bg-pinny-orange',
+    GREEN: 'bg-pinny-green',
+    BLUE: 'bg-pinny-blue',
   }
 
   return (
-    <Accordion type="single" collapsible>
+    <Accordion type="single" collapsible className="w-full">
       <AccordionItem
         value={team.id}
         className={cn(
           'rounded-lg border border-neutral-50 px-2',
-          colors[team.color].bg
+          colors[team.color]
         )}
       >
         <AccordionTrigger>
@@ -32,17 +33,7 @@ export default function TeamCard({ team }: Props) {
         </AccordionTrigger>
         <AccordionContent>
           <div className="pl-2">
-            {team.players.map(player => (
-              <li
-                className={cn(
-                  'list-inside list-decimal font-semibold',
-                  colors[team.color].text
-                )}
-                key={player.id}
-              >
-                {player.name}
-              </li>
-            ))}
+            <TeamPlayerRow team={team} />
           </div>
         </AccordionContent>
       </AccordionItem>

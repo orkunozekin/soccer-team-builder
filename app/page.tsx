@@ -13,7 +13,7 @@ export default function Home() {
       </header>
       <section className="flex flex-col gap-2 px-4">
         <p className="font-medium">
-          Add player name(s) below to quickly form randomized teams
+          Add player name(s) below to quickly generate randomized teams
         </p>
         <PlayerForm />
         <AllPlayersScrollArea />
