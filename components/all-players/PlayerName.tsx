@@ -69,7 +69,7 @@ export default function PlayerName({ player }: Props) {
         </>
       ) : (
         <>
-          <p>{playerName}</p>
+          <p className="text-sm">{playerName}</p>
           <div className="flex gap-1">
             <PencilIcon onClick={toggleIsEditing} />
             <TrashIcon onClick={() => deletePlayer(player.id)} />

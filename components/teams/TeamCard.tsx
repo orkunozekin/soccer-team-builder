@@ -13,9 +13,9 @@ type Props = {
 
 export default function TeamCard({ team }: Props) {
   const colors = {
-    ORANGE: 'bg-pinny-orange',
-    GREEN: 'bg-pinny-green',
-    BLUE: 'bg-pinny-blue',
+    ORANGE: { bg: 'bg-pinny-orange', text: 'text-white' },
+    GREEN: { bg: 'bg-pinny-green', text: 'text-black' },
+    BLUE: { bg: 'bg-pinny-blue', text: 'text-white' },
   }
 
   return (
@@ -24,7 +24,7 @@ export default function TeamCard({ team }: Props) {
         value={team.id}
         className={cn(
           'rounded-lg border border-neutral-50 px-2',
-          colors[team.color]
+          colors[team.color].bg
         )}
       >
         <AccordionTrigger>
@@ -33,7 +33,13 @@ export default function TeamCard({ team }: Props) {
         <AccordionContent>
           <div className="pl-2">
             {team.players.map(player => (
-              <li className="list-inside list-decimal" key={player.id}>
+              <li
+                className={cn(
+                  'list-inside list-decimal font-semibold',
+                  colors[team.color].text
+                )}
+                key={player.id}
+              >
                 {player.name}
               </li>
             ))}
