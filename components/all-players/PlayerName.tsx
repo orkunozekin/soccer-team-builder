@@ -4,6 +4,7 @@ import React, { KeyboardEvent, useEffect, useRef, useState } from 'react'
 import PencilIcon from '@/components/icons/PencilIcon'
 import TrashIcon from '@/components/icons/TrashIcon'
 import CheckIcon from '../icons/CheckIcon'
+import useTeamsStore from '@/store/useTeamsStore'
 
 type Props = {
   player: Player
@@ -11,6 +12,7 @@ type Props = {
 
 export default function PlayerName({ player }: Props) {
   const { deletePlayer, editPlayer } = usePlayersStore()
+  const { editTeamPlayer } = useTeamsStore()
 
   const inputRef = useRef<HTMLParagraphElement | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -19,7 +21,9 @@ export default function PlayerName({ player }: Props) {
   const toggleIsEditing = () => setIsEditing(!isEditing)
 
   const handleConfirmEdit = (id: string, name: string) => {
+    //edit both in All Players and in Teams
     editPlayer(id, name)
+    editTeamPlayer(id, name)
     toggleIsEditing()
   }
 
@@ -57,7 +61,7 @@ export default function PlayerName({ player }: Props) {
             contentEditable={isEditing}
             suppressContentEditableWarning={true}
             ref={inputRef}
-            className="!border-neutral-80 min-w-fit rounded-md border px-1 focus:outline-none focus:ring-0"
+            className="min-w-fit rounded-md border !border-neutral-80 px-1 focus:outline-none focus:ring-0"
             onInput={e =>
               setPlayerName(e.currentTarget.textContent || player.name)
             }

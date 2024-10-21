@@ -9,6 +9,7 @@ interface TeamsState {
   generateTeams: (players: Player[], teamCount?: number) => void
   removeTeam: (teamId: string) => void
   reassignPlayer: (playerId: string, targetTeamId: string) => void
+  editTeamPlayer: (playerId: string, name: string) => void
   clearTeams: () => void
 }
 
@@ -105,6 +106,16 @@ const useTeamsStore = create<TeamsState>()(
           }
           return { teams: updatedTeams }
         }),
+
+      editTeamPlayer: (playerId, name) =>
+        set(state => ({
+          teams: state.teams.map(team => ({
+            ...team,
+            players: team.players.map(player =>
+              player.id === playerId ? { ...player, name } : player
+            ),
+          })),
+        })),
 
       clearTeams: () => set({ teams: [] }),
     }),
