@@ -26,7 +26,7 @@ const useTeamsStore = create<TeamsState>(set => ({
       ]
     }
 
-    // Determine the number of teams
+    // Determine the minimum number of teams
     let numberOfTeams = teamCount
     if (!teamCount) numberOfTeams = 2
     else if (shuffledPlayers.length > 11 * teamCount) {
@@ -40,12 +40,24 @@ const useTeamsStore = create<TeamsState>(set => ({
     const colors = ['ORANGE', 'GREEN', 'BLUE', 'SHIRTS'] // Orange, Green, Light Blue
 
     // Generate teams with random colors
-    const teams: Team[] = Array.from({ length: numberOfTeams }, (_, index) => ({
-      id: `team-${index + 1}`,
-      name: `${capitalizeFirstLetter(colors[index % colors.length].toLowerCase()) as TeamColor} Team`,
-      players: [],
-      color: colors[index % colors.length] as TeamColor,
-    }))
+    const nameCounts: Record<string, number> = {}
+    const teams: Team[] = Array.from({ length: numberOfTeams }, (_, index) => {
+      /**team name will be the color --
+       * it will be capitalized and have a number appended if there are multiple teams with the same color
+       */
+      const baseName = colors[index % colors.length]
+      nameCounts[baseName] = (nameCounts[baseName] || 0) + 1
+      const name =
+        nameCounts[baseName] > 1
+          ? `${baseName} ${nameCounts[baseName]}`
+          : baseName
+      return {
+        id: `team-${index + 1}`,
+        name: `${capitalizeFirstLetter(name.toLowerCase()) as TeamColor}`,
+        players: [],
+        color: colors[index % colors.length] as TeamColor,
+      }
+    })
 
     // Distribute players evenly among teams
     shuffledPlayers.forEach((player, index) => {
@@ -59,6 +71,7 @@ const useTeamsStore = create<TeamsState>(set => ({
     set(state => ({
       teams: state.teams.filter(team => team.id !== teamId),
     })),
+
   reassignPlayer: (playerId, targetTeamId) =>
     set(state => {
       // Remove player from their current team
@@ -83,7 +96,6 @@ const useTeamsStore = create<TeamsState>(set => ({
           updatedTeams[targetTeamIndex].players.push(playerToReassign)
         }
       }
-
       return { teams: updatedTeams }
     }),
   clearTeams: () => set({ teams: [] }),

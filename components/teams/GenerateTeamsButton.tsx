@@ -31,7 +31,7 @@ export default function GenerateTeamsButton() {
       {shouldDisplayButton ? (
         <section className="mt-2 flex items-end gap-2">
           <div className="flex w-1/2 flex-col gap-1">
-            <Label className="font-semibold"># of teams</Label>
+            <Label className="font-semibold">minimum # of teams</Label>
             <Input
               placeholder="2"
               onChange={handleSetTeamCount}

@@ -31,7 +31,7 @@ export default function TeamPlayerRow({ team }: Props) {
         >
           <p>{player.name}</p>
           <Select onValueChange={value => onReassignPlayer(player.id, value)}>
-            <SelectTrigger className="w-[180px] font-normal">
+            <SelectTrigger className="w-[180px] border-neutral-10 font-normal">
               <SelectValue placeholder="Transfer to" />
             </SelectTrigger>
             <SelectContent>

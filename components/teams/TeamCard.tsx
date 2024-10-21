@@ -19,6 +19,8 @@ export default function TeamCard({ team }: Props) {
     BLUE: 'bg-pinny-blue',
   }
 
+  const playerCount = team.players.length
+
   return (
     <Accordion type="single" collapsible className="w-full">
       <AccordionItem
@@ -28,8 +30,10 @@ export default function TeamCard({ team }: Props) {
           colors[team.color]
         )}
       >
-        <AccordionTrigger>
-          <p className="text-sm font-semibold">{team.name}</p>
+        <AccordionTrigger className="hover:no-underline [&_svg]:text-black">
+          <p className="text-sm font-semibold">
+            {team.name} ({playerCount})
+          </p>
         </AccordionTrigger>
         <AccordionContent>
           <div className="pl-2">
