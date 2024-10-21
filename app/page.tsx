@@ -8,8 +8,8 @@ import TeamsContainer from '@/components/teams/TeamsContainer'
 export default function Home() {
   return (
     <section className="pb-4">
-      <header className="mb-4 flex items-center justify-center bg-red-50 py-2 font-semibold text-white">
-        Pickup Soccer Team Builder
+      <header className="sticky top-0 z-20 mb-4 flex items-center justify-center bg-red-50 py-2 font-semibold text-white">
+        Jville Soccer Team Builder
       </header>
       <section className="flex flex-col gap-2 px-4">
         <p className="font-medium">
