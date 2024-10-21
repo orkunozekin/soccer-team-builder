@@ -4,22 +4,30 @@ import useTeamsStore from '@/store/useTeamsStore'
 import { usePlayersStore } from '@/store/usePlayerStore'
 import { Input } from '@/components/ui/input'
 import { Label } from '../ui/label'
+import { Player } from '@/interfaces/Player.interface'
 
 export default function GenerateTeamsButton() {
   const { generateTeams } = useTeamsStore()
   const { players } = usePlayersStore()
-  const { teams, removeTeam } = useTeamsStore()
+  const { teams } = useTeamsStore()
 
   const [teamCount, setTeamCount] = useState<number | undefined>(2)
 
   const buttonLabel = teams.length > 0 ? 'Shuffle Teams' : 'Generate Teams'
 
+  const teamPlayers = teams.reduce<Player[]>((acc, team) => {
+    return [...acc, ...team.players]
+  }, [])
+
   const handleGenerateTeams = () => {
-    generateTeams(players, teamCount)
+    console.log(teamPlayers)
+    const playersForTeamGeneration =
+      teamPlayers.length > 0 ? teamPlayers : players
+    generateTeams(playersForTeamGeneration, teamCount)
   }
 
   const playerCount = players.length
-  const shouldDisplayButton = playerCount >= 4
+  const shouldDisplayButton = playerCount >= 4 || teamPlayers.length >= 4
 
   const handleSetTeamCount = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value) || 0
