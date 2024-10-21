@@ -12,7 +12,7 @@ type Props = {
 
 export default function PlayerName({ player }: Props) {
   const { deletePlayer, editPlayer } = usePlayersStore()
-  const { editTeamPlayer } = useTeamsStore()
+  const { editTeamPlayer, removeTeamPlayer } = useTeamsStore()
 
   const inputRef = useRef<HTMLParagraphElement | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -25,6 +25,11 @@ export default function PlayerName({ player }: Props) {
     editPlayer(id, name)
     editTeamPlayer(id, name)
     toggleIsEditing()
+  }
+
+  const handleRemovePlayer = (id: string) => {
+    deletePlayer(id)
+    removeTeamPlayer(id)
   }
 
   const handleEnter = (
@@ -76,7 +81,7 @@ export default function PlayerName({ player }: Props) {
           <p className="text-sm">{playerName}</p>
           <div className="flex gap-1">
             <PencilIcon onClick={toggleIsEditing} />
-            <TrashIcon onClick={() => deletePlayer(player.id)} />
+            <TrashIcon onClick={() => handleRemovePlayer(player.id)} />
           </div>
         </>
       )}

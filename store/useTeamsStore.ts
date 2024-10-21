@@ -10,6 +10,7 @@ interface TeamsState {
   removeTeam: (teamId: string) => void
   reassignPlayer: (playerId: string, targetTeamId: string) => void
   editTeamPlayer: (playerId: string, name: string) => void
+  removeTeamPlayer: (playerId: string) => void
   clearTeams: () => void
 }
 
@@ -116,6 +117,15 @@ const useTeamsStore = create<TeamsState>()(
             ),
           })),
         })),
+
+      removeTeamPlayer: playerId => {
+        set(state => ({
+          teams: state.teams.map(team => ({
+            ...team,
+            players: team.players.filter(player => player.id !== playerId),
+          })),
+        }))
+      },
 
       clearTeams: () => set({ teams: [] }),
     }),
