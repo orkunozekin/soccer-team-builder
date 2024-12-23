@@ -11,10 +11,10 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { capitalizeFirstLetter } from '@/lib/stringUtils'
-import { usePlayersStore } from '@/store/usePlayerStore'
+import { useTeamsStore } from '@/store/useTeamsStore'
 
 export default function PlayerForm() {
-  const { addPlayers } = usePlayersStore()
+  const { addPlayers } = useTeamsStore()
 
   const playerFormSchema = z.object({
     playerNames: z.string().min(1, 'Add some players'),

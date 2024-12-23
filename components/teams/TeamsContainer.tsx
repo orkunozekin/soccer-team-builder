@@ -1,4 +1,4 @@
-import useTeamsStore from '@/store/useTeamsStore'
+import { useTeamsStore } from '@/store/useTeamsStore'
 import React from 'react'
 import TeamCard from './TeamCard'
 import TrashIcon from '@/components/icons/TrashIcon'
