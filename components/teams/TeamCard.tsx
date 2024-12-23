@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/accordion'
 import { cn } from '@/lib/utils'
 import TeamPlayerRow from './TeamPlayerRow'
+import TeamColorEdit from './TeamColorEdit'
 
 type Props = {
   team: Team
@@ -17,6 +18,7 @@ export default function TeamCard({ team }: Props) {
     ORANGE: 'bg-pinny-orange',
     GREEN: 'bg-pinny-green',
     BLUE: 'bg-pinny-blue',
+    RED: 'bg-red-60',
   }
 
   const playerCount = team.players.length
@@ -36,9 +38,10 @@ export default function TeamCard({ team }: Props) {
           </p>
         </AccordionTrigger>
         <AccordionContent>
-          <div className="pl-2">
+          <section className="flex flex-col gap-4 pl-2">
+            <TeamColorEdit team={team} />
             <TeamPlayerRow team={team} />
-          </div>
+          </section>
         </AccordionContent>
       </AccordionItem>
     </Accordion>

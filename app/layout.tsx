@@ -21,7 +21,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={cn(inter.variable, 'antialiased')}>{children}</body>
+      <body className={cn(inter.variable, 'antialiased')}>
+        <header className="sticky top-0 z-20 mb-4 flex items-center justify-center bg-red-50 py-2 font-semibold text-white">
+          Jville Soccer Team Builder
+        </header>
+        {children}
+      </body>
     </html>
   )
 }

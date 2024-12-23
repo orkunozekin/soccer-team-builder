@@ -23,7 +23,7 @@ export default function TeamPlayerRow({ team }: Props) {
   const teamReassingOptions = teams.filter(t => t.id !== team.id)
 
   return (
-    <>
+    <section>
       {team.players.map(player => (
         <li
           className="flex list-inside list-decimal items-center justify-between py-1 font-semibold text-black"
@@ -47,6 +47,6 @@ export default function TeamPlayerRow({ team }: Props) {
           </Select>
         </li>
       ))}
-    </>
+    </section>
   )
 }

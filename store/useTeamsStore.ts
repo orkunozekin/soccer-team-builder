@@ -11,6 +11,7 @@ interface TeamsState {
   reassignPlayer: (playerId: string, targetTeamId: string) => void
   editTeamPlayer: (playerId: string, name: string) => void
   removeTeamPlayer: (playerId: string) => void
+  editTeamColor: (teamId: string, newColor: TeamColor) => void
   clearTeams: () => void
 }
 
@@ -79,6 +80,16 @@ const useTeamsStore = create<TeamsState>()(
       removeTeam: teamId =>
         set(state => ({
           teams: state.teams.filter(team => team.id !== teamId),
+        })),
+
+      editTeamColor: (teamId, color) =>
+        set(state => ({
+          teams: state.teams.map(team => {
+            if (team.id === teamId) {
+              return { ...team, name: capitalizeFirstLetter(color), color }
+            }
+            return team
+          }),
         })),
 
       reassignPlayer: (playerId, targetTeamId) =>

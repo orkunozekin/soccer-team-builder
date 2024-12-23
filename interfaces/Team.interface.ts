@@ -7,4 +7,4 @@ export interface Team {
   color: TeamColor
 }
 
-export type TeamColor = 'ORANGE' | 'GREEN' | 'BLUE'
+export type TeamColor = 'ORANGE' | 'GREEN' | 'BLUE' | 'RED'
