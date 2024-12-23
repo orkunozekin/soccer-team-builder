@@ -1,15 +1,13 @@
 import React, { useState } from 'react'
 import { Button } from '../ui/button'
-import useTeamsStore from '@/store/useTeamsStore'
-import { usePlayersStore } from '@/store/usePlayerStore'
 import { Input } from '@/components/ui/input'
 import { Label } from '../ui/label'
 import { Player } from '@/interfaces/Player.interface'
+import { useTeamsStore } from '@/store/useTeamsStore'
 
 export default function GenerateTeamsButton() {
   const { generateTeams } = useTeamsStore()
-  const { players } = usePlayersStore()
-  const { teams } = useTeamsStore()
+  const { teams, players } = useTeamsStore()
 
   const [teamCount, setTeamCount] = useState<number | undefined>(2)
 

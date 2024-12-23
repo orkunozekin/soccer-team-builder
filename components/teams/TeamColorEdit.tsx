@@ -1,7 +1,7 @@
 import { Team, TeamColor } from '@/interfaces/Team.interface'
 import { capitalizeFirstLetter } from '@/lib/stringUtils'
 import { cn } from '@/lib/utils'
-import useTeamsStore from '@/store/useTeamsStore'
+import { useTeamsStore } from '@/store/useTeamsStore'
 import React from 'react'
 
 type Props = {

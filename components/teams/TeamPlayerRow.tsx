@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import useTeamsStore from '@/store/useTeamsStore'
+import { useTeamsStore } from '@/store/useTeamsStore'
 
 type Props = {
   team: Team
@@ -20,7 +20,7 @@ export default function TeamPlayerRow({ team }: Props) {
     reassignPlayer(playerId, targetTeamId)
   }
 
-  const teamReassingOptions = teams.filter(t => t.id !== team.id)
+  const teamReassignOptions = teams.filter(t => t.id !== team.id)
 
   return (
     <section>
@@ -37,7 +37,7 @@ export default function TeamPlayerRow({ team }: Props) {
             <SelectContent>
               <SelectGroup>
                 <SelectLabel>Teams</SelectLabel>
-                {teamReassingOptions.map(team => (
+                {teamReassignOptions.map(team => (
                   <SelectItem key={team.id} value={team.id}>
                     {team.name}
                   </SelectItem>

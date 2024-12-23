@@ -1,12 +1,12 @@
 'use client'
 
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { usePlayersStore } from '@/store/usePlayerStore'
 import PlayerName from './PlayerName'
 import CloseIcon from '../icons/CloseIcon'
+import { useTeamsStore } from '@/store/useTeamsStore'
 
 export default function AllPlayersScrollArea() {
-  const { players, clearPlayers } = usePlayersStore()
+  const { players, clearPlayers } = useTeamsStore()
 
   const playerCount = players.length
 

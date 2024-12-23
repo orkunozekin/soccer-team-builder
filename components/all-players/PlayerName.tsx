@@ -1,18 +1,16 @@
 import { Player } from '@/interfaces/Player.interface'
-import { usePlayersStore } from '@/store/usePlayerStore'
 import React, { KeyboardEvent, useEffect, useRef, useState } from 'react'
 import PencilIcon from '@/components/icons/PencilIcon'
 import TrashIcon from '@/components/icons/TrashIcon'
 import CheckIcon from '../icons/CheckIcon'
-import useTeamsStore from '@/store/useTeamsStore'
+import { useTeamsStore } from '@/store/useTeamsStore'
 
 type Props = {
   player: Player
 }
 
 export default function PlayerName({ player }: Props) {
-  const { deletePlayer, editPlayer } = usePlayersStore()
-  const { editTeamPlayer, removeTeamPlayer } = useTeamsStore()
+  const { editPlayerName, deletePlayer, removeTeamPlayer } = useTeamsStore()
 
   const inputRef = useRef<HTMLParagraphElement | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -21,9 +19,7 @@ export default function PlayerName({ player }: Props) {
   const toggleIsEditing = () => setIsEditing(!isEditing)
 
   const handleConfirmEdit = (id: string, name: string) => {
-    //edit both in All Players and in Teams
-    editPlayer(id, name)
-    editTeamPlayer(id, name)
+    editPlayerName(id, name)
     toggleIsEditing()
   }
 
