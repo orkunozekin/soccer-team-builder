@@ -1,6 +1,13 @@
 export interface Player {
   id: string
   name: string
+  position: `${PlayerPosition}`
+}
+
+export enum PlayerPosition {
+  DEFENDER = 'defender',
+  MIDFIELDER = 'midfielder',
+  FORWARD = 'forward',
 }
 
 export interface PlayersState {

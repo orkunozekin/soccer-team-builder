@@ -30,6 +30,7 @@ export default function TeamColorEdit({ team }: Props) {
           const availableColor = capitalizeFirstLetter(color.toLowerCase())
           return (
             <p
+              key={color}
               className={cn(
                 'rounded-md border border-white p-1',
                 colors[color]

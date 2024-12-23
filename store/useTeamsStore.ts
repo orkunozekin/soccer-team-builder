@@ -1,14 +1,20 @@
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import { Player } from '@/interfaces/Player.interface'
+import { Player, PlayerPosition } from '@/interfaces/Player.interface'
 import { Team, TeamColor } from '@/interfaces/Team.interface'
 
 interface StoreState {
   players: Player[]
   teams: Team[]
   // Player-related methods
-  addPlayers: (names: string[]) => void
+  addPlayer: ({
+    name,
+    position,
+  }: {
+    name: string
+    position: PlayerPosition
+  }) => void
   editPlayerName: (playerId: string, name: string) => void
   deletePlayer: (id: string) => void
   clearPlayers: () => void
@@ -28,14 +34,15 @@ export const useTeamsStore = create<StoreState>()(
       teams: [],
 
       // Player-related methods
-      addPlayers: names =>
+      addPlayer: ({ name, position }) =>
         set(state => ({
           players: [
             ...state.players,
-            ...names.map(name => ({
+            {
               id: uuidv4(),
               name,
-            })),
+              position, // User-defined position
+            },
           ],
         })),
 
@@ -50,22 +57,38 @@ export const useTeamsStore = create<StoreState>()(
       generateTeams: (players, teamCount = 2) => {
         if (!players.length) return
 
-        const shuffledPlayers = [...players]
-        for (let i = shuffledPlayers.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1))
-          ;[shuffledPlayers[i], shuffledPlayers[j]] = [
-            shuffledPlayers[j],
-            shuffledPlayers[i],
-          ]
+        // Group players by position
+        const groupedPlayers: Record<string, Player[]> = {
+          goalkeeper: [],
+          defense: [],
+          midfield: [],
+          forward: [],
         }
 
+        players.forEach(player => {
+          if (groupedPlayers[player.position]) {
+            groupedPlayers[player.position].push(player)
+          }
+        })
+
+        // Shuffle players within each position group
+        Object.keys(groupedPlayers).forEach(position => {
+          const group = groupedPlayers[position]
+          for (let i = group.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1))
+            ;[group[i], group[j]] = [group[j], group[i]]
+          }
+        })
+
+        // Define the number of teams
         let numberOfTeams = Math.max(
           2,
-          teamCount || Math.ceil(shuffledPlayers.length / 11)
+          teamCount || Math.ceil(players.length / 11)
         )
 
-        const colors = ['ORANGE', 'GREEN', 'BLUE', 'SHIRTS']
+        const colors = ['ORANGE', 'GREEN', 'BLUE', 'RED', 'SHIRTS']
         const nameCounts: Record<string, number> = {}
+
         const teams: Team[] = Array.from(
           { length: numberOfTeams },
           (_, index) => {
@@ -84,8 +107,23 @@ export const useTeamsStore = create<StoreState>()(
           }
         )
 
-        shuffledPlayers.forEach((player, index) => {
-          teams[index % numberOfTeams].players.push(player)
+        // Distribute players based on positions
+        Object.keys(groupedPlayers).forEach(position => {
+          const playersByPosition = groupedPlayers[position]
+
+          if (position === 'goalkeeper') {
+            // Assign one goalkeeper per team
+            playersByPosition.forEach((player, index) => {
+              if (index < numberOfTeams) {
+                teams[index].players.push(player)
+              }
+            })
+          } else {
+            // Distribute other positions evenly among teams
+            playersByPosition.forEach((player, index) => {
+              teams[index % numberOfTeams].players.push(player)
+            })
+          }
         })
 
         set({ teams })
