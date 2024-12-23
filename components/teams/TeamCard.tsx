@@ -23,8 +23,6 @@ export default function TeamCard({ team }: Props) {
 
   const playerCount = team.players.length
 
-  console.log(team.color)
-
   return (
     <Accordion type="single" collapsible className="w-full">
       <AccordionItem
