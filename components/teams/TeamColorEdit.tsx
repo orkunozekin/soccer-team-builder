@@ -24,7 +24,7 @@ export default function TeamColorEdit({ team }: Props) {
 
   return (
     <section className="flex items-center gap-2">
-      <p className="font-semibold text-white">Change color:</p>
+      <p className="text-base font-semibold text-white">Change color:</p>
       <section className="flex gap-2">
         {otherTeamColors.map(color => {
           const availableColor = capitalizeFirstLetter(color.toLowerCase())
@@ -32,7 +32,7 @@ export default function TeamColorEdit({ team }: Props) {
             <p
               key={color}
               className={cn(
-                'rounded-md border border-white p-1',
+                'rounded-md border border-white p-1 text-base',
                 colors[color]
               )}
               onClick={() => editTeamColor(team.id, color)}

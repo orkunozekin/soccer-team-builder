@@ -77,7 +77,7 @@ export default function PlayerName({ player, className }: Props) {
         </>
       ) : (
         <>
-          <p className="max-w-1/3 text-sm">{playerName}</p>
+          <p className="max-w-1/3 text-base">{playerName}</p>
           <PencilIcon onClick={toggleIsEditing} />
         </>
       )}
