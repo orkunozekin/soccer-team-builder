@@ -13,7 +13,7 @@ const CheckIcon = ({ onClick, className = '' }: Props) => {
       viewBox="0 0 24 24"
       strokeWidth={1.5}
       stroke="currentColor"
-      className={cn('size-4', className)}
+      className={cn('size-5', className)}
     >
       <path
         strokeLinecap="round"

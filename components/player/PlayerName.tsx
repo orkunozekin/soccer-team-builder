@@ -1,16 +1,17 @@
 import { Player } from '@/interfaces/Player.interface'
 import React, { KeyboardEvent, useEffect, useRef, useState } from 'react'
 import PencilIcon from '@/components/icons/PencilIcon'
-import TrashIcon from '@/components/icons/TrashIcon'
 import CheckIcon from '../icons/CheckIcon'
 import { useTeamsStore } from '@/store/useTeamsStore'
+import { cn } from '@/lib/utils'
 
 type Props = {
   player: Player
+  className?: string
 }
 
-export default function PlayerName({ player }: Props) {
-  const { editPlayerName, deletePlayer, removeTeamPlayer } = useTeamsStore()
+export default function PlayerName({ player, className }: Props) {
+  const { editPlayerName } = useTeamsStore()
 
   const inputRef = useRef<HTMLParagraphElement | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -21,11 +22,6 @@ export default function PlayerName({ player }: Props) {
   const handleConfirmEdit = (id: string, name: string) => {
     editPlayerName(id, name)
     toggleIsEditing()
-  }
-
-  const handleRemovePlayer = (id: string) => {
-    deletePlayer(id)
-    removeTeamPlayer(id)
   }
 
   const handleEnter = (
@@ -54,15 +50,22 @@ export default function PlayerName({ player }: Props) {
     sel?.removeAllRanges()
   }, [isEditing])
 
+  // Update playerName state if player.name changes somewhere else
+  useEffect(() => {
+    setPlayerName(player.name)
+  }, [player.name])
+
   return (
-    <section className="flex items-center justify-between">
+    <section
+      className={cn('flex w-full items-center justify-between', className)}
+    >
       {isEditing ? (
         <>
           <div
             contentEditable={isEditing}
             suppressContentEditableWarning={true}
             ref={inputRef}
-            className="min-w-fit rounded-md border !border-neutral-80 px-1 focus:outline-none focus:ring-0"
+            className="min-w-fit rounded-md px-0.5 focus:outline-none focus:ring-0"
             onInput={e =>
               setPlayerName(e.currentTarget.textContent || player.name)
             }
@@ -74,11 +77,8 @@ export default function PlayerName({ player }: Props) {
         </>
       ) : (
         <>
-          <p className="text-sm">{playerName}</p>
-          <div className="flex gap-1">
-            <PencilIcon onClick={toggleIsEditing} />
-            <TrashIcon onClick={() => handleRemovePlayer(player.id)} />
-          </div>
+          <p className="max-w-1/3 text-base">{playerName}</p>
+          <PencilIcon onClick={toggleIsEditing} />
         </>
       )}
     </section>
