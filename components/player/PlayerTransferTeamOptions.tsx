@@ -20,19 +20,24 @@ const PlayerTransferTeamOptions = ({
     BLUE: 'bg-pinny-blue',
     RED: 'bg-red-60',
   }
+
   return (
-    <section className="flex gap-1">
-      {teamOptions.map(team => {
-        const teamColor = colors[team.color]
-        return (
-          <div
-            key={team.id}
-            className={cn('size-6 rounded-sm', teamColor)}
-            onClick={() => onReassignPlayer(player.id, team.id)}
-          />
-        )
-      })}
-    </section>
+    <>
+      {teamOptions.length > 0 ? (
+        <section className="flex gap-1">
+          {teamOptions.map(team => {
+            const teamColor = colors[team.color]
+            return (
+              <div
+                key={team.id}
+                className={cn('size-6 rounded-sm', teamColor)}
+                onClick={() => onReassignPlayer(player.id, team.id)}
+              />
+            )
+          })}
+        </section>
+      ) : null}
+    </>
   )
 }
 

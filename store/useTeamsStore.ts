@@ -70,6 +70,7 @@ export const useTeamsStore = create<StoreState>()(
           { length: numberOfTeams },
           (_, index) => {
             const baseName = colors[index % colors.length]
+            // Add a number to the team name if there are multiple teams with the same name
             nameCounts[baseName] = (nameCounts[baseName] || 0) + 1
             const name =
               nameCounts[baseName] > 1
@@ -122,14 +123,23 @@ export const useTeamsStore = create<StoreState>()(
         }),
 
       editPlayerName: (playerId, name) =>
-        set(state => ({
-          teams: state.teams.map(team => ({
+        set(state => {
+          const updatedPlayers = state.players.map(player =>
+            player.id === playerId ? { ...player, name } : player
+          )
+          const updatedTeams = state.teams.map(team => ({
             ...team,
             players: team.players.map(player =>
               player.id === playerId ? { ...player, name } : player
             ),
-          })),
-        })),
+          }))
+          console.log('Updated players:', updatedPlayers)
+          console.log('Updated teams:', updatedTeams)
+          return {
+            players: updatedPlayers,
+            teams: updatedTeams,
+          }
+        }),
 
       removeTeamPlayer: playerId =>
         set(state => ({

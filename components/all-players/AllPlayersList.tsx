@@ -1,5 +1,4 @@
 import { useTeamsStore } from '@/store/useTeamsStore'
-import React from 'react'
 import PlayerTransferTeamOptions from '../player/PlayerTransferTeamOptions'
 import { KebabMenuItem } from '@/interfaces/KebabMenu.interface'
 import TrashIcon from '../icons/TrashIcon'
@@ -17,6 +16,7 @@ const AllPlayersList = () => {
   const onReassignPlayer = (playerId: string, targetTeamId: any) => {
     reassignPlayer(playerId, targetTeamId)
   }
+
   return (
     <section className="flex flex-col gap-1">
       {players.map(player => {
@@ -28,7 +28,9 @@ const AllPlayersList = () => {
             icon: <TrashIcon className="size-5" />,
             onClick: () => handleRemovePlayer(player.id),
           },
-          {
+        ]
+        if (teamOptions.length > 0)
+          kebabMenuItems.push({
             label: (
               <PlayerTransferTeamOptions
                 onReassignPlayer={onReassignPlayer}
@@ -36,8 +38,7 @@ const AllPlayersList = () => {
                 teamOptions={teamOptions}
               />
             ),
-          },
-        ]
+          })
         return (
           <PlayersRowItem
             kebabMenuItems={kebabMenuItems}

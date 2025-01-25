@@ -50,6 +50,11 @@ export default function PlayerName({ player, className }: Props) {
     sel?.removeAllRanges()
   }, [isEditing])
 
+  // Update playerName state if player.name changes somewhere else
+  useEffect(() => {
+    setPlayerName(player.name)
+  }, [player.name])
+
   return (
     <section
       className={cn('flex w-full items-center justify-between', className)}

@@ -18,9 +18,9 @@ export default function GenerateTeamsButton() {
   }, [])
 
   const handleGenerateTeams = () => {
-    console.log(teamPlayers)
+    //when there are more players (All Players) than team players, use players for team generation
     const playersForTeamGeneration =
-      teamPlayers.length > 0 ? teamPlayers : players
+      players.length > teamPlayers.length ? players : teamPlayers
     generateTeams(playersForTeamGeneration, teamCount)
   }
 

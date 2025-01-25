@@ -37,6 +37,7 @@ export default function TeamPlayerRow({ team }: Props) {
         ]
         return (
           <PlayersRowItem
+            key={player.id}
             kebabMenuItems={kebabMenuItems}
             player={player}
             className="rounded-sm border border-neutral-20 p-1.5"

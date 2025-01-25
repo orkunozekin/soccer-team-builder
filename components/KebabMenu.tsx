@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { Fragment } from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +21,7 @@ const KebabMenu = ({ kebabMenuItems }: Props) => {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-fit">
         {kebabMenuItems.map((item, index) => (
-          <>
+          <Fragment key={index}>
             <DropdownMenuItem
               key={index}
               onClick={item.onClick}
@@ -31,7 +31,7 @@ const KebabMenu = ({ kebabMenuItems }: Props) => {
               {item.label && <span>{item.label}</span>}
             </DropdownMenuItem>
             {index < kebabMenuItems.length - 1 && <DropdownMenuSeparator />}
-          </>
+          </Fragment>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
