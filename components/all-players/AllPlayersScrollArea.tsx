@@ -21,7 +21,7 @@ export default function AllPlayersScrollArea() {
             <div className="sticky top-0 z-10 flex justify-between bg-white py-2">
               <div className="flex items-center gap-1 font-semibold">
                 <h4>All Players</h4>
-                {playerCount > 0 ? <p>({playerCount})</p> : null}
+                <p>({playerCount})</p>
               </div>
               <CloseIcon onClick={clearPlayers} />
             </div>

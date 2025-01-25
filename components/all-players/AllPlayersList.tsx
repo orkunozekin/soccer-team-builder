@@ -18,7 +18,7 @@ const AllPlayersList = () => {
   }
 
   return (
-    <section className="flex flex-col gap-1">
+    <section className="flex flex-col gap-2">
       {players.map(player => {
         const teamOptions = teams.filter(
           team => team.players.filter(p => p.id === player.id).length === 0
@@ -41,6 +41,7 @@ const AllPlayersList = () => {
           })
         return (
           <PlayersRowItem
+            className="rounded-sm border border-neutral-400 p-1"
             kebabMenuItems={kebabMenuItems}
             player={player}
             key={player.id}
