@@ -133,8 +133,6 @@ export const useTeamsStore = create<StoreState>()(
               player.id === playerId ? { ...player, name } : player
             ),
           }))
-          console.log('Updated players:', updatedPlayers)
-          console.log('Updated teams:', updatedTeams)
           return {
             players: updatedPlayers,
             teams: updatedTeams,
