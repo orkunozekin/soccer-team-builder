@@ -38,7 +38,7 @@ export default function TeamCard({ team }: Props) {
           </p>
         </AccordionTrigger>
         <AccordionContent>
-          <section className="flex flex-col gap-4 pl-2">
+          <section className="flex flex-col gap-4">
             <TeamColorEdit team={team} />
             <TeamPlayerRow team={team} />
           </section>
