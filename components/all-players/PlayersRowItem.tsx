@@ -13,7 +13,7 @@ type Props = {
 
 const PlayersRowItem = ({ player, kebabMenuItems, className = '' }: Props) => {
   return (
-    <div className={cn('flex items-center justify-between gap-1', className)}>
+    <div className={cn('flex items-center justify-between gap-2', className)}>
       <PlayerName player={player} />
       <KebabMenu kebabMenuItems={kebabMenuItems} />
     </div>
