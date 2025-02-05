@@ -100,6 +100,8 @@ export const useTeamsStore = create<StoreState>()(
       reassignPlayer: (playerId, targetTeamId) =>
         set(state => {
           let playerToReassign: Player | null = null
+
+          // Remove the player from their current team, if they are already assigned
           const updatedTeams = state.teams.map(team => {
             const filteredPlayers = team.players.filter(player => {
               if (player.id === playerId) {
@@ -111,6 +113,13 @@ export const useTeamsStore = create<StoreState>()(
             return { ...team, players: filteredPlayers }
           })
 
+          // If the player was not found in any team, retrieve them from the players store
+          if (!playerToReassign) {
+            playerToReassign =
+              state.players.find(player => player.id === playerId) || null
+          }
+
+          // Assign the player to the target team
           if (playerToReassign) {
             const targetTeamIndex = updatedTeams.findIndex(
               team => team.id === targetTeamId
@@ -119,6 +128,7 @@ export const useTeamsStore = create<StoreState>()(
               updatedTeams[targetTeamIndex].players.push(playerToReassign)
             }
           }
+
           return { teams: updatedTeams }
         }),
 
