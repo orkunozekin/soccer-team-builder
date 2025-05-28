@@ -1,10 +1,14 @@
 'use client'
 
-import { ScrollArea } from '@/components/ui/scroll-area'
-import CloseIcon from '../icons/CloseIcon'
 import { useTeamsStore } from '@/store/useTeamsStore'
 import AllPlayersList from './AllPlayersList'
 import { cn } from '@/lib/utils'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 
 export default function AllPlayersScrollArea() {
   const { players, clearPlayers } = useTeamsStore()
@@ -14,20 +18,19 @@ export default function AllPlayersScrollArea() {
   return (
     <>
       {!!playerCount ? (
-        <ScrollArea
-          className={cn('rounded-md border', playerCount >= 6 ? 'h-52' : '')}
-        >
-          <section className="px-3 pb-3">
-            <div className="sticky top-0 z-10 flex justify-between bg-white py-2">
-              <div className="flex items-center gap-1 font-semibold">
-                <h4>All Players</h4>
-                <p>({playerCount})</p>
-              </div>
-              <CloseIcon onClick={clearPlayers} />
-            </div>
-            <AllPlayersList />
-          </section>
-        </ScrollArea>
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem
+            value="all-players"
+            className={cn('rounded-lg border border-neutral-50 px-2')}
+          >
+            <AccordionTrigger className="hover:no-underline [&_svg]:text-black">
+              <h4 className="font-semibold">All Players ({playerCount})</h4>
+            </AccordionTrigger>
+            <AccordionContent>
+              <AllPlayersList />
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       ) : null}
     </>
   )
