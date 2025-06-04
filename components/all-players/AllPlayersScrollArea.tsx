@@ -9,6 +9,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
+import CloseIcon from '../icons/CloseIcon'
+import { Button } from '../ui/button'
 
 export default function AllPlayersScrollArea() {
   const { players, clearPlayers } = useTeamsStore()
@@ -27,6 +29,10 @@ export default function AllPlayersScrollArea() {
               <h4 className="font-semibold">All Players ({playerCount})</h4>
             </AccordionTrigger>
             <AccordionContent>
+              <Button onClick={clearPlayers} className="mb-2">
+                <CloseIcon className="mr-2" />
+                <p>Clear players</p>
+              </Button>
               <AllPlayersList />
             </AccordionContent>
           </AccordionItem>
