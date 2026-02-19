@@ -1,24 +1,24 @@
 import { NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
-import { verifySuperAdmin } from '@/lib/api/auth'
+import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin'
 import { TEST_USERS } from '@/lib/testData/testUsers'
 
 /**
  * POST /api/seed-test-users
  * Creates the test users in Firebase Auth and Firestore.
- * Requires: super admin Bearer token, or header X-Seed-Secret matching SEED_SECRET env (optional).
+ * Requires: admin Bearer token, or header X-Seed-Secret matching SEED_SECRET env (optional).
  */
 export async function POST(request: Request) {
-  // Allow super admin OR optional secret for scripted/local use
+  // Allow admin OR optional secret for scripted/local use
   const seedSecret = request.headers.get('x-seed-secret')
   const useSecret = process.env.SEED_SECRET && seedSecret === process.env.SEED_SECRET
 
   if (!useSecret) {
-    const { isSuperAdmin, error } = await verifySuperAdmin(request)
-    if (error || !isSuperAdmin) {
+    const { isAdmin, error } = await verifyAdmin(request)
+    if (error || !isAdmin) {
       return NextResponse.json(
-        { error: 'Super admin required or valid X-Seed-Secret' },
+        { error: 'Admin required or valid X-Seed-Secret' },
         { status: 403 }
       )
     }

@@ -35,8 +35,8 @@ Use these to register accounts via the app’s sign-up flow, or seed them progra
 
 You can create all 22 users in Firebase Auth and Firestore in one go:
 
-**Option A – As super admin (from browser or Postman)**  
-1. Log in to the app as a super admin.  
+**Option A – As admin (from browser or Postman)**  
+1. Log in to the app as an admin.  
 2. Send a POST request to `/api/seed-test-users` with your auth token:
    ```bash
    curl -X POST https://your-app.com/api/seed-test-users \
@@ -61,7 +61,7 @@ The response lists each email as `created`, `updated` (already in Auth; Firestor
 To have all test users RSVP for a specific match in one go:
 
 **Request:** `POST /api/seed-match-rsvps` with JSON body `{ "matchId": "YOUR_MATCH_ID" }`.  
-Use the same auth as above (super admin Bearer token **or** `X-Seed-Secret` header).
+Use the same auth as above (admin Bearer token **or** `X-Seed-Secret` header).
 
 **Example (with secret):**
 ```bash

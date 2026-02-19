@@ -8,16 +8,14 @@ import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 
 interface AdminRouteGuardProps {
   children: React.ReactNode
-  requireSuperAdmin?: boolean
 }
 
 export function AdminRouteGuard({
   children,
-  requireSuperAdmin = false,
 }: AdminRouteGuardProps) {
   const router = useRouter()
   const { user, loading } = useAuth()
-  const { isAdmin, isSuperAdmin } = useAdmin()
+  const { isAdmin } = useAdmin()
 
   useEffect(() => {
     if (!loading) {
@@ -26,17 +24,12 @@ export function AdminRouteGuard({
         return
       }
 
-      if (requireSuperAdmin && !isSuperAdmin) {
-        router.push('/matches')
-        return
-      }
-
-      if (!requireSuperAdmin && !isAdmin) {
+      if (!isAdmin) {
         router.push('/matches')
         return
       }
     }
-  }, [user, loading, isAdmin, isSuperAdmin, requireSuperAdmin, router])
+  }, [user, loading, isAdmin, router])
 
   if (loading) {
     return <PageLoadingSkeleton variant="centered" />
@@ -44,19 +37,6 @@ export function AdminRouteGuard({
 
   if (!user) {
     return null
-  }
-
-  if (requireSuperAdmin && !isSuperAdmin) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Access Denied</h1>
-          <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-            You need super admin privileges to access this page.
-          </p>
-        </div>
-      </div>
-    )
   }
 
   if (!isAdmin) {

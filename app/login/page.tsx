@@ -21,7 +21,7 @@ export default function LoginPage() {
             <LoginForm />
             <div className="mt-4 text-center text-sm">
               <span className="text-zinc-600 dark:text-zinc-400">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
               </span>
               <Link
                 href="/register"

@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/authStore'
 import { getDocument } from '@/lib/firebase/firestore'
 import { timestampToDate } from '@/lib/firebase/firestore'
 import { User } from '@/types/user'
+import { createUser } from '@/lib/services/userService'
 
 /** If auth/user fetch takes longer than this, stop showing loading so the app is still usable. */
 const AUTH_LOADING_TIMEOUT_MS = 8_000
@@ -35,15 +36,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         if (firebaseUser) {
           try {
-            const userDoc = await getDocument('users', firebaseUser.uid)
+            let userDoc = await getDocument('users', firebaseUser.uid)
+
+            // Some legacy accounts may exist in Auth but not in Firestore yet.
+            // Ensure the canonical user doc exists at /users/{uid} so role-based UI works.
+            if (!userDoc) {
+              const displayName =
+                firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'User'
+              await createUser(firebaseUser.uid, firebaseUser.email ?? '', displayName)
+              userDoc = await getDocument('users', firebaseUser.uid)
+            }
+
             if (userDoc) {
+              const roleRaw = typeof userDoc.role === 'string' ? userDoc.role.trim() : ''
+              const role: User['role'] = roleRaw === 'admin' ? 'admin' : 'user'
+
               const userData: User = {
-                uid: userDoc.uid,
-                email: userDoc.email,
-                displayName: userDoc.displayName,
+                uid: firebaseUser.uid,
+                email: (userDoc.email as string) ?? firebaseUser.email ?? '',
+                displayName: (userDoc.displayName as string) ?? firebaseUser.displayName ?? '',
                 jerseyNumber: userDoc.jerseyNumber ?? null,
                 position: userDoc.position ?? null,
-                role: userDoc.role || 'user',
+                role,
                 createdAt: timestampToDate(userDoc.createdAt) || new Date(),
                 updatedAt: timestampToDate(userDoc.updatedAt) || new Date(),
               }

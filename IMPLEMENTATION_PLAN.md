@@ -42,7 +42,7 @@ Since we're using Next.js App Router, follow these patterns:
    - `displayName`: string
    - `jerseyNumber`: number | null
    - `position`: string | null (e.g., 'GK', 'LB', 'RB', 'CB', 'LWB', 'RWB', 'CDM', 'CM', 'CAM', 'LM', 'RM', 'LW', 'RW', 'CF', 'ST', etc.)
-   - `role`: 'user' | 'admin' | 'superAdmin'
+   - `role`: 'user' | 'admin'
    - `createdAt`: timestamp
    - `updatedAt`: timestamp
 
@@ -444,7 +444,7 @@ function generateTeams(rsvps: RSVP[], users: User[], maxTeamSize = 11) {
   })
   const admins = rsvps.filter(r => {
     const user = users.find(u => u.uid === r.userId)
-    return user && ['admin', 'superAdmin'].includes(user.role)
+    return user && user.role === 'admin'
   })
   const regularPlayers = rsvps.filter(r => 
     !goalkeepers.includes(r) && !admins.includes(r)
@@ -515,7 +515,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if request.auth != null && 
         (request.auth.uid == userId || 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superAdmin']);
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
@@ -523,7 +523,7 @@ service cloud.firestore {
     match /matches/{matchId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superAdmin'];
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       
       // RSVPs: users can create/update their own, admins can manage all
       match /rsvps/{rsvpId} {
@@ -531,14 +531,14 @@ service cloud.firestore {
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
         allow update, delete: if request.auth != null && 
           (request.resource.data.userId == request.auth.uid ||
-           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superAdmin']);
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       }
       
       // Teams: all can read, only admins can write
       match /teams/{teamId} {
         allow read: if request.auth != null;
         allow write: if request.auth != null && 
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superAdmin'];
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       }
     }
   }

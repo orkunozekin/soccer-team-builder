@@ -53,7 +53,7 @@ export function PlayerTransfer({
     try {
       // Find current team/bench for player
       let currentTeam: Team | null = null
-      let isOnBench = benchPlayerIds.includes(selectedPlayerId)
+      const isOnBench = benchPlayerIds.includes(selectedPlayerId)
 
       for (const team of teams) {
         if (team.playerIds.includes(selectedPlayerId)) {

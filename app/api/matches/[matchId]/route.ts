@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
-import { verifySuperAdmin } from '@/lib/api/auth'
+import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 
 function dateToTimestamp(d: string | null): Timestamp | null {
@@ -14,10 +14,10 @@ export async function PATCH(
   { params }: { params: Promise<{ matchId: string }> }
 ) {
   try {
-    const { isSuperAdmin, error: authError } = await verifySuperAdmin(request)
-    if (authError || !isSuperAdmin) {
+    const { isAdmin, error: authError } = await verifyAdmin(request)
+    if (authError || !isAdmin) {
       return NextResponse.json(
-        { error: 'Super admin privileges required' },
+        { error: 'Admin privileges required' },
         { status: 403 }
       )
     }
@@ -73,10 +73,10 @@ export async function DELETE(
   { params }: { params: Promise<{ matchId: string }> }
 ) {
   try {
-    const { isSuperAdmin, error: authError } = await verifySuperAdmin(request)
-    if (authError || !isSuperAdmin) {
+    const { isAdmin, error: authError } = await verifyAdmin(request)
+    if (authError || !isAdmin) {
       return NextResponse.json(
-        { error: 'Super admin privileges required' },
+        { error: 'Admin privileges required' },
         { status: 403 }
       )
     }

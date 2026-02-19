@@ -92,7 +92,7 @@ export function UserRoleManager() {
       <CardHeader>
         <CardTitle>User Role Management</CardTitle>
         <CardDescription>
-          Manage user roles. Only super admins can change roles.
+          Manage user roles.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -134,7 +134,6 @@ export function UserRoleManager() {
                   <SelectContent>
                     <SelectItem value="user">User</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="superAdmin">Super Admin</SelectItem>
                   </SelectContent>
                 </Select>
                 {user.uid === currentUser?.uid && (

@@ -45,7 +45,7 @@ export function generateTeams(
 
     if (isGoalkeeper(user.position)) {
       goalkeepers.push(rsvp)
-    } else if (user.role === 'admin' || user.role === 'superAdmin') {
+    } else if (user.role === 'admin') {
       admins.push(rsvp)
     } else {
       regularPlayers.push(rsvp)

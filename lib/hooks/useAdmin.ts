@@ -5,12 +5,10 @@ import { useAuth } from './useAuth'
 export const useAdmin = () => {
   const { userData } = useAuth()
 
-  const isAdmin = userData?.role === 'admin' || userData?.role === 'superAdmin'
-  const isSuperAdmin = userData?.role === 'superAdmin'
+  const isAdmin = userData?.role === 'admin'
 
   return {
     isAdmin,
-    isSuperAdmin,
     role: userData?.role || 'user',
   }
 }

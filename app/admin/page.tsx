@@ -4,7 +4,6 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { AdminRouteGuard } from '@/components/admin/AdminRouteGuard'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { useAdmin } from '@/lib/hooks/useAdmin'
 import { AdminMatchControls } from '@/components/admin/AdminMatchControls'
 import { UserRoleManager } from '@/components/admin/UserRoleManager'
 import { getAllMatches } from '@/lib/services/matchService'
@@ -12,7 +11,6 @@ import { useMatchStore } from '@/store/matchStore'
 import { AdminMatchCard } from '@/components/admin/AdminMatchCard'
 
 function AdminDashboardContent() {
-  const { isSuperAdmin } = useAdmin()
   const { matches, setMatches, setLoading } = useMatchStore()
 
   useEffect(() => {
@@ -64,7 +62,6 @@ function AdminDashboardContent() {
                 <AdminMatchCard
                   key={match.id}
                   match={match}
-                  isSuperAdmin={isSuperAdmin}
                   onDeleted={() => getAllMatches().then(setMatches)}
                 />
               ))}
@@ -73,11 +70,9 @@ function AdminDashboardContent() {
         </div>
       </div>
 
-      {isSuperAdmin && (
-        <div className="mt-6">
-          <UserRoleManager />
-        </div>
-      )}
+      <div className="mt-6">
+        <UserRoleManager />
+      </div>
     </div>
   )
 }

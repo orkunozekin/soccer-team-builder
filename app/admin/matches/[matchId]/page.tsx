@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { format } from 'date-fns'
 import { AdminRouteGuard } from '@/components/admin/AdminRouteGuard'
 import { getMatch } from '@/lib/services/matchService'
 import { getMatchTeams, getBench } from '@/lib/services/teamService'
@@ -10,7 +9,6 @@ import { getMatchRSVPs } from '@/lib/services/rsvpService'
 import { getAllUsers } from '@/lib/services/userService'
 import { generateTeamsAPI, deleteMatchAPI, updateMatchAPI } from '@/lib/api/client'
 import { computeTeamCountForRSVPCount } from '@/lib/utils/teamGenerator'
-import { useAdmin } from '@/lib/hooks/useAdmin'
 import { RSVPPollControls } from '@/components/admin/RSVPPollControls'
 import { DatePickerTime } from '@/components/ui/date-picker-time'
 import { PlayerTransfer } from '@/components/admin/PlayerTransfer'
@@ -36,7 +34,6 @@ import { User } from '@/types/user'
 function AdminMatchManagementContent() {
   const router = useRouter()
   const params = useParams()
-  const { isSuperAdmin } = useAdmin()
   const matchId = params?.matchId as string
   const [match, setMatch] = useState<Match | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -195,48 +192,46 @@ function AdminMatchManagementContent() {
 
       <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
         <div className="space-y-6">
-          {isSuperAdmin && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Match date & time</CardTitle>
-                <CardDescription>
-                  Edit the match date and time. Only super admins see this.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <form onSubmit={handleSaveDateTime} className="space-y-4">
-                  <DatePickerTime
-                    dateId="match-date"
-                    timeId="match-time"
-                    date={date}
-                    time={time}
-                    onDateChange={setDate}
-                    onTimeChange={setTime}
-                    datePlaceholder="Select date"
-                    disabled={saving}
-                    timeStep={300}
-                  />
-                  {saveSuccess && (
-                    <p className="text-sm text-green-600 dark:text-green-400">
-                      Date and time saved.
-                    </p>
-                  )}
-                  <Button type="submit" disabled={saving}>
-                    {saving ? 'Saving...' : 'Save date & time'}
-                  </Button>
-                </form>
-                <div className="border-t pt-4">
-                  <Button
-                    variant="destructive"
-                    disabled={deleting}
-                    onClick={() => setDeleteDialogOpen(true)}
-                  >
-                    {deleting ? 'Deleting...' : 'Delete match'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Match date & time</CardTitle>
+              <CardDescription>
+                Edit the match date and time.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <form onSubmit={handleSaveDateTime} className="space-y-4">
+                <DatePickerTime
+                  dateId="match-date"
+                  timeId="match-time"
+                  date={date}
+                  time={time}
+                  onDateChange={setDate}
+                  onTimeChange={setTime}
+                  datePlaceholder="Select date"
+                  disabled={saving}
+                  timeStep={300}
+                />
+                {saveSuccess && (
+                  <p className="text-sm text-green-600 dark:text-green-400">
+                    Date and time saved.
+                  </p>
+                )}
+                <Button type="submit" disabled={saving}>
+                  {saving ? 'Saving...' : 'Save date & time'}
+                </Button>
+              </form>
+              <div className="border-t pt-4">
+                <Button
+                  variant="destructive"
+                  disabled={deleting}
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  {deleting ? 'Deleting...' : 'Delete match'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
           <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>

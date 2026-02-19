@@ -20,13 +20,11 @@ import { deleteMatchAPI } from '@/lib/api/client'
 
 interface AdminMatchCardProps {
   match: Match
-  isSuperAdmin: boolean
   onDeleted?: () => void
 }
 
 export function AdminMatchCard({
   match,
-  isSuperAdmin,
   onDeleted,
 }: AdminMatchCardProps) {
   const [open, setOpen] = useState(false)
@@ -64,28 +62,26 @@ export function AdminMatchCard({
           >
             Manage match →
           </Link>
-          {isSuperAdmin && (
-            <div className="flex flex-wrap gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
-              <Link href={`/admin/matches/${match.id}/edit`}>
-                <Button variant="outline" size="sm" className="h-8">
-                  Edit
-                </Button>
-              </Link>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="h-8"
-                disabled={deleting}
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setOpen(true)
-                }}
-              >
-                {deleting ? 'Deleting...' : 'Delete'}
+          <div className="flex flex-wrap gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+            <Link href={`/admin/matches/${match.id}/edit`}>
+              <Button variant="outline" size="sm" className="h-8">
+                Edit
               </Button>
-            </div>
-          )}
+            </Link>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-8"
+              disabled={deleting}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setOpen(true)
+              }}
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

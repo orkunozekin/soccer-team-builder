@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
-import { verifySuperAdmin } from '@/lib/api/auth'
+import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { computeTeamCountForRSVPCount, generateTeams } from '@/lib/utils/teamGenerator'
 import type { RSVP } from '@/types/rsvp'
@@ -19,17 +19,17 @@ function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
  * POST /api/seed-match-rsvps
  * Body: { matchId: string }
  * Creates RSVPs for all test users (@test.soccer) for the given match.
- * Requires: super admin Bearer token, or header X-Seed-Secret matching SEED_SECRET env (optional).
+ * Requires: admin Bearer token, or header X-Seed-Secret matching SEED_SECRET env (optional).
  */
 export async function POST(request: Request) {
   const seedSecret = request.headers.get('x-seed-secret')
   const useSecret = process.env.SEED_SECRET && seedSecret === process.env.SEED_SECRET
 
   if (!useSecret) {
-    const { isSuperAdmin, error } = await verifySuperAdmin(request)
-    if (error || !isSuperAdmin) {
+    const { isAdmin, error } = await verifyAdmin(request)
+    if (error || !isAdmin) {
       return NextResponse.json(
-        { error: 'Super admin required or valid X-Seed-Secret' },
+        { error: 'Admin required or valid X-Seed-Secret' },
         { status: 403 }
       )
     }

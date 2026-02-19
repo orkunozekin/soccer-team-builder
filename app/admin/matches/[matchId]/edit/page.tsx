@@ -20,7 +20,7 @@ function EditMatchRedirect() {
 
 export default function EditMatchPage() {
   return (
-    <AdminRouteGuard requireSuperAdmin>
+    <AdminRouteGuard>
       <EditMatchRedirect />
     </AdminRouteGuard>
   )
