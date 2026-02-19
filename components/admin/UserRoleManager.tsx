@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { User, UserRole } from '@/types/user'
-import { getAllUsers, updateUser } from '@/lib/services/userService'
+import { getUsersPaginated, getUsersCount, updateUser } from '@/lib/services/userService'
 import {
   Select,
   SelectContent,
@@ -11,31 +11,55 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Pagination } from '@/components/ui/pagination'
 import { CardLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { useAuth } from '@/lib/hooks/useAuth'
+
+const PAGE_SIZE = 10
 
 export function UserRoleManager() {
   const { user: currentUser } = useAuth()
   const [users, setUsers] = useState<User[]>([])
+  const [totalCount, setTotalCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [page, setPage] = useState(1)
+  // cursors[i] = cursor to request page i+1 (cursors[0] = cursor for page 2)
+  const [cursors, setCursors] = useState<(string | null)[]>([null])
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const allUsers = await getAllUsers()
-        setUsers(allUsers)
-      } catch (err) {
-        console.error('Error fetching users:', err)
-      } finally {
-        setLoading(false)
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+
+  const fetchPage = async (pageNum: number, cursor: string | null) => {
+    setLoading(true)
+    try {
+      const [pageResult, count] = await Promise.all([
+        getUsersPaginated(PAGE_SIZE, cursor ?? undefined),
+        pageNum === 1 ? getUsersCount() : Promise.resolve(0),
+      ])
+      setUsers(pageResult.users)
+      if (pageNum === 1) {
+        setTotalCount(count)
       }
+      setCursors((prev) => {
+        const next = [...prev]
+        next[pageNum - 1] = pageResult.nextCursor
+        return next
+      })
+    } catch (err) {
+      console.error('Error fetching users:', err)
+      setUsers([])
+    } finally {
+      setLoading(false)
     }
+  }
 
-    fetchUsers()
-  }, [])
+  // Load page when page number changes. Page 1 uses cursor null; page N uses cursors[N-2].
+  useEffect(() => {
+    const cursorForRequest = page === 1 ? null : cursors[page - 2] ?? null
+    fetchPage(page, cursorForRequest)
+  }, [page])
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     setUpdating(userId)
@@ -120,6 +144,18 @@ export function UserRoleManager() {
             </div>
           ))}
         </div>
+
+        {totalCount > PAGE_SIZE && (
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={PAGE_SIZE}
+            onPrevious={() => setPage((p) => Math.max(1, p - 1))}
+            onNext={() => setPage((p) => p + 1)}
+            itemLabel="users"
+          />
+        )}
       </CardContent>
     </Card>
   )
