@@ -71,7 +71,9 @@ export async function POST(request: Request) {
         {
           uid: record.uid,
           email: user.email,
+          emailLower: user.email.toLowerCase(),
           displayName: user.displayName,
+          displayNameLower: user.displayName.toLowerCase(),
           jerseyNumber: user.jerseyNumber,
           position: user.position,
           role: 'user',

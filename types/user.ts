@@ -14,7 +14,9 @@ export interface User {
 export interface UserFirestore {
   uid: string
   email: string
+  emailLower?: string
   displayName: string
+  displayNameLower?: string
   jerseyNumber: number | null
   position: string | null
   role: UserRole

@@ -126,3 +126,45 @@ export async function deleteMatchAPI(matchId: string): Promise<{ success: boolea
 
   return response.json()
 }
+
+export async function deleteUserAPI(userId: string): Promise<{ success: boolean }> {
+  const response = await apiRequest(`/users/${userId}`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to delete user')
+  }
+
+  return response.json()
+}
+
+export async function searchUsersAPI(
+  q: string,
+  limit: number = 25
+): Promise<{
+  success: boolean
+  users: Array<{
+    uid: string
+    email: string
+    displayName: string
+    role: 'user' | 'admin'
+  }>
+}> {
+  const params = new URLSearchParams({
+    q,
+    limit: String(limit),
+  })
+
+  const response = await apiRequest(`/users/search?${params.toString()}`, {
+    method: 'GET',
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to search users')
+  }
+
+  return response.json()
+}

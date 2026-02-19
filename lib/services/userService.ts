@@ -10,6 +10,9 @@ export const createUser = async (
     uid,
     email,
     displayName,
+    // Precomputed fields for server-side prefix search
+    emailLower: email.toLowerCase(),
+    displayNameLower: displayName.toLowerCase(),
     jerseyNumber: null,
     position: null,
     role: 'user',
