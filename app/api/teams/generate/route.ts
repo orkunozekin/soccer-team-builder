@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/api/auth'
+import { verifyAdmin } from '@/lib/api/auth'
 import { generateTeams } from '@/lib/utils/teamGenerator'
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication
-    const { uid, error: authError } = await verifyAuth(request)
+    // Verify authentication and admin status
+    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
     if (authError || !uid) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Note: Admin verification should be done here
-    // For now, relying on Firestore security rules
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: 'Admin privileges required' },
+        { status: 403 }
+      )
+    }
 
     const { matchId } = await request.json()
 

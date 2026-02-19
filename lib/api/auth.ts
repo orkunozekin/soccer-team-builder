@@ -1,3 +1,6 @@
+import { getAdminAuth } from '@/lib/firebase/admin'
+import { getAdminDb } from '@/lib/firebase/admin'
+
 /**
  * Get the current user's auth token from the request
  */
@@ -10,15 +13,8 @@ export async function getAuthToken(request: Request): Promise<string | null> {
 }
 
 /**
- * Verify the user is authenticated
- * 
- * Note: This is a simplified version. In production, you should:
- * 1. Install firebase-admin: npm install firebase-admin
- * 2. Use Firebase Admin SDK to verify the token server-side
- * 3. This provides proper security and prevents token tampering
- * 
- * For now, we rely on Firestore security rules for authorization,
- * but we still check that a token is provided.
+ * Verify the user is authenticated using Firebase Admin SDK
+ * This provides proper server-side token verification
  */
 export async function verifyAuth(request: Request): Promise<{
   uid: string | null
@@ -29,14 +25,63 @@ export async function verifyAuth(request: Request): Promise<{
     return { uid: null, error: 'No authorization token provided' }
   }
 
-  // TODO: In production, verify with Firebase Admin SDK:
-  // import { initializeApp, cert } from 'firebase-admin/app'
-  // import { getAuth } from 'firebase-admin/auth'
-  // const decodedToken = await getAuth().verifyIdToken(token)
-  // return { uid: decodedToken.uid, error: null }
+  try {
+    // Use Firebase Admin SDK to verify the token
+    const adminAuth = getAdminAuth()
+    
+    // If Admin SDK is not configured, fall back to client SDK approach
+    if (!adminAuth) {
+      // Fallback: Accept token but rely on Firestore security rules
+      // This is less secure but allows development without service account
+      console.warn('Firebase Admin SDK not configured, using fallback verification')
+      return { uid: 'fallback', error: null }
+    }
 
-  // For now, we'll accept any valid token format
-  // Firestore security rules will handle actual authorization
-  // This is acceptable for MVP, but should be upgraded for production
-  return { uid: 'verified', error: null }
+    const decodedToken = await adminAuth.verifyIdToken(token)
+    return { uid: decodedToken.uid, error: null }
+  } catch (error: any) {
+    console.error('Token verification error:', error)
+    return { uid: null, error: 'Invalid or expired token' }
+  }
+}
+
+/**
+ * Verify the user has admin role
+ */
+export async function verifyAdmin(request: Request): Promise<{
+  uid: string | null
+  isAdmin: boolean
+  error: string | null
+}> {
+  const { uid, error } = await verifyAuth(request)
+  if (error || !uid) {
+    return { uid: null, isAdmin: false, error }
+  }
+
+  // If using fallback, skip admin check (Firestore rules will handle it)
+  if (uid === 'fallback') {
+    return { uid, isAdmin: false, error: null }
+  }
+
+  try {
+    const adminDb = getAdminDb()
+    if (!adminDb) {
+      // Fallback: Can't verify admin, rely on Firestore rules
+      return { uid, isAdmin: false, error: null }
+    }
+
+    const userDoc = await adminDb.collection('users').doc(uid).get()
+    if (!userDoc.exists) {
+      return { uid, isAdmin: false, error: 'User not found' }
+    }
+
+    const userData = userDoc.data()
+    const role = userData?.role || 'user'
+    const isAdmin = role === 'admin' || role === 'superAdmin'
+
+    return { uid, isAdmin, error: null }
+  } catch (error: any) {
+    console.error('Admin verification error:', error)
+    return { uid, isAdmin: false, error: 'Failed to verify admin status' }
+  }
 }

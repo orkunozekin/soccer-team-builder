@@ -38,15 +38,30 @@ UI Components → API Client → Next.js API Routes → Firebase Services → Fi
 ### Security
 
 **Current Implementation:**
-- API routes verify authentication tokens
-- Firestore security rules enforce authorization
-- Business logic is hidden on the server
+- ✅ Firebase Admin SDK installed and configured
+- ✅ API routes verify authentication tokens using Admin SDK
+- ✅ Admin role verification on server-side
+- ✅ Firestore security rules enforce authorization
+- ✅ Business logic is hidden on the server
 
-**Production Recommendations:**
-1. Install Firebase Admin SDK: `npm install firebase-admin`
-2. Use Admin SDK in API routes to verify tokens server-side
-3. Verify admin roles server-side before allowing operations
-4. Add rate limiting to API routes
+**Setup Instructions:**
+
+1. **Get Service Account Key:**
+   - Go to Firebase Console → Project Settings → Service Accounts
+   - Click "Generate New Private Key"
+   - Download the JSON file
+
+2. **Configure for Development:**
+   - Option A: Save JSON as `firebase-service-account.json` in project root
+     - Set `GOOGLE_APPLICATION_CREDENTIALS=./firebase-service-account.json` in `.env.local`
+   - Option B: Paste JSON content into `.env.local` as `FIREBASE_SERVICE_ACCOUNT_KEY` (minified)
+
+3. **Configure for Production:**
+   - Use environment variables in your hosting platform
+   - Set `FIREBASE_SERVICE_ACCOUNT_KEY` with the JSON content
+   - Or use `GOOGLE_APPLICATION_CREDENTIALS` pointing to the file path
+
+**Note:** The service account file is in `.gitignore` - never commit it!
 
 ### API Routes
 
