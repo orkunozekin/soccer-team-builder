@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { DatePickerTime } from '@/components/ui/date-picker-time'
 import { Match } from '@/types/match'
 import { format } from 'date-fns'
 
@@ -55,8 +56,13 @@ function EditMatchContent() {
     setSuccess(false)
     setSaving(true)
     try {
+      // Build match datetime in local time so the calendar day doesn't shift (avoid new Date(isoDate) = UTC midnight)
+      const [y, m, d] = date.split('-').map(Number)
+      const [h, min] = time.split(':').map(Number)
+      const matchDateTime = new Date(y, m - 1, d, h, min, 0, 0)
+
       const payload: Parameters<typeof updateMatchAPI>[1] = {
-        date: new Date(date).toISOString(),
+        date: matchDateTime.toISOString(),
         time,
         rsvpOpen,
         rsvpOpenAt: rsvpOpenAt ? new Date(rsvpOpenAt).toISOString() : null,
@@ -108,28 +114,17 @@ function EditMatchContent() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-                disabled={saving}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="time">Time (HH:mm)</Label>
-              <Input
-                id="time"
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                required
-                disabled={saving}
-              />
-            </div>
+            <DatePickerTime
+              dateId="date"
+              timeId="time"
+              date={date}
+              time={time}
+              onDateChange={setDate}
+              onTimeChange={setTime}
+              datePlaceholder="Select date"
+              disabled={saving}
+              timeStep={300}
+            />
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -146,6 +141,7 @@ function EditMatchContent() {
               <Input
                 id="rsvpOpenAt"
                 type="datetime-local"
+                step={600}
                 value={rsvpOpenAt}
                 onChange={(e) => setRsvpOpenAt(e.target.value)}
                 disabled={saving}
@@ -156,6 +152,7 @@ function EditMatchContent() {
               <Input
                 id="rsvpCloseAt"
                 type="datetime-local"
+                step={600}
                 value={rsvpCloseAt}
                 onChange={(e) => setRsvpCloseAt(e.target.value)}
                 disabled={saving}

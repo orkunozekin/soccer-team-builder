@@ -1,13 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { format } from 'date-fns'
 import { createMatchAPI } from '@/lib/api/client'
 import { getMatch } from '@/lib/services/matchService'
 import { useMatchStore } from '@/store/matchStore'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { DatePickerTime } from '@/components/ui/date-picker-time'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface AdminMatchControlsProps {
@@ -17,7 +15,7 @@ interface AdminMatchControlsProps {
 export function AdminMatchControls({ onMatchCreated }: AdminMatchControlsProps) {
   const { addMatch } = useMatchStore()
   const [date, setDate] = useState('')
-  const [time, setTime] = useState('')
+  const [time, setTime] = useState('09:00')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -35,10 +33,10 @@ export function AdminMatchControls({ onMatchCreated }: AdminMatchControlsProps) 
     setLoading(true)
 
     try {
-      // Combine date and time
-      const [hours, minutes] = time.split(':')
-      const matchDate = new Date(date)
-      matchDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0)
+      // Combine date and time in local time (avoid new Date(isoDate) which is UTC midnight and shifts the day in some timezones)
+      const [y, m, d] = date.split('-').map(Number)
+      const [hours, minutes] = time.split(':').map(Number)
+      const matchDate = new Date(y, m - 1, d, hours, minutes, 0, 0)
 
       // Call API route (validation on server)
       const { matchId } = await createMatchAPI(matchDate, time)
@@ -52,7 +50,7 @@ export function AdminMatchControls({ onMatchCreated }: AdminMatchControlsProps) 
 
       setSuccess(true)
       setDate('')
-      setTime('')
+      setTime('09:00')
       setTimeout(() => setSuccess(false), 3000)
 
       if (onMatchCreated) {
@@ -78,32 +76,18 @@ export function AdminMatchControls({ onMatchCreated }: AdminMatchControlsProps) 
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="date">Date</Label>
-            <Input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              min={today}
-              required
-              disabled={loading}
-              className="h-11 text-base sm:h-9 sm:text-sm"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="time">Time</Label>
-            <Input
-              id="time"
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              required
-              disabled={loading}
-              className="h-11 text-base sm:h-9 sm:text-sm"
-            />
-          </div>
+          <DatePickerTime
+            dateId="date"
+            timeId="time"
+            date={date}
+            time={time}
+            onDateChange={setDate}
+            onTimeChange={setTime}
+            datePlaceholder="Select date"
+            disabled={loading}
+            minDate={new Date(today + 'T12:00:00')}
+            timeStep={300}
+          />
 
           {error && (
             <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">

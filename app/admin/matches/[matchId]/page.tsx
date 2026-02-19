@@ -17,6 +17,16 @@ import { TeamsDisplay } from '@/components/teams/TeamsDisplay'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Match } from '@/types/match'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
@@ -28,6 +38,7 @@ function AdminMatchManagementContent() {
   const matchId = params?.matchId as string
   const [match, setMatch] = useState<Match | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [teams, setTeams] = useState<Team[]>([])
   const [benchPlayerIds, setBenchPlayerIds] = useState<string[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
@@ -93,11 +104,12 @@ function AdminMatchManagementContent() {
     return <PageLoadingSkeleton showBack variant="container" />
   }
 
-  const handleDeleteMatch = async () => {
-    if (!matchId || !confirm('Delete this match? This will remove the match, its teams, bench, and RSVPs. This cannot be undone.')) return
+  const handleConfirmDeleteMatch = async () => {
+    if (!matchId) return
     setDeleting(true)
     try {
       await deleteMatchAPI(matchId)
+      setDeleteDialogOpen(false)
       router.push('/admin')
     } catch (err) {
       console.error(err)
@@ -150,13 +162,36 @@ function AdminMatchManagementContent() {
                 <Button
                   variant="destructive"
                   disabled={deleting}
-                  onClick={handleDeleteMatch}
+                  onClick={() => setDeleteDialogOpen(true)}
                 >
                   {deleting ? 'Deleting...' : 'Delete match'}
                 </Button>
               </CardContent>
             </Card>
           )}
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete match?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will remove the match, its teams, bench, and RSVPs. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleConfirmDeleteMatch()
+                  }}
+                  disabled={deleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <RSVPPollControls match={match} />
           <GenerateTeamsButton match={match} onTeamsGenerated={refreshData} />
           <PlayerTransfer
