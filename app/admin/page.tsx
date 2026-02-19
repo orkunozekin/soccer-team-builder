@@ -6,6 +6,7 @@ import { AdminRouteGuard } from '@/components/admin/AdminRouteGuard'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { AdminMatchControls } from '@/components/admin/AdminMatchControls'
+import { UserRoleManager } from '@/components/admin/UserRoleManager'
 import { getAllMatches } from '@/lib/services/matchService'
 import { useMatchStore } from '@/store/matchStore'
 import { MatchCard } from '@/components/matches/MatchCard'
@@ -83,6 +84,12 @@ function AdminDashboardContent() {
           )}
         </div>
       </div>
+
+      {isSuperAdmin && (
+        <div className="mt-6">
+          <UserRoleManager />
+        </div>
+      )}
 
       <Card className="mt-6">
         <CardHeader>
