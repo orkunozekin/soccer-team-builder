@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { cn } from '@/lib/utils'
+import { AuthProvider } from '@/components/auth/AuthProvider'
 
 // Use the Google Inter font from next/font
 const inter = Inter({
@@ -22,10 +23,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={cn(inter.variable, 'antialiased')}>
-        <header className="sticky top-0 z-20 mb-4 flex items-center justify-center bg-red-50 py-2 font-semibold text-white">
-          Jville Soccer Team Builder
-        </header>
-        {children}
+        <AuthProvider>
+          <header className="sticky top-0 z-20 mb-4 flex items-center justify-center bg-red-50 py-2 font-semibold text-white">
+            Jville Soccer Team Builder
+          </header>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   )
