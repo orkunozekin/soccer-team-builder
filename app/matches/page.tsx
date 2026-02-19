@@ -1,25 +1,52 @@
 'use client'
 
-import { useAuth } from '@/lib/hooks/useAuth'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/hooks/useAuth'
+import { getAllMatches } from '@/lib/services/matchService'
+import { useMatchStore } from '@/store/matchStore'
+import { MatchCard } from '@/components/matches/MatchCard'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function MatchesPage() {
-  const { user, userData, loading } = useAuth()
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
+  const { matches, loading, setMatches, setLoading } = useMatchStore()
 
-  if (loading) {
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login')
+      return
+    }
+
+    const fetchMatches = async () => {
+      if (user) {
+        setLoading(true)
+        try {
+          const allMatches = await getAllMatches()
+          setMatches(allMatches)
+        } catch (error) {
+          console.error('Error fetching matches:', error)
+        } finally {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchMatches()
+  }, [user, authLoading, router, setMatches, setLoading])
+
+  if (authLoading || loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <p className="text-lg">Loading...</p>
+          <p className="text-lg">Loading matches...</p>
         </div>
       </div>
     )
   }
 
   if (!user) {
-    router.push('/login')
     return null
   }
 
@@ -28,23 +55,31 @@ export default function MatchesPage() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Matches</h1>
         <p className="text-zinc-600 dark:text-zinc-400">
-          Welcome, {userData?.displayName || user.email}
+          View and RSVP to upcoming matches
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Matches</CardTitle>
-          <CardDescription>
-            Match management will be available in Phase 3
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-zinc-600 dark:text-zinc-400">
-            No matches available yet. Check back soon!
-          </p>
-        </CardContent>
-      </Card>
+      {matches.length === 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>No Matches</CardTitle>
+            <CardDescription>
+              No matches have been created yet. Check back soon!
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Admins can create matches from the admin dashboard.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {matches.map((match) => (
+            <MatchCard key={match.id} match={match} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

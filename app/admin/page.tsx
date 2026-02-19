@@ -1,11 +1,35 @@
 'use client'
 
+import { useEffect } from 'react'
+import Link from 'next/link'
 import { AdminRouteGuard } from '@/components/admin/AdminRouteGuard'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAdmin } from '@/lib/hooks/useAdmin'
+import { AdminMatchControls } from '@/components/admin/AdminMatchControls'
+import { getAllMatches } from '@/lib/services/matchService'
+import { useMatchStore } from '@/store/matchStore'
+import { MatchCard } from '@/components/matches/MatchCard'
+import { format } from 'date-fns'
 
 function AdminDashboardContent() {
   const { role, isSuperAdmin } = useAdmin()
+  const { matches, setMatches, setLoading } = useMatchStore()
+
+  useEffect(() => {
+    const fetchMatches = async () => {
+      setLoading(true)
+      try {
+        const allMatches = await getAllMatches()
+        setMatches(allMatches)
+      } catch (error) {
+        console.error('Error fetching matches:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchMatches()
+  }, [setMatches, setLoading])
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -16,48 +40,48 @@ function AdminDashboardContent() {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Match Management</CardTitle>
-            <CardDescription>
-              Create and manage soccer matches
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Match management will be available in Phase 3
-            </p>
-          </CardContent>
-        </Card>
+      <div className="space-y-6">
+        <AdminMatchControls
+          onMatchCreated={() => {
+            // Refresh matches list
+            getAllMatches().then(setMatches)
+          }}
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>RSVP Poll Controls</CardTitle>
-            <CardDescription>
-              Manage RSVP poll schedules
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              RSVP poll controls will be available in Phase 4
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Team Management</CardTitle>
-            <CardDescription>
-              View and manage team assignments
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Team management will be available in Phase 5
-            </p>
-          </CardContent>
-        </Card>
+        <div>
+          <h2 className="text-2xl font-bold mb-4">All Matches</h2>
+          {matches.length === 0 ? (
+            <Card>
+              <CardContent className="py-6">
+                <p className="text-center text-zinc-600 dark:text-zinc-400">
+                  No matches created yet. Create one above!
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {matches.map((match) => (
+                <Link key={match.id} href={`/admin/matches/${match.id}`}>
+                  <Card className="transition-all hover:shadow-md cursor-pointer h-full">
+                    <CardHeader>
+                      <CardTitle className="text-lg">
+                        {format(match.date, 'MMM d, yyyy')}
+                      </CardTitle>
+                      <CardDescription>
+                        {format(match.date, 'h:mm a')}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                        Click to manage
+                      </p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <Card className="mt-6">
