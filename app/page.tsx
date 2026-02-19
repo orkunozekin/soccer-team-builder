@@ -31,7 +31,7 @@ export default function Home() {
       <div className="w-full max-w-2xl space-y-6">
         <div className="text-center">
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            Soccerville Team Builder
+            Soccerville
           </h1>
           <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
             Manage pickup matches, RSVP to games, and get automatically assigned to balanced teams

@@ -33,7 +33,7 @@ export function Navigation() {
     return (
       <header className="sticky top-0 z-20 mb-4 flex items-center justify-center bg-red-50 py-2 font-semibold text-white">
         <div className="container mx-auto px-4">
-          <div className="text-center">Soccerville Team Builder</div>
+          <div className="text-center">Soccerville</div>
         </div>
       </header>
     )
