@@ -1,3 +1,6 @@
+import type { User } from '@/types/user'
+import type { Team } from '@/types/team'
+
 /**
  * Position to pitch coordinates mapping
  * Coordinates are relative (0-100%) for responsive design
@@ -5,6 +8,37 @@
 export interface PitchPosition {
   x: number // 0-100, left to right
   y: number // 0-100, top to bottom
+}
+
+export interface PlayerOnPitch {
+  user: User
+  position: PitchPosition
+}
+
+/**
+ * Map a team's players to pitch positions (grouped by position with offsets).
+ */
+export function getTeamPlayers(team: Team, users: User[]): PlayerOnPitch[] {
+  const teamUsers = team.playerIds
+    .map((id) => users.find((u) => u.uid === id))
+    .filter((u): u is User => !!u)
+
+  const positionGroups: Record<string, User[]> = {}
+  teamUsers.forEach((user) => {
+    const pos = user.position || 'CM'
+    if (!positionGroups[pos]) positionGroups[pos] = []
+    positionGroups[pos].push(user)
+  })
+
+  const players: PlayerOnPitch[] = []
+  Object.entries(positionGroups).forEach(([position, positionUsers]) => {
+    const basePos = getPitchPosition(position)
+    positionUsers.forEach((user, index) => {
+      const offsetPos = getOffsetPosition(basePos, index, positionUsers.length)
+      players.push({ user, position: offsetPos })
+    })
+  })
+  return players
 }
 
 const POSITION_COORDINATES: Record<string, PitchPosition> = {

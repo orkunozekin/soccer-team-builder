@@ -8,8 +8,6 @@ import {
 } from '@/lib/firebase/firestore'
 import { orderBy } from 'firebase/firestore'
 import { Match } from '@/types/match'
-import { shouldRSVPBeOpen } from '@/lib/utils/rsvpScheduler'
-
 
 export const getMatch = async (matchId: string): Promise<Match | null> => {
   const matchDoc = await getDocument('matches', matchId)
@@ -19,9 +17,8 @@ export const getMatch = async (matchId: string): Promise<Match | null> => {
   const rsvpOpenAt = matchDoc.rsvpOpenAt ? timestampToDate(matchDoc.rsvpOpenAt) : null
   const rsvpCloseAt = matchDoc.rsvpCloseAt ? timestampToDate(matchDoc.rsvpCloseAt) : null
 
-  // Schedule is always 6am–10pm CT on match day; no manual override
-  const shouldBeOpen = shouldRSVPBeOpen(matchDate, null, null)
-  const rsvpOpen = matchDoc.rsvpOpen && shouldBeOpen
+  // UI reflects admin intent: show Open when they've opened the poll (schedule is 6am–10pm CT for reference only)
+  const rsvpOpen = matchDoc.rsvpOpen === true
 
   return {
     id: matchId,
@@ -44,8 +41,7 @@ export const getAllMatches = async (): Promise<Match[]> => {
     const rsvpOpenAt = match.rsvpOpenAt ? timestampToDate(match.rsvpOpenAt) : null
     const rsvpCloseAt = match.rsvpCloseAt ? timestampToDate(match.rsvpCloseAt) : null
 
-    const shouldBeOpen = shouldRSVPBeOpen(matchDate, null, null)
-    const rsvpOpen = match.rsvpOpen && shouldBeOpen
+    const rsvpOpen = match.rsvpOpen === true
 
     return {
       id: match.id,
