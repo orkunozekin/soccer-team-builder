@@ -88,3 +88,41 @@ export async function createMatchAPI(
 
   return response.json()
 }
+
+export type UpdateMatchPayload = {
+  date?: string
+  time?: string
+  rsvpOpen?: boolean
+  rsvpOpenAt?: string | null
+  rsvpCloseAt?: string | null
+}
+
+export async function updateMatchAPI(
+  matchId: string,
+  updates: UpdateMatchPayload
+): Promise<{ success: boolean }> {
+  const response = await apiRequest(`/matches/${matchId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to update match')
+  }
+
+  return response.json()
+}
+
+export async function deleteMatchAPI(matchId: string): Promise<{ success: boolean }> {
+  const response = await apiRequest(`/matches/${matchId}`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to delete match')
+  }
+
+  return response.json()
+}

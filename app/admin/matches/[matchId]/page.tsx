@@ -7,12 +7,16 @@ import { getMatch } from '@/lib/services/matchService'
 import { getMatchTeams, getBench } from '@/lib/services/teamService'
 import { getMatchRSVPs } from '@/lib/services/rsvpService'
 import { getAllUsers } from '@/lib/services/userService'
-import { generateTeamsAPI } from '@/lib/api/client'
+import { generateTeamsAPI, deleteMatchAPI } from '@/lib/api/client'
+import { useAdmin } from '@/lib/hooks/useAdmin'
 import { RSVPPollControls } from '@/components/admin/RSVPPollControls'
+import Link from 'next/link'
 import { GenerateTeamsButton } from '@/components/admin/GenerateTeamsButton'
 import { PlayerTransfer } from '@/components/admin/PlayerTransfer'
 import { TeamsDisplay } from '@/components/teams/TeamsDisplay'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Match } from '@/types/match'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
@@ -20,8 +24,10 @@ import { User } from '@/types/user'
 function AdminMatchManagementContent() {
   const router = useRouter()
   const params = useParams()
+  const { isSuperAdmin } = useAdmin()
   const matchId = params?.matchId as string
   const [match, setMatch] = useState<Match | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [teams, setTeams] = useState<Team[]>([])
   const [benchPlayerIds, setBenchPlayerIds] = useState<string[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
@@ -87,6 +93,20 @@ function AdminMatchManagementContent() {
     return <PageLoadingSkeleton showBack variant="container" />
   }
 
+  const handleDeleteMatch = async () => {
+    if (!matchId || !confirm('Delete this match? This will remove the match, its teams, bench, and RSVPs. This cannot be undone.')) return
+    setDeleting(true)
+    try {
+      await deleteMatchAPI(matchId)
+      router.push('/admin')
+    } catch (err) {
+      console.error(err)
+      alert(err instanceof Error ? err.message : 'Failed to delete match')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   if (!match) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -113,6 +133,30 @@ function AdminMatchManagementContent() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-6">
+          {isSuperAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Match settings</CardTitle>
+                <CardDescription>
+                  Edit or delete this match. Only super admins see this.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-2">
+                <Link href={`/admin/matches/${matchId}/edit`}>
+                  <Button variant="outline">
+                    Edit match
+                  </Button>
+                </Link>
+                <Button
+                  variant="destructive"
+                  disabled={deleting}
+                  onClick={handleDeleteMatch}
+                >
+                  {deleting ? 'Deleting...' : 'Delete match'}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
           <RSVPPollControls match={match} />
           <GenerateTeamsButton match={match} onTeamsGenerated={refreshData} />
           <PlayerTransfer

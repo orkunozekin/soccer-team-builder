@@ -85,3 +85,42 @@ export async function verifyAdmin(request: Request): Promise<{
     return { uid, isAdmin: false, error: 'Failed to verify admin status' }
   }
 }
+
+/**
+ * Verify the user has super admin role
+ */
+export async function verifySuperAdmin(request: Request): Promise<{
+  uid: string | null
+  isSuperAdmin: boolean
+  error: string | null
+}> {
+  const { uid, error } = await verifyAuth(request)
+  if (error || !uid) {
+    return { uid: null, isSuperAdmin: false, error }
+  }
+
+  if (uid === 'fallback') {
+    return { uid, isSuperAdmin: false, error: null }
+  }
+
+  try {
+    const adminDb = getAdminDb()
+    if (!adminDb) {
+      return { uid, isSuperAdmin: false, error: null }
+    }
+
+    const userDoc = await adminDb.collection('users').doc(uid).get()
+    if (!userDoc.exists) {
+      return { uid: null, isSuperAdmin: false, error: 'User not found' }
+    }
+
+    const userData = userDoc.data()
+    const role = userData?.role || 'user'
+    const isSuperAdmin = role === 'superAdmin'
+
+    return { uid, isSuperAdmin, error: null }
+  } catch (error: any) {
+    console.error('Super admin verification error:', error)
+    return { uid: null, isSuperAdmin: false, error: 'Failed to verify super admin status' }
+  }
+}

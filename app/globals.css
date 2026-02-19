@@ -75,4 +75,23 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Date and time inputs: picker icon on the very right */
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    position: relative;
+    padding-right: 2.5rem;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    opacity: 0.7;
+  }
 }

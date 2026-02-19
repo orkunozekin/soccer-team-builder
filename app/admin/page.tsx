@@ -9,8 +9,7 @@ import { AdminMatchControls } from '@/components/admin/AdminMatchControls'
 import { UserRoleManager } from '@/components/admin/UserRoleManager'
 import { getAllMatches } from '@/lib/services/matchService'
 import { useMatchStore } from '@/store/matchStore'
-import { MatchCard } from '@/components/matches/MatchCard'
-import { format } from 'date-fns'
+import { AdminMatchCard } from '@/components/admin/AdminMatchCard'
 
 function AdminDashboardContent() {
   const { isSuperAdmin } = useAdmin()
@@ -62,23 +61,12 @@ function AdminDashboardContent() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {matches.map((match) => (
-                <Link key={match.id} href={`/admin/matches/${match.id}`}>
-                  <Card className="transition-all hover:shadow-md cursor-pointer h-full">
-                    <CardHeader>
-                      <CardTitle className="text-lg">
-                        {format(match.date, 'MMM d, yyyy')}
-                      </CardTitle>
-                      <CardDescription>
-                        {format(match.date, 'h:mm a')}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                        Click to manage
-                      </p>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <AdminMatchCard
+                  key={match.id}
+                  match={match}
+                  isSuperAdmin={isSuperAdmin}
+                  onDeleted={() => getAllMatches().then(setMatches)}
+                />
               ))}
             </div>
           )}
