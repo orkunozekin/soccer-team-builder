@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { ProfileForm } from '@/components/profile/ProfileForm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -17,13 +18,7 @@ export default function ProfilePage() {
   }, [user, loading, router])
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg">Loading...</p>
-        </div>
-      </div>
-    )
+    return <PageLoadingSkeleton variant="container" />
   }
 
   if (!user) {

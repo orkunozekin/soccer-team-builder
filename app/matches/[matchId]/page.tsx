@@ -10,6 +10,7 @@ import { getAllUsers } from '@/lib/services/userService'
 import { useMatchStore } from '@/store/matchStore'
 import { MatchDetails } from '@/components/matches/MatchDetails'
 import { TeamsDisplay } from '@/components/teams/TeamsDisplay'
+import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
 
@@ -71,13 +72,7 @@ export default function MatchDetailsPage() {
   }, [matchId, user, authLoading, router, setCurrentMatch, setMatchRSVPs])
 
   if (authLoading || loadingMatch) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg">Loading match details...</p>
-        </div>
-      </div>
-    )
+    return <PageLoadingSkeleton showBack variant="container" />
   }
 
   if (!user || !currentMatch) {

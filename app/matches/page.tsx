@@ -7,6 +7,7 @@ import { useAdmin } from '@/lib/hooks/useAdmin'
 import { getAllMatches } from '@/lib/services/matchService'
 import { useMatchStore } from '@/store/matchStore'
 import { MatchCard } from '@/components/matches/MatchCard'
+import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function MatchesPage() {
@@ -39,13 +40,7 @@ export default function MatchesPage() {
   }, [user, authLoading, router, setMatches, setLoading])
 
   if (authLoading || loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg">Loading matches...</p>
-        </div>
-      </div>
-    )
+    return <PageLoadingSkeleton variant="container" />
   }
 
   if (!user) {

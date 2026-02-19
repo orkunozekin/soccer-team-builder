@@ -10,8 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { CardLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { useAuth } from '@/lib/hooks/useAuth'
 
 export function UserRoleManager() {
@@ -60,15 +60,7 @@ export function UserRoleManager() {
   }
 
   if (loading) {
-    return (
-      <Card>
-        <CardContent className="py-6">
-          <p className="text-center text-zinc-600 dark:text-zinc-400">
-            Loading users...
-          </p>
-        </CardContent>
-      </Card>
-    )
+    return <CardLoadingSkeleton />
   }
 
   return (

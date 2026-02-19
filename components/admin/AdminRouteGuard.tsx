@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useAdmin } from '@/lib/hooks/useAdmin'
+import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 
 interface AdminRouteGuardProps {
   children: React.ReactNode
@@ -38,13 +39,7 @@ export function AdminRouteGuard({
   }, [user, loading, isAdmin, isSuperAdmin, requireSuperAdmin, router])
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg">Loading...</p>
-        </div>
-      </div>
-    )
+    return <PageLoadingSkeleton variant="centered" />
   }
 
   if (!user) {

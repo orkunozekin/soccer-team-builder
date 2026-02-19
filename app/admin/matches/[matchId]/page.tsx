@@ -12,6 +12,7 @@ import { RSVPPollControls } from '@/components/admin/RSVPPollControls'
 import { GenerateTeamsButton } from '@/components/admin/GenerateTeamsButton'
 import { PlayerTransfer } from '@/components/admin/PlayerTransfer'
 import { TeamsDisplay } from '@/components/teams/TeamsDisplay'
+import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { Match } from '@/types/match'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
@@ -82,24 +83,8 @@ function AdminMatchManagementContent() {
     }
   }, [mounted, loading, matchId, teams.length])
 
-  if (!mounted) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg">Loading...</p>
-        </div>
-      </div>
-    )
+  if (!mounted || loading) {
+    return <PageLoadingSkeleton showBack variant="container" />
   }
 
   if (!match) {
