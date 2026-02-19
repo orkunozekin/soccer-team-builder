@@ -13,8 +13,9 @@ function timestampToMs(
 ): number {
   if (!t) return 0
   if (t instanceof Date) return t.getTime()
-  if (typeof (t as { toDate }).toDate === 'function') {
-    return (t as Timestamp).toDate().getTime()
+  const withToDate = t as { toDate: () => Date }
+  if (typeof withToDate.toDate === 'function') {
+    return withToDate.toDate().getTime()
   }
   return 0
 }
