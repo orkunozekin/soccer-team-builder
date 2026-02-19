@@ -12,8 +12,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Jville Soccer',
-  description: 'Jville Soccer Team Builder',
+  title: 'Soccerville',
+  description: 'Soccerville Team Builder',
 }
 
 export default function RootLayout({
