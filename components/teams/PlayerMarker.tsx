@@ -13,8 +13,9 @@ interface PlayerMarkerProps {
   isMobile: boolean
   isAdmin: boolean
   onPlayerClick?: (userId: string, teamId: string | null) => void
-  /** When true, counter-flip the icon/label so text reads correctly on a flipped pitch */
-  counterFlip?: boolean
+  /** Counter-flip the icon/label so text reads correctly on a flipped pitch */
+  counterFlipX?: boolean
+  counterFlipY?: boolean
 }
 
 export function PlayerMarker({
@@ -24,7 +25,8 @@ export function PlayerMarker({
   isMobile,
   isAdmin,
   onPlayerClick,
-  counterFlip = false,
+  counterFlipX = false,
+  counterFlipY = false,
 }: PlayerMarkerProps) {
   const isGK = isGoalkeeper(user.position)
   const clickable = isAdmin && onPlayerClick
@@ -73,8 +75,13 @@ export function PlayerMarker({
       style={{ left: `${position.x}%`, top: `${position.y}%` }}
       onClick={() => clickable && onPlayerClick(user.uid, team.id)}
     >
-      {counterFlip ? (
-        <div className="inline-block" style={{ transform: 'scaleX(-1)' }}>
+      {counterFlipX || counterFlipY ? (
+        <div
+          className="inline-block"
+          style={{
+            transform: `scaleX(${counterFlipX ? -1 : 1}) scaleY(${counterFlipY ? -1 : 1})`,
+          }}
+        >
           {content}
         </div>
       ) : (

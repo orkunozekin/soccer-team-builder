@@ -12,10 +12,10 @@ import { generateTeamsAPI, deleteMatchAPI, updateMatchAPI } from '@/lib/api/clie
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { RSVPPollControls } from '@/components/admin/RSVPPollControls'
 import { DatePickerTime } from '@/components/ui/date-picker-time'
-import { GenerateTeamsButton } from '@/components/admin/GenerateTeamsButton'
 import { PlayerTransfer } from '@/components/admin/PlayerTransfer'
 import { TeamsDisplay } from '@/components/teams/TeamsDisplay'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
+import { BackLink } from '@/components/ui/back-link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -165,12 +165,7 @@ function AdminMatchManagementContent() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <button
-        onClick={() => router.push('/admin')}
-        className="mb-6 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
-      >
-        ← Back to Admin Dashboard
-      </button>
+      <BackLink href="/admin" label="Back to Admin Dashboard" />
 
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Match Management</h1>
@@ -179,7 +174,7 @@ function AdminMatchManagementContent() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
         <div className="space-y-6">
           {isSuperAdmin && (
             <Card>
@@ -247,9 +242,6 @@ function AdminMatchManagementContent() {
             </AlertDialogContent>
           </AlertDialog>
           <RSVPPollControls match={match} />
-          {rsvpCount > 2 && (
-            <GenerateTeamsButton match={match} onTeamsGenerated={refreshData} />
-          )}
           {teams.length > 0 && (
             <PlayerTransfer
               matchId={matchId}

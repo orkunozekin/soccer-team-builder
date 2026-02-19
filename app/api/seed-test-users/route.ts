@@ -2,23 +2,11 @@ import { NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { verifySuperAdmin } from '@/lib/api/auth'
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin'
-
-const TEST_USERS = [
-  { email: 'alex.rivera@test.soccer', password: 'testpass123', displayName: 'Alex Rivera' },
-  { email: 'jordan.lee@test.soccer', password: 'testpass123', displayName: 'Jordan Lee' },
-  { email: 'sam.chen@test.soccer', password: 'testpass123', displayName: 'Sam Chen' },
-  { email: 'riley.morgan@test.soccer', password: 'testpass123', displayName: 'Riley Morgan' },
-  { email: 'casey.kim@test.soccer', password: 'testpass123', displayName: 'Casey Kim' },
-  { email: 'quinn.taylor@test.soccer', password: 'testpass123', displayName: 'Quinn Taylor' },
-  { email: 'morgan.james@test.soccer', password: 'testpass123', displayName: 'Morgan James' },
-  { email: 'drew.patel@test.soccer', password: 'testpass123', displayName: 'Drew Patel' },
-  { email: 'jesse.wright@test.soccer', password: 'testpass123', displayName: 'Jesse Wright' },
-  { email: 'skyler.brooks@test.soccer', password: 'testpass123', displayName: 'Skyler Brooks' },
-]
+import { TEST_USERS } from '@/lib/testData/testUsers'
 
 /**
  * POST /api/seed-test-users
- * Creates the 10 test users in Firebase Auth and Firestore.
+ * Creates the test users in Firebase Auth and Firestore.
  * Requires: super admin Bearer token, or header X-Seed-Secret matching SEED_SECRET env (optional).
  */
 export async function POST(request: Request) {
@@ -45,37 +33,62 @@ export async function POST(request: Request) {
     )
   }
 
-  const results: { email: string; status: 'created' | 'exists' | 'error'; message?: string }[] = []
+  const results: {
+    email: string
+    status: 'created' | 'updated' | 'error'
+    message?: string
+  }[] = []
 
   for (const user of TEST_USERS) {
     try {
-      const record = await adminAuth.createUser({
+      let created = true
+      let record = await adminAuth.createUser({
         email: user.email,
         password: user.password,
         displayName: user.displayName,
+      }).catch(async (err: unknown) => {
+        const code = (err as { code?: string })?.code
+        const message = err instanceof Error ? err.message : String(err)
+        if (
+          code === 'auth/email-already-exists' ||
+          String(message).includes('already exists')
+        ) {
+          created = false
+          return await adminAuth.getUserByEmail(user.email)
+        }
+        throw err
       })
+
+      // Ensure Auth displayName matches seed data
+      if (record.displayName !== user.displayName) {
+        record = await adminAuth.updateUser(record.uid, { displayName: user.displayName })
+      }
 
       const now = Timestamp.now()
-      await adminDb.collection('users').doc(record.uid).set({
-        uid: record.uid,
-        email: user.email,
-        displayName: user.displayName,
-        jerseyNumber: null,
-        position: null,
-        role: 'user',
-        createdAt: now,
-        updatedAt: now,
-      })
+      const userRef = adminDb.collection('users').doc(record.uid)
+      const existing = await userRef.get()
+      await userRef.set(
+        {
+          uid: record.uid,
+          email: user.email,
+          displayName: user.displayName,
+          jerseyNumber: user.jerseyNumber,
+          position: user.position,
+          role: 'user',
+          isTestUser: true,
+          createdAt: existing.exists ? existing.data()?.createdAt ?? now : now,
+          updatedAt: now,
+        },
+        { merge: true }
+      )
 
-      results.push({ email: user.email, status: 'created' })
+      results.push({
+        email: user.email,
+        status: created ? 'created' : 'updated',
+      })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
-      const code = (err as { code?: string })?.code
-      if (code === 'auth/email-already-exists' || String(message).includes('already exists')) {
-        results.push({ email: user.email, status: 'exists' })
-      } else {
-        results.push({ email: user.email, status: 'error', message })
-      }
+      results.push({ email: user.email, status: 'error', message })
     }
   }
 
@@ -84,7 +97,7 @@ export async function POST(request: Request) {
     results,
     summary: {
       created: results.filter((r) => r.status === 'created').length,
-      exists: results.filter((r) => r.status === 'exists').length,
+      updated: results.filter((r) => r.status === 'updated').length,
       error: results.filter((r) => r.status === 'error').length,
     },
   })

@@ -68,7 +68,7 @@ export function SoccerPitch({
           isMobile={isMobile}
           isAdmin={isAdmin}
           onPlayerClick={onPlayerClick}
-          flip={index === 1}
+          flipY={index === 1}
         />
       ))}
     </div>

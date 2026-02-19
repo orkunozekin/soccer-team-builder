@@ -11,7 +11,8 @@ interface SinglePitchViewProps {
   isMobile: boolean
   isAdmin: boolean
   onPlayerClick?: (userId: string, teamId: string | null) => void
-  flip?: boolean
+  flipX?: boolean
+  flipY?: boolean
 }
 
 export function SinglePitchView({
@@ -20,12 +21,28 @@ export function SinglePitchView({
   isMobile,
   isAdmin,
   onPlayerClick,
-  flip = false,
+  flipX = false,
+  flipY = false,
 }: SinglePitchViewProps) {
+  const scaleX = flipX ? -1 : 1
+  const scaleY = flipY ? -1 : 1
+  const pitchTransform =
+    scaleX === 1 && scaleY === 1
+      ? undefined
+      : `scaleX(${scaleX}) scaleY(${scaleY})`
+
+  // Mobile: make the pitch a bit taller so it doesn't feel squished.
+  // (aspect-ratio is width/height)
+  const aspectRatio = isMobile ? '4/3' : '105/68'
+
   return (
     <div
-      className={`relative w-full ${flip ? 'scale-x-[-1]' : ''}`}
-      style={{ aspectRatio: '105/68' }}
+      className="relative w-full"
+      style={{
+        aspectRatio,
+        transform: pitchTransform,
+        transformOrigin: 'center',
+      }}
     >
       <div className="relative w-full h-full overflow-visible">
         <PitchSurface />
@@ -38,7 +55,8 @@ export function SinglePitchView({
             isMobile={isMobile}
             isAdmin={isAdmin}
             onPlayerClick={onPlayerClick}
-            counterFlip={flip}
+            counterFlipX={flipX}
+            counterFlipY={flipY}
           />
         ))}
       </div>

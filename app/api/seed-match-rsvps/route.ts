@@ -2,19 +2,18 @@ import { NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { verifySuperAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { generateTeams } from '@/lib/utils/teamGenerator'
+import type { RSVP } from '@/types/rsvp'
+import type { User } from '@/types/user'
 
-const TEST_USER_EMAILS = [
-  'alex.rivera@test.soccer',
-  'jordan.lee@test.soccer',
-  'sam.chen@test.soccer',
-  'riley.morgan@test.soccer',
-  'casey.kim@test.soccer',
-  'quinn.taylor@test.soccer',
-  'morgan.james@test.soccer',
-  'drew.patel@test.soccer',
-  'jesse.wright@test.soccer',
-  'skyler.brooks@test.soccer',
-]
+const TEAM_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6']
+const TEAM_NAMES = ['Blue', 'Red', 'Green', 'Orange', 'Purple']
+
+function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
+  if (!t) return null
+  if (t instanceof Date) return t
+  return (t as Timestamp).toDate()
+}
 
 /**
  * POST /api/seed-match-rsvps
@@ -36,7 +35,7 @@ export async function POST(request: Request) {
     }
   }
 
-  let body: { matchId?: string }
+  let body: { matchId?: string; regenerateTeams?: boolean }
   try {
     body = await request.json()
   } catch {
@@ -47,6 +46,7 @@ export async function POST(request: Request) {
   if (!matchId || typeof matchId !== 'string') {
     return NextResponse.json({ error: 'matchId is required' }, { status: 400 })
   }
+  const regenerateTeamsAfter = body.regenerateTeams !== false
 
   const adminDb = getAdminDb()
   if (!adminDb) {
@@ -62,11 +62,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Match not found' }, { status: 404 })
   }
 
-  // Get UIDs of test users (by email)
-  const usersSnap = await adminDb.collection('users').get()
-  const testUserIds = usersSnap.docs
-    .filter((d) => TEST_USER_EMAILS.includes((d.data().email as string) ?? ''))
-    .map((d) => d.id)
+  // Get UIDs of seeded test users
+  const usersSnap = await adminDb
+    .collection('users')
+    .where('isTestUser', '==', true)
+    .get()
+  const testUserIds = usersSnap.docs.map((d) => d.id)
 
   if (testUserIds.length === 0) {
     return NextResponse.json(
@@ -104,10 +105,97 @@ export async function POST(request: Request) {
     results.push({ userId, status: 'created' })
   }
 
+  // Optional: regenerate teams so the match reflects the new RSVP count immediately
+  if (regenerateTeamsAfter) {
+    const rsvpSnap = await adminDb
+      .collection('rsvps')
+      .where('matchId', '==', matchId)
+      .where('status', '==', 'confirmed')
+      .get()
+
+    const rsvpsToUse: RSVP[] = rsvpSnap.docs.map((d) => {
+      const data = d.data()
+      return {
+        id: d.id,
+        matchId: data.matchId ?? matchId,
+        userId: data.userId,
+        status: data.status ?? 'confirmed',
+        rsvpAt: timestampToDate(data.rsvpAt) || new Date(),
+        updatedAt: timestampToDate(data.updatedAt) || new Date(),
+      }
+    })
+
+    const usersSnapAll = await adminDb.collection('users').get()
+    const users: User[] = usersSnapAll.docs.map((d) => {
+      const data = d.data()
+      return {
+        uid: data.uid ?? d.id,
+        email: data.email ?? '',
+        displayName: data.displayName ?? '',
+        jerseyNumber: data.jerseyNumber ?? null,
+        position: data.position ?? null,
+        role: data.role || 'user',
+        createdAt: timestampToDate(data.createdAt) || new Date(),
+        updatedAt: timestampToDate(data.updatedAt) || new Date(),
+      }
+    })
+
+    const teamAssignments = generateTeams(rsvpsToUse, users, 11)
+
+    const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
+    const benchCol = adminDb.collection(`matches/${matchId}/bench`)
+
+    // Delete existing teams
+    const existingTeams = await teamsCol.get()
+    const deleteBatch = adminDb.batch()
+    existingTeams.docs.forEach((d) => deleteBatch.delete(d.ref))
+    await deleteBatch.commit()
+
+    const allPlayerIds = new Set<string>()
+    const writes: Promise<unknown>[] = []
+
+    for (let i = 0; i < teamAssignments.length; i++) {
+      const assignment = teamAssignments[i]
+      const teamId = `team_${matchId}_${assignment.teamNumber}_${Date.now()}`
+      writes.push(
+        teamsCol.doc(teamId).set({
+          matchId,
+          teamNumber: assignment.teamNumber,
+          name: TEAM_NAMES[i] ?? `Team ${assignment.teamNumber}`,
+          color: TEAM_COLORS[i] ?? '#3b82f6',
+          playerIds: assignment.playerIds,
+          maxSize: 11,
+          createdAt: now,
+          updatedAt: now,
+        })
+      )
+      assignment.playerIds.forEach((id) => allPlayerIds.add(id))
+    }
+
+    const benchPlayerIds = rsvpsToUse
+      .map((r) => r.userId)
+      .filter((id) => !allPlayerIds.has(id))
+
+    const benchId = `bench_${matchId}`
+    writes.push(
+      benchCol.doc(benchId).set(
+        {
+          matchId,
+          playerIds: benchPlayerIds,
+          updatedAt: now,
+        },
+        { merge: true }
+      )
+    )
+
+    await Promise.all(writes)
+  }
+
   return NextResponse.json({
     success: true,
     matchId,
     results,
+    regenerateTeams: regenerateTeamsAfter,
     summary: {
       created: results.filter((r) => r.status === 'created').length,
       exists: results.filter((r) => r.status === 'exists').length,

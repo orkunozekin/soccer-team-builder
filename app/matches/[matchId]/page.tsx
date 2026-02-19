@@ -11,6 +11,7 @@ import { useMatchStore } from '@/store/matchStore'
 import { MatchDetails } from '@/components/matches/MatchDetails'
 import { TeamsDisplay } from '@/components/teams/TeamsDisplay'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
+import { BackLink } from '@/components/ui/back-link'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
 
@@ -80,25 +81,24 @@ export default function MatchDetailsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <button
-        onClick={() => router.push('/matches')}
-        className="mb-6 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
-      >
-        ← Back to Matches
-      </button>
+    <div className="container mx-auto px-4 py-2">
+      <BackLink href="/matches" label="Back to Matches" />
 
-      <MatchDetails match={currentMatch} rsvpCount={matchRSVPs.length} />
-
-      {!loadingTeams && teams.length > 0 && (
-        <div className="mt-8">
-          <TeamsDisplay
-            teams={teams}
-            users={allUsers}
-            benchPlayerIds={benchPlayerIds}
-          />
+      <div className="mt-6 grid gap-10 lg:grid-cols-2 lg:gap-12">
+        <div>
+          <MatchDetails match={currentMatch} rsvpCount={matchRSVPs.length} />
         </div>
-      )}
+
+        <div>
+          {!loadingTeams && teams.length > 0 && (
+            <TeamsDisplay
+              teams={teams}
+              users={allUsers}
+              benchPlayerIds={benchPlayerIds}
+            />
+          )}
+        </div>
+      </div>
     </div>
   )
 }
