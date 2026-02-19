@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import { User } from '@/types/user'
 import { Team } from '@/types/team'
-import { updateTeam, updateBench, getBench } from '@/lib/services/teamService'
-import { isGoalkeeper } from '@/lib/utils/teamGenerator'
+import { transferPlayerAPI } from '@/lib/api/client'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -63,78 +62,14 @@ export function PlayerTransfer({
         }
       }
 
-      const player = users.find((u) => u.uid === selectedPlayerId)
-      const isGK = player && isGoalkeeper(player.position)
-
-      // Check if target is bench
-      if (targetTeamId === 'bench') {
-        // Move to bench
-        if (currentTeam) {
-          // Remove from team
-          const newPlayerIds = currentTeam.playerIds.filter(
-            (id) => id !== selectedPlayerId
-          )
-          await updateTeam(matchId, currentTeam.id, {
-            playerIds: newPlayerIds,
-          })
-        }
-
-        // Add to bench
-        const newBenchIds = [...benchPlayerIds]
-        if (!newBenchIds.includes(selectedPlayerId)) {
-          newBenchIds.push(selectedPlayerId)
-          await updateBench(matchId, newBenchIds)
-        }
-      } else {
-        // Move to team
-        const targetTeam = teams.find((t) => t.id === targetTeamId)
-        if (!targetTeam) {
-          setError('Target team not found')
-          setLoading(false)
-          return
-        }
-
-        // Check team size
-        if (targetTeam.playerIds.length >= targetTeam.maxSize) {
-          setError(`Team is full (${targetTeam.maxSize} players)`)
-          setLoading(false)
-          return
-        }
-
-        // Check goalkeeper limit (max 1 per team)
-        if (isGK) {
-          const hasGK = targetTeam.playerIds.some((id) => {
-            const p = users.find((u) => u.uid === id)
-            return p && isGoalkeeper(p.position)
-          })
-          if (hasGK) {
-            setError('Team already has a goalkeeper')
-            setLoading(false)
-            return
-          }
-        }
-
-        // Remove from current location
-        if (currentTeam) {
-          const newPlayerIds = currentTeam.playerIds.filter(
-            (id) => id !== selectedPlayerId
-          )
-          await updateTeam(matchId, currentTeam.id, {
-            playerIds: newPlayerIds,
-          })
-        } else if (isOnBench) {
-          const newBenchIds = benchPlayerIds.filter(
-            (id) => id !== selectedPlayerId
-          )
-          await updateBench(matchId, newBenchIds)
-        }
-
-        // Add to target team
-        const newPlayerIds = [...targetTeam.playerIds, selectedPlayerId]
-        await updateTeam(matchId, targetTeam.id, {
-          playerIds: newPlayerIds,
-        })
-      }
+      // Call API route (validation and business logic on server)
+      await transferPlayerAPI(
+        matchId,
+        selectedPlayerId,
+        targetTeamId,
+        currentTeam?.id,
+        isOnBench
+      )
 
       setSelectedPlayerId('')
       setTargetTeamId('')

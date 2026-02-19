@@ -51,7 +51,7 @@ export const getAllUsers = async (): Promise<User[]> => {
 
 export const updateUser = async (
   uid: string,
-  updates: Partial<Pick<User, 'displayName' | 'jerseyNumber' | 'position'>>
+  updates: Partial<Pick<User, 'displayName' | 'jerseyNumber' | 'position' | 'role'>>
 ): Promise<void> => {
   await updateDocument('users', uid, updates)
 }

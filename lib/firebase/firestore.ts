@@ -7,7 +7,6 @@ import {
   updateDoc,
   deleteDoc,
   query,
-  where,
   Timestamp,
   DocumentData,
   QueryConstraint,

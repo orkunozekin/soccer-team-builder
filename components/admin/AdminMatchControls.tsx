@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { format } from 'date-fns'
-import { createMatch, updateMatch } from '@/lib/services/matchService'
+import { createMatchAPI } from '@/lib/api/client'
+import { getMatch } from '@/lib/services/matchService'
 import { useMatchStore } from '@/store/matchStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,10 +40,10 @@ export function AdminMatchControls({ onMatchCreated }: AdminMatchControlsProps) 
       const matchDate = new Date(date)
       matchDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0)
 
-      const matchId = await createMatch(matchDate, time, false)
+      // Call API route (validation on server)
+      const { matchId } = await createMatchAPI(matchDate, time)
       
       // Fetch the created match to add to store
-      const { getMatch } = await import('@/lib/services/matchService')
       const newMatch = await getMatch(matchId)
       
       if (newMatch) {
