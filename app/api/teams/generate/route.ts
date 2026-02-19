@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
-import { generateTeams } from '@/lib/utils/teamGenerator'
+import { computeTeamCountForRSVPCount, generateTeams } from '@/lib/utils/teamGenerator'
 import type { RSVP } from '@/types/rsvp'
 import type { User } from '@/types/user'
 
@@ -85,7 +85,8 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const teamAssignments = generateTeams(rsvpsToUse, users, 11)
+    const teamCount = computeTeamCountForRSVPCount(rsvpsToUse.length, 11, 2)
+    const teamAssignments = generateTeams(rsvpsToUse, users, 11, { teamCount })
 
     // Use same path format as client: collection id "matches/{matchId}/teams"
     const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
@@ -100,19 +101,20 @@ export async function POST(request: NextRequest) {
     const now = Timestamp.now()
     const allPlayerIds = new Set<string>()
 
+    const writes: Promise<unknown>[] = []
     for (let i = 0; i < teamAssignments.length; i++) {
       const assignment = teamAssignments[i]
       const teamId = `team_${matchId}_${assignment.teamNumber}_${Date.now()}`
-      teamsCol.doc(teamId).set({
+      writes.push(teamsCol.doc(teamId).set({
         matchId,
         teamNumber: assignment.teamNumber,
-        name: TEAM_NAMES[i] ?? `Team ${assignment.teamNumber}`,
-        color: TEAM_COLORS[i] ?? '#3b82f6',
+        name: TEAM_NAMES[i % TEAM_NAMES.length] ?? `Team ${assignment.teamNumber}`,
+        color: TEAM_COLORS[i % TEAM_COLORS.length] ?? '#3b82f6',
         playerIds: assignment.playerIds,
         maxSize: 11,
         createdAt: now,
         updatedAt: now,
-      })
+      }))
       assignment.playerIds.forEach((id) => allPlayerIds.add(id))
     }
 
@@ -134,6 +136,8 @@ export async function POST(request: NextRequest) {
         updatedAt: now,
       })
     }
+
+    await Promise.all(writes)
 
     return NextResponse.json({
       success: true,

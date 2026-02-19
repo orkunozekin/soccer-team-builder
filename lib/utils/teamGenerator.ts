@@ -17,10 +17,22 @@ interface TeamAssignment {
   playerIds: string[]
 }
 
+export function computeTeamCountForRSVPCount(
+  rsvpCount: number,
+  maxTeamSize: number = 11,
+  baseTeams: number = 2
+): number {
+  const baseCapacity = baseTeams * maxTeamSize
+  const extraPlayers = Math.max(0, rsvpCount - baseCapacity)
+  const extraTeams = Math.floor(extraPlayers / maxTeamSize)
+  return Math.max(baseTeams, baseTeams + extraTeams)
+}
+
 export function generateTeams(
   rsvps: RSVP[],
   users: User[],
-  maxTeamSize: number = 11
+  maxTeamSize: number = 11,
+  options?: { teamCount?: number }
 ): TeamAssignment[] {
   // 1. Separate players by priority
   const goalkeepers: RSVP[] = []
@@ -41,7 +53,8 @@ export function generateTeams(
   })
 
   // 2. Create teams (at least 2)
-  const teamCount = Math.max(2, Math.ceil(rsvps.length / maxTeamSize))
+  const teamCount =
+    options?.teamCount ?? Math.max(2, Math.ceil(rsvps.length / maxTeamSize))
   const teams: TeamAssignment[] = Array.from({ length: teamCount }, (_, i) => ({
     teamNumber: i + 1,
     playerIds: [],

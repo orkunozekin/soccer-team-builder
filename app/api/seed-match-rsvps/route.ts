@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { verifySuperAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
-import { generateTeams } from '@/lib/utils/teamGenerator'
+import { computeTeamCountForRSVPCount, generateTeams } from '@/lib/utils/teamGenerator'
 import type { RSVP } from '@/types/rsvp'
 import type { User } from '@/types/user'
 
@@ -140,7 +140,8 @@ export async function POST(request: Request) {
       }
     })
 
-    const teamAssignments = generateTeams(rsvpsToUse, users, 11)
+    const teamCount = computeTeamCountForRSVPCount(rsvpsToUse.length, 11, 2)
+    const teamAssignments = generateTeams(rsvpsToUse, users, 11, { teamCount })
 
     const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
     const benchCol = adminDb.collection(`matches/${matchId}/bench`)

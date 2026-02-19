@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Timestamp } from 'firebase-admin/firestore'
 import { verifyAdmin } from '@/lib/api/auth'
+import { getAdminDb } from '@/lib/firebase/admin'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
+
+function uniq(ids: string[]): string[] {
+  return Array.from(new Set(ids))
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,45 +33,75 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Import services
-    const { getMatchTeams, getBench, updateTeam, updateBench } = await import(
-      '@/lib/services/teamService'
-    )
-    const { getAllUsers } = await import('@/lib/services/userService')
-
-    const [teams, bench, users] = await Promise.all([
-      getMatchTeams(matchId),
-      getBench(matchId),
-      getAllUsers(),
-    ])
-
-    const player = users.find((u) => u.uid === playerId)
-    if (!player) {
-      return NextResponse.json({ error: 'Player not found' }, { status: 404 })
+    const adminDb = getAdminDb()
+    if (!adminDb) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
     }
 
-    const isGK = isGoalkeeper(player.position)
+    const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
+    const benchCol = adminDb.collection(`matches/${matchId}/bench`)
+    const benchId = `bench_${matchId}`
+
+    const [teamsSnap, benchSnap] = await Promise.all([
+      teamsCol.get(),
+      benchCol.doc(benchId).get(),
+    ])
+
+    const teams = teamsSnap.docs.map((d) => {
+      const data = d.data()
+      return {
+        id: d.id,
+        playerIds: (data.playerIds as string[]) ?? [],
+        maxSize: Number(data.maxSize ?? 11),
+      }
+    })
+
+    const benchPlayerIds: string[] = benchSnap.exists
+      ? ((benchSnap.data()?.playerIds as string[]) ?? [])
+      : []
+
+    // Load player and (if needed) target team players for GK check
+    const playerDocRef = adminDb.collection('users').doc(playerId)
+    const playerDoc = await playerDocRef.get()
+    if (!playerDoc.exists) {
+      return NextResponse.json({ error: 'Player not found' }, { status: 404 })
+    }
+    const playerData = playerDoc.data() as { position?: string | null } | undefined
+    const movingIsGK = isGoalkeeper(playerData?.position ?? null)
 
     // If moving to bench
     if (targetTeamId === 'bench') {
-      // Remove from current team
+      const now = Timestamp.now()
+      const batch = adminDb.batch()
+
+      // Remove from current team if provided
       if (currentTeamId) {
         const currentTeam = teams.find((t) => t.id === currentTeamId)
         if (currentTeam) {
-          const newPlayerIds = currentTeam.playerIds.filter(
-            (id) => id !== playerId
-          )
-          await updateTeam(matchId, currentTeamId, {
-            playerIds: newPlayerIds,
+          batch.update(teamsCol.doc(currentTeamId), {
+            playerIds: currentTeam.playerIds.filter((id) => id !== playerId),
+            updatedAt: now,
           })
         }
       }
 
       // Add to bench
-      const benchPlayerIds = bench?.playerIds || []
       if (!benchPlayerIds.includes(playerId)) {
-        await updateBench(matchId, [...benchPlayerIds, playerId])
+        batch.set(
+          benchCol.doc(benchId),
+          {
+            matchId,
+            playerIds: uniq([...benchPlayerIds, playerId]),
+            updatedAt: now,
+          },
+          { merge: true }
+        )
       }
+
+      await batch.commit()
 
       return NextResponse.json({ success: true })
     }
@@ -85,10 +121,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Validation: Check goalkeeper limit
-    if (isGK) {
-      const hasGK = targetTeam.playerIds.some((id) => {
-        const p = users.find((u) => u.uid === id)
-        return p && isGoalkeeper(p.position)
+    if (movingIsGK) {
+      const refs = targetTeam.playerIds.map((id) => adminDb.collection('users').doc(id))
+      const docs = refs.length > 0 ? await adminDb.getAll(...refs) : []
+      const hasGK = docs.some((d) => {
+        const pos = (d.data() as { position?: string | null } | undefined)?.position ?? null
+        return isGoalkeeper(pos)
       })
       if (hasGK) {
         return NextResponse.json(
@@ -98,29 +136,37 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const now = Timestamp.now()
+    const batch = adminDb.batch()
+
     // Remove from current location
     if (currentTeamId) {
       const currentTeam = teams.find((t) => t.id === currentTeamId)
       if (currentTeam) {
-        const newPlayerIds = currentTeam.playerIds.filter(
-          (id) => id !== playerId
-        )
-        await updateTeam(matchId, currentTeamId, {
-          playerIds: newPlayerIds,
+        batch.update(teamsCol.doc(currentTeamId), {
+          playerIds: currentTeam.playerIds.filter((id) => id !== playerId),
+          updatedAt: now,
         })
       }
     } else if (isOnBench) {
-      const benchPlayerIds = (bench?.playerIds || []).filter(
-        (id) => id !== playerId
+      batch.set(
+        benchCol.doc(benchId),
+        {
+          matchId,
+          playerIds: benchPlayerIds.filter((id) => id !== playerId),
+          updatedAt: now,
+        },
+        { merge: true }
       )
-      await updateBench(matchId, benchPlayerIds)
     }
 
     // Add to target team
-    const newPlayerIds = [...targetTeam.playerIds, playerId]
-    await updateTeam(matchId, targetTeamId, {
-      playerIds: newPlayerIds,
+    batch.update(teamsCol.doc(targetTeamId), {
+      playerIds: uniq([...targetTeam.playerIds, playerId]),
+      updatedAt: now,
     })
+
+    await batch.commit()
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

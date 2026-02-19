@@ -9,6 +9,7 @@ import { getMatchTeams, getBench } from '@/lib/services/teamService'
 import { getMatchRSVPs } from '@/lib/services/rsvpService'
 import { getAllUsers } from '@/lib/services/userService'
 import { generateTeamsAPI, deleteMatchAPI, updateMatchAPI } from '@/lib/api/client'
+import { computeTeamCountForRSVPCount } from '@/lib/utils/teamGenerator'
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { RSVPPollControls } from '@/components/admin/RSVPPollControls'
 import { DatePickerTime } from '@/components/ui/date-picker-time'
@@ -51,6 +52,7 @@ function AdminMatchManagementContent() {
   const [time, setTime] = useState('')
   const [saveSuccess, setSaveSuccess] = useState(false)
   const autoGenerateAttempted = useRef(false)
+  const autoExpandAttempted = useRef(false)
 
   const refreshData = async () => {
     if (!matchId) return
@@ -112,6 +114,23 @@ function AdminMatchManagementContent() {
       cancelled = true
     }
   }, [mounted, loading, matchId, teams.length])
+
+  // Auto-expand teams when RSVP count crosses another full-team threshold (11 per extra team after first 22).
+  useEffect(() => {
+    if (!mounted || loading || !matchId) return
+    if (teams.length === 0) return
+
+    const desiredTeams = computeTeamCountForRSVPCount(rsvpCount, 11, 2)
+    if (teams.length >= desiredTeams) return
+    if (autoExpandAttempted.current) return
+
+    autoExpandAttempted.current = true
+    generateTeamsAPI(matchId)
+      .then(() => refreshData())
+      .finally(() => {
+        autoExpandAttempted.current = false
+      })
+  }, [mounted, loading, matchId, rsvpCount, teams.length])
 
   if (!mounted || loading) {
     return <PageLoadingSkeleton showBack variant="container" />
@@ -256,10 +275,12 @@ function AdminMatchManagementContent() {
         <div>
           {teams.length > 0 && (
             <TeamsDisplay
+              matchId={matchId}
               teams={teams}
               users={allUsers}
               benchPlayerIds={benchPlayerIds}
               isAdmin={true}
+              onTeamsChanged={refreshData}
             />
           )}
         </div>
