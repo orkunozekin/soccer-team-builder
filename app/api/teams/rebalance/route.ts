@@ -1,6 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
-
+import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
@@ -183,7 +182,7 @@ export async function POST(request: NextRequest) {
     const targets = computeTargetSizes(roster.length, capacities)
     const assigned: string[][] = teams.map(() => [])
 
-    function pickNextTeam(eligible: number[]) {
+    const pickNextTeam = (eligible: number[]) => {
       // Choose team with most remaining spots, tie-break by fewest assigned, then index
       let best = eligible[0]
       for (const idx of eligible) {
@@ -195,7 +194,7 @@ export async function POST(request: NextRequest) {
       return best
     }
 
-    function assignFrom(bucket: Bucket) {
+    const assignFrom = (bucket: Bucket) => {
       for (const playerId of buckets[bucket]) {
         const eligible = assigned
           .map((_, idx) => idx)
