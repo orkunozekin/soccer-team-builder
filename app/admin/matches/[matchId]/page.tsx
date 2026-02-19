@@ -2,15 +2,16 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { format } from 'date-fns'
 import { AdminRouteGuard } from '@/components/admin/AdminRouteGuard'
 import { getMatch } from '@/lib/services/matchService'
 import { getMatchTeams, getBench } from '@/lib/services/teamService'
 import { getMatchRSVPs } from '@/lib/services/rsvpService'
 import { getAllUsers } from '@/lib/services/userService'
-import { generateTeamsAPI, deleteMatchAPI } from '@/lib/api/client'
+import { generateTeamsAPI, deleteMatchAPI, updateMatchAPI } from '@/lib/api/client'
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { RSVPPollControls } from '@/components/admin/RSVPPollControls'
-import Link from 'next/link'
+import { DatePickerTime } from '@/components/ui/date-picker-time'
 import { GenerateTeamsButton } from '@/components/admin/GenerateTeamsButton'
 import { PlayerTransfer } from '@/components/admin/PlayerTransfer'
 import { TeamsDisplay } from '@/components/teams/TeamsDisplay'
@@ -42,25 +43,37 @@ function AdminMatchManagementContent() {
   const [teams, setTeams] = useState<Team[]>([])
   const [benchPlayerIds, setBenchPlayerIds] = useState<string[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
+  const [rsvpCount, setRsvpCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [date, setDate] = useState('')
+  const [time, setTime] = useState('')
+  const [saveSuccess, setSaveSuccess] = useState(false)
   const autoGenerateAttempted = useRef(false)
 
   const refreshData = async () => {
     if (!matchId) return
 
     try {
-      const [matchData, teamsData, benchData, usersData] = await Promise.all([
+      const [matchData, teamsData, benchData, usersData, rsvpsData] = await Promise.all([
         getMatch(matchId),
         getMatchTeams(matchId),
         getBench(matchId),
         getAllUsers(),
+        getMatchRSVPs(matchId),
       ])
 
       setMatch(matchData)
       setTeams(teamsData)
       setBenchPlayerIds(benchData?.playerIds || [])
       setAllUsers(usersData)
+      setRsvpCount(rsvpsData.length)
+      if (matchData) {
+        const d = new Date(matchData.date)
+        setDate(d.toISOString().slice(0, 10))
+        setTime(matchData.time || '')
+      }
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
@@ -102,6 +115,29 @@ function AdminMatchManagementContent() {
 
   if (!mounted || loading) {
     return <PageLoadingSkeleton showBack variant="container" />
+  }
+
+  const handleSaveDateTime = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!matchId || !match || !date || !time) return
+    setSaving(true)
+    setSaveSuccess(false)
+    try {
+      const [y, m, d] = date.split('-').map(Number)
+      const [h, min] = time.split(':').map(Number)
+      const matchDateTime = new Date(y, m - 1, d, h, min, 0, 0)
+      await updateMatchAPI(matchId, {
+        date: matchDateTime.toISOString(),
+        time,
+      })
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 3000)
+      await refreshData()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleConfirmDeleteMatch = async () => {
@@ -148,24 +184,42 @@ function AdminMatchManagementContent() {
           {isSuperAdmin && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Match settings</CardTitle>
+                <CardTitle className="text-lg">Match date & time</CardTitle>
                 <CardDescription>
-                  Edit or delete this match. Only super admins see this.
+                  Edit the match date and time. Only super admins see this.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-wrap gap-2">
-                <Link href={`/admin/matches/${matchId}/edit`}>
-                  <Button variant="outline">
-                    Edit match
+              <CardContent className="space-y-4">
+                <form onSubmit={handleSaveDateTime} className="space-y-4">
+                  <DatePickerTime
+                    dateId="match-date"
+                    timeId="match-time"
+                    date={date}
+                    time={time}
+                    onDateChange={setDate}
+                    onTimeChange={setTime}
+                    datePlaceholder="Select date"
+                    disabled={saving}
+                    timeStep={300}
+                  />
+                  {saveSuccess && (
+                    <p className="text-sm text-green-600 dark:text-green-400">
+                      Date and time saved.
+                    </p>
+                  )}
+                  <Button type="submit" disabled={saving}>
+                    {saving ? 'Saving...' : 'Save date & time'}
                   </Button>
-                </Link>
-                <Button
-                  variant="destructive"
-                  disabled={deleting}
-                  onClick={() => setDeleteDialogOpen(true)}
-                >
-                  {deleting ? 'Deleting...' : 'Delete match'}
-                </Button>
+                </form>
+                <div className="border-t pt-4">
+                  <Button
+                    variant="destructive"
+                    disabled={deleting}
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    {deleting ? 'Deleting...' : 'Delete match'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -193,14 +247,18 @@ function AdminMatchManagementContent() {
             </AlertDialogContent>
           </AlertDialog>
           <RSVPPollControls match={match} />
-          <GenerateTeamsButton match={match} onTeamsGenerated={refreshData} />
-          <PlayerTransfer
-            matchId={matchId}
-            teams={teams}
-            users={allUsers}
-            benchPlayerIds={benchPlayerIds}
-            onTransferComplete={refreshData}
-          />
+          {rsvpCount > 2 && (
+            <GenerateTeamsButton match={match} onTeamsGenerated={refreshData} />
+          )}
+          {teams.length > 0 && (
+            <PlayerTransfer
+              matchId={matchId}
+              teams={teams}
+              users={allUsers}
+              benchPlayerIds={benchPlayerIds}
+              onTransferComplete={refreshData}
+            />
+          )}
         </div>
 
         <div>

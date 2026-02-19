@@ -19,13 +19,9 @@ export const getMatch = async (matchId: string): Promise<Match | null> => {
   const rsvpOpenAt = matchDoc.rsvpOpenAt ? timestampToDate(matchDoc.rsvpOpenAt) : null
   const rsvpCloseAt = matchDoc.rsvpCloseAt ? timestampToDate(matchDoc.rsvpCloseAt) : null
 
-  // Check if RSVP should be open based on schedule
-  const shouldBeOpen = shouldRSVPBeOpen(matchDate, rsvpOpenAt, rsvpCloseAt)
-  
-  // If manual override is not set, update RSVP status based on schedule
-  const rsvpOpen = rsvpOpenAt && rsvpCloseAt 
-    ? matchDoc.rsvpOpen 
-    : shouldBeOpen
+  // Schedule is always 6am–10pm CT on match day; no manual override
+  const shouldBeOpen = shouldRSVPBeOpen(matchDate, null, null)
+  const rsvpOpen = matchDoc.rsvpOpen && shouldBeOpen
 
   return {
     id: matchId,
@@ -48,10 +44,8 @@ export const getAllMatches = async (): Promise<Match[]> => {
     const rsvpOpenAt = match.rsvpOpenAt ? timestampToDate(match.rsvpOpenAt) : null
     const rsvpCloseAt = match.rsvpCloseAt ? timestampToDate(match.rsvpCloseAt) : null
 
-    const shouldBeOpen = shouldRSVPBeOpen(matchDate, rsvpOpenAt, rsvpCloseAt)
-    const rsvpOpen = rsvpOpenAt && rsvpCloseAt
-      ? match.rsvpOpen
-      : shouldBeOpen
+    const shouldBeOpen = shouldRSVPBeOpen(matchDate, null, null)
+    const rsvpOpen = match.rsvpOpen && shouldBeOpen
 
     return {
       id: match.id,

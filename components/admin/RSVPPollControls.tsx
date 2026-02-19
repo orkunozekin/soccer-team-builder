@@ -21,11 +21,6 @@ export function RSVPPollControls({ match }: RSVPPollControlsProps) {
   const [success, setSuccess] = useState(false)
 
   const schedule = getRSVPSchedule(match.date)
-  const isOpenBySchedule = shouldRSVPBeOpen(
-    match.date,
-    match.rsvpOpenAt,
-    match.rsvpCloseAt
-  )
 
   const handleToggleRSVP = async (open: boolean) => {
     setLoading(true)
@@ -34,9 +29,9 @@ export function RSVPPollControls({ match }: RSVPPollControlsProps) {
 
     try {
       if (open) {
-        // Open RSVP - use manual override or schedule
-        const openAt = match.rsvpOpenAt || schedule.openAt || new Date()
-        const closeAt = match.rsvpCloseAt || schedule.closeAt || new Date()
+        // Open RSVP - always use schedule: 6am–10pm CT on match day
+        const openAt = schedule.openAt!
+        const closeAt = schedule.closeAt!
 
         await updateMatch(match.id, {
           rsvpOpen: true,
@@ -86,20 +81,11 @@ export function RSVPPollControls({ match }: RSVPPollControlsProps) {
         </div>
 
         {schedule.openAt && schedule.closeAt && (
-          <div className="text-sm space-y-1">
-            <p className="text-zinc-600 dark:text-zinc-400">
-              <span className="font-medium">Scheduled:</span>{' '}
-              {format(schedule.openAt, 'MMM d, h:mm a')} -{' '}
-              {format(schedule.closeAt, 'h:mm a')}
-            </p>
-            {match.rsvpOpenAt && match.rsvpCloseAt && (
-              <p className="text-zinc-600 dark:text-zinc-400">
-                <span className="font-medium">Manual Override:</span>{' '}
-                {format(match.rsvpOpenAt, 'MMM d, h:mm a')} -{' '}
-                {format(match.rsvpCloseAt, 'h:mm a')}
-              </p>
-            )}
-          </div>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <span className="font-medium">Default window:</span>{' '}
+            {format(schedule.openAt, 'MMM d, h:mm a')} – {format(schedule.closeAt, 'h:mm a')} CT
+            (match day)
+          </p>
         )}
 
         {error && (
