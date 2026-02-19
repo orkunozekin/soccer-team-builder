@@ -1,0 +1,81 @@
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/hooks/useAuth'
+import { useAdmin } from '@/lib/hooks/useAdmin'
+
+interface AdminRouteGuardProps {
+  children: React.ReactNode
+  requireSuperAdmin?: boolean
+}
+
+export function AdminRouteGuard({
+  children,
+  requireSuperAdmin = false,
+}: AdminRouteGuardProps) {
+  const router = useRouter()
+  const { user, loading } = useAuth()
+  const { isAdmin, isSuperAdmin } = useAdmin()
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        router.push('/login')
+        return
+      }
+
+      if (requireSuperAdmin && !isSuperAdmin) {
+        router.push('/matches')
+        return
+      }
+
+      if (!requireSuperAdmin && !isAdmin) {
+        router.push('/matches')
+        return
+      }
+    }
+  }, [user, loading, isAdmin, isSuperAdmin, requireSuperAdmin, router])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
+
+  if (requireSuperAdmin && !isSuperAdmin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">Access Denied</h1>
+          <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+            You need super admin privileges to access this page.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">Access Denied</h1>
+          <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+            You need admin privileges to access this page.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return <>{children}</>
+}
