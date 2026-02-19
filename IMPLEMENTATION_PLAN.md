@@ -190,8 +190,8 @@ soccer-team-builder/
    - Ensure Prettier and ESLint are set up
    - Install shadcn/ui components (if not already installed)
    - Archive or remove existing UI components (we're building new ones from scratch)
-   - Install Firebase: `npm install firebase`
-   - Install date utilities: `npm install date-fns date-fns-tz`
+   - Install Firebase: `yarn add firebase`
+   - Install date utilities: `yarn add date-fns date-fns-tz`
 
 2. **Firebase Setup**
 

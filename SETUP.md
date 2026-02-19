@@ -51,7 +51,7 @@ GOOGLE_APPLICATION_CREDENTIALS=./firebase-service-account.json
 1. Copy `.env.local.example` to `.env.local` (or create it manually)
 2. Fill in your Firebase client configuration values
 3. The Admin SDK is already configured since you have `firebase-service-account.json`
-4. Run `npm run dev` to start the development server
+4. Run `yarn dev` to start the development server
 
 ## Security Notes
 
