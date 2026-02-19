@@ -17,6 +17,7 @@ import { CardLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import CloseIcon from '@/components/icons/CloseIcon'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -232,7 +233,7 @@ export function UserRoleManager() {
                   {user.email}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <Select
                   value={user.role}
                   onValueChange={(value: UserRole) =>
@@ -240,7 +241,7 @@ export function UserRoleManager() {
                   }
                   disabled={updating === user.uid || deleting === user.uid}
                 >
-                  <SelectTrigger className="w-32 h-9">
+                  <SelectTrigger className="w-24 h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -250,13 +251,14 @@ export function UserRoleManager() {
                 </Select>
 
                 <Button
-                  variant="destructive"
-                  size="sm"
-                  className="h-9"
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
                   disabled={updating === user.uid || deleting === user.uid}
                   onClick={() => setDeleteDialogUserId(user.uid)}
+                  aria-label={`Remove ${user.displayName || user.email}`}
                 >
-                  {deleting === user.uid ? 'Removing...' : 'Remove'}
+                  <CloseIcon className={deleting === user.uid ? 'opacity-50' : ''} />
                 </Button>
               </div>
             </div>

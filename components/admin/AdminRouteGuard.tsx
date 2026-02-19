@@ -2,9 +2,9 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/hooks/useAuth'
-import { useAdmin } from '@/lib/hooks/useAdmin'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
+import { useAdmin } from '@/lib/hooks/useAdmin'
+import { useAuth } from '@/lib/hooks/useAuth'
 
 interface AdminRouteGuardProps {
   children: React.ReactNode

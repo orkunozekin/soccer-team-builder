@@ -168,3 +168,24 @@ export async function searchUsersAPI(
 
   return response.json()
 }
+
+export async function rebalanceTeamsAPI(matchId: string): Promise<{
+  success: boolean
+  teamsRebalanced: number
+  assignedCounts: number[]
+  benchCount: number
+  rosterLimit: number
+  replacements: Array<{ insertedGK: string; removedPlayer: string }>
+}> {
+  const response = await apiRequest('/teams/rebalance', {
+    method: 'POST',
+    body: JSON.stringify({ matchId }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to rebalance teams')
+  }
+
+  return response.json()
+}

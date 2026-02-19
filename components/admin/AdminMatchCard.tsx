@@ -1,10 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { format } from 'date-fns'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,8 +14,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Match } from '@/types/match'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { deleteMatchAPI } from '@/lib/api/client'
+import { Match } from '@/types/match'
 
 interface AdminMatchCardProps {
   match: Match
@@ -27,6 +28,7 @@ export function AdminMatchCard({
   match,
   onDeleted,
 }: AdminMatchCardProps) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -46,7 +48,18 @@ export function AdminMatchCard({
 
   return (
     <>
-      <Card className="transition-all hover:shadow-md h-full flex flex-col">
+      <Card
+        className="transition-all hover:shadow-md h-full flex flex-col cursor-pointer"
+        role="link"
+        tabIndex={0}
+        onClick={() => router.push(`/admin/matches/${match.id}`)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            router.push(`/admin/matches/${match.id}`)
+          }
+        }}
+      >
         <CardHeader>
           <CardTitle className="text-lg">
             {format(match.date, 'MMM d, yyyy')}
@@ -56,12 +69,6 @@ export function AdminMatchCard({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2 pt-0">
-          <Link
-            href={`/admin/matches/${match.id}`}
-            className="text-sm font-medium text-primary hover:underline"
-          >
-            Manage match →
-          </Link>
           <div className="flex flex-wrap gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
             <Link href={`/admin/matches/${match.id}/edit`}>
               <Button variant="outline" size="sm" className="h-8">

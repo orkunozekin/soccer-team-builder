@@ -12,6 +12,7 @@ import { computeTeamCountForRSVPCount } from '@/lib/utils/teamGenerator'
 import { RSVPPollControls } from '@/components/admin/RSVPPollControls'
 import { DatePickerTime } from '@/components/ui/date-picker-time'
 import { PlayerTransfer } from '@/components/admin/PlayerTransfer'
+import { RebalanceTeamsButton } from '@/components/admin/RebalanceTeamsButton'
 import { TeamsDisplay } from '@/components/teams/TeamsDisplay'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { BackLink } from '@/components/ui/back-link'
@@ -276,6 +277,16 @@ function AdminMatchManagementContent() {
               benchPlayerIds={benchPlayerIds}
               isAdmin={true}
               onTeamsChanged={refreshData}
+              headerActions={
+                teams.length >= 2 ? (
+                  <RebalanceTeamsButton
+                    matchId={matchId}
+                    onDone={refreshData}
+                    size="sm"
+                    showError="inline"
+                  />
+                ) : null
+              }
             />
           )}
         </div>

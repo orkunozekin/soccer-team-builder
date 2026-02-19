@@ -16,6 +16,7 @@ interface TeamsDisplayProps {
   benchPlayerIds: string[]
   isAdmin?: boolean
   onTeamsChanged?: () => void
+  headerActions?: React.ReactNode
 }
 
 export function TeamsDisplay({
@@ -25,6 +26,7 @@ export function TeamsDisplay({
   benchPlayerIds,
   isAdmin = false,
   onTeamsChanged,
+  headerActions,
 }: TeamsDisplayProps) {
   const dndEnabled = Boolean(isAdmin && matchId && onTeamsChanged)
   const [pageIndex, setPageIndex] = useState(0)
@@ -118,8 +120,9 @@ export function TeamsDisplay({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h2 className="text-2xl font-bold">Teams</h2>
+        {headerActions ? <div className="shrink-0">{headerActions}</div> : null}
       </div>
 
       {pages.length > 1 && (
