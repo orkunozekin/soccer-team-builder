@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { loginUser } from '@/lib/firebase/auth'
+import { loginUser, loginWithGoogle } from '@/lib/firebase/auth'
+import { getUser, createUser } from '@/lib/services/userService'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +16,7 @@ export function LoginForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,6 +34,27 @@ export function LoginForm() {
     }
   }
 
+  const handleGoogleSignIn = async () => {
+    setError('')
+    setGoogleLoading(true)
+    try {
+      const userCredential = await loginWithGoogle()
+      const user = userCredential.user
+      const existingUser = await getUser(user.uid)
+      if (!existingUser) {
+        const displayName =
+          user.displayName ?? user.email?.split('@')[0] ?? 'User'
+        await createUser(user.uid, user.email ?? '', displayName)
+      }
+      setUser(user)
+      router.push('/matches')
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign in with Google')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
+
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-4">
       <div className="space-y-2">
@@ -43,7 +66,7 @@ export function LoginForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          disabled={loading}
+          disabled={loading || googleLoading}
           className="h-11 text-base sm:h-9 sm:text-sm"
           autoComplete="email"
         />
@@ -58,7 +81,7 @@ export function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          disabled={loading}
+          disabled={loading || googleLoading}
           className="h-11 text-base sm:h-9 sm:text-sm"
           autoComplete="current-password"
         />
@@ -72,10 +95,29 @@ export function LoginForm() {
 
       <Button
         type="submit"
-        disabled={loading}
+        disabled={loading || googleLoading}
         className="w-full h-11 text-base sm:h-9 sm:text-sm"
       >
         {loading ? 'Signing in...' : 'Sign In'}
+      </Button>
+
+      <div className="relative my-4">
+        <span className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-gray-200 dark:border-gray-700" />
+        </span>
+        <span className="relative flex justify-center text-xs uppercase text-gray-500 dark:text-gray-400">
+          Or continue with
+        </span>
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        disabled={loading || googleLoading}
+        className="w-full h-11 text-base sm:h-9 sm:text-sm"
+        onClick={handleGoogleSignIn}
+      >
+        {googleLoading ? 'Signing in...' : 'Sign in with Google'}
       </Button>
     </form>
   )

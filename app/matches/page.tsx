@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { useAdmin } from '@/lib/hooks/useAdmin'
 import { getAllMatches } from '@/lib/services/matchService'
 import { useMatchStore } from '@/store/matchStore'
 import { MatchCard } from '@/components/matches/MatchCard'
@@ -11,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export default function MatchesPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
+  const { isAdmin } = useAdmin()
   const { matches, loading, setMatches, setLoading } = useMatchStore()
 
   useEffect(() => {
@@ -69,7 +71,9 @@ export default function MatchesPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Admins can create matches from the admin dashboard.
+              {isAdmin
+                ? 'Create matches from the admin dashboard.'
+                : 'Check back soon for upcoming matches!'}
             </p>
           </CardContent>
         </Card>

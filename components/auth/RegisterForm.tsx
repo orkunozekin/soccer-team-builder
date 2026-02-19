@@ -2,20 +2,23 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { registerUser } from '@/lib/firebase/auth'
-import { createUser } from '@/lib/services/userService'
+import { registerUser, loginWithGoogle } from '@/lib/firebase/auth'
+import { getUser, createUser } from '@/lib/services/userService'
+import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 export function RegisterForm() {
   const router = useRouter()
+  const setUser = useAuthStore((state) => state.setUser)
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,6 +51,27 @@ export function RegisterForm() {
     }
   }
 
+  const handleGoogleSignIn = async () => {
+    setError('')
+    setGoogleLoading(true)
+    try {
+      const userCredential = await loginWithGoogle()
+      const user = userCredential.user
+      const existingUser = await getUser(user.uid)
+      if (!existingUser) {
+        const displayName =
+          user.displayName ?? user.email?.split('@')[0] ?? 'User'
+        await createUser(user.uid, user.email ?? '', displayName)
+      }
+      setUser(user)
+      router.push('/matches')
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign in with Google')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
+
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-4">
       <div className="space-y-2">
@@ -59,7 +83,7 @@ export function RegisterForm() {
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
           required
-          disabled={loading}
+          disabled={loading || googleLoading}
           className="h-11 text-base sm:h-9 sm:text-sm"
           autoComplete="name"
         />
@@ -74,7 +98,7 @@ export function RegisterForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          disabled={loading}
+          disabled={loading || googleLoading}
           className="h-11 text-base sm:h-9 sm:text-sm"
           autoComplete="email"
         />
@@ -89,7 +113,7 @@ export function RegisterForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          disabled={loading}
+          disabled={loading || googleLoading}
           className="h-11 text-base sm:h-9 sm:text-sm"
           autoComplete="new-password"
         />
@@ -104,7 +128,7 @@ export function RegisterForm() {
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
-          disabled={loading}
+          disabled={loading || googleLoading}
           className="h-11 text-base sm:h-9 sm:text-sm"
           autoComplete="new-password"
         />
@@ -118,10 +142,29 @@ export function RegisterForm() {
 
       <Button
         type="submit"
-        disabled={loading}
+        disabled={loading || googleLoading}
         className="w-full h-11 text-base sm:h-9 sm:text-sm"
       >
         {loading ? 'Creating account...' : 'Create Account'}
+      </Button>
+
+      <div className="relative my-4">
+        <span className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-gray-200 dark:border-gray-700" />
+        </span>
+        <span className="relative flex justify-center text-xs uppercase text-gray-500 dark:text-gray-400">
+          Or continue with
+        </span>
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        disabled={loading || googleLoading}
+        className="w-full h-11 text-base sm:h-9 sm:text-sm"
+        onClick={handleGoogleSignIn}
+      >
+        {googleLoading ? 'Signing in...' : 'Sign up with Google'}
       </Button>
     </form>
   )

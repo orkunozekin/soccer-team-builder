@@ -1,6 +1,8 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut,
   User,
   UserCredential,
@@ -19,6 +21,11 @@ export const loginUser = async (
   password: string
 ): Promise<UserCredential> => {
   return signInWithEmailAndPassword(auth, email, password)
+}
+
+export const loginWithGoogle = async (): Promise<UserCredential> => {
+  const provider = new GoogleAuthProvider()
+  return signInWithPopup(auth, provider)
 }
 
 export const logoutUser = async (): Promise<void> => {
