@@ -225,6 +225,7 @@ function AdminMatchManagementContent() {
               <div className="border-t pt-4">
                 <Button
                   variant="destructive"
+                  className="w-full sm:w-auto"
                   disabled={deleting}
                   onClick={() => setDeleteDialogOpen(true)}
                 >
@@ -257,15 +258,6 @@ function AdminMatchManagementContent() {
             </AlertDialogContent>
           </AlertDialog>
           <RSVPPollControls match={match} />
-          {teams.length > 0 && (
-            <PlayerTransfer
-              matchId={matchId}
-              teams={teams}
-              users={allUsers}
-              benchPlayerIds={benchPlayerIds}
-              onTransferComplete={refreshData}
-            />
-          )}
         </div>
 
         <div>
@@ -288,6 +280,18 @@ function AdminMatchManagementContent() {
                 ) : null
               }
             />
+          )}
+
+          {teams.length > 0 && (
+            <div className="mt-6">
+              <PlayerTransfer
+                matchId={matchId}
+                teams={teams}
+                users={allUsers}
+                benchPlayerIds={benchPlayerIds}
+                onTransferComplete={refreshData}
+              />
+            </div>
           )}
         </div>
       </div>

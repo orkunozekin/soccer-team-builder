@@ -52,7 +52,7 @@ export function DatePickerTime({
 
   return (
     <FieldGroup className={cn('flex-row flex-wrap gap-4', className)}>
-      <Field>
+      <Field className="w-full sm:w-[14rem]">
         <FieldLabel htmlFor={dateId}>Date</FieldLabel>
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
@@ -82,7 +82,7 @@ export function DatePickerTime({
           </PopoverContent>
         </Popover>
       </Field>
-      <Field className="w-[8rem] shrink-0">
+      <Field className="w-full sm:w-[14rem]">
         <FieldLabel htmlFor={timeId}>Time</FieldLabel>
         <Input
           type="time"

@@ -1,13 +1,13 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { User } from '@/types/user'
-import { Team } from '@/types/team'
-import { transferPlayerAPI } from '@/lib/api/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { transferPlayerAPI } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
+import { Team } from '@/types/team'
+import { User } from '@/types/user'
 
 interface TeamsDisplayProps {
   matchId?: string
@@ -151,7 +151,7 @@ export function TeamsDisplay({
       )}
 
       {transferError && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-md border border-red-300 bg-red-100 p-3 text-sm font-medium text-red-950 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
           {transferError}
         </div>
       )}

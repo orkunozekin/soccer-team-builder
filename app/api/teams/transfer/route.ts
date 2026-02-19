@@ -112,14 +112,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Target team not found' }, { status: 404 })
     }
 
-    // Validation: Check team size
-    if (targetTeam.playerIds.length >= targetTeam.maxSize) {
-      return NextResponse.json(
-        { error: `Team is full (${targetTeam.maxSize} players)` },
-        { status: 400 }
-      )
-    }
-
     // Validation: Check goalkeeper limit
     if (movingIsGK) {
       const refs = targetTeam.playerIds.map((id) => adminDb.collection('users').doc(id))

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { User } from '@/types/user'
 import { Team } from '@/types/team'
 import { transferPlayerAPI } from '@/lib/api/client'
@@ -40,6 +40,46 @@ export function PlayerTransfer({
   benchPlayerIds.forEach((id) => allPlayerIds.add(id))
 
   const availablePlayers = users.filter((u) => allPlayerIds.has(u.uid))
+
+  const teamColorByPlayerId = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const team of teams) {
+      const color = team.color || '#3b82f6'
+      for (const id of team.playerIds) {
+        if (!map.has(id)) map.set(id, color)
+      }
+    }
+    return map
+  }, [teams])
+
+  const teamNameById = useMemo(
+    () => new Map(teams.map((t) => [t.id, t.name || `Team ${t.teamNumber}`])),
+    [teams]
+  )
+  const teamColorById = useMemo(
+    () => new Map(teams.map((t) => [t.id, t.color || '#3b82f6'])),
+    [teams]
+  )
+
+  const teamNameByPlayerId = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const team of teams) {
+      const name = team.name || `Team ${team.teamNumber}`
+      for (const id of team.playerIds) {
+        if (!map.has(id)) map.set(id, name)
+      }
+    }
+    return map
+  }, [teams])
+
+  const styleForTeamColor = (hex: string | null): React.CSSProperties | undefined => {
+    if (!hex) return undefined
+    // Inline style so it wins over SelectItem focus background classes.
+    return {
+      backgroundColor: hex,
+      color: 'white',
+    }
+  }
 
   const handleTransfer = async () => {
     if (!selectedPlayerId || !targetTeamId) {
@@ -102,8 +142,21 @@ export function PlayerTransfer({
             <SelectContent>
               {availablePlayers.map((user) => (
                 <SelectItem key={user.uid} value={user.uid}>
-                  {user.displayName} {user.jerseyNumber && `#${user.jerseyNumber}`}
-                  {user.position && ` (${user.position})`}
+                  <span
+                    className="flex items-center justify-between gap-2 rounded-sm px-2 py-1"
+                    style={styleForTeamColor(teamColorByPlayerId.get(user.uid) ?? null)}
+                    title={benchPlayerIds.includes(user.uid) ? 'Bench' : undefined}
+                  >
+                    <span className="truncate">
+                      {user.displayName} {user.jerseyNumber && `#${user.jerseyNumber}`}
+                      {user.position && ` (${user.position})`}
+                    </span>
+                    {!benchPlayerIds.includes(user.uid) && (
+                      <span className="shrink-0 text-xs opacity-90">
+                        {teamNameByPlayerId.get(user.uid) ?? ''}
+                      </span>
+                    )}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -120,7 +173,15 @@ export function PlayerTransfer({
               <SelectItem value="bench">Bench</SelectItem>
               {teams.map((team) => (
                 <SelectItem key={team.id} value={team.id}>
-                  {team.name || `Team ${team.teamNumber}`} ({team.playerIds.length}/{team.maxSize})
+                  <span
+                    className="flex items-center justify-between gap-2 rounded-sm px-2 py-1"
+                    style={styleForTeamColor(teamColorById.get(team.id) ?? null)}
+                    title={teamNameById.get(team.id)}
+                  >
+                    <span className="truncate">
+                      {teamNameById.get(team.id)} ({team.playerIds.length}/{team.maxSize})
+                    </span>
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -128,7 +189,7 @@ export function PlayerTransfer({
         </div>
 
         {error && (
-          <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+          <div className="rounded-md border border-red-300 bg-red-100 p-3 text-sm font-medium text-red-950 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
             {error}
           </div>
         )}
