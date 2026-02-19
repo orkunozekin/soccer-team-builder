@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { loginUser, loginWithGoogle } from '@/lib/firebase/auth'
 import { getUser, createUser } from '@/lib/services/userService'
 import { useAuthStore } from '@/store/authStore'
+import { GoogleIcon } from '@/components/icons/GoogleIcon'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -117,7 +118,14 @@ export function LoginForm() {
         className="w-full h-11 text-base sm:h-9 sm:text-sm"
         onClick={handleGoogleSignIn}
       >
-        {googleLoading ? 'Signing in...' : 'Sign in with Google'}
+        {googleLoading ? (
+          'Signing in...'
+        ) : (
+          <span className="inline-flex items-center justify-center">
+            <GoogleIcon className="mr-2" />
+            Sign in with Google
+          </span>
+        )}
       </Button>
     </form>
   )
