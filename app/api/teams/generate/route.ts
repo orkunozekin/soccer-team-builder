@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Timestamp } from 'firebase-admin/firestore'
 import { verifyAdmin } from '@/lib/api/auth'
+import { getAdminDb } from '@/lib/firebase/admin'
 import { generateTeams } from '@/lib/utils/teamGenerator'
+import type { RSVP } from '@/types/rsvp'
+import type { User } from '@/types/user'
+
+const TEAM_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6']
+const TEAM_NAMES = ['Blue', 'Red', 'Green', 'Orange', 'Purple']
+
+function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
+  if (!t) return null
+  if (t instanceof Date) return t
+  return (t as Timestamp).toDate()
+}
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication and admin status
     const { uid, isAdmin, error: authError } = await verifyAdmin(request)
     if (authError || !uid) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -23,83 +35,105 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Match ID required' }, { status: 400 })
     }
 
-    // Note: In production, verify admin role using Firebase Admin SDK
-    // For now, we'll rely on Firestore security rules + client-side checks
+    const adminDb = getAdminDb()
+    if (!adminDb) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
+    }
 
-    // Import Firestore helpers (client SDK works in API routes too)
-    const { db } = await import('@/lib/firebase/config')
-    const {
-      queryDocuments,
-      getDocument,
-      createDocument,
-      updateDocument,
-      deleteDocument,
-      timestampToDate,
-    } = await import('@/lib/firebase/firestore')
-    const { where } = await import('firebase/firestore')
-    const { getMatchRSVPs } = await import('@/lib/services/rsvpService')
-    const { getAllUsers } = await import('@/lib/services/userService')
-    const {
-      createTeam,
-      getMatchTeams,
-      deleteTeam,
-      updateTeam,
-      updateBench,
-    } = await import('@/lib/services/teamService')
+    // Fetch RSVPs (client uses top-level collection 'rsvps' with matchId field)
+    const rsvpSnap = await adminDb
+      .collection('rsvps')
+      .where('matchId', '==', matchId)
+      .where('status', '==', 'confirmed')
+      .get()
 
-    // Fetch RSVPs and users
-    const [rsvps, users] = await Promise.all([
-      getMatchRSVPs(matchId),
-      getAllUsers(),
-    ])
+    const rsvpsToUse: RSVP[] = rsvpSnap.docs.map((d) => {
+      const data = d.data()
+      return {
+        id: d.id,
+        matchId: data.matchId ?? matchId,
+        userId: data.userId,
+        status: data.status ?? 'confirmed',
+        rsvpAt: timestampToDate(data.rsvpAt) || new Date(),
+        updatedAt: timestampToDate(data.updatedAt) || new Date(),
+      }
+    })
 
-    if (rsvps.length < 2) {
+    if (rsvpsToUse.length < 2) {
       return NextResponse.json(
         { error: 'Need at least 2 players to generate teams' },
         { status: 400 }
       )
     }
 
-    // Generate teams (business logic on server)
-    const teamAssignments = generateTeams(rsvps, users, 11)
+    // Fetch all users
+    const usersSnap = await adminDb.collection('users').get()
+    const users: User[] = usersSnap.docs.map((d) => {
+      const data = d.data()
+      return {
+        uid: data.uid ?? d.id,
+        email: data.email ?? '',
+        displayName: data.displayName ?? '',
+        jerseyNumber: data.jerseyNumber ?? null,
+        position: data.position ?? null,
+        role: data.role || 'user',
+        createdAt: timestampToDate(data.createdAt) || new Date(),
+        updatedAt: timestampToDate(data.updatedAt) || new Date(),
+      }
+    })
+
+    const teamAssignments = generateTeams(rsvpsToUse, users, 11)
+
+    // Use same path format as client: collection id "matches/{matchId}/teams"
+    const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
+    const benchCol = adminDb.collection(`matches/${matchId}/bench`)
 
     // Delete existing teams
-    const existingTeams = await getMatchTeams(matchId)
-    for (const team of existingTeams) {
-      await deleteTeam(matchId, team.id)
-    }
+    const existingTeams = await teamsCol.get()
+    const batch = adminDb.batch()
+    existingTeams.docs.forEach((d) => batch.delete(d.ref))
+    await batch.commit()
 
-    // Create new teams
-    const TEAM_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6']
-    const TEAM_NAMES = ['Blue', 'Red', 'Green', 'Orange', 'Purple']
+    const now = Timestamp.now()
     const allPlayerIds = new Set<string>()
 
     for (let i = 0; i < teamAssignments.length; i++) {
       const assignment = teamAssignments[i]
-      const teamId = await createTeam(
+      const teamId = `team_${matchId}_${assignment.teamNumber}_${Date.now()}`
+      teamsCol.doc(teamId).set({
         matchId,
-        assignment.teamNumber,
-        TEAM_NAMES[i] || `Team ${assignment.teamNumber}`,
-        TEAM_COLORS[i] || '#3b82f6',
-        11
-      )
-
-      // Update team with players
-      if (assignment.playerIds.length > 0) {
-        await updateTeam(matchId, teamId, {
-          playerIds: assignment.playerIds,
-        })
-      }
-
+        teamNumber: assignment.teamNumber,
+        name: TEAM_NAMES[i] ?? `Team ${assignment.teamNumber}`,
+        color: TEAM_COLORS[i] ?? '#3b82f6',
+        playerIds: assignment.playerIds,
+        maxSize: 11,
+        createdAt: now,
+        updatedAt: now,
+      })
       assignment.playerIds.forEach((id) => allPlayerIds.add(id))
     }
 
-    // Put remaining players on bench
-    const benchPlayerIds = rsvps
+    const benchPlayerIds = rsvpsToUse
       .map((r) => r.userId)
       .filter((id) => !allPlayerIds.has(id))
 
-    await updateBench(matchId, benchPlayerIds)
+    const benchId = `bench_${matchId}`
+    const benchDoc = await benchCol.doc(benchId).get()
+    if (benchDoc.exists) {
+      await benchCol.doc(benchId).update({
+        playerIds: benchPlayerIds,
+        updatedAt: now,
+      })
+    } else {
+      await benchCol.doc(benchId).set({
+        matchId,
+        playerIds: benchPlayerIds,
+        updatedAt: now,
+      })
+    }
 
     return NextResponse.json({
       success: true,

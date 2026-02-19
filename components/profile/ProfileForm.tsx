@@ -12,20 +12,40 @@ import { User } from '@/types/user'
 
 export function ProfileForm() {
   const { user, userData } = useAuth()
+
+  if (!userData) {
+    return (
+      <div className="text-center text-zinc-600 dark:text-zinc-400">
+        Loading profile...
+      </div>
+    )
+  }
+
+  return <ProfileFormInner user={user!} userData={userData} />
+}
+
+function ProfileFormInner({
+  user,
+  userData,
+}: {
+  user: import('firebase/auth').User
+  userData: User
+}) {
   const setUserData = useAuthStore((state) => state.setUserData)
-  const [displayName, setDisplayName] = useState('')
-  const [jerseyNumber, setJerseyNumber] = useState<string>('')
-  const [position, setPosition] = useState<string | null>(null)
+  const [displayName, setDisplayName] = useState(userData.displayName)
+  const [jerseyNumber, setJerseyNumber] = useState<string>(
+    userData.jerseyNumber?.toString() || ''
+  )
+  const [position, setPosition] = useState<string | null>(userData.position ?? null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
+  // Sync form when userData changes (e.g. after refetch or another tab)
   useEffect(() => {
-    if (userData) {
-      setDisplayName(userData.displayName)
-      setJerseyNumber(userData.jerseyNumber?.toString() || '')
-      setPosition(userData.position)
-    }
+    setDisplayName(userData.displayName)
+    setJerseyNumber(userData.jerseyNumber?.toString() || '')
+    setPosition(userData.position ?? null)
   }, [userData])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,7 +53,7 @@ export function ProfileForm() {
     setError('')
     setSuccess(false)
 
-    if (!user || !userData) {
+    if (!user) {
       setError('You must be logged in to update your profile')
       return
     }
@@ -72,18 +92,17 @@ export function ProfileForm() {
     }
   }
 
-  if (!userData) {
-    return (
-      <div className="text-center text-zinc-600 dark:text-zinc-400">
-        Loading profile...
-      </div>
-    )
-  }
+  const formLabelClass =
+    'text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight'
+  const inputClass =
+    'h-11 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500'
 
   return (
-    <form onSubmit={handleSubmit} className="w-full space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="displayName">Display Name</Label>
+    <form onSubmit={handleSubmit} className="w-full space-y-6">
+      <div className="space-y-1.5">
+        <Label htmlFor="displayName" className={formLabelClass}>
+          Display Name
+        </Label>
         <Input
           id="displayName"
           type="text"
@@ -92,26 +111,28 @@ export function ProfileForm() {
           onChange={(e) => setDisplayName(e.target.value)}
           required
           disabled={loading}
-          className="h-11 text-base sm:h-9 sm:text-sm"
+          className={inputClass}
           autoComplete="name"
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="jerseyNumber">Jersey Number</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor="jerseyNumber" className={formLabelClass}>
+          Jersey Number
+        </Label>
         <Input
           id="jerseyNumber"
           type="number"
           min="0"
           max="99"
-          placeholder="Enter jersey number (0-99)"
+          placeholder="0–99"
           value={jerseyNumber}
           onChange={(e) => setJerseyNumber(e.target.value)}
           disabled={loading}
-          className="h-11 text-base sm:h-9 sm:text-sm"
+          className={inputClass}
         />
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          Optional: Enter a number between 0 and 99
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+          Optional · 0 to 99
         </p>
       </div>
 
@@ -119,27 +140,31 @@ export function ProfileForm() {
         value={position}
         onValueChange={setPosition}
         disabled={loading}
+        labelClassName={formLabelClass}
+        triggerClassName={inputClass}
       />
 
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50/80 dark:bg-red-950/30 px-4 py-3 text-sm font-medium text-red-800 dark:text-red-300">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-400">
-          Profile updated successfully!
+        <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/30 px-4 py-3 text-sm font-medium text-emerald-800 dark:text-emerald-300">
+          Profile updated successfully
         </div>
       )}
 
-      <Button
-        type="submit"
-        disabled={loading}
-        className="w-full h-11 text-base sm:h-9 sm:text-sm"
-      >
-        {loading ? 'Updating...' : 'Update Profile'}
-      </Button>
+      <div className="pt-2">
+        <Button
+          type="submit"
+          disabled={loading}
+          className="w-full h-11 rounded-lg text-base font-semibold shadow-sm"
+        >
+          {loading ? 'Updating…' : 'Update Profile'}
+        </Button>
+      </div>
     </form>
   )
 }

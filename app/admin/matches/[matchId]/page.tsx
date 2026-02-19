@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { useAuth } from '@/lib/hooks/useAuth'
-import { useAdmin } from '@/lib/hooks/useAdmin'
 import { AdminRouteGuard } from '@/components/admin/AdminRouteGuard'
 import { getMatch } from '@/lib/services/matchService'
 import { getMatchTeams, getBench } from '@/lib/services/teamService'
+import { getMatchRSVPs } from '@/lib/services/rsvpService'
 import { getAllUsers } from '@/lib/services/userService'
+import { generateTeamsAPI } from '@/lib/api/client'
 import { RSVPPollControls } from '@/components/admin/RSVPPollControls'
 import { GenerateTeamsButton } from '@/components/admin/GenerateTeamsButton'
 import { PlayerTransfer } from '@/components/admin/PlayerTransfer'
@@ -20,12 +20,13 @@ function AdminMatchManagementContent() {
   const router = useRouter()
   const params = useParams()
   const matchId = params?.matchId as string
-  const { user } = useAuth()
   const [match, setMatch] = useState<Match | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
   const [benchPlayerIds, setBenchPlayerIds] = useState<string[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
+  const autoGenerateAttempted = useRef(false)
 
   const refreshData = async () => {
     if (!matchId) return
@@ -50,8 +51,46 @@ function AdminMatchManagementContent() {
   }
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!matchId) return
     refreshData()
   }, [matchId])
+
+  // Auto-generate teams once when 2+ RSVPs and no teams yet
+  useEffect(() => {
+    if (!mounted || loading || !matchId || teams.length > 0 || autoGenerateAttempted.current) return
+
+    let cancelled = false
+    autoGenerateAttempted.current = true
+
+    getMatchRSVPs(matchId).then((rsvps) => {
+      if (cancelled || rsvps.length < 2) return
+      generateTeamsAPI(matchId)
+        .then(() => {
+          if (!cancelled) refreshData()
+        })
+        .catch(() => {
+          autoGenerateAttempted.current = false
+        })
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [mounted, loading, matchId, teams.length])
+
+  if (!mounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

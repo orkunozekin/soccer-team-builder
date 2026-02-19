@@ -3,20 +3,20 @@
  * These functions call our Next.js API routes instead of directly calling Firebase
  */
 
+import { auth } from '@/lib/firebase/config'
+
 const API_BASE = '/api'
 
 async function apiRequest(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<Response> {
-  // Get auth token from Firebase
-  const { auth } = await import('@/lib/firebase/config')
   const user = auth.currentUser
   const token = user ? await user.getIdToken() : null
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   }
 
   if (token) {

@@ -1,5 +1,4 @@
 import {
-  createDocument,
   getDocument,
   updateDocument,
   deleteDocument,
@@ -7,29 +6,10 @@ import {
   timestampToDate,
   dateToTimestamp,
 } from '@/lib/firebase/firestore'
-import { where, orderBy } from 'firebase/firestore'
-import { Match, MatchFirestore } from '@/types/match'
+import { orderBy } from 'firebase/firestore'
+import { Match } from '@/types/match'
 import { shouldRSVPBeOpen } from '@/lib/utils/rsvpScheduler'
 
-export const createMatch = async (
-  date: Date,
-  time: string,
-  rsvpOpen: boolean = false,
-  rsvpOpenAt: Date | null = null,
-  rsvpCloseAt: Date | null = null
-): Promise<string> => {
-  const matchId = `match_${Date.now()}`
-  const matchData: Omit<MatchFirestore, 'id' | 'createdAt' | 'updatedAt'> = {
-    date: dateToTimestamp(date)!,
-    time,
-    rsvpOpen,
-    rsvpOpenAt: rsvpOpenAt ? dateToTimestamp(rsvpOpenAt) : null,
-    rsvpCloseAt: rsvpCloseAt ? dateToTimestamp(rsvpCloseAt) : null,
-  }
-
-  await createDocument('matches', matchId, matchData)
-  return matchId
-}
 
 export const getMatch = async (matchId: string): Promise<Match | null> => {
   const matchDoc = await getDocument('matches', matchId)
@@ -60,28 +40,23 @@ export const getMatch = async (matchId: string): Promise<Match | null> => {
 }
 
 export const getAllMatches = async (): Promise<Match[]> => {
-  const matches = await queryDocuments('matches', [
-    orderBy('date', 'asc'),
-    orderBy('time', 'asc'),
-  ])
+  // Single orderBy to avoid requiring a composite index; sort by time in memory
+  const matches = await queryDocuments('matches', [orderBy('date', 'asc')])
 
-  return matches.map((match: any) => {
+  const mapped = matches.map((match: any) => {
     const matchDate = timestampToDate(match.date) || new Date()
     const rsvpOpenAt = match.rsvpOpenAt ? timestampToDate(match.rsvpOpenAt) : null
     const rsvpCloseAt = match.rsvpCloseAt ? timestampToDate(match.rsvpCloseAt) : null
 
-    // Check if RSVP should be open based on schedule
     const shouldBeOpen = shouldRSVPBeOpen(matchDate, rsvpOpenAt, rsvpCloseAt)
-    
-    // If manual override is not set, update RSVP status based on schedule
-    const rsvpOpen = rsvpOpenAt && rsvpCloseAt 
-      ? match.rsvpOpen 
+    const rsvpOpen = rsvpOpenAt && rsvpCloseAt
+      ? match.rsvpOpen
       : shouldBeOpen
 
     return {
       id: match.id,
       date: matchDate,
-      time: match.time,
+      time: match.time ?? '',
       rsvpOpen,
       rsvpOpenAt,
       rsvpCloseAt,
@@ -89,6 +64,14 @@ export const getAllMatches = async (): Promise<Match[]> => {
       updatedAt: timestampToDate(match.updatedAt) || new Date(),
     }
   })
+
+  mapped.sort((a, b) => {
+    const dateCompare = a.date.getTime() - b.date.getTime()
+    if (dateCompare !== 0) return dateCompare
+    return (a.time || '').localeCompare(b.time || '')
+  })
+
+  return mapped
 }
 
 export const updateMatch = async (

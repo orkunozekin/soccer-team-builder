@@ -39,8 +39,8 @@ export function MatchDetails({ match, rsvpCount }: MatchDetailsProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-              RSVP Status
+            <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+              Current headcount
             </p>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               {rsvpCount} {rsvpCount === 1 ? 'player' : 'players'} confirmed

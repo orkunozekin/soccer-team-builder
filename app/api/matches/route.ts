@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Timestamp } from 'firebase-admin/firestore'
 import { verifyAdmin } from '@/lib/api/auth'
-import { createMatch } from '@/lib/services/matchService'
+import { getAdminDb } from '@/lib/firebase/admin'
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication and admin status
     const { uid, isAdmin, error: authError } = await verifyAdmin(request)
     if (authError || !uid) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -26,22 +26,35 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate date
     const matchDate = new Date(date)
     if (isNaN(matchDate.getTime())) {
       return NextResponse.json({ error: 'Invalid date' }, { status: 400 })
     }
 
-    // Validate time format (HH:mm)
     const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/
     if (!timeRegex.test(time)) {
       return NextResponse.json({ error: 'Invalid time format' }, { status: 400 })
     }
 
-    // Note: Admin verification should be done here with Firebase Admin SDK
-    // For now, relying on Firestore security rules
+    const adminDb = getAdminDb()
+    if (!adminDb) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
+    }
 
-    const matchId = await createMatch(matchDate, time, false)
+    const matchId = `match_${Date.now()}`
+    const now = Timestamp.now()
+    await adminDb.collection('matches').doc(matchId).set({
+      date: Timestamp.fromDate(matchDate),
+      time,
+      rsvpOpen: false,
+      rsvpOpenAt: null,
+      rsvpCloseAt: null,
+      createdAt: now,
+      updatedAt: now,
+    })
 
     return NextResponse.json({ success: true, matchId })
   } catch (error: any) {

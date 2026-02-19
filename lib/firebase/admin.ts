@@ -21,7 +21,7 @@ let adminDb: Firestore | null = null
  * 2. Environment variables (recommended for production):
  *    - Set GOOGLE_APPLICATION_CREDENTIALS or individual credential env vars
  */
-export function initializeAdmin(): App {
+export function initializeAdmin(): App | null {
   if (adminApp) {
     return adminApp
   }
@@ -42,54 +42,50 @@ export function initializeAdmin(): App {
       })
       return adminApp
     }
-    
+
     // Option 2: Use application default credentials (for Cloud Run, GCP, etc.)
     if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
       adminApp = initializeApp()
       return adminApp
     }
-    
+
     // Option 3: Try to load from file (for local development)
-    // This will work if GOOGLE_APPLICATION_CREDENTIALS points to a file
     try {
       adminApp = initializeApp()
       return adminApp
     } catch {
       // If that fails, we'll use fallback
     }
-    
+
     // Fallback: Admin SDK not configured
     console.warn(
       'Firebase Admin SDK not configured. API routes will use fallback verification. ' +
-      'For proper security, set up service account credentials. ' +
-      'See ARCHITECTURE.md for setup instructions.'
+        'For proper security, set up service account credentials. ' +
+        'See ARCHITECTURE.md for setup instructions.'
     )
-    return null as any
+    return null
   } catch (error) {
     console.error('Error initializing Firebase Admin SDK:', error)
-    // Fall back to client SDK if Admin SDK fails
-    return null as any
+    return null
   }
-
-  return adminApp
 }
 
-export function getAdminAuth(): Auth {
+export function getAdminAuth(): Auth | null {
   if (!adminAuth) {
     const app = initializeAdmin()
     if (app) {
       adminAuth = getAuth(app)
     }
   }
-  return adminAuth!
+  return adminAuth
 }
 
-export function getAdminDb(): Firestore {
+export function getAdminDb(): Firestore | null {
   if (!adminDb) {
     const app = initializeAdmin()
     if (app) {
       adminDb = getFirestore(app)
     }
   }
-  return adminDb!
+  return adminDb
 }

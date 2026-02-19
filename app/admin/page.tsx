@@ -13,7 +13,7 @@ import { MatchCard } from '@/components/matches/MatchCard'
 import { format } from 'date-fns'
 
 function AdminDashboardContent() {
-  const { role, isSuperAdmin } = useAdmin()
+  const { isSuperAdmin } = useAdmin()
   const { matches, setMatches, setLoading } = useMatchStore()
 
   useEffect(() => {
@@ -33,7 +33,7 @@ function AdminDashboardContent() {
   }, [setMatches, setLoading])
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto max-w-5xl px-4 py-8">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <p className="text-zinc-600 dark:text-zinc-400">
@@ -90,24 +90,6 @@ function AdminDashboardContent() {
           <UserRoleManager />
         </div>
       )}
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Admin Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 text-sm">
-            <p>
-              <span className="font-medium">Role:</span> {role}
-            </p>
-            {isSuperAdmin && (
-              <p className="text-zinc-600 dark:text-zinc-400">
-                You have super admin privileges
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

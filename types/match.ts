@@ -8,14 +8,3 @@ export interface Match {
   createdAt: Date
   updatedAt: Date
 }
-
-export interface MatchFirestore {
-  id: string
-  date: any // Firestore Timestamp
-  time: string
-  rsvpOpen: boolean
-  rsvpOpenAt: any | null // Firestore Timestamp
-  rsvpCloseAt: any | null // Firestore Timestamp
-  createdAt: any // Firestore Timestamp
-  updatedAt: any // Firestore Timestamp
-}
