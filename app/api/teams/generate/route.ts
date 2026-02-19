@@ -88,19 +88,14 @@ export async function POST(request: NextRequest) {
     const teamCount = computeTeamCountForRSVPCount(rsvpsToUse.length, 11, 2)
     const teamAssignments = generateTeams(rsvpsToUse, users, 11, { teamCount })
 
-    // Use same path format as client: collection id "matches/{matchId}/teams"
     const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
-    const benchCol = adminDb.collection(`matches/${matchId}/bench`)
 
-    // Delete existing teams
     const existingTeams = await teamsCol.get()
     const batch = adminDb.batch()
     existingTeams.docs.forEach((d) => batch.delete(d.ref))
     await batch.commit()
 
     const now = Timestamp.now()
-    const allPlayerIds = new Set<string>()
-
     const writes: Promise<unknown>[] = []
     for (let i = 0; i < teamAssignments.length; i++) {
       const assignment = teamAssignments[i]
@@ -115,26 +110,6 @@ export async function POST(request: NextRequest) {
         createdAt: now,
         updatedAt: now,
       }))
-      assignment.playerIds.forEach((id) => allPlayerIds.add(id))
-    }
-
-    const benchPlayerIds = rsvpsToUse
-      .map((r) => r.userId)
-      .filter((id) => !allPlayerIds.has(id))
-
-    const benchId = `bench_${matchId}`
-    const benchDoc = await benchCol.doc(benchId).get()
-    if (benchDoc.exists) {
-      await benchCol.doc(benchId).update({
-        playerIds: benchPlayerIds,
-        updatedAt: now,
-      })
-    } else {
-      await benchCol.doc(benchId).set({
-        matchId,
-        playerIds: benchPlayerIds,
-        updatedAt: now,
-      })
     }
 
     await Promise.all(writes)

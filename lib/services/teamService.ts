@@ -84,50 +84,19 @@ export const deleteTeam = async (
   await deleteDocument(getTeamsCollectionPath(matchId), teamId)
 }
 
-// Bench operations
+// Bench is no longer used; return empty stub for backwards compatibility
 export const getBench = async (matchId: string): Promise<Bench | null> => {
-  const benchDocs = await queryDocuments(getBenchCollectionPath(matchId), [])
-  
-  if (benchDocs.length === 0) {
-    // Create default bench if it doesn't exist
-    const benchId = `bench_${matchId}`
-    await createDocument(getBenchCollectionPath(matchId), benchId, {
-      matchId,
-      playerIds: [],
-    })
-    return {
-      id: benchId,
-      matchId,
-      playerIds: [],
-      updatedAt: new Date(),
-    }
-  }
-
-  const bench = benchDocs[0] as any
   return {
-    id: bench.id,
-    matchId: bench.matchId,
-    playerIds: bench.playerIds || [],
-    updatedAt: timestampToDate(bench.updatedAt) || new Date(),
+    id: `bench_${matchId}`,
+    matchId,
+    playerIds: [],
+    updatedAt: new Date(),
   }
 }
 
 export const updateBench = async (
-  matchId: string,
-  playerIds: string[]
+  _matchId: string,
+  _playerIds: string[]
 ): Promise<void> => {
-  const benchDocs = await queryDocuments(getBenchCollectionPath(matchId), [])
-  
-  if (benchDocs.length === 0) {
-    const benchId = `bench_${matchId}`
-    await createDocument(getBenchCollectionPath(matchId), benchId, {
-      matchId,
-      playerIds,
-    })
-  } else {
-    const benchId = benchDocs[0].id
-    await updateDocument(getBenchCollectionPath(matchId), benchId, {
-      playerIds,
-    })
-  }
+  // No-op: bench removed; all players are on teams
 }

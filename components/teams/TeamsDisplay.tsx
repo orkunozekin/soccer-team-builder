@@ -13,7 +13,6 @@ interface TeamsDisplayProps {
   matchId?: string
   teams: Team[]
   users: User[]
-  benchPlayerIds: string[]
   isAdmin?: boolean
   onTeamsChanged?: () => void
   headerActions?: React.ReactNode
@@ -23,7 +22,6 @@ export function TeamsDisplay({
   matchId,
   teams,
   users,
-  benchPlayerIds,
   isAdmin = false,
   onTeamsChanged,
   headerActions,
@@ -93,33 +91,8 @@ export function TeamsDisplay({
     }
   }
 
-  const onDropToBench = async (e: React.DragEvent) => {
-    if (!dndEnabled || !matchId) return
-    e.preventDefault()
-    const payload = parsePayload(e)
-    if (!payload?.playerId) return
-    if (payload.fromBench) return
-
-    setTransferError('')
-    setTransferring(payload.playerId)
-    try {
-      await transferPlayerAPI(
-        matchId,
-        payload.playerId,
-        'bench',
-        payload.fromTeamId,
-        payload.fromBench
-      )
-      onTeamsChanged?.()
-    } catch (err) {
-      setTransferError(err instanceof Error ? err.message : 'Failed to transfer player')
-    } finally {
-      setTransferring(null)
-    }
-  }
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-2xl font-bold">Teams</h2>
         {headerActions ? <div className="shrink-0">{headerActions}</div> : null}
@@ -145,8 +118,7 @@ export function TeamsDisplay({
         <div className="text-sm text-zinc-600 dark:text-zinc-400">
           <span className="font-medium">
             {page.kind === 'main' ? 'Main teams' : 'Extra teams'}
-          </span>{' '}
-          — showing {page.start + 1}–{page.end} of {teamsSorted.length}
+          </span>
         </div>
       )}
 
@@ -230,63 +202,6 @@ export function TeamsDisplay({
           )
         })}
       </div>
-
-      {(benchPlayerIds.length > 0 || dndEnabled) && (
-        <Card
-          onDragOver={(e) => dndEnabled && e.preventDefault()}
-          onDrop={onDropToBench}
-          className={cn(dndEnabled && 'outline outline-1 outline-transparent hover:outline-zinc-300')}
-        >
-          <CardHeader>
-            <CardTitle>Bench</CardTitle>
-            {dndEnabled && (
-              <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                Drag players here to bench them.
-              </p>
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {benchPlayerIds.length === 0 ? (
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  No players on bench
-                </p>
-              ) : (
-                benchPlayerIds
-                  .map((id) => users.find((u) => u.uid === id))
-                  .filter((u): u is User => !!u)
-                  .map((user) => (
-                    <div
-                      key={user.uid}
-                      draggable={dndEnabled}
-                      onDragStart={(e) => {
-                        if (!dndEnabled) return
-                        const payload = { playerId: user.uid, fromBench: true } satisfies DragPayload
-                        e.dataTransfer.setData('application/json', JSON.stringify(payload))
-                        e.dataTransfer.effectAllowed = 'move'
-                      }}
-                      className={cn(
-                        'flex items-center gap-2 text-sm',
-                        dndEnabled && 'rounded-md px-1 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-grab active:cursor-grabbing',
-                        transferring === user.uid && 'opacity-50'
-                      )}
-                    >
-                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-500 text-white text-xs font-bold">
-                        {user.jerseyNumber || '?'}
-                      </span>
-                      <span className="truncate">{user.displayName}</span>
-                      {user.position && (
-                        <span className="ml-auto text-xs text-zinc-600 dark:text-zinc-400">
-                          {user.position}
-                        </span>
-                      )}
-                    </div>
-                  ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }

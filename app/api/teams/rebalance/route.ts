@@ -65,8 +65,6 @@ export async function POST(request: NextRequest) {
     }
 
     const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
-    const benchCol = adminDb.collection(`matches/${matchId}/bench`)
-    const benchId = `bench_${matchId}`
 
     const teamsSnap = await teamsCol.get()
     if (teamsSnap.empty) {
@@ -212,11 +210,6 @@ export async function POST(request: NextRequest) {
     assignFrom('FWD')
     assignFrom('UNK')
 
-    const assignedSet = new Set(assigned.flat())
-    const benchPlayerIds = uniqueRsvpsSorted
-      .map((r) => r.userId)
-      .filter((id) => !assignedSet.has(id))
-
     const now = Timestamp.now()
     const batch = adminDb.batch()
     teams.forEach((t, idx) => {
@@ -225,22 +218,13 @@ export async function POST(request: NextRequest) {
         updatedAt: now,
       })
     })
-    batch.set(
-      benchCol.doc(benchId),
-      {
-        matchId,
-        playerIds: benchPlayerIds,
-        updatedAt: now,
-      },
-      { merge: true }
-    )
     await batch.commit()
 
     return NextResponse.json({
       success: true,
       teamsRebalanced: teams.length,
       assignedCounts: assigned.map((a) => a.length),
-      benchCount: benchPlayerIds.length,
+      benchCount: 0,
       rosterLimit,
       replacements,
     })

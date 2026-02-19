@@ -1,17 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useAuth } from '@/lib/hooks/useAuth'
-import { createRSVP, cancelRSVP, getUserRSVP } from '@/lib/services/rsvpService'
-import { useMatchStore } from '@/store/matchStore'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { cancelRSVPAPI, confirmRSVPAPI } from '@/lib/api/client'
+import { useAuth } from '@/lib/hooks/useAuth'
+import { getUserRSVP } from '@/lib/services/rsvpService'
+import { useMatchStore } from '@/store/matchStore'
 import { Match } from '@/types/match'
 
 interface RSVPButtonProps {
   match: Match
+  onTeamsRegenerated?: () => void | Promise<void>
 }
 
-export function RSVPButton({ match }: RSVPButtonProps) {
+export function RSVPButton({ match, onTeamsRegenerated }: RSVPButtonProps) {
   const { user } = useAuth()
   const { matchRSVPs, addRSVP, removeRSVP } = useMatchStore()
   const [hasRSVPed, setHasRSVPed] = useState(false)
@@ -50,16 +52,19 @@ export function RSVPButton({ match }: RSVPButtonProps) {
 
     try {
       if (hasRSVPed) {
-        // Cancel RSVP
+        // Cancel RSVP (API updates RSVP and removes user from team / deletes empty team)
         const rsvp = matchRSVPs.find((r) => r.userId === user.uid)
         if (rsvp) {
-          await cancelRSVP(rsvp.id)
+          const { teamsUpdated } = await cancelRSVPAPI(rsvp.id)
           removeRSVP(rsvp.id)
           setHasRSVPed(false)
+          if (teamsUpdated && onTeamsRegenerated) {
+            await onTeamsRegenerated()
+          }
         }
       } else {
-        // Create RSVP
-        const rsvpId = await createRSVP(match.id, user.uid)
+        // Confirm RSVP via API (creates RSVP and expands teams when 23+ RSVPs)
+        const { rsvpId, regenerated } = await confirmRSVPAPI(match.id)
         const newRSVP = {
           id: rsvpId,
           matchId: match.id,
@@ -70,6 +75,9 @@ export function RSVPButton({ match }: RSVPButtonProps) {
         }
         addRSVP(newRSVP)
         setHasRSVPed(true)
+        if (regenerated && onTeamsRegenerated) {
+          await onTeamsRegenerated()
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Failed to update RSVP')
@@ -79,11 +87,7 @@ export function RSVPButton({ match }: RSVPButtonProps) {
   }
 
   if (!match.rsvpOpen) {
-    return (
-      <Button disabled className="w-full h-11 sm:h-9">
-        RSVP Closed
-      </Button>
-    )
+    return null
   }
 
   return (

@@ -62,7 +62,7 @@ export function AdminMatchCard({
       >
         <CardHeader>
           <CardTitle className="text-lg">
-            {format(match.date, 'MMM d, yyyy')}
+            {format(match.date, 'MMM d')}
           </CardTitle>
           <CardDescription>
             {format(match.date, 'h:mm a')}
@@ -97,7 +97,7 @@ export function AdminMatchCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete match?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the match, its teams, bench, and RSVPs. This cannot be undone.
+              This will remove the match, its teams, and RSVPs. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

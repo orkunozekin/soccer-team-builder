@@ -46,6 +46,40 @@ export async function generateTeamsAPI(matchId: string): Promise<{
   return response.json()
 }
 
+export async function confirmRSVPAPI(matchId: string): Promise<{
+  rsvpId: string
+  regenerated: boolean
+}> {
+  const response = await apiRequest('/rsvp', {
+    method: 'POST',
+    body: JSON.stringify({ matchId }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to confirm RSVP')
+  }
+
+  return response.json()
+}
+
+export async function cancelRSVPAPI(rsvpId: string): Promise<{
+  cancelled: boolean
+  teamsUpdated: boolean
+}> {
+  const response = await apiRequest('/rsvp', {
+    method: 'PATCH',
+    body: JSON.stringify({ rsvpId }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to cancel RSVP')
+  }
+
+  return response.json()
+}
+
 export async function transferPlayerAPI(
   matchId: string,
   playerId: string,

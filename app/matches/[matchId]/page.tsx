@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getMatch } from '@/lib/services/matchService'
 import { getMatchRSVPs } from '@/lib/services/rsvpService'
-import { getMatchTeams, getBench } from '@/lib/services/teamService'
+import { getMatchTeams } from '@/lib/services/teamService'
 import { getAllUsers } from '@/lib/services/userService'
 import { useMatchStore } from '@/store/matchStore'
 import { MatchDetails } from '@/components/matches/MatchDetails'
@@ -24,7 +24,6 @@ export default function MatchDetailsPage() {
     useMatchStore()
   const [loadingMatch, setLoadingMatch] = useState(true)
   const [teams, setTeams] = useState<Team[]>([])
-  const [benchPlayerIds, setBenchPlayerIds] = useState<string[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [loadingTeams, setLoadingTeams] = useState(true)
 
@@ -51,14 +50,11 @@ export default function MatchDetailsPage() {
         const rsvps = await getMatchRSVPs(matchId)
         setMatchRSVPs(rsvps)
 
-        // Fetch teams and bench
-        const [matchTeams, bench, users] = await Promise.all([
+        const [matchTeams, users] = await Promise.all([
           getMatchTeams(matchId),
-          getBench(matchId),
           getAllUsers(),
         ])
         setTeams(matchTeams)
-        setBenchPlayerIds(bench?.playerIds || [])
         setAllUsers(users)
         setLoadingTeams(false)
       } catch (error) {
@@ -72,6 +68,12 @@ export default function MatchDetailsPage() {
     fetchMatchData()
   }, [matchId, user, authLoading, router, setCurrentMatch, setMatchRSVPs])
 
+  const refetchTeams = async () => {
+    if (!matchId) return
+    const newTeams = await getMatchTeams(matchId)
+    setTeams(newTeams)
+  }
+
   if (authLoading || loadingMatch) {
     return <PageLoadingSkeleton showBack variant="container" />
   }
@@ -84,9 +86,9 @@ export default function MatchDetailsPage() {
     <div className="container mx-auto px-4 py-2">
       <BackLink href="/matches" label="Back to Matches" />
 
-      <div className="mt-6 grid gap-10 lg:grid-cols-2 lg:gap-12">
+      <div className="mt-2 grid gap-10 lg:grid-cols-2 lg:gap-12">
         <div>
-          <MatchDetails match={currentMatch} rsvpCount={matchRSVPs.length} />
+          <MatchDetails match={currentMatch} rsvpCount={matchRSVPs.length} onTeamsRegenerated={refetchTeams} />
         </div>
 
         <div>
@@ -94,7 +96,6 @@ export default function MatchDetailsPage() {
             <TeamsDisplay
               teams={teams}
               users={allUsers}
-              benchPlayerIds={benchPlayerIds}
             />
           )}
         </div>

@@ -1,10 +1,10 @@
 'use client'
 
-import Link from 'next/link'
 import { format } from 'date-fns'
-import { Match } from '@/types/match'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Match } from '@/types/match'
 
 interface MatchCardProps {
   match: Match
@@ -12,7 +12,7 @@ interface MatchCardProps {
 
 export function MatchCard({ match }: MatchCardProps) {
   const matchDate = new Date(match.date)
-  const formattedDate = format(matchDate, 'EEEE, MMMM d, yyyy')
+  const formattedDate = format(matchDate, 'EEEE, MMMM d')
   const formattedTime = format(matchDate, 'h:mm a')
 
   return (

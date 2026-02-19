@@ -18,7 +18,6 @@ interface PlayerTransferProps {
   matchId: string
   teams: Team[]
   users: User[]
-  benchPlayerIds: string[]
   onTransferComplete?: () => void
 }
 
@@ -26,7 +25,6 @@ export function PlayerTransfer({
   matchId,
   teams,
   users,
-  benchPlayerIds,
   onTransferComplete,
 }: PlayerTransferProps) {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('')
@@ -34,10 +32,8 @@ export function PlayerTransfer({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Get all players (from teams and bench)
   const allPlayerIds = new Set<string>()
   teams.forEach((team) => team.playerIds.forEach((id) => allPlayerIds.add(id)))
-  benchPlayerIds.forEach((id) => allPlayerIds.add(id))
 
   const availablePlayers = users.filter((u) => allPlayerIds.has(u.uid))
 
@@ -91,10 +87,7 @@ export function PlayerTransfer({
     setError('')
 
     try {
-      // Find current team/bench for player
       let currentTeam: Team | null = null
-      const isOnBench = benchPlayerIds.includes(selectedPlayerId)
-
       for (const team of teams) {
         if (team.playerIds.includes(selectedPlayerId)) {
           currentTeam = team
@@ -102,13 +95,11 @@ export function PlayerTransfer({
         }
       }
 
-      // Call API route (validation and business logic on server)
       await transferPlayerAPI(
         matchId,
         selectedPlayerId,
         targetTeamId,
-        currentTeam?.id,
-        isOnBench
+        currentTeam?.id
       )
 
       setSelectedPlayerId('')
@@ -129,7 +120,7 @@ export function PlayerTransfer({
       <CardHeader>
         <CardTitle>Transfer Player</CardTitle>
         <CardDescription>
-          Move players between teams or to/from bench
+          Move players between teams
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -145,17 +136,14 @@ export function PlayerTransfer({
                   <span
                     className="flex items-center justify-between gap-2 rounded-sm px-2 py-1"
                     style={styleForTeamColor(teamColorByPlayerId.get(user.uid) ?? null)}
-                    title={benchPlayerIds.includes(user.uid) ? 'Bench' : undefined}
                   >
                     <span className="truncate">
                       {user.displayName} {user.jerseyNumber && `#${user.jerseyNumber}`}
                       {user.position && ` (${user.position})`}
                     </span>
-                    {!benchPlayerIds.includes(user.uid) && (
-                      <span className="shrink-0 text-xs opacity-90">
-                        {teamNameByPlayerId.get(user.uid) ?? ''}
-                      </span>
-                    )}
+                    <span className="shrink-0 text-xs opacity-90">
+                      {teamNameByPlayerId.get(user.uid) ?? ''}
+                    </span>
                   </span>
                 </SelectItem>
               ))}
@@ -170,7 +158,6 @@ export function PlayerTransfer({
               <SelectValue placeholder="Choose destination" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="bench">Bench</SelectItem>
               {teams.map((team) => (
                 <SelectItem key={team.id} value={team.id}>
                   <span

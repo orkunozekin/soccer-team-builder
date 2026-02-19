@@ -144,17 +144,13 @@ export async function POST(request: Request) {
     const teamAssignments = generateTeams(rsvpsToUse, users, 11, { teamCount })
 
     const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
-    const benchCol = adminDb.collection(`matches/${matchId}/bench`)
 
-    // Delete existing teams
     const existingTeams = await teamsCol.get()
     const deleteBatch = adminDb.batch()
     existingTeams.docs.forEach((d) => deleteBatch.delete(d.ref))
     await deleteBatch.commit()
 
-    const allPlayerIds = new Set<string>()
     const writes: Promise<unknown>[] = []
-
     for (let i = 0; i < teamAssignments.length; i++) {
       const assignment = teamAssignments[i]
       const teamId = `team_${matchId}_${assignment.teamNumber}_${Date.now()}`
@@ -170,24 +166,7 @@ export async function POST(request: Request) {
           updatedAt: now,
         })
       )
-      assignment.playerIds.forEach((id) => allPlayerIds.add(id))
     }
-
-    const benchPlayerIds = rsvpsToUse
-      .map((r) => r.userId)
-      .filter((id) => !allPlayerIds.has(id))
-
-    const benchId = `bench_${matchId}`
-    writes.push(
-      benchCol.doc(benchId).set(
-        {
-          matchId,
-          playerIds: benchPlayerIds,
-          updatedAt: now,
-        },
-        { merge: true }
-      )
-    )
 
     await Promise.all(writes)
   }

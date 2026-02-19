@@ -24,8 +24,42 @@ export function computeTeamCountForRSVPCount(
 ): number {
   const baseCapacity = baseTeams * maxTeamSize
   const extraPlayers = Math.max(0, rsvpCount - baseCapacity)
-  const extraTeams = Math.floor(extraPlayers / maxTeamSize)
+  const extraTeams = extraPlayers > 0 ? Math.ceil(extraPlayers / maxTeamSize) : 0
   return Math.max(baseTeams, baseTeams + extraTeams)
+}
+
+/**
+ * Fill one team with up to maxSize players from the pool (in order), with at most one GK.
+ * Mutates pool (splice). Returns the player IDs assigned.
+ */
+function fillTeam(
+  pool: RSVP[],
+  users: User[],
+  maxSize: number,
+  maxGk: number = 1
+): string[] {
+  const assigned: string[] = []
+  let gkCount = 0
+  const deferred: RSVP[] = []
+
+  for (const rsvp of pool) {
+    if (assigned.length >= maxSize) {
+      deferred.push(rsvp)
+      continue
+    }
+    const isGk = isGoalkeeper(users.find((u) => u.uid === rsvp.userId)?.position ?? null)
+    if (isGk && gkCount >= maxGk) {
+      deferred.push(rsvp)
+      continue
+    }
+    assigned.push(rsvp.userId)
+    if (isGk) gkCount += 1
+  }
+
+  // Put deferred back at the start of pool for next team (replace pool contents)
+  pool.length = 0
+  pool.push(...deferred)
+  return assigned
 }
 
 export function generateTeams(
@@ -34,57 +68,89 @@ export function generateTeams(
   maxTeamSize: number = 11,
   options?: { teamCount?: number }
 ): TeamAssignment[] {
-  // 1. Separate players by priority
-  const goalkeepers: RSVP[] = []
-  const admins: RSVP[] = []
-  const regularPlayers: RSVP[] = []
-
-  rsvps.forEach((rsvp) => {
-    const user = users.find((u) => u.uid === rsvp.userId)
-    if (!user) return
-
-    if (isGoalkeeper(user.position)) {
-      goalkeepers.push(rsvp)
-    } else if (user.role === 'admin') {
-      admins.push(rsvp)
-    } else {
-      regularPlayers.push(rsvp)
-    }
-  })
-
-  // 2. Create teams (at least 2)
   const teamCount =
     options?.teamCount ?? Math.max(2, Math.ceil(rsvps.length / maxTeamSize))
-  const teams: TeamAssignment[] = Array.from({ length: teamCount }, (_, i) => ({
-    teamNumber: i + 1,
-    playerIds: [],
-  }))
 
-  // 3. Assign goalkeepers to first two teams (max 1 per team)
-  goalkeepers.forEach((gk, idx) => {
-    if (idx < 2 && teams[idx]) {
-      teams[idx].playerIds.push(gk.userId)
-    }
-  })
+  // Sort by RSVP time (earliest first)
+  const sorted = [...rsvps].sort(
+    (a, b) => (a.rsvpAt?.getTime() ?? 0) - (b.rsvpAt?.getTime() ?? 0)
+  )
+  const pool = sorted.filter((r) => users.some((u) => u.uid === r.userId))
 
-  // 4. Assign admins to first two teams
-  admins.forEach((admin, idx) => {
-    const teamIdx = idx % 2
-    if (teams[teamIdx] && teams[teamIdx].playerIds.length < maxTeamSize) {
-      teams[teamIdx].playerIds.push(admin.userId)
-    }
-  })
+  const teams: TeamAssignment[] = []
 
-  // 5. Fill remaining spots first come first serve
-  regularPlayers.forEach((player) => {
-    // Find team with most space
-    const team = teams.reduce((min, t) =>
-      t.playerIds.length < min.playerIds.length ? t : min
+  // First two teams: 11 each, max 1 GK per team (keep 11 v 11)
+  for (let i = 0; i < 2 && pool.length > 0; i++) {
+    const playerIds = fillTeam(pool, users, maxTeamSize, 1)
+    teams.push({ teamNumber: i + 1, playerIds })
+  }
+
+  // Remaining players go to third team and beyond (extra teams)
+  let teamNumber = 3
+  while (pool.length > 0) {
+    const playerIds = fillTeam(pool, users, maxTeamSize, 11) // no GK limit on extra teams
+    teams.push({ teamNumber, playerIds })
+    teamNumber += 1
+  }
+
+  // Admins who RSVP'd after the first 22: swap them into the first two teams by replacing the last non-admin(s) by RSVP time
+  if (teams.length >= 3) {
+    const userById = new Map(users.map((u) => [u.uid, u]))
+    const rsvpAtByUserId = new Map(
+      sorted.map((r) => [r.userId, r.rsvpAt?.getTime() ?? 0])
     )
-    if (team.playerIds.length < maxTeamSize) {
-      team.playerIds.push(player.userId)
+
+    const overflowTeams = teams.slice(2)
+    const overflowAdminIds: string[] = []
+    for (const t of overflowTeams) {
+      for (const uid of t.playerIds) {
+        if (userById.get(uid)?.role === 'admin') {
+          overflowAdminIds.push(uid)
+        }
+      }
     }
-  })
+    overflowAdminIds.sort(
+      (a, b) => (rsvpAtByUserId.get(a) ?? 0) - (rsvpAtByUserId.get(b) ?? 0)
+    )
+
+    const firstTwoNonAdmins: { userId: string; teamIndex: number }[] = []
+    for (let ti = 0; ti < 2 && ti < teams.length; ti++) {
+      for (const uid of teams[ti].playerIds) {
+        if (userById.get(uid)?.role !== 'admin') {
+          firstTwoNonAdmins.push({ userId: uid, teamIndex: ti })
+        }
+      }
+    }
+    firstTwoNonAdmins.sort(
+      (a, b) =>
+        (rsvpAtByUserId.get(b.userId) ?? 0) - (rsvpAtByUserId.get(a.userId) ?? 0)
+    )
+
+    const swapCount = Math.min(overflowAdminIds.length, firstTwoNonAdmins.length)
+    for (let i = 0; i < swapCount; i++) {
+      const adminId = overflowAdminIds[i]
+      const { userId: bumpedId, teamIndex } = firstTwoNonAdmins[i]
+
+      const mainTeam = teams[teamIndex]
+      mainTeam.playerIds = mainTeam.playerIds.map((id) =>
+        id === bumpedId ? adminId : id
+      )
+
+      const overflowTeam = overflowTeams.find((t) =>
+        t.playerIds.includes(adminId)
+      )
+      if (overflowTeam) {
+        overflowTeam.playerIds = overflowTeam.playerIds.map((id) =>
+          id === adminId ? bumpedId : id
+        )
+      }
+    }
+  }
+
+  // If we needed more teams by count but had no overflow, add empty slots
+  while (teams.length < teamCount) {
+    teams.push({ teamNumber: teams.length + 1, playerIds: [] })
+  }
 
   return teams
 }

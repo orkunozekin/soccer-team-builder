@@ -276,7 +276,7 @@ export function UserRoleManager() {
             <AlertDialogHeader>
               <AlertDialogTitle>Remove user?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will delete the user from the system (Auth + database) and remove them from teams/bench/RSVPs. This cannot be undone.
+                This will delete the user from the system (Auth + database) and remove them from teams/RSVPs. This cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

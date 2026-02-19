@@ -9,11 +9,12 @@ import { Badge } from '@/components/ui/badge'
 interface MatchDetailsProps {
   match: Match
   rsvpCount: number
+  onTeamsRegenerated?: () => void | Promise<void>
 }
 
-export function MatchDetails({ match, rsvpCount }: MatchDetailsProps) {
+export function MatchDetails({ match, rsvpCount, onTeamsRegenerated }: MatchDetailsProps) {
   const matchDate = new Date(match.date)
-  const formattedDate = format(matchDate, 'EEEE, MMMM d, yyyy')
+  const formattedDate = format(matchDate, 'EEEE, MMMM d')
   const formattedTime = format(matchDate, 'h:mm a')
 
   return (
@@ -47,9 +48,11 @@ export function MatchDetails({ match, rsvpCount }: MatchDetailsProps) {
             </p>
           </div>
 
-          <div className="pt-4 border-t">
-            <RSVPButton match={match} />
-          </div>
+          {match.rsvpOpen && (
+            <div className="pt-4">
+              <RSVPButton match={match} onTeamsRegenerated={onTeamsRegenerated} />
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

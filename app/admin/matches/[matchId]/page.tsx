@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { AdminRouteGuard } from '@/components/admin/AdminRouteGuard'
 import { getMatch } from '@/lib/services/matchService'
-import { getMatchTeams, getBench } from '@/lib/services/teamService'
+import { getMatchTeams } from '@/lib/services/teamService'
 import { getMatchRSVPs } from '@/lib/services/rsvpService'
 import { getAllUsers } from '@/lib/services/userService'
 import { generateTeamsAPI, deleteMatchAPI, updateMatchAPI } from '@/lib/api/client'
@@ -40,7 +40,6 @@ function AdminMatchManagementContent() {
   const [deleting, setDeleting] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [teams, setTeams] = useState<Team[]>([])
-  const [benchPlayerIds, setBenchPlayerIds] = useState<string[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [rsvpCount, setRsvpCount] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -56,17 +55,15 @@ function AdminMatchManagementContent() {
     if (!matchId) return
 
     try {
-      const [matchData, teamsData, benchData, usersData, rsvpsData] = await Promise.all([
+      const [matchData, teamsData, usersData, rsvpsData] = await Promise.all([
         getMatch(matchId),
         getMatchTeams(matchId),
-        getBench(matchId),
         getAllUsers(),
         getMatchRSVPs(matchId),
       ])
 
       setMatch(matchData)
       setTeams(teamsData)
-      setBenchPlayerIds(benchData?.playerIds || [])
       setAllUsers(usersData)
       setRsvpCount(rsvpsData.length)
       if (matchData) {
@@ -239,7 +236,7 @@ function AdminMatchManagementContent() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete match?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will remove the match, its teams, bench, and RSVPs. This cannot be undone.
+                  This will remove the match, its teams, and RSVPs. This cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -266,7 +263,6 @@ function AdminMatchManagementContent() {
               matchId={matchId}
               teams={teams}
               users={allUsers}
-              benchPlayerIds={benchPlayerIds}
               isAdmin={true}
               onTeamsChanged={refreshData}
               headerActions={
@@ -288,7 +284,6 @@ function AdminMatchManagementContent() {
                 matchId={matchId}
                 teams={teams}
                 users={allUsers}
-                benchPlayerIds={benchPlayerIds}
                 onTransferComplete={refreshData}
               />
             </div>

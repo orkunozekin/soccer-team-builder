@@ -33,6 +33,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (targetTeamId === 'bench') {
+      return NextResponse.json(
+        { error: 'Bench is not supported; use teams only' },
+        { status: 400 }
+      )
+    }
+
     const adminDb = getAdminDb()
     if (!adminDb) {
       return NextResponse.json(
@@ -42,13 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
-    const benchCol = adminDb.collection(`matches/${matchId}/bench`)
-    const benchId = `bench_${matchId}`
-
-    const [teamsSnap, benchSnap] = await Promise.all([
-      teamsCol.get(),
-      benchCol.doc(benchId).get(),
-    ])
+    const teamsSnap = await teamsCol.get()
 
     const teams = teamsSnap.docs.map((d) => {
       const data = d.data()
@@ -59,10 +60,6 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const benchPlayerIds: string[] = benchSnap.exists
-      ? ((benchSnap.data()?.playerIds as string[]) ?? [])
-      : []
-
     // Load player and (if needed) target team players for GK check
     const playerDocRef = adminDb.collection('users').doc(playerId)
     const playerDoc = await playerDocRef.get()
@@ -71,40 +68,6 @@ export async function POST(request: NextRequest) {
     }
     const playerData = playerDoc.data() as { position?: string | null } | undefined
     const movingIsGK = isGoalkeeper(playerData?.position ?? null)
-
-    // If moving to bench
-    if (targetTeamId === 'bench') {
-      const now = Timestamp.now()
-      const batch = adminDb.batch()
-
-      // Remove from current team if provided
-      if (currentTeamId) {
-        const currentTeam = teams.find((t) => t.id === currentTeamId)
-        if (currentTeam) {
-          batch.update(teamsCol.doc(currentTeamId), {
-            playerIds: currentTeam.playerIds.filter((id) => id !== playerId),
-            updatedAt: now,
-          })
-        }
-      }
-
-      // Add to bench
-      if (!benchPlayerIds.includes(playerId)) {
-        batch.set(
-          benchCol.doc(benchId),
-          {
-            matchId,
-            playerIds: uniq([...benchPlayerIds, playerId]),
-            updatedAt: now,
-          },
-          { merge: true }
-        )
-      }
-
-      await batch.commit()
-
-      return NextResponse.json({ success: true })
-    }
 
     // Moving to a team
     const targetTeam = teams.find((t) => t.id === targetTeamId)
@@ -131,7 +94,7 @@ export async function POST(request: NextRequest) {
     const now = Timestamp.now()
     const batch = adminDb.batch()
 
-    // Remove from current location
+    // Remove from current team if provided
     if (currentTeamId) {
       const currentTeam = teams.find((t) => t.id === currentTeamId)
       if (currentTeam) {
@@ -140,16 +103,6 @@ export async function POST(request: NextRequest) {
           updatedAt: now,
         })
       }
-    } else if (isOnBench) {
-      batch.set(
-        benchCol.doc(benchId),
-        {
-          matchId,
-          playerIds: benchPlayerIds.filter((id) => id !== playerId),
-          updatedAt: now,
-        },
-        { merge: true }
-      )
     }
 
     // Add to target team

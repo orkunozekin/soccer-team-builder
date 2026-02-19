@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { loginUser, loginWithGoogle } from '@/lib/firebase/auth'
 import { getUser, createUser } from '@/lib/services/userService'
 import { useAuthStore } from '@/store/authStore'
+import { FormError } from '@/components/auth/FormError'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -88,11 +89,7 @@ export function LoginForm() {
         />
       </div>
 
-      {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
-          {error}
-        </div>
-      )}
+      <FormError message={error} />
 
       <Button
         type="submit"
@@ -102,13 +99,12 @@ export function LoginForm() {
         {loading ? 'Signing in...' : 'Sign In'}
       </Button>
 
-      <div className="relative my-4">
-        <span className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-gray-200 dark:border-gray-700" />
-        </span>
-        <span className="relative flex justify-center text-xs uppercase text-gray-500 dark:text-gray-400">
+      <div className="my-4 flex items-center gap-3">
+        <span className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+        <span className="text-xs uppercase text-gray-500 dark:text-gray-400">
           Or continue with
         </span>
+        <span className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
       </div>
 
       <Button
