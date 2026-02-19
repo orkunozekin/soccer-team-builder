@@ -1,6 +1,5 @@
-import { createDocument, getDocument, updateDocument } from '@/lib/firebase/firestore'
+import { createDocument, getDocument, updateDocument, queryDocuments, timestampToDate } from '@/lib/firebase/firestore'
 import { User, UserFirestore } from '@/types/user'
-import { timestampToDate } from '@/lib/firebase/firestore'
 
 export const createUser = async (
   uid: string,
@@ -33,6 +32,21 @@ export const getUser = async (uid: string): Promise<User | null> => {
     createdAt: timestampToDate(userDoc.createdAt) || new Date(),
     updatedAt: timestampToDate(userDoc.updatedAt) || new Date(),
   }
+}
+
+export const getAllUsers = async (): Promise<User[]> => {
+  const users = await queryDocuments('users', [])
+
+  return users.map((user: any) => ({
+    uid: user.uid,
+    email: user.email,
+    displayName: user.displayName,
+    jerseyNumber: user.jerseyNumber ?? null,
+    position: user.position ?? null,
+    role: user.role || 'user',
+    createdAt: timestampToDate(user.createdAt) || new Date(),
+    updatedAt: timestampToDate(user.updatedAt) || new Date(),
+  }))
 }
 
 export const updateUser = async (

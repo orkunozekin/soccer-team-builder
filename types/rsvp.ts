@@ -1,0 +1,19 @@
+export type RSVPStatus = 'confirmed' | 'cancelled'
+
+export interface RSVP {
+  id: string
+  matchId: string
+  userId: string
+  status: RSVPStatus
+  rsvpAt: Date
+  updatedAt: Date
+}
+
+export interface RSVPFirestore {
+  id: string
+  matchId: string
+  userId: string
+  status: RSVPStatus
+  rsvpAt: any // Firestore Timestamp
+  updatedAt: any // Firestore Timestamp
+}
