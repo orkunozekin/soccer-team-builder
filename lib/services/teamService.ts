@@ -4,11 +4,9 @@ import {
   updateDocument,
   deleteDocument,
   queryDocuments,
-  where,
   timestampToDate,
-  dateToTimestamp,
 } from '@/lib/firebase/firestore'
-import { Team, TeamFirestore, Bench, BenchFirestore } from '@/types/team'
+import { Team, TeamFirestore, Bench } from '@/types/team'
 
 // Teams are stored as subcollection under matches
 const getTeamsCollectionPath = (matchId: string) => `matches/${matchId}/teams`
