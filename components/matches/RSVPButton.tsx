@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { ProfileCompleteModal } from '@/components/profile/ProfileCompleteModal'
 import { Button } from '@/components/ui/button'
+import { ButtonSpinner } from '@/components/ui/button-spinner'
 import { cancelRSVPAPI, confirmRSVPAPI } from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getUserRSVP } from '@/lib/services/rsvpService'
@@ -122,15 +123,12 @@ export function RSVPButton({ match, onTeamsRegenerated }: RSVPButtonProps) {
       />
       <Button
         onClick={handleRSVP}
-        disabled={loading || !user}
+        disabled={!user}
+        loading={loading}
         variant={hasRSVPed ? 'outline' : 'default'}
         className="w-full h-11 text-base sm:h-9 sm:text-sm"
       >
-        {loading
-          ? 'Processing...'
-          : hasRSVPed
-          ? 'Cancel RSVP'
-          : 'RSVP to Match'}
+        {hasRSVPed ? 'Cancel RSVP' : 'RSVP to Match'}
       </Button>
       {error && (
         <p className="text-sm text-red-600 dark:text-red-400">{error}</p>

@@ -183,10 +183,11 @@ export function PlayerTransfer({
 
         <Button
           onClick={handleTransfer}
-          disabled={loading || !selectedPlayerId || !targetTeamId}
+          disabled={!selectedPlayerId || !targetTeamId}
+          loading={loading}
           className="w-full h-11 sm:h-9"
         >
-          {loading ? 'Transferring...' : 'Transfer Player'}
+          Transfer Player
         </Button>
       </CardContent>
     </Card>

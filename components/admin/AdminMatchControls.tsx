@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { ButtonSpinner } from '@/components/ui/button-spinner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DatePickerTime } from '@/components/ui/date-picker-time'
 import { Input } from '@/components/ui/input'
@@ -120,10 +121,10 @@ export function AdminMatchControls({ onMatchCreated }: AdminMatchControlsProps) 
 
           <Button
             type="submit"
-            disabled={loading}
+            loading={loading}
             className="w-full h-11 text-base sm:h-9 sm:text-sm"
           >
-            {loading ? 'Creating...' : 'Create Match'}
+            Create Match
           </Button>
         </form>
       </CardContent>

@@ -104,17 +104,19 @@ export function RSVPPollControls({ match }: RSVPPollControlsProps) {
           <Button
             onClick={() => handleToggleRSVP(true)}
             disabled={loading || match.rsvpOpen}
+            loading={loading}
             className="flex-1 h-11 sm:h-9"
           >
-            {loading ? 'Updating...' : 'Open RSVP'}
+            Open RSVP
           </Button>
           <Button
             onClick={() => handleToggleRSVP(false)}
-            disabled={loading || !match.rsvpOpen}
+            disabled={!match.rsvpOpen}
+            loading={loading}
             variant="outline"
             className="flex-1 h-11 sm:h-9"
           >
-            {loading ? 'Updating...' : 'Close RSVP'}
+            Close RSVP
           </Button>
         </div>
       </CardContent>

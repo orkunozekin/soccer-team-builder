@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { deleteMatchAPI } from '@/lib/api/client'
+import { ButtonSpinner } from '@/components/ui/button-spinner'
 import { Match } from '@/types/match'
 
 interface AdminMatchCardProps {
@@ -79,14 +80,14 @@ export function AdminMatchCard({
               variant="destructive"
               size="sm"
               className="h-8"
-              disabled={deleting}
+              loading={deleting}
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
                 setOpen(true)
               }}
             >
-              {deleting ? 'Deleting...' : 'Delete'}
+              Delete
             </Button>
           </div>
         </CardContent>
@@ -110,7 +111,7 @@ export function AdminMatchCard({
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? 'Deleting...' : 'Delete'}
+              {deleting ? <ButtonSpinner /> : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

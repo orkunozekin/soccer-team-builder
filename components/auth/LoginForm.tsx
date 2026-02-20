@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/authStore'
 import { FormError } from '@/components/auth/FormError'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
 import { Button } from '@/components/ui/button'
+import { ButtonSpinner } from '@/components/ui/button-spinner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -94,9 +95,10 @@ export function LoginForm() {
       <Button
         type="submit"
         disabled={loading || googleLoading}
+        loading={loading}
         className="w-full h-11 text-base sm:h-9 sm:text-sm"
       >
-        {loading ? 'Signing in...' : 'Sign In'}
+        Sign In
       </Button>
 
       <div className="my-4 flex items-center gap-3">
@@ -110,18 +112,15 @@ export function LoginForm() {
       <Button
         type="button"
         variant="outline"
-        disabled={loading || googleLoading}
+        disabled={loading}
+        loading={googleLoading}
         className="w-full h-11 text-base sm:h-9 sm:text-sm"
         onClick={handleGoogleSignIn}
       >
-        {googleLoading ? (
-          'Signing in...'
-        ) : (
-          <span className="inline-flex items-center justify-center">
-            <GoogleIcon className="mr-2" />
-            Sign in with Google
-          </span>
-        )}
+        <span className="inline-flex items-center justify-center">
+          <GoogleIcon className="mr-2" />
+          Sign in with Google
+        </span>
       </Button>
     </form>
   )

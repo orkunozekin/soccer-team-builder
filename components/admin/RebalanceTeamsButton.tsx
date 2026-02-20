@@ -47,10 +47,10 @@ export function RebalanceTeamsButton({
         variant={variant}
         size={size}
         className={className}
-        disabled={loading}
+        loading={loading}
         onClick={handleClick}
       >
-        {loading ? 'Rebalancing…' : 'Rebalance teams'}
+        Rebalance teams
       </Button>
       {error && showError === 'inline' && (
         <div className="mt-2 text-xs text-red-700 dark:text-red-400">

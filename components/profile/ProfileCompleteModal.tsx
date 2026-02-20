@@ -146,8 +146,8 @@ export function ProfileCompleteModal({ open, onOpenChange, onSaved }: ProfileCom
           {error && (
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
           )}
-          <Button type="submit" disabled={loading} className="mt-2">
-            {loading ? 'Saving…' : 'Save and continue'}
+          <Button type="submit" loading={loading} className="mt-2">
+            Save and continue
           </Button>
         </form>
         </div>

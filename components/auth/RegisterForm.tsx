@@ -140,10 +140,11 @@ export function RegisterForm() {
 
       <Button
         type="submit"
-        disabled={loading || googleLoading}
+        disabled={googleLoading}
+        loading={loading}
         className="w-full h-11 text-base sm:h-9 sm:text-sm"
       >
-        {loading ? 'Creating account...' : 'Create Account'}
+        Create Account
       </Button>
 
       <div className="my-4 flex items-center gap-3">
@@ -157,18 +158,15 @@ export function RegisterForm() {
       <Button
         type="button"
         variant="outline"
-        disabled={loading || googleLoading}
+        disabled={loading}
+        loading={googleLoading}
         className="w-full h-11 text-base sm:h-9 sm:text-sm"
         onClick={handleGoogleSignIn}
       >
-        {googleLoading ? (
-          'Signing in...'
-        ) : (
-          <span className="inline-flex items-center justify-center">
-            <GoogleIcon className="mr-2" />
-            Sign up with Google
-          </span>
-        )}
+        <span className="inline-flex items-center justify-center">
+          <GoogleIcon className="mr-2" />
+          Sign up with Google
+        </span>
       </Button>
     </form>
   )

@@ -6,6 +6,7 @@ import { updateUser } from '@/lib/services/userService'
 import { useAuthStore } from '@/store/authStore'
 import { PositionSelector } from '@/components/profile/PositionSelector'
 import { Button } from '@/components/ui/button'
+import { ButtonSpinner } from '@/components/ui/button-spinner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { User } from '@/types/user'
@@ -165,10 +166,10 @@ function ProfileFormInner({
       <div className="pt-2">
         <Button
           type="submit"
-          disabled={loading}
+          loading={loading}
           className="w-full h-11 rounded-lg text-base font-semibold shadow-sm"
         >
-          {loading ? 'Updating…' : 'Update Profile'}
+          Update Profile
         </Button>
       </div>
     </form>

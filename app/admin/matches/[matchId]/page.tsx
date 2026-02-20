@@ -30,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { ButtonSpinner } from '@/components/ui/button-spinner'
 import { Match } from '@/types/match'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
@@ -231,18 +232,18 @@ function AdminMatchManagementContent() {
                     Date, time and location saved.
                   </p>
                 )}
-                <Button type="submit" disabled={saving}>
-                  {saving ? 'Saving...' : 'Save date, time & location'}
+                <Button type="submit" loading={saving}>
+                  Save date, time & location
                 </Button>
               </form>
               <div className="border-t pt-4">
                 <Button
                   variant="destructive"
                   className="w-full sm:w-auto"
-                  disabled={deleting}
+                  loading={deleting}
                   onClick={() => setDeleteDialogOpen(true)}
                 >
-                  {deleting ? 'Deleting...' : 'Delete match'}
+                  Delete match
                 </Button>
               </div>
             </CardContent>
@@ -265,7 +266,7 @@ function AdminMatchManagementContent() {
                   disabled={deleting}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
-                  {deleting ? 'Deleting...' : 'Delete'}
+                  {deleting ? <ButtonSpinner /> : 'Delete'}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
