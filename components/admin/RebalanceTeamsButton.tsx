@@ -28,8 +28,8 @@ export function RebalanceTeamsButton({
     try {
       await rebalanceTeamsAPI(matchId)
       onDone()
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to rebalance teams')
+    } catch {
+      setError('Failed to rebalance teams')
     } finally {
       setLoading(false)
     }

@@ -166,9 +166,8 @@ function AdminMatchManagementContent() {
       await deleteMatchAPI(matchId)
       setDeleteDialogOpen(false)
       router.push('/admin')
-    } catch (err) {
-      console.error(err)
-      alert(err instanceof Error ? err.message : 'Failed to delete match')
+    } catch {
+      alert('Failed to delete match')
     } finally {
       setDeleting(false)
     }

@@ -46,8 +46,8 @@ export function RegisterForm() {
       await createUser(user.uid, email, displayName || email.split('@')[0])
 
       router.push('/matches')
-    } catch (err: any) {
-      setError(err.message || 'Failed to create account')
+    } catch {
+      setError('Failed to create account')
     } finally {
       setLoading(false)
     }
@@ -67,8 +67,8 @@ export function RegisterForm() {
       }
       setUser(user)
       router.push('/matches')
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign in with Google')
+    } catch {
+      setError('Failed to sign in with Google')
     } finally {
       setGoogleLoading(false)
     }

@@ -203,8 +203,8 @@ export function TeamsDisplay({
         false
       )
       onTeamsChanged?.()
-    } catch (err) {
-      setTransferError(err instanceof Error ? err.message : 'Failed to transfer player')
+    } catch {
+      setTransferError('Failed to transfer player')
     } finally {
       setTransferring(null)
     }

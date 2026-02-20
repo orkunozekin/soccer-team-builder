@@ -99,8 +99,8 @@ export function RSVPButton({ match, onTeamsRegenerated }: RSVPButtonProps) {
       } else {
         await submitConfirmRSVP()
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to update RSVP')
+    } catch {
+      setError('Failed to update RSVP')
     } finally {
       setLoading(false)
     }

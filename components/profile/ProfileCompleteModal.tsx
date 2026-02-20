@@ -62,8 +62,8 @@ export function ProfileCompleteModal({ open, onOpenChange, onSaved }: ProfileCom
       setUserData(updatedUserData)
       onOpenChange(false)
       onSaved?.()
-    } catch (err: any) {
-      setError(err.message ?? 'Failed to update profile')
+    } catch {
+      setError('Failed to update profile')
     } finally {
       setLoading(false)
     }

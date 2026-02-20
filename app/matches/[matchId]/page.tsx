@@ -80,9 +80,8 @@ export default function MatchDetailsPage() {
         try {
           const rsvps = await getMatchRSVPs(matchId)
           setMatchRSVPs(rsvps)
-        } catch (e) {
-          console.error('getMatchRSVPs failed:', e)
-          setFetchError(`RSVPs: ${e instanceof Error ? e.message : String(e)}`)
+        } catch {
+          setFetchError('Failed to load RSVPs')
         }
 
         try {
@@ -92,13 +91,11 @@ export default function MatchDetailsPage() {
           ])
           setTeams(matchTeams)
           setAllUsers(users)
-        } catch (e) {
-          console.error('getMatchTeams or getAllUsers failed:', e)
-          setFetchError(`Teams/Users: ${e instanceof Error ? e.message : String(e)}`)
+        } catch {
+          setFetchError('Failed to load teams or players')
         }
-      } catch (error) {
-        console.error('getMatch failed:', error)
-        setFetchError(`Match: ${error instanceof Error ? error.message : String(error)}`)
+      } catch {
+        setFetchError('Failed to load match')
         router.push('/matches')
         return
       } finally {
@@ -173,9 +170,8 @@ export default function MatchDetailsPage() {
       await deleteMatchAPI(matchId)
       setDeleteDialogOpen(false)
       router.push('/matches')
-    } catch (err) {
-      console.error(err)
-      alert(err instanceof Error ? err.message : 'Failed to delete match')
+    } catch {
+      alert('Failed to delete match')
     } finally {
       setDeleting(false)
     }

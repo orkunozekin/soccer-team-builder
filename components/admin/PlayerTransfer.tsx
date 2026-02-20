@@ -108,8 +108,8 @@ export function PlayerTransfer({
       if (onTransferComplete) {
         onTransferComplete()
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to transfer player')
+    } catch {
+      setError('Failed to transfer player')
     } finally {
       setLoading(false)
     }

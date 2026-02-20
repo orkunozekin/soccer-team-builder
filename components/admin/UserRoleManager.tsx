@@ -116,10 +116,9 @@ export function UserRoleManager() {
           if (cancelled) return
           setSearchUsers(res.users)
         })
-        .catch((err: unknown) => {
+        .catch(() => {
           if (cancelled) return
-          const message = err instanceof Error ? err.message : String(err)
-          setError(message || 'Failed to search users')
+          setError('Failed to search users')
           setSearchUsers([])
         })
         .finally(() => {
@@ -174,8 +173,8 @@ export function UserRoleManager() {
 
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
-    } catch (err: any) {
-      setError(err.message || 'Failed to remove user')
+    } catch {
+      setError('Failed to remove user')
     } finally {
       setDeleting(null)
     }

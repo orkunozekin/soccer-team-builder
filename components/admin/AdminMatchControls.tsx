@@ -61,8 +61,8 @@ export function AdminMatchControls({ onMatchCreated }: AdminMatchControlsProps) 
       if (onMatchCreated) {
         onMatchCreated()
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to create match')
+    } catch {
+      setError('Failed to create match')
     } finally {
       setLoading(false)
     }

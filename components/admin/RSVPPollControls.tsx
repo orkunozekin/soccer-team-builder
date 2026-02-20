@@ -57,8 +57,8 @@ export function RSVPPollControls({ match }: RSVPPollControlsProps) {
 
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
-    } catch (err: any) {
-      setError(err.message || 'Failed to update RSVP status')
+    } catch {
+      setError('Failed to update RSVP status')
     } finally {
       setLoading(false)
     }

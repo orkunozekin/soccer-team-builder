@@ -30,8 +30,8 @@ export function LoginForm() {
       const userCredential = await loginUser(email, password)
       setUser(userCredential.user)
       router.push('/matches')
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign in')
+    } catch {
+      setError('Failed to sign in')
     } finally {
       setLoading(false)
     }
@@ -51,8 +51,8 @@ export function LoginForm() {
       }
       setUser(user)
       router.push('/matches')
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign in with Google')
+    } catch {
+      setError('Failed to sign in with Google')
     } finally {
       setGoogleLoading(false)
     }

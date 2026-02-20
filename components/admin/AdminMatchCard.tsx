@@ -39,9 +39,8 @@ export function AdminMatchCard({
       await deleteMatchAPI(match.id)
       setOpen(false)
       onDeleted?.()
-    } catch (err) {
-      console.error(err)
-      alert(err instanceof Error ? err.message : 'Failed to delete match')
+    } catch {
+      alert('Failed to delete match')
     } finally {
       setDeleting(false)
     }
