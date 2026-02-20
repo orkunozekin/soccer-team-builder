@@ -40,8 +40,12 @@ export async function verifyAuth(request: Request): Promise<{
     const decodedToken = await adminAuth.verifyIdToken(token)
     return { uid: decodedToken.uid, error: null }
   } catch (error: any) {
-    console.error('Token verification error:', error)
-    return { uid: null, error: 'Invalid or expired token' }
+    const message = error?.message ?? String(error)
+    console.error('Token verification error:', message)
+    return {
+      uid: null,
+      error: message?.includes('auth/') ? message : 'Invalid or expired token',
+    }
   }
 }
 

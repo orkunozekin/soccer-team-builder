@@ -4,19 +4,33 @@
  */
 
 import { auth } from '@/lib/firebase/config'
+import { useAuthStore } from '@/store/authStore'
 
 const API_BASE = '/api'
 
+/** Get ID token: use auth.currentUser first, then fall back to store user (helps when currentUser is briefly null in prod). */
+async function getIdToken(forceRefresh?: boolean): Promise<string | null> {
+  const currentUser = auth.currentUser
+  if (currentUser) {
+    return currentUser.getIdToken(forceRefresh === true)
+  }
+  const storeUser = typeof window !== 'undefined' ? useAuthStore.getState().user : null
+  if (storeUser) {
+    return storeUser.getIdToken(forceRefresh === true)
+  }
+  return null
+}
+
 async function apiRequest(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit & { forceRefreshToken?: boolean } = {}
 ): Promise<Response> {
-  const user = auth.currentUser
-  const token = user ? await user.getIdToken() : null
+  const { forceRefreshToken, ...fetchOptions } = options
+  const token = await getIdToken(forceRefreshToken === true)
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
+    ...(fetchOptions.headers as Record<string, string>),
   }
 
   if (token) {
@@ -24,7 +38,7 @@ async function apiRequest(
   }
 
   return fetch(`${API_BASE}${endpoint}`, {
-    ...options,
+    ...fetchOptions,
     headers,
   })
 }
@@ -53,6 +67,7 @@ export async function confirmRSVPAPI(matchId: string): Promise<{
   const response = await apiRequest('/rsvp', {
     method: 'POST',
     body: JSON.stringify({ matchId }),
+    forceRefreshToken: true,
   })
 
   if (!response.ok) {
@@ -70,6 +85,7 @@ export async function cancelRSVPAPI(rsvpId: string): Promise<{
   const response = await apiRequest('/rsvp', {
     method: 'PATCH',
     body: JSON.stringify({ rsvpId }),
+    forceRefreshToken: true,
   })
 
   if (!response.ok) {

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
+import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { expandTeamsForMatch } from '@/lib/teams/expandTeamsForMatch'
@@ -13,7 +13,10 @@ export async function POST(request: NextRequest) {
   try {
     const { uid, error: authError } = await verifyAuth(request)
     if (authError || !uid) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json(
+        { error: authError || 'Unauthorized' },
+        { status: 401 }
+      )
     }
 
     const body = await request.json()
@@ -79,7 +82,10 @@ export async function PATCH(request: NextRequest) {
   try {
     const { uid, error: authError } = await verifyAuth(request)
     if (authError || !uid) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json(
+        { error: authError || 'Unauthorized' },
+        { status: 401 }
+      )
     }
 
     const body = await request.json()

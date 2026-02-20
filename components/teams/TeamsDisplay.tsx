@@ -36,17 +36,14 @@ export function TeamsDisplay({
   }, [teams])
 
   const pages = useMemo(() => {
-    const out: { start: number; end: number; label: string; kind: 'main' | 'extra' }[] = []
+    const out: { start: number; end: number; label: string }[] = []
     for (let start = 0; start < teamsSorted.length; start += 2) {
       const end = Math.min(teamsSorted.length, start + 2)
-      const kind = start === 0 ? 'main' : 'extra'
       const teamStart = start + 1
       const teamEnd = end
       const label =
-        kind === 'main'
-          ? `Main (Teams ${teamStart}–${teamEnd})`
-          : `Extra (Teams ${teamStart}–${teamEnd})`
-      out.push({ start, end, label, kind })
+        teamStart === teamEnd ? `Team ${teamStart}` : `Teams ${teamStart}–${teamEnd}`
+      out.push({ start, end, label })
     }
     return out
   }, [teamsSorted])
@@ -111,14 +108,6 @@ export function TeamsDisplay({
               {p.label}
             </Button>
           ))}
-        </div>
-      )}
-
-      {page && (
-        <div className="text-sm text-zinc-600 dark:text-zinc-400">
-          <span className="font-medium">
-            {page.kind === 'main' ? 'Main teams' : 'Extra teams'}
-          </span>
         </div>
       )}
 

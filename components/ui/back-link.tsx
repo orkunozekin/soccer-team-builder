@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
@@ -12,11 +13,12 @@ export function BackLink({ href, label, className }: BackLinkProps) {
     <Link
       href={href}
       className={cn(
-        'mb-4 inline-flex items-center text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors',
+        'mb-4 inline-flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors',
         className
       )}
     >
-      ← {label}
+      <ArrowLeft className="h-5 w-5 shrink-0" strokeWidth={2.5} aria-hidden />
+      {label}
     </Link>
   )
 }
