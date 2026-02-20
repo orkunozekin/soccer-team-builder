@@ -49,6 +49,9 @@ export async function PATCH(
       if (ts) updates.date = ts
     }
     if (body.time !== undefined) updates.time = body.time
+    if (body.location !== undefined) {
+      updates.location = typeof body.location === 'string' ? body.location.trim() || null : null
+    }
     if (body.rsvpOpen !== undefined) updates.rsvpOpen = body.rsvpOpen
     if (body.rsvpOpenAt !== undefined) {
       updates.rsvpOpenAt = body.rsvpOpenAt ? dateToTimestamp(body.rsvpOpenAt) : null

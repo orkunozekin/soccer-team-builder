@@ -124,11 +124,16 @@ export async function transferPlayerAPI(
 
 export async function createMatchAPI(
   date: Date,
-  time: string
+  time: string,
+  location?: string | null
 ): Promise<{ success: boolean; matchId: string }> {
   const response = await apiRequest('/matches', {
     method: 'POST',
-    body: JSON.stringify({ date: date.toISOString(), time }),
+    body: JSON.stringify({
+      date: date.toISOString(),
+      time,
+      location: location ?? null,
+    }),
   })
 
   if (!response.ok) {
@@ -142,6 +147,7 @@ export async function createMatchAPI(
 export type UpdateMatchPayload = {
   date?: string
   time?: string
+  location?: string | null
   rsvpOpen?: boolean
   rsvpOpenAt?: string | null
   rsvpCloseAt?: string | null

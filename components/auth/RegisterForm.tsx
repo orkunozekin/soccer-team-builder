@@ -42,7 +42,7 @@ export function RegisterForm() {
       const userCredential = await registerUser(email, password)
       const user = userCredential.user
 
-      // Create user document in Firestore
+      // Create user document in Firestore (jersey number still needed for RSVP)
       await createUser(user.uid, email, displayName || email.split('@')[0])
 
       router.push('/matches')

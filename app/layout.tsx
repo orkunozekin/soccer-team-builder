@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { cn } from '@/lib/utils'
 import { AuthProvider } from '@/components/auth/AuthProvider'
+import { ProfileGuard } from '@/components/auth/ProfileGuard'
 import { Navigation } from '@/components/layout/Navigation'
 
 // Use the Google Inter font from next/font

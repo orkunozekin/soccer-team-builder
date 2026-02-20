@@ -24,6 +24,7 @@ export const getMatch = async (matchId: string): Promise<Match | null> => {
     id: matchId,
     date: matchDate,
     time: matchDoc.time,
+    location: matchDoc.location ?? null,
     rsvpOpen,
     rsvpOpenAt,
     rsvpCloseAt,
@@ -47,6 +48,7 @@ export const getAllMatches = async (): Promise<Match[]> => {
       id: match.id,
       date: matchDate,
       time: match.time ?? '',
+      location: match.location ?? null,
       rsvpOpen,
       rsvpOpenAt,
       rsvpCloseAt,
@@ -66,7 +68,7 @@ export const getAllMatches = async (): Promise<Match[]> => {
 
 export const updateMatch = async (
   matchId: string,
-  updates: Partial<Pick<Match, 'date' | 'time' | 'rsvpOpen' | 'rsvpOpenAt' | 'rsvpCloseAt'>>
+  updates: Partial<Pick<Match, 'date' | 'time' | 'location' | 'rsvpOpen' | 'rsvpOpenAt' | 'rsvpCloseAt'>>
 ): Promise<void> => {
   const firestoreUpdates: any = {}
   
@@ -75,6 +77,9 @@ export const updateMatch = async (
   }
   if (updates.time !== undefined) {
     firestoreUpdates.time = updates.time
+  }
+  if (updates.location !== undefined) {
+    firestoreUpdates.location = typeof updates.location === 'string' ? updates.location.trim() || null : null
   }
   if (updates.rsvpOpen !== undefined) {
     firestoreUpdates.rsvpOpen = updates.rsvpOpen

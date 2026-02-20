@@ -18,6 +18,8 @@ import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { BackLink } from '@/components/ui/back-link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +49,7 @@ function AdminMatchManagementContent() {
   const [saving, setSaving] = useState(false)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
+  const [location, setLocation] = useState('')
   const [saveSuccess, setSaveSuccess] = useState(false)
   const autoGenerateAttempted = useRef(false)
   const autoExpandAttempted = useRef(false)
@@ -143,6 +146,7 @@ function AdminMatchManagementContent() {
       await updateMatchAPI(matchId, {
         date: matchDateTime.toISOString(),
         time,
+        location: location.trim() || null,
       })
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
@@ -192,9 +196,9 @@ function AdminMatchManagementContent() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Match date & time</CardTitle>
+              <CardTitle className="text-lg">Match date, time & location</CardTitle>
               <CardDescription>
-                Edit the match date and time.
+                Edit the match date, time, and location.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -210,13 +214,25 @@ function AdminMatchManagementContent() {
                   disabled={saving}
                   timeStep={300}
                 />
+                <div className="space-y-2">
+                  <Label htmlFor="match-location">Location</Label>
+                  <Input
+                    id="match-location"
+                    type="text"
+                    placeholder="e.g. Central Park Field 3"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    disabled={saving}
+                    className="h-11"
+                  />
+                </div>
                 {saveSuccess && (
                   <p className="text-sm text-green-600 dark:text-green-400">
-                    Date and time saved.
+                    Date, time and location saved.
                   </p>
                 )}
                 <Button type="submit" disabled={saving}>
-                  {saving ? 'Saving...' : 'Save date & time'}
+                  {saving ? 'Saving...' : 'Save date, time & location'}
                 </Button>
               </form>
               <div className="border-t pt-4">

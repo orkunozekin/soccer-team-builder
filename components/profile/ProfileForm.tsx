@@ -61,17 +61,23 @@ function ProfileFormInner({
     setLoading(true)
 
     try {
-      const updates: Partial<Pick<User, 'displayName' | 'jerseyNumber' | 'position'>> = {
-        displayName: displayName.trim(),
-        jerseyNumber: jerseyNumber ? parseInt(jerseyNumber, 10) : null,
-        position,
-      }
-
-      // Validate jersey number if provided
-      if (jerseyNumber && (isNaN(parseInt(jerseyNumber, 10)) || parseInt(jerseyNumber, 10) < 0 || parseInt(jerseyNumber, 10) > 99)) {
-        setError('Jersey number must be between 0 and 99')
+      const trimmedName = displayName.trim()
+      if (!trimmedName) {
+        setError('Display name is required')
         setLoading(false)
         return
+      }
+      const num = jerseyNumber ? parseInt(jerseyNumber, 10) : null
+      if (num === null || isNaN(num) || num < 0 || num > 99) {
+        setError('Jersey number is required and must be 0–99')
+        setLoading(false)
+        return
+      }
+
+      const updates: Partial<Pick<User, 'displayName' | 'jerseyNumber' | 'position'>> = {
+        displayName: trimmedName,
+        jerseyNumber: num,
+        position,
       }
 
       await updateUser(user.uid, updates)
@@ -118,7 +124,7 @@ function ProfileFormInner({
 
       <div className="space-y-1.5">
         <Label htmlFor="jerseyNumber" className={formLabelClass}>
-          Jersey Number
+          Jersey Number <span className="text-red-500">*</span>
         </Label>
         <Input
           id="jerseyNumber"
@@ -132,7 +138,7 @@ function ProfileFormInner({
           className={inputClass}
         />
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-          Optional · 0 to 99
+          Required to RSVP · 0 to 99
         </p>
       </div>
 

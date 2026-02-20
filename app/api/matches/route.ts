@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { date, time } = await request.json()
+    const { date, time, location } = await request.json()
 
     if (!date || !time) {
       return NextResponse.json(
@@ -48,9 +48,11 @@ export async function POST(request: NextRequest) {
     const { openAt, closeAt } = getRSVPSchedule(matchDate)
     const matchId = `match_${Date.now()}`
     const now = Timestamp.now()
+    const locationStr = typeof location === 'string' ? location.trim() || null : null
     await adminDb.collection('matches').doc(matchId).set({
       date: Timestamp.fromDate(matchDate),
       time,
+      location: locationStr ?? null,
       rsvpOpen: false,
       rsvpOpenAt: openAt ? Timestamp.fromDate(openAt) : null,
       rsvpCloseAt: closeAt ? Timestamp.fromDate(closeAt) : null,

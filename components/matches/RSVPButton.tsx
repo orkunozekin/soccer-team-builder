@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { ProfileCompleteModal } from '@/components/profile/ProfileCompleteModal'
 import { Button } from '@/components/ui/button'
 import { cancelRSVPAPI, confirmRSVPAPI } from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getUserRSVP } from '@/lib/services/rsvpService'
+import { isProfileComplete } from '@/lib/utils/profile'
 import { useMatchStore } from '@/store/matchStore'
 import { Match } from '@/types/match'
 
@@ -14,18 +16,19 @@ interface RSVPButtonProps {
 }
 
 export function RSVPButton({ match, onTeamsRegenerated }: RSVPButtonProps) {
-  const { user } = useAuth()
+  const { user, userData } = useAuth()
+  const profileComplete = isProfileComplete(userData)
   const { matchRSVPs, addRSVP, removeRSVP } = useMatchStore()
   const [hasRSVPed, setHasRSVPed] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [profileDrawerOpen, setProfileDrawerOpen] = useState(false)
 
   useEffect(() => {
     if (user && matchRSVPs.length > 0) {
       const userRSVP = matchRSVPs.find((r) => r.userId === user.uid)
       setHasRSVPed(!!userRSVP)
     } else {
-      // Check if user has RSVPed
       const checkRSVP = async () => {
         if (user) {
           const rsvp = await getUserRSVP(match.id, user.uid)
@@ -36,9 +39,40 @@ export function RSVPButton({ match, onTeamsRegenerated }: RSVPButtonProps) {
     }
   }, [user, match.id, matchRSVPs])
 
+  const submitConfirmRSVP = async () => {
+    if (!user || !match.rsvpOpen) return
+    setLoading(true)
+    setError('')
+    try {
+      const { rsvpId, regenerated } = await confirmRSVPAPI(match.id)
+      const newRSVP = {
+        id: rsvpId,
+        matchId: match.id,
+        userId: user.uid,
+        status: 'confirmed' as const,
+        rsvpAt: new Date(),
+        updatedAt: new Date(),
+      }
+      addRSVP(newRSVP)
+      setHasRSVPed(true)
+      if (regenerated && onTeamsRegenerated) {
+        await onTeamsRegenerated()
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to update RSVP')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleRSVP = async () => {
     if (!user) {
       setError('You must be logged in to RSVP')
+      return
+    }
+
+    if (!profileComplete) {
+      setProfileDrawerOpen(true)
       return
     }
 
@@ -52,7 +86,6 @@ export function RSVPButton({ match, onTeamsRegenerated }: RSVPButtonProps) {
 
     try {
       if (hasRSVPed) {
-        // Cancel RSVP (API updates RSVP and removes user from team / deletes empty team)
         const rsvp = matchRSVPs.find((r) => r.userId === user.uid)
         if (rsvp) {
           const { teamsUpdated } = await cancelRSVPAPI(rsvp.id)
@@ -63,21 +96,7 @@ export function RSVPButton({ match, onTeamsRegenerated }: RSVPButtonProps) {
           }
         }
       } else {
-        // Confirm RSVP via API (creates RSVP and expands teams when 23+ RSVPs)
-        const { rsvpId, regenerated } = await confirmRSVPAPI(match.id)
-        const newRSVP = {
-          id: rsvpId,
-          matchId: match.id,
-          userId: user.uid,
-          status: 'confirmed' as const,
-          rsvpAt: new Date(),
-          updatedAt: new Date(),
-        }
-        addRSVP(newRSVP)
-        setHasRSVPed(true)
-        if (regenerated && onTeamsRegenerated) {
-          await onTeamsRegenerated()
-        }
+        await submitConfirmRSVP()
       }
     } catch (err: any) {
       setError(err.message || 'Failed to update RSVP')
@@ -86,12 +105,21 @@ export function RSVPButton({ match, onTeamsRegenerated }: RSVPButtonProps) {
     }
   }
 
+  const handleProfileSaved = () => {
+    submitConfirmRSVP()
+  }
+
   if (!match.rsvpOpen) {
     return null
   }
 
   return (
     <div className="space-y-2">
+      <ProfileCompleteModal
+        open={profileDrawerOpen}
+        onOpenChange={setProfileDrawerOpen}
+        onSaved={handleProfileSaved}
+      />
       <Button
         onClick={handleRSVP}
         disabled={loading || !user}

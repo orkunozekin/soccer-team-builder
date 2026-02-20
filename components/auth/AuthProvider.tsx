@@ -41,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Some legacy accounts may exist in Auth but not in Firestore yet.
             // Ensure the canonical user doc exists at /users/{uid} so role-based UI works.
             if (!userDoc) {
+              // Google (and other IdPs) set firebaseUser.displayName; email/password users get it from the form or email prefix.
               const displayName =
                 firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'User'
               await createUser(firebaseUser.uid, firebaseUser.email ?? '', displayName)

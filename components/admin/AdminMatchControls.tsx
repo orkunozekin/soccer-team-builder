@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { DatePickerTime } from '@/components/ui/date-picker-time'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { createMatchAPI } from '@/lib/api/client'
 import { getMatch } from '@/lib/services/matchService'
 import { useMatchStore } from '@/store/matchStore'
-import { Button } from '@/components/ui/button'
-import { DatePickerTime } from '@/components/ui/date-picker-time'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface AdminMatchControlsProps {
   onMatchCreated?: () => void
@@ -16,6 +18,7 @@ export function AdminMatchControls({ onMatchCreated }: AdminMatchControlsProps) 
   const { addMatch } = useMatchStore()
   const [date, setDate] = useState('')
   const [time, setTime] = useState('09:00')
+  const [location, setLocation] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -39,7 +42,7 @@ export function AdminMatchControls({ onMatchCreated }: AdminMatchControlsProps) 
       const matchDate = new Date(y, m - 1, d, hours, minutes, 0, 0)
 
       // Call API route (validation on server)
-      const { matchId } = await createMatchAPI(matchDate, time)
+      const { matchId } = await createMatchAPI(matchDate, time, location.trim() || null)
       
       // Fetch the created match to add to store
       const newMatch = await getMatch(matchId)
@@ -51,6 +54,7 @@ export function AdminMatchControls({ onMatchCreated }: AdminMatchControlsProps) 
       setSuccess(true)
       setDate('')
       setTime('09:00')
+      setLocation('')
       setTimeout(() => setSuccess(false), 3000)
 
       if (onMatchCreated) {
@@ -88,6 +92,19 @@ export function AdminMatchControls({ onMatchCreated }: AdminMatchControlsProps) 
             minDate={new Date(today + 'T12:00:00')}
             timeStep={300}
           />
+
+          <div className="space-y-2">
+            <Label htmlFor="location">Location</Label>
+            <Input
+              id="location"
+              type="text"
+              placeholder="e.g. Central Park Field 3"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              disabled={loading}
+              className="h-11"
+            />
+          </div>
 
           {error && (
             <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">

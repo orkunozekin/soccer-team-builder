@@ -25,6 +25,11 @@ export function MatchCard({ match }: MatchCardProps) {
               <CardDescription className="text-base">
                 {formattedTime}
               </CardDescription>
+              {match.location && (
+                <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+                  {match.location}
+                </p>
+              )}
             </div>
             <Badge
               variant={match.rsvpOpen ? 'default' : 'outline'}
