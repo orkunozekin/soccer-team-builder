@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
+import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { computeTeamCountForRSVPCount, generateTeams } from '@/lib/utils/teamGenerator'

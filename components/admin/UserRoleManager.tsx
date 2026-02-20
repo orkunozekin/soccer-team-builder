@@ -1,23 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { deleteUserAPI, searchUsersAPI } from '@/lib/api/client'
-import { User, UserRole } from '@/types/user'
-import { getUsersPaginated, getUsersCount, updateUser } from '@/lib/services/userService'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Pagination } from '@/components/ui/pagination'
-import { CardLoadingSkeleton } from '@/components/LoadingSkeleton'
-import { useAuth } from '@/lib/hooks/useAuth'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import CloseIcon from '@/components/icons/CloseIcon'
+import { CardLoadingSkeleton } from '@/components/LoadingSkeleton'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +13,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Pagination } from '@/components/ui/pagination'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { deleteUserAPI, searchUsersAPI } from '@/lib/api/client'
+import { useAuth } from '@/lib/hooks/useAuth'
+import { getUsersCount, getUsersPaginated, updateUser } from '@/lib/services/userService'
+import { User, UserRole } from '@/types/user'
 
 const PAGE_SIZE = 10
 
