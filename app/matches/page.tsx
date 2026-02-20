@@ -7,6 +7,7 @@ import { useAdmin } from '@/lib/hooks/useAdmin'
 import { getAllMatches } from '@/lib/services/matchService'
 import { useMatchStore } from '@/store/matchStore'
 import { MatchCard } from '@/components/matches/MatchCard'
+import { AdminMatchControls } from '@/components/admin/AdminMatchControls'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -56,6 +57,14 @@ export default function MatchesPage() {
         </p>
       </div>
 
+      {isAdmin && (
+        <div className="mb-6">
+          <AdminMatchControls
+            onMatchCreated={() => getAllMatches().then(setMatches)}
+          />
+        </div>
+      )}
+
       {matches.length === 0 ? (
         <Card>
           <CardHeader>
@@ -67,7 +76,7 @@ export default function MatchesPage() {
           <CardContent>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               {isAdmin
-                ? 'Create matches from the admin dashboard.'
+                ? 'Create a match using the form above.'
                 : 'Check back soon for upcoming matches!'}
             </p>
           </CardContent>

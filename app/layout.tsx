@@ -1,10 +1,9 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { cn } from '@/lib/utils'
 import { AuthProvider } from '@/components/auth/AuthProvider'
-import { ProfileGuard } from '@/components/auth/ProfileGuard'
 import { Navigation } from '@/components/layout/Navigation'
+import { cn } from '@/lib/utils'
 
 // Use the Google Inter font from next/font
 const inter = Inter({
