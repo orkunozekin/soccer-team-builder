@@ -6,8 +6,8 @@ import { computeTeamCountForRSVPCount, generateTeams } from '@/lib/utils/teamGen
 import type { RSVP } from '@/types/rsvp'
 import type { User } from '@/types/user'
 
-const TEAM_COLORS = ['#f97316', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6']
-const TEAM_NAMES = ['Orange', 'Blue', 'Green', 'Red', 'Purple']
+const TEAM_COLORS = ['#f97316', '#3b82f6', '#eab308', '#65a30d', '#ef4444', '#8b5cf6']
+const TEAM_NAMES = ['Orange', 'Blue', 'Yellow', 'Lime', 'Red', 'Purple']
 
 function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
   if (!t) return null

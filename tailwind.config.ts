@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+import tailwindcssAnimate from 'tailwindcss-animate'
 
 const config: Config = {
   darkMode: ['class'],
@@ -27,9 +28,9 @@ const config: Config = {
         'red-10': '#250704',
         'red-20': '#570F0C',
         'red-30': '#861719',
-        'red-40': '#B2252D',
-        'red-50': '#E02932',
-        'red-60': '#F04E56',
+        'red-40': '#B30000',
+        'red-50': '#CC0000',
+        'red-60': '#E60000',
         'red-70': '#FF7A7B',
         'red-80': '#FFB5B3',
         'red-90': '#FFD8D6',
@@ -104,6 +105,6 @@ const config: Config = {
       },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [tailwindcssAnimate],
 }
 export default config

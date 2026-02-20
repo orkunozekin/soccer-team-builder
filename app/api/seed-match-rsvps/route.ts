@@ -6,13 +6,21 @@ import { computeTeamCountForRSVPCount, generateTeams } from '@/lib/utils/teamGen
 import type { RSVP } from '@/types/rsvp'
 import type { User } from '@/types/user'
 
-const TEAM_COLORS = ['#f97316', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6']
-const TEAM_NAMES = ['Orange', 'Blue', 'Green', 'Red', 'Purple']
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+const TEAM_COLORS = ['#f97316', '#3b82f6', '#eab308', '#65a30d', '#ef4444', '#8b5cf6']
+const TEAM_NAMES = ['Orange', 'Blue', 'Yellow', 'Lime', 'Red', 'Purple']
 
 function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
   if (!t) return null
   if (t instanceof Date) return t
   return (t as Timestamp).toDate()
+}
+
+/** GET: health check for this route (no auth). */
+export async function GET() {
+  return NextResponse.json({ ok: true, route: 'seed-match-rsvps' })
 }
 
 /**
@@ -22,64 +30,65 @@ function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
  * Requires: admin Bearer token, or header X-Seed-Secret matching SEED_SECRET env (optional).
  */
 export async function POST(request: Request) {
-  const seedSecret = request.headers.get('x-seed-secret')
-  const useSecret = process.env.SEED_SECRET && seedSecret === process.env.SEED_SECRET
+  try {
+    const seedSecret = request.headers.get('x-seed-secret')
+    const useSecret = process.env.SEED_SECRET && seedSecret === process.env.SEED_SECRET
 
-  if (!useSecret) {
-    const { isAdmin, error } = await verifyAdmin(request)
-    if (error || !isAdmin) {
+    if (!useSecret) {
+      const { isAdmin, error } = await verifyAdmin(request)
+      if (error || !isAdmin) {
+        return NextResponse.json(
+          { error: 'Admin required or valid X-Seed-Secret' },
+          { status: 403 }
+        )
+      }
+    }
+
+    let body: { matchId?: string; regenerateTeams?: boolean }
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+
+    const matchId = body.matchId
+    if (!matchId || typeof matchId !== 'string') {
+      return NextResponse.json({ error: 'matchId is required' }, { status: 400 })
+    }
+    const regenerateTeamsAfter = body.regenerateTeams !== false
+
+    const adminDb = getAdminDb()
+    if (!adminDb) {
       return NextResponse.json(
-        { error: 'Admin required or valid X-Seed-Secret' },
-        { status: 403 }
+        { error: 'Firebase Admin not configured' },
+        { status: 500 }
       )
     }
-  }
 
-  let body: { matchId?: string; regenerateTeams?: boolean }
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
+    // Verify match exists
+    const matchRef = adminDb.collection('matches').doc(matchId)
+    if (!(await matchRef.get()).exists) {
+      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+    }
 
-  const matchId = body.matchId
-  if (!matchId || typeof matchId !== 'string') {
-    return NextResponse.json({ error: 'matchId is required' }, { status: 400 })
-  }
-  const regenerateTeamsAfter = body.regenerateTeams !== false
+    // Get UIDs of seeded test users
+    const usersSnap = await adminDb
+      .collection('users')
+      .where('isTestUser', '==', true)
+      .get()
+    const testUserIds = usersSnap.docs.map((d) => d.id)
 
-  const adminDb = getAdminDb()
-  if (!adminDb) {
-    return NextResponse.json(
-      { error: 'Firebase Admin not configured' },
-      { status: 500 }
-    )
-  }
+    if (testUserIds.length === 0) {
+      return NextResponse.json(
+        { error: 'No test users found. Run POST /api/seed-test-users first.' },
+        { status: 400 }
+      )
+    }
 
-  // Verify match exists
-  const matchRef = adminDb.collection('matches').doc(matchId)
-  if (!(await matchRef.get()).exists) {
-    return NextResponse.json({ error: 'Match not found' }, { status: 404 })
-  }
+    const now = Timestamp.now()
+    const results: { userId: string; status: 'created' | 'exists' }[] = []
 
-  // Get UIDs of seeded test users
-  const usersSnap = await adminDb
-    .collection('users')
-    .where('isTestUser', '==', true)
-    .get()
-  const testUserIds = usersSnap.docs.map((d) => d.id)
-
-  if (testUserIds.length === 0) {
-    return NextResponse.json(
-      { error: 'No test users found. Run POST /api/seed-test-users first.' },
-      { status: 400 }
-    )
-  }
-
-  const now = Timestamp.now()
-  const results: { userId: string; status: 'created' | 'exists' }[] = []
-
-  for (const userId of testUserIds) {
+    for (const userId of testUserIds) {
     const existing = await adminDb
       .collection('rsvps')
       .where('matchId', '==', matchId)
@@ -171,14 +180,19 @@ export async function POST(request: Request) {
     await Promise.all(writes)
   }
 
-  return NextResponse.json({
-    success: true,
-    matchId,
-    results,
-    regenerateTeams: regenerateTeamsAfter,
-    summary: {
-      created: results.filter((r) => r.status === 'created').length,
-      exists: results.filter((r) => r.status === 'exists').length,
-    },
-  })
+    return NextResponse.json({
+      success: true,
+      matchId,
+      results,
+      regenerateTeams: regenerateTeamsAfter,
+      summary: {
+        created: results.filter((r) => r.status === 'created').length,
+        exists: results.filter((r) => r.status === 'exists').length,
+      },
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('seed-match-rsvps error:', err)
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
 }
