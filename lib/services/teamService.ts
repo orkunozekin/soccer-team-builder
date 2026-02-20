@@ -3,7 +3,7 @@ import {
   getDocument,
   updateDocument,
   deleteDocument,
-  queryDocuments,
+  queryCollectionAtPath,
   timestampToDate,
 } from '@/lib/firebase/firestore'
 import { Team, TeamFirestore, Bench } from '@/types/team'
@@ -54,7 +54,7 @@ export const getTeam = async (
 }
 
 export const getMatchTeams = async (matchId: string): Promise<Team[]> => {
-  const teams = await queryDocuments(getTeamsCollectionPath(matchId), [])
+  const teams = await queryCollectionAtPath(getTeamsCollectionPath(matchId), [])
 
   return teams.map((team: any) => ({
     id: team.id,

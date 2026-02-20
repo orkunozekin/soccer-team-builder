@@ -26,6 +26,7 @@ export default function MatchDetailsPage() {
   const [teams, setTeams] = useState<Team[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [loadingTeams, setLoadingTeams] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -37,6 +38,7 @@ export default function MatchDetailsPage() {
       if (!matchId || !user) return
 
       setLoadingMatch(true)
+      setFetchError(null)
       try {
         const match = await getMatch(matchId)
         if (!match) {
@@ -46,22 +48,33 @@ export default function MatchDetailsPage() {
 
         setCurrentMatch(match)
 
-        // Fetch RSVPs for this match
-        const rsvps = await getMatchRSVPs(matchId)
-        setMatchRSVPs(rsvps)
+        try {
+          const rsvps = await getMatchRSVPs(matchId)
+          setMatchRSVPs(rsvps)
+        } catch (e) {
+          console.error('getMatchRSVPs failed:', e)
+          setFetchError(`RSVPs: ${e instanceof Error ? e.message : String(e)}`)
+        }
 
-        const [matchTeams, users] = await Promise.all([
-          getMatchTeams(matchId),
-          getAllUsers(),
-        ])
-        setTeams(matchTeams)
-        setAllUsers(users)
-        setLoadingTeams(false)
+        try {
+          const [matchTeams, users] = await Promise.all([
+            getMatchTeams(matchId),
+            getAllUsers(),
+          ])
+          setTeams(matchTeams)
+          setAllUsers(users)
+        } catch (e) {
+          console.error('getMatchTeams or getAllUsers failed:', e)
+          setFetchError(`Teams/Users: ${e instanceof Error ? e.message : String(e)}`)
+        }
       } catch (error) {
-        console.error('Error fetching match data:', error)
+        console.error('getMatch failed:', error)
+        setFetchError(`Match: ${error instanceof Error ? error.message : String(error)}`)
         router.push('/matches')
+        return
       } finally {
         setLoadingMatch(false)
+        setLoadingTeams(false)
       }
     }
 
