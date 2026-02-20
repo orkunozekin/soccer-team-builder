@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/rsvp-schedule",
+      "schedule": "0 12 * * *"
+    }
+  ]
+}

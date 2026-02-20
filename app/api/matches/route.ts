@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
+import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { getRSVPSchedule } from '@/lib/utils/rsvpScheduler'
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,14 +45,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const { openAt, closeAt } = getRSVPSchedule(matchDate)
     const matchId = `match_${Date.now()}`
     const now = Timestamp.now()
     await adminDb.collection('matches').doc(matchId).set({
       date: Timestamp.fromDate(matchDate),
       time,
       rsvpOpen: false,
-      rsvpOpenAt: null,
-      rsvpCloseAt: null,
+      rsvpOpenAt: openAt ? Timestamp.fromDate(openAt) : null,
+      rsvpCloseAt: closeAt ? Timestamp.fromDate(closeAt) : null,
       createdAt: now,
       updatedAt: now,
     })
