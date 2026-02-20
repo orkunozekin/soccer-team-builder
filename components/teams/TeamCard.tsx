@@ -44,7 +44,7 @@ export function TeamCard({ team, users }: TeamCardProps) {
                   className="flex items-center justify-center w-8 h-8 rounded-full text-white text-xs font-bold"
                   style={{ backgroundColor: team.color || '#3b82f6' }}
                 >
-                  {user.jerseyNumber || '?'}
+                  {user.jerseyNumber != null ? user.jerseyNumber : ''}
                 </span>
                 <span>{user.displayName}</span>
                 {user.position && (

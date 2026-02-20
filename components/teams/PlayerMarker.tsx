@@ -48,7 +48,7 @@ export function PlayerMarker({
             isGK ? 'text-zinc-900' : 'text-white'
           } ${isMobile ? 'text-[10px]' : 'text-sm'}`}
         >
-          {user.jerseyNumber ?? '?'}
+          {user.jerseyNumber != null ? user.jerseyNumber : ''}
         </span>
       </div>
       <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-px text-center flex flex-col items-center gap-px ${isMobile ? 'w-[3rem]' : 'w-[4.5rem]'}`}>

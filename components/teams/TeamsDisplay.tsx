@@ -64,7 +64,7 @@ function DraggablePlayerRow({
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
         style={{ backgroundColor: team.color || '#3b82f6' }}
       >
-        {user.jerseyNumber || '?'}
+        {user.jerseyNumber != null ? user.jerseyNumber : ''}
       </span>
       <span className="truncate">{user.displayName}</span>
       {user.position && (

@@ -46,16 +46,13 @@ export function ProfileCompleteModal({ open, onOpenChange, onSaved }: ProfileCom
       return
     }
     const num = jerseyNumber.trim() ? parseInt(jerseyNumber, 10) : NaN
-    if (Number.isNaN(num) || num < 0 || num > 99) {
-      setError('Jersey number must be 0–99')
-      return
-    }
+    const jersey = Number.isNaN(num) || num < 0 || num > 99 ? null : num
 
     setLoading(true)
     try {
       const updates: Partial<Pick<User, 'displayName' | 'jerseyNumber'>> = {
         displayName: trimmedName,
-        jerseyNumber: num,
+        jerseyNumber: jersey,
       }
       await updateUser(user.uid, updates)
       const updatedUserData: User = {
@@ -129,7 +126,7 @@ export function ProfileCompleteModal({ open, onOpenChange, onSaved }: ProfileCom
           </div>
           <div className="space-y-2">
             <Label htmlFor="modal-jerseyNumber">
-              Jersey Number <span className="text-red-500">*</span>
+              Jersey Number <span className="text-zinc-400 dark:text-zinc-500">(optional)</span>
             </Label>
             <Input
               id="modal-jerseyNumber"

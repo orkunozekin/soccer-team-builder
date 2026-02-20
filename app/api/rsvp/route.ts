@@ -36,16 +36,10 @@ export async function POST(request: NextRequest) {
     const userSnap = await adminDb.collection('users').doc(uid).get()
     const userData = userSnap.exists ? userSnap.data() : null
     const displayName = userData?.displayName
-    const jerseyNumber = userData?.jerseyNumber
     const hasName = typeof displayName === 'string' && displayName.trim().length > 0
-    const hasJersey =
-      typeof jerseyNumber === 'number' &&
-      Number.isInteger(jerseyNumber) &&
-      jerseyNumber >= 0 &&
-      jerseyNumber <= 99
-    if (!hasName || !hasJersey) {
+    if (!hasName) {
       return NextResponse.json(
-        { error: 'Complete your profile (display name and jersey number) to RSVP' },
+        { error: 'Set your display name to RSVP' },
         { status: 400 }
       )
     }

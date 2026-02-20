@@ -27,7 +27,7 @@ export function BenchList({ playerIds, users }: BenchListProps) {
           {benchUsers.map((user) => (
             <div key={user.uid} className="flex items-center gap-2 text-sm">
               <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-500 text-white text-xs font-bold">
-                {user.jerseyNumber || '?'}
+                {user.jerseyNumber != null ? user.jerseyNumber : ''}
               </span>
               <span>{user.displayName}</span>
               {user.position && (
