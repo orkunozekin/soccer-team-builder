@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { ProfileCompleteModal } from '@/components/profile/ProfileCompleteModal'
+import { PositionSelector } from '@/components/profile/PositionSelector'
 import { Button } from '@/components/ui/button'
 import { cancelRSVPAPI, confirmRSVPAPI } from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getUserRSVP } from '@/lib/services/rsvpService'
 import { isProfileComplete } from '@/lib/utils/profile'
 import { useMatchStore } from '@/store/matchStore'
+import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { Match } from '@/types/match'
 
 interface RSVPButtonProps {
@@ -25,6 +27,8 @@ export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPBu
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false)
+  const [showPositionPickerForGkBlock, setShowPositionPickerForGkBlock] = useState(false)
+  const [positionForRsvp, setPositionForRsvp] = useState<string | null>(null)
 
   useEffect(() => {
     if (user && matchRSVPs.length > 0) {
@@ -41,12 +45,16 @@ export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPBu
     }
   }, [user, match.id, matchRSVPs])
 
-  const submitConfirmRSVP = async () => {
+  const submitConfirmRSVP = async (positionOverride?: string | null) => {
     if (!user || !match.rsvpOpen) return
     setLoading(true)
     setError('')
+    setShowPositionPickerForGkBlock(false)
     try {
-      const { rsvpId, regenerated, position } = await confirmRSVPAPI(match.id)
+      const { rsvpId, regenerated, position } = await confirmRSVPAPI(
+        match.id,
+        positionOverride
+      )
       const newRSVP = {
         id: rsvpId,
         matchId: match.id,
@@ -58,6 +66,7 @@ export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPBu
       }
       addRSVP(newRSVP)
       setHasRSVPed(true)
+      setPositionForRsvp(null)
       if (regenerated && onTeamsRegenerated) {
         await onTeamsRegenerated()
       }
@@ -66,6 +75,10 @@ export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPBu
       setError(message)
       if (message.includes('RSVP is closed') && onMatchRefetch) {
         await onMatchRefetch()
+      }
+      if (message.includes('2 goalkeepers')) {
+        setShowPositionPickerForGkBlock(true)
+        setPositionForRsvp(null)
       }
     } finally {
       setLoading(false)
@@ -116,6 +129,12 @@ export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPBu
     submitConfirmRSVP()
   }
 
+  const handleRsvpWithPosition = () => {
+    if (positionForRsvp && !isGoalkeeper(positionForRsvp)) {
+      submitConfirmRSVP(positionForRsvp)
+    }
+  }
+
   if (!match.rsvpOpen) {
     return null
   }
@@ -127,16 +146,48 @@ export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPBu
         onOpenChange={setProfileDrawerOpen}
         onSaved={handleProfileSaved}
       />
-      <Button
-        onClick={handleRSVP}
-        disabled={!user}
-        loading={loading}
-        variant={hasRSVPed ? 'outline' : 'default'}
-        className="w-full h-11 text-base sm:h-9 sm:text-sm"
-      >
-        {hasRSVPed ? 'Cancel RSVP' : 'RSVP to Match'}
-      </Button>
-      {error && (
+      {showPositionPickerForGkBlock && (
+        <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-950/30 p-3 space-y-3">
+          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+            There are already 2 goalkeepers for this match. Choose a different position to RSVP.
+          </p>
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-[12rem]">
+              <PositionSelector
+                value={positionForRsvp}
+                onValueChange={setPositionForRsvp}
+                disabled={loading}
+                hideLabel
+              />
+            </div>
+            <Button
+              size="sm"
+              onClick={handleRsvpWithPosition}
+              loading={loading}
+              disabled={!positionForRsvp || isGoalkeeper(positionForRsvp)}
+            >
+              RSVP with this position
+            </Button>
+          </div>
+          {positionForRsvp && isGoalkeeper(positionForRsvp) && (
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              Please select a non-goalkeeper position.
+            </p>
+          )}
+        </div>
+      )}
+      {!showPositionPickerForGkBlock && (
+        <Button
+          onClick={handleRSVP}
+          disabled={!user}
+          loading={loading}
+          variant={hasRSVPed ? 'outline' : 'default'}
+          className="w-full h-11 text-base sm:h-9 sm:text-sm"
+        >
+          {hasRSVPed ? 'Cancel RSVP' : 'RSVP to Match'}
+        </Button>
+      )}
+      {error && !showPositionPickerForGkBlock && (
         <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
     </div>

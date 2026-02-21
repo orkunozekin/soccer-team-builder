@@ -148,7 +148,7 @@ export function MatchDetails({
                   onClick={handleSavePosition}
                   loading={positionLoading}
                   disabled={editPosition === currentPosition || positionLoading}
-                  className="min-w-[8.5rem]"
+                  className="min-w-[8.5rem] h-11"
                 >
                   Update position
                 </Button>

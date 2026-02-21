@@ -1,32 +1,6 @@
 # Test users (fake emails & passwords)
 
-Use these to register accounts via the app’s sign-up flow, or seed them programmatically (see below).
-
-| # | Email | Password | Display name | # | Pos |
-|---|--------|----------|--------------|---:|-----|
-| 1 | alex.rivera@test.soccer | testpass123 | Alex Rivera | 1 | GK |
-| 2 | jordan.lee@test.soccer | testpass123 | Jordan Lee | 2 | RB |
-| 3 | sam.chen@test.soccer | testpass123 | Sam Chen | 3 | CB |
-| 4 | riley.morgan@test.soccer | testpass123 | Riley Morgan | 4 | CB |
-| 5 | casey.kim@test.soccer | testpass123 | Casey Kim | 5 | LB |
-| 6 | quinn.taylor@test.soccer | testpass123 | Quinn Taylor | 6 | CDM |
-| 7 | morgan.james@test.soccer | testpass123 | Morgan James | 7 | CM |
-| 8 | drew.patel@test.soccer | testpass123 | Drew Patel | 8 | CM |
-| 9 | jesse.wright@test.soccer | testpass123 | Jesse Wright | 9 | CAM |
-| 10 | skyler.brooks@test.soccer | testpass123 | Skyler Brooks | 10 | RW |
-| 11 | taylor.nguyen@test.soccer | testpass123 | Taylor Nguyen | 11 | LW |
-| 12 | cameron.davis@test.soccer | testpass123 | Cameron Davis | 12 | ST |
-| 13 | avery.wilson@test.soccer | testpass123 | Avery Wilson | 13 | CF |
-| 14 | parker.thomas@test.soccer | testpass123 | Parker Thomas | 14 | RM |
-| 15 | reese.martin@test.soccer | testpass123 | Reese Martin | 15 | LM |
-| 16 | rowan.jackson@test.soccer | testpass123 | Rowan Jackson | 16 | RWB |
-| 17 | logan.white@test.soccer | testpass123 | Logan White | 17 | LWB |
-| 18 | hayden.harris@test.soccer | testpass123 | Hayden Harris | 18 | CM |
-| 19 | finley.clark@test.soccer | testpass123 | Finley Clark | 19 | CDM |
-| 20 | noah.ortiz@test.soccer | testpass123 | Noah Ortiz | 20 | RB |
-| 21 | emerson.sanchez@test.soccer | testpass123 | Emerson Sanchez | 21 | LB |
-| 22 | micah.bell@test.soccer | testpass123 | Micah Bell | 22 | ST |
-| 23 | faruk.ortac@test.soccer | testpass123 | Faruk Ortac | 22 | ST |
+Use the users at lib\testData\testUsers.ts\ to register accounts via the app’s sign-up flow, or seed them programmatically (see below).
 
 **Note:** These are fake addresses (e.g. `@test.soccer`). Use the same password for all to make testing easier.
 

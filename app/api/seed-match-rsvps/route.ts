@@ -102,11 +102,15 @@ export async function POST(request: Request) {
       continue
     }
 
+    const userDoc = await adminDb.collection('users').doc(userId).get()
+    const userPosition = userDoc.exists ? (userDoc.data()?.position as string | null) ?? null : null
+
     const rsvpId = `rsvp_${matchId}_${userId}_${now.toMillis()}_${results.length}`
     await adminDb.collection('rsvps').doc(rsvpId).set({
       matchId,
       userId,
       status: 'confirmed',
+      position: userPosition,
       rsvpAt: now,
       createdAt: now,
       updatedAt: now,

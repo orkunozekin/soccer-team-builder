@@ -81,6 +81,43 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ rsvpId, regenerated, position: existingPosition })
     }
 
+    // At most 2 goalkeepers in the match (main two teams). Reject if user is GK and 2 GKs already confirmed.
+    // Count using effective position: RSVP position if set, otherwise the user's profile position.
+    if (isGoalkeeper(position)) {
+      const confirmedSnap = await adminDb
+        .collection('rsvps')
+        .where('matchId', '==', matchId)
+        .where('status', '==', 'confirmed')
+        .get()
+      const userIds = confirmedSnap.docs.map((d) => d.data()?.userId as string).filter(Boolean)
+      const userPositions = new Map<string, string | null>()
+      if (userIds.length > 0) {
+        const uniq = Array.from(new Set(userIds))
+        await Promise.all(
+          uniq.map(async (id) => {
+            const u = await adminDb.collection('users').doc(id).get()
+            userPositions.set(id, (u.data()?.position as string | null) ?? null)
+          })
+        )
+      }
+      const gkCount = confirmedSnap.docs.filter((d) => {
+        const data = d.data()
+        const rsvpPosition = (data?.position as string | null) ?? null
+        const effectivePosition = rsvpPosition ?? userPositions.get(data?.userId as string) ?? null
+        return isGoalkeeper(effectivePosition)
+      }).length
+      if (gkCount >= 2) {
+        return NextResponse.json(
+          {
+            error:
+              'There are already 2 goalkeepers for this match. Please choose a different position to RSVP.',
+            code: 'TOO_MANY_GKS',
+          },
+          { status: 400 }
+        )
+      }
+    }
+
     rsvpId = `rsvp_${matchId}_${uid}_${Date.now()}`
     const now = Timestamp.now()
 

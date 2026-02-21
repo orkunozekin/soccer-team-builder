@@ -29,8 +29,6 @@ export const TEST_USERS: TestUserSeed[] = [
   { email: 'logan.white@test.soccer', password: 'testpass123', displayName: 'Logan White', jerseyNumber: 17, position: 'LWB' },
   { email: 'hayden.harris@test.soccer', password: 'testpass123', displayName: 'Hayden Harris', jerseyNumber: 18, position: 'CM' },
   { email: 'finley.clark@test.soccer', password: 'testpass123', displayName: 'Finley Clark', jerseyNumber: 19, position: 'CDM' },
-  { email: 'noah.ortiz@test.soccer', password: 'testpass123', displayName: 'Noah Ortiz', jerseyNumber: 20, position: 'RB' },
-  { email: 'emerson.sanchez@test.soccer', password: 'testpass123', displayName: 'Emerson Sanchez', jerseyNumber: 21, position: 'LB' },
-  { email: 'micah.bell@test.soccer', password: 'testpass123', displayName: 'Micah Bell', jerseyNumber: 22, position: 'ST' },
+  { email: 'noah.ortiz@test.soccer', password: 'testpass123', displayName: 'Noah Ortiz', jerseyNumber: 20, position: 'GK' },
 ]
 

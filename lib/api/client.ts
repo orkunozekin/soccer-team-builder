@@ -60,14 +60,19 @@ export async function generateTeamsAPI(matchId: string): Promise<{
   return response.json()
 }
 
-export async function confirmRSVPAPI(matchId: string): Promise<{
+export async function confirmRSVPAPI(
+  matchId: string,
+  position?: string | null
+): Promise<{
   rsvpId: string
   regenerated: boolean
   position: string | null
 }> {
+  const body: { matchId: string; position?: string | null } = { matchId }
+  if (position !== undefined) body.position = position
   const response = await apiRequest('/rsvp', {
     method: 'POST',
-    body: JSON.stringify({ matchId }),
+    body: JSON.stringify(body),
     forceRefreshToken: true,
   })
 
