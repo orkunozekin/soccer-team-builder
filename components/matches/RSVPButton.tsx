@@ -13,9 +13,11 @@ import { Match } from '@/types/match'
 interface RSVPButtonProps {
   match: Match
   onTeamsRegenerated?: () => void | Promise<void>
+  /** Call when backend says RSVP is closed so the parent can refetch the match and update UI */
+  onMatchRefetch?: () => void | Promise<void>
 }
 
-export function RSVPButton({ match, onTeamsRegenerated }: RSVPButtonProps) {
+export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPButtonProps) {
   const { user, userData } = useAuth()
   const profileComplete = isProfileComplete(userData)
   const { matchRSVPs, addRSVP, removeRSVP } = useMatchStore()
@@ -60,7 +62,11 @@ export function RSVPButton({ match, onTeamsRegenerated }: RSVPButtonProps) {
         await onTeamsRegenerated()
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to update RSVP')
+      const message = err.message || 'Failed to update RSVP'
+      setError(message)
+      if (message.includes('RSVP is closed') && onMatchRefetch) {
+        await onMatchRefetch()
+      }
     } finally {
       setLoading(false)
     }

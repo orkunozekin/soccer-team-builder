@@ -20,6 +20,7 @@ interface MatchDetailsProps {
   userRsvp: RSVP | null
   userProfilePosition: string | null
   onTeamsRegenerated?: () => void | Promise<void>
+  onMatchRefetch?: () => void | Promise<void>
 }
 
 function positionLabel(value: string | null): string {
@@ -34,6 +35,7 @@ export function MatchDetails({
   userRsvp,
   userProfilePosition,
   onTeamsRegenerated,
+  onMatchRefetch,
 }: MatchDetailsProps) {
   const matchDate = new Date(match.date)
   const formattedDate = format(matchDate, 'EEEE, MMMM d')
@@ -169,7 +171,11 @@ export function MatchDetails({
 
           {match.rsvpOpen && (
             <div className="pt-4">
-              <RSVPButton match={match} onTeamsRegenerated={onTeamsRegenerated} />
+              <RSVPButton
+                match={match}
+                onTeamsRegenerated={onTeamsRegenerated}
+                onMatchRefetch={onMatchRefetch}
+              />
             </div>
           )}
         </CardContent>

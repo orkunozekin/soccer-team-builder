@@ -35,6 +35,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const matchSnap = await adminDb.collection('matches').doc(matchId).get()
+    if (!matchSnap.exists) {
+      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+    }
+    const rsvpOpen = matchSnap.data()?.rsvpOpen === true
+    if (!rsvpOpen) {
+      return NextResponse.json(
+        { error: 'RSVP is closed for this match' },
+        { status: 403 }
+      )
+    }
+
     const userSnap = await adminDb.collection('users').doc(uid).get()
     const userData = userSnap.exists ? userSnap.data() : null
     const displayName = userData?.displayName

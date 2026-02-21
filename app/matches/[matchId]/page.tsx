@@ -137,6 +137,7 @@ export default function MatchDetailsPage() {
             userRsvp={userRsvp}
             userProfilePosition={userProfilePosition}
             onTeamsRegenerated={refetchTeams}
+            onMatchRefetch={refetchAll}
           />
 
           {isAdmin && currentMatch && (
