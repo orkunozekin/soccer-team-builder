@@ -129,6 +129,7 @@ export async function POST(request: Request) {
         matchId: data.matchId ?? matchId,
         userId: data.userId,
         status: data.status ?? 'confirmed',
+        position: data.position ?? null,
         rsvpAt: timestampToDate(data.rsvpAt) || new Date(),
         updatedAt: timestampToDate(data.updatedAt) || new Date(),
       }
