@@ -73,7 +73,7 @@ export function Navigation() {
               onClick={handleLogout}
               variant="outline"
               size="sm"
-              className="h-8 border-white/40 bg-red-40 text-white hover:bg-red-30 shadow-sm"
+              className="h-8 border-white/40 bg-red-40 text-white hover:bg-red-30 hover:text-white shadow-sm"
             >
               Sign Out
             </Button>
@@ -132,7 +132,7 @@ export function Navigation() {
             <Button
               onClick={handleLogout}
               variant="outline"
-              className="mt-2 h-11 border-white/40 bg-red-40 text-white hover:bg-red-30 shadow-sm"
+              className="mt-2 h-11 border-white/40 bg-red-40 text-white hover:bg-red-30 hover:text-white shadow-sm"
             >
               Sign Out
             </Button>

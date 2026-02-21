@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { deleteMatchAPI } from '@/lib/api/client'
@@ -22,16 +22,21 @@ import { Match } from '@/types/match'
 
 interface AdminMatchCardProps {
   match: Match
+  rsvpCount?: number
   onDeleted?: () => void
 }
 
 export function AdminMatchCard({
   match,
+  rsvpCount,
   onDeleted,
 }: AdminMatchCardProps) {
-  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  const matchDate = new Date(match.date)
+  const formattedDate = format(matchDate, 'EEEE, MMMM d')
+  const formattedTime = format(matchDate, 'h:mm a')
 
   const handleConfirmDelete = async () => {
     setDeleting(true)
@@ -48,33 +53,36 @@ export function AdminMatchCard({
 
   return (
     <>
-      <Card
-        className="transition-all hover:shadow-md h-full flex flex-col cursor-pointer"
-        role="link"
-        tabIndex={0}
-        onClick={() => router.push(`/admin/matches/${match.id}`)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            router.push(`/admin/matches/${match.id}`)
-          }
-        }}
-      >
+      <Link href={`/admin/matches/${match.id}`}>
+        <Card className="transition-all hover:shadow-md cursor-pointer h-full">
         <CardHeader>
-          <CardTitle className="text-lg">
-            {format(match.date, 'MMM d')}
-          </CardTitle>
-          <CardDescription>
-            {format(match.date, 'h:mm a')}
-          </CardDescription>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1">
+              <CardTitle className="text-xl mb-2">{formattedDate}</CardTitle>
+              <CardDescription className="text-base">
+                {formattedTime}
+              </CardDescription>
+              {match.location && (
+                <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+                  {match.location}
+                </p>
+              )}
+            </div>
+            <Badge
+              variant={match.rsvpOpen ? 'default' : 'outline'}
+              className="shrink-0"
+            >
+              {match.rsvpOpen ? 'RSVP Open' : 'RSVP Closed'}
+            </Badge>
+          </div>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2 pt-0">
-          <div className="flex flex-wrap gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
-            <Link href={`/admin/matches/${match.id}/edit`}>
-              <Button variant="outline" size="sm" className="h-8">
-                Edit
-              </Button>
-            </Link>
+        <CardContent className="space-y-2">
+          {rsvpCount !== undefined && (
+            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              {rsvpCount} {rsvpCount === 1 ? 'player' : 'players'} confirmed
+            </p>
+          )}
+          <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
             <Button
               variant="destructive"
               size="sm"
@@ -91,6 +99,7 @@ export function AdminMatchCard({
           </div>
         </CardContent>
       </Card>
+      </Link>
 
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent onClick={(e) => e.stopPropagation()}>

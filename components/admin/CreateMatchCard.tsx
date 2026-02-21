@@ -16,6 +16,7 @@ interface CreateMatchCardProps {
 
 export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
   const { addMatch } = useMatchStore()
+  const [expanded, setExpanded] = useState(false)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('09:00')
   const [location, setLocation] = useState('')
@@ -71,52 +72,73 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <DatePickerTime
-            dateId="date"
-            timeId="time"
-            date={date}
-            time={time}
-            onDateChange={setDate}
-            onTimeChange={setTime}
-            datePlaceholder="Select date"
-            disabled={loading}
-            minDate={new Date(today + 'T12:00:00')}
-            timeStep={300}
-          />
-
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              disabled={loading}
-              className="h-11"
-            />
-          </div>
-
-          {error && (
-            <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-400">
-              Match created successfully!
-            </div>
-          )}
-
+        {!expanded ? (
           <Button
-            type="submit"
-            loading={loading}
-            className="w-full h-11 text-base sm:h-9 sm:text-sm"
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => setExpanded(true)}
           >
-            Create Match
+            Add match
           </Button>
-        </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <DatePickerTime
+              dateId="date"
+              timeId="time"
+              date={date}
+              time={time}
+              onDateChange={setDate}
+              onTimeChange={setTime}
+              datePlaceholder="Select date"
+              disabled={loading}
+              minDate={new Date(today + 'T12:00:00')}
+              timeStep={300}
+            />
+
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                disabled={loading}
+                className="h-11"
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                Match created successfully!
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setExpanded(false)}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                loading={loading}
+                className="flex-1 h-11 text-base sm:h-9 sm:text-sm"
+              >
+                Create Match
+              </Button>
+            </div>
+          </form>
+        )}
       </CardContent>
     </Card>
   )

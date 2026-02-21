@@ -1,17 +1,18 @@
 'use client'
 
-import { useEffect } from 'react'
-import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { AdminRouteGuard } from '@/components/admin/AdminRouteGuard'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
 import { UserRoleManager } from '@/components/admin/UserRoleManager'
 import { getAllMatches } from '@/lib/services/matchService'
+import { getMatchRsvpCount } from '@/lib/services/rsvpService'
 import { useMatchStore } from '@/store/matchStore'
 import { AdminMatchCard } from '@/components/admin/AdminMatchCard'
 
 function AdminDashboardContent() {
   const { matches, setMatches, setLoading } = useMatchStore()
+  const [rsvpCounts, setRsvpCounts] = useState<Record<string, number>>({})
 
   useEffect(() => {
     const fetchMatches = async () => {
@@ -19,6 +20,13 @@ function AdminDashboardContent() {
       try {
         const allMatches = await getAllMatches()
         setMatches(allMatches)
+        const counts: Record<string, number> = {}
+        await Promise.all(
+          allMatches.map(async (m) => {
+            counts[m.id] = await getMatchRsvpCount(m.id)
+          })
+        )
+        setRsvpCounts(counts)
       } catch (error) {
         console.error('Error fetching matches:', error)
       } finally {
@@ -28,6 +36,18 @@ function AdminDashboardContent() {
 
     fetchMatches()
   }, [setMatches, setLoading])
+
+  const refetchMatches = async () => {
+    const allMatches = await getAllMatches()
+    setMatches(allMatches)
+    const counts: Record<string, number> = {}
+    await Promise.all(
+      allMatches.map(async (m) => {
+        counts[m.id] = await getMatchRsvpCount(m.id)
+      })
+    )
+    setRsvpCounts(counts)
+  }
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8">
@@ -40,7 +60,7 @@ function AdminDashboardContent() {
 
       <div className="space-y-6">
         <CreateMatchCard
-          onMatchCreated={() => getAllMatches().then(setMatches)}
+          onMatchCreated={refetchMatches}
         />
 
         <div>
@@ -59,7 +79,8 @@ function AdminDashboardContent() {
                 <AdminMatchCard
                   key={match.id}
                   match={match}
-                  onDeleted={() => getAllMatches().then(setMatches)}
+                  rsvpCount={rsvpCounts[match.id]}
+                  onDeleted={refetchMatches}
                 />
               ))}
             </div>

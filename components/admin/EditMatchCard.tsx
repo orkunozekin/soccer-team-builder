@@ -34,6 +34,7 @@ export function EditMatchCard({
   onSaved,
   onDeleted,
 }: EditMatchCardProps) {
+  const [expanded, setExpanded] = useState(false)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [location, setLocation] = useState('')
@@ -95,49 +96,72 @@ export function EditMatchCard({
             Edit date, time, location, and RSVP window.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleSaveDateTime} className="space-y-4">
-            <DatePickerTime
-              dateId="match-date"
-              timeId="match-time"
-              date={date}
-              time={time}
-              onDateChange={setDate}
-              onTimeChange={setTime}
-              datePlaceholder="Select date"
-              disabled={saving}
-              timeStep={300}
-            />
-            <div className="space-y-2">
-              <Label htmlFor="match-location">Location</Label>
-              <Input
-                id="match-location"
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                disabled={saving}
-                className="h-11"
-              />
-            </div>
-            {saveSuccess && (
-              <p className="text-sm text-green-600 dark:text-green-400">
-                Date, time and location saved.
-              </p>
-            )}
-            <Button type="submit" loading={saving}>
-              Save date, time & location
-            </Button>
-          </form>
-          <div className="border-t pt-4">
+        <CardContent>
+          {!expanded ? (
             <Button
-              variant="destructive"
-              className="w-full sm:w-auto"
-              loading={deleting}
-              onClick={() => setDeleteDialogOpen(true)}
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => setExpanded(true)}
             >
-              Delete match
+              Manage match
             </Button>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              <form onSubmit={handleSaveDateTime} className="space-y-4">
+                <DatePickerTime
+                  dateId="match-date"
+                  timeId="match-time"
+                  date={date}
+                  time={time}
+                  onDateChange={setDate}
+                  onTimeChange={setTime}
+                  datePlaceholder="Select date"
+                  disabled={saving}
+                  timeStep={300}
+                />
+                <div className="space-y-2">
+                  <Label htmlFor="match-location">Location</Label>
+                  <Input
+                    id="match-location"
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    disabled={saving}
+                    className="h-11"
+                  />
+                </div>
+                {saveSuccess && (
+                  <p className="text-sm text-green-600 dark:text-green-400">
+                    Date, time and location saved.
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setExpanded(false)}
+                    disabled={saving}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" loading={saving}>
+                    Save date, time & location
+                  </Button>
+                </div>
+              </form>
+              <div className="border-t pt-4">
+                <Button
+                  variant="destructive"
+                  className="w-full sm:w-auto"
+                  loading={deleting}
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  Delete match
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
