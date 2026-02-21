@@ -80,6 +80,15 @@ export const getMatchRSVPs = async (matchId: string): Promise<RSVP[]> => {
   }))
 }
 
+/** Returns the number of confirmed RSVPs for a match. */
+export const getMatchRsvpCount = async (matchId: string): Promise<number> => {
+  const rsvps = await queryDocuments('rsvps', [
+    where('matchId', '==', matchId),
+    where('status', '==', 'confirmed'),
+  ])
+  return rsvps.length
+}
+
 export const cancelRSVP = async (rsvpId: string): Promise<void> => {
   await updateDocument('rsvps', rsvpId, { status: 'cancelled' as RSVPStatus })
 }

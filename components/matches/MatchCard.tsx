@@ -8,9 +8,10 @@ import { Match } from '@/types/match'
 
 interface MatchCardProps {
   match: Match
+  rsvpCount?: number
 }
 
-export function MatchCard({ match }: MatchCardProps) {
+export function MatchCard({ match, rsvpCount }: MatchCardProps) {
   const matchDate = new Date(match.date)
   const formattedDate = format(matchDate, 'EEEE, MMMM d')
   const formattedTime = format(matchDate, 'h:mm a')
@@ -39,7 +40,12 @@ export function MatchCard({ match }: MatchCardProps) {
             </Badge>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-2">
+          {rsvpCount !== undefined && (
+            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              {rsvpCount} {rsvpCount === 1 ? 'player' : 'players'} confirmed
+            </p>
+          )}
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Click to view details and RSVP
           </p>

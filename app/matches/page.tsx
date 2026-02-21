@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { getAllMatches } from '@/lib/services/matchService'
+import { getMatchRsvpCount } from '@/lib/services/rsvpService'
 import { useMatchStore } from '@/store/matchStore'
 import { MatchCard } from '@/components/matches/MatchCard'
 import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
@@ -16,6 +17,7 @@ export default function MatchesPage() {
   const { user, loading: authLoading } = useAuth()
   const { isAdmin } = useAdmin()
   const { matches, loading, setMatches, setLoading } = useMatchStore()
+  const [rsvpCounts, setRsvpCounts] = useState<Record<string, number>>({})
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -29,6 +31,13 @@ export default function MatchesPage() {
         try {
           const allMatches = await getAllMatches()
           setMatches(allMatches)
+          const counts: Record<string, number> = {}
+          await Promise.all(
+            allMatches.map(async (m) => {
+              counts[m.id] = await getMatchRsvpCount(m.id)
+            })
+          )
+          setRsvpCounts(counts)
         } catch (error) {
           console.error('Error fetching matches:', error)
         } finally {
@@ -39,6 +48,18 @@ export default function MatchesPage() {
 
     fetchMatches()
   }, [user, authLoading, router, setMatches, setLoading])
+
+  const refetchMatchesAndCounts = async () => {
+    const allMatches = await getAllMatches()
+    setMatches(allMatches)
+    const counts: Record<string, number> = {}
+    await Promise.all(
+      allMatches.map(async (m) => {
+        counts[m.id] = await getMatchRsvpCount(m.id)
+      })
+    )
+    setRsvpCounts(counts)
+  }
 
   if (authLoading || loading) {
     return <PageLoadingSkeleton variant="container" />
@@ -60,7 +81,7 @@ export default function MatchesPage() {
       {isAdmin && (
         <div className="mb-6">
           <CreateMatchCard
-            onMatchCreated={() => getAllMatches().then(setMatches)}
+            onMatchCreated={refetchMatchesAndCounts}
           />
         </div>
       )}
@@ -84,7 +105,11 @@ export default function MatchesPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {matches.map((match) => (
-            <MatchCard key={match.id} match={match} />
+            <MatchCard
+              key={match.id}
+              match={match}
+              rsvpCount={rsvpCounts[match.id]}
+            />
           ))}
         </div>
       )}
