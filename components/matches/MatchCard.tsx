@@ -4,7 +4,7 @@ import { format } from 'date-fns'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { getNextRSVPOpenTime, getNextRSVPCloseTime } from '@/lib/utils/rsvpScheduler'
+import { getNextRSVPCloseTime, getNextRSVPOpenTime } from '@/lib/utils/rsvpScheduler'
 import { Match } from '@/types/match'
 
 interface MatchCardProps {
@@ -16,7 +16,7 @@ interface MatchCardProps {
 
 export function MatchCard({ match, rsvpCount, isAdmin }: MatchCardProps) {
   const matchDate = new Date(match.date)
-  const formattedDate = format(matchDate, 'EEEE, MMMM d')
+  const formattedDate = format(matchDate, 'EEEE, MMM d')
   const formattedTime = format(matchDate, 'h:mm a')
   const rsvpOpenAt = getNextRSVPOpenTime(matchDate)
   const rsvpCloseAt = getNextRSVPCloseTime(matchDate)
@@ -57,7 +57,7 @@ export function MatchCard({ match, rsvpCount, isAdmin }: MatchCardProps) {
           </div>
           <Badge
             variant={match.rsvpOpen ? 'default' : 'outline'}
-            className="shrink-0"
+            className="shrink-0 py-1 text-xs"
           >
             {match.rsvpOpen ? 'RSVP Open' : 'RSVP Closed'}
           </Badge>

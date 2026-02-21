@@ -1,18 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
-import { Match } from '@/types/match'
-import { RSVP } from '@/types/rsvp'
 import { RSVPButton } from '@/components/matches/RSVPButton'
 import { PositionSelector } from '@/components/profile/PositionSelector'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { updateRSVPPositionAPI } from '@/lib/api/client'
-import { useMatchStore } from '@/store/matchStore'
 import { SOCCER_POSITIONS } from '@/lib/constants/positions'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
+import { useMatchStore } from '@/store/matchStore'
+import { Match } from '@/types/match'
+import { RSVP } from '@/types/rsvp'
 
 interface MatchDetailsProps {
   match: Match
@@ -38,7 +38,7 @@ export function MatchDetails({
   onMatchRefetch,
 }: MatchDetailsProps) {
   const matchDate = new Date(match.date)
-  const formattedDate = format(matchDate, 'EEEE, MMMM d')
+  const formattedDate = format(matchDate, 'EEEE, MMM d')
   const formattedTime = format(matchDate, 'h:mm a')
 
   const { updateRSVPPosition } = useMatchStore()
@@ -101,7 +101,7 @@ export function MatchDetails({
             </div>
             <Badge
               variant={match.rsvpOpen ? 'default' : 'outline'}
-              className="shrink-0 text-sm"
+              className="shrink-0 py-1 text-xs"
             >
               {match.rsvpOpen ? 'RSVP Open' : 'RSVP Closed'}
             </Badge>

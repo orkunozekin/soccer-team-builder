@@ -35,7 +35,7 @@ export function AdminMatchCard({
   const [deleting, setDeleting] = useState(false)
 
   const matchDate = new Date(match.date)
-  const formattedDate = format(matchDate, 'EEEE, MMMM d')
+  const formattedDate = format(matchDate, 'EEEE, MMM d')
   const formattedTime = format(matchDate, 'h:mm a')
 
   const handleConfirmDelete = async () => {
@@ -70,7 +70,7 @@ export function AdminMatchCard({
             </div>
             <Badge
               variant={match.rsvpOpen ? 'default' : 'outline'}
-              className="shrink-0"
+              className="shrink-0 py-1 text-xs"
             >
               {match.rsvpOpen ? 'RSVP Open' : 'RSVP Closed'}
             </Badge>
