@@ -1,14 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { AdminMatchCard } from '@/components/admin/AdminMatchCard'
 import { AdminRouteGuard } from '@/components/admin/AdminRouteGuard'
-import { Card, CardContent } from '@/components/ui/card'
 import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
 import { UserRoleManager } from '@/components/admin/UserRoleManager'
+import { Card, CardContent } from '@/components/ui/card'
 import { getAllMatches } from '@/lib/services/matchService'
 import { getMatchRsvpCount } from '@/lib/services/rsvpService'
 import { useMatchStore } from '@/store/matchStore'
-import { AdminMatchCard } from '@/components/admin/AdminMatchCard'
 
 function AdminDashboardContent() {
   const { matches, setMatches, setLoading } = useMatchStore()
