@@ -18,6 +18,7 @@ interface PositionSelectorProps {
   value: string | null
   onValueChange: (value: string | null) => void
   disabled?: boolean
+  hideLabel?: boolean
   labelClassName?: string
   triggerClassName?: string
 }
@@ -26,14 +27,17 @@ export function PositionSelector({
   value,
   onValueChange,
   disabled = false,
+  hideLabel = false,
   labelClassName,
   triggerClassName,
 }: PositionSelectorProps) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor="position" className={labelClassName}>
-        Position
-      </Label>
+      {!hideLabel && (
+        <Label htmlFor="position" className={labelClassName}>
+          Position
+        </Label>
+      )}
       <Select
         value={value ?? NONE_POSITION_VALUE}
         onValueChange={(val) => onValueChange(val === NONE_POSITION_VALUE ? null : val)}

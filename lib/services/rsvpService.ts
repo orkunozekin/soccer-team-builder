@@ -33,6 +33,7 @@ export const getRSVP = async (rsvpId: string): Promise<RSVP | null> => {
     matchId: rsvpDoc.matchId,
     userId: rsvpDoc.userId,
     status: rsvpDoc.status,
+    position: rsvpDoc.position ?? null,
     rsvpAt: timestampToDate(rsvpDoc.rsvpAt) || new Date(),
     updatedAt: timestampToDate(rsvpDoc.updatedAt) || new Date(),
   }
@@ -56,6 +57,7 @@ export const getUserRSVP = async (
     matchId: rsvp.matchId,
     userId: rsvp.userId,
     status: rsvp.status,
+    position: rsvp.position ?? null,
     rsvpAt: timestampToDate(rsvp.rsvpAt) || new Date(),
     updatedAt: timestampToDate(rsvp.updatedAt) || new Date(),
   }
@@ -72,6 +74,7 @@ export const getMatchRSVPs = async (matchId: string): Promise<RSVP[]> => {
     matchId: rsvp.matchId,
     userId: rsvp.userId,
     status: rsvp.status,
+    position: rsvp.position ?? null,
     rsvpAt: timestampToDate(rsvp.rsvpAt) || new Date(),
     updatedAt: timestampToDate(rsvp.updatedAt) || new Date(),
   }))

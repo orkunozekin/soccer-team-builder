@@ -220,6 +220,19 @@ export async function POST(request: NextRequest) {
     })
     await batch.commit()
 
+    // Persist GK replacements so when that GK later changes position, we can swap them with the person they replaced
+    const gkReplacements: Record<string, string> = {}
+    for (const r of replacements) {
+      gkReplacements[r.insertedGK] = r.removedPlayer
+    }
+    if (Object.keys(gkReplacements).length > 0) {
+      const matchRef = adminDb.collection('matches').doc(matchId)
+      await matchRef.set(
+        { gkReplacements, updatedAt: now },
+        { merge: true }
+      )
+    }
+
     return NextResponse.json({
       success: true,
       teamsRebalanced: teams.length,

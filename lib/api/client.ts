@@ -63,6 +63,7 @@ export async function generateTeamsAPI(matchId: string): Promise<{
 export async function confirmRSVPAPI(matchId: string): Promise<{
   rsvpId: string
   regenerated: boolean
+  position: string | null
 }> {
   const response = await apiRequest('/rsvp', {
     method: 'POST',
@@ -91,6 +92,30 @@ export async function cancelRSVPAPI(rsvpId: string): Promise<{
   if (!response.ok) {
     const error = await response.json()
     throw new Error(error.error || 'Failed to cancel RSVP')
+  }
+
+  return response.json()
+}
+
+export async function updateRSVPPositionAPI(
+  rsvpId: string,
+  position: string | null
+): Promise<{
+  updated: boolean
+  swapOccurred?: boolean
+  otherPlayerDisplayName?: string
+  swapWithReplacedPlayer?: boolean
+  teamsUpdated?: boolean
+}> {
+  const response = await apiRequest('/rsvp', {
+    method: 'PATCH',
+    body: JSON.stringify({ rsvpId, position }),
+    forceRefreshToken: true,
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to update position')
   }
 
   return response.json()

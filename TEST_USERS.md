@@ -26,6 +26,7 @@ Use these to register accounts via the app’s sign-up flow, or seed them progra
 | 20 | noah.ortiz@test.soccer | testpass123 | Noah Ortiz | 20 | RB |
 | 21 | emerson.sanchez@test.soccer | testpass123 | Emerson Sanchez | 21 | LB |
 | 22 | micah.bell@test.soccer | testpass123 | Micah Bell | 22 | ST |
+| 23 | faruk.ortac@test.soccer | testpass123 | Faruk Ortac | 22 | ST |
 
 **Note:** These are fake addresses (e.g. `@test.soccer`). Use the same password for all to make testing easier.
 
@@ -65,7 +66,7 @@ Use the same auth as above (admin Bearer token **or** `X-Seed-Secret` header).
 
 **Example (with secret):**
 ```bash
-curl -X POST http://localhost:3000/api/seed-match-rsvps \
+curl -X POST http://localhost:3001/api/seed-match-rsvps \
   -H "Content-Type: application/json" \
   -H "X-Seed-Secret: your-secret-here" \
   -d '{"matchId":"abc123"}'

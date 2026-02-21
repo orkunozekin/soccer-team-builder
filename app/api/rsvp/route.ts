@@ -1,9 +1,11 @@
-import { Timestamp } from 'firebase-admin/firestore'
+import { Timestamp, FieldValue } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { expandTeamsForMatch } from '@/lib/teams/expandTeamsForMatch'
 import { removeUserFromMatchTeams } from '@/lib/teams/removeUserFromMatchTeams'
+import { swapGkWithLowerPriority, performGkSwap } from '@/lib/teams/swapGkWithLowerTeam'
+import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 
 /**
  * POST: Confirm RSVP for the authenticated user.
@@ -44,6 +46,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Use provided position or fall back to profile position (per-RSVP position is stored and not changed by later profile updates)
+    const positionFromBody = body?.position != null
+      ? (typeof body.position === 'string' ? body.position.trim() || null : null)
+      : null
+    const position = positionFromBody ?? (userData?.position as string | null) ?? null
+
     const existing = await adminDb
       .collection('rsvps')
       .where('matchId', '==', matchId)
@@ -54,9 +62,11 @@ export async function POST(request: NextRequest) {
 
     let rsvpId: string
     if (!existing.empty) {
-      rsvpId = existing.docs[0].id
+      const existingDoc = existing.docs[0]
+      rsvpId = existingDoc.id
+      const existingPosition = (existingDoc.data()?.position as string | null) ?? null
       const { regenerated } = await expandTeamsForMatch(adminDb, matchId)
-      return NextResponse.json({ rsvpId, regenerated })
+      return NextResponse.json({ rsvpId, regenerated, position: existingPosition })
     }
 
     rsvpId = `rsvp_${matchId}_${uid}_${Date.now()}`
@@ -66,6 +76,7 @@ export async function POST(request: NextRequest) {
       matchId,
       userId: uid,
       status: 'confirmed',
+      position: position ?? null,
       rsvpAt: now,
       updatedAt: now,
     })
@@ -75,6 +86,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       rsvpId,
       regenerated,
+      position: position ?? null,
     })
   } catch (error: any) {
     console.error('Error creating RSVP:', error)
@@ -101,6 +113,7 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json()
     const rsvpId = body?.rsvpId
+    const positionFromBody = body?.position
     if (!rsvpId || typeof rsvpId !== 'string') {
       return NextResponse.json({ error: 'rsvpId required' }, { status: 400 })
     }
@@ -130,6 +143,101 @@ export async function PATCH(request: NextRequest) {
     const matchId = data.matchId as string
     const userId = data.userId as string
 
+    // Update position flow (PATCH with position field)
+    if (positionFromBody !== undefined) {
+      const newPosition = typeof positionFromBody === 'string' ? positionFromBody.trim() || null : null
+      const userSnap = await adminDb.collection('users').doc(userId).get()
+      const userData = userSnap.exists ? userSnap.data() : null
+      const oldPosition = (data.position as string | null) ?? (userData?.position as string | null) ?? null
+      const oldIsGk = isGoalkeeper(oldPosition)
+      const newIsGk = isGoalkeeper(newPosition)
+
+      let swapOccurred = false
+      let otherPlayerDisplayName: string | undefined
+      let swapWithReplacedPlayer = false
+
+      if (oldIsGk && !newIsGk) {
+        const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
+        const teamsSnap = await teamsCol.get()
+        let currentUserTeamNumber = 0
+        const teamNumbersByUserId = new Map<string, number>()
+        for (const d of teamsSnap.docs) {
+          const playerIds = (d.data().playerIds as string[]) ?? []
+          const teamNumber = (d.data().teamNumber as number) ?? 0
+          for (const pid of playerIds) teamNumbersByUserId.set(pid, teamNumber)
+          if (playerIds.includes(userId)) currentUserTeamNumber = teamNumber
+        }
+
+        // If this GK had replaced a non-GK (e.g. via rebalance), swap back with that person first
+        const matchSnap = await adminDb.collection('matches').doc(matchId).get()
+        const gkReplacements = (matchSnap.exists ? matchSnap.data()?.gkReplacements : null) as Record<string, string> | undefined
+        const replacedUserId = gkReplacements?.[userId]
+        const replacedUserTeamNumber = replacedUserId != null ? teamNumbersByUserId.get(replacedUserId) : undefined
+        const replacedUserOnLowerTeam =
+          replacedUserId != null &&
+          replacedUserTeamNumber != null &&
+          replacedUserTeamNumber > currentUserTeamNumber
+
+        if (replacedUserOnLowerTeam) {
+          const otherUserSnap = await adminDb.collection('users').doc(replacedUserId).get()
+          otherPlayerDisplayName = otherUserSnap.exists ? (otherUserSnap.data()?.displayName as string) || undefined : undefined
+          swapWithReplacedPlayer = true
+          await performGkSwap(adminDb, matchId, userId, replacedUserId)
+          swapOccurred = true
+          await adminDb.collection('matches').doc(matchId).update({
+            [`gkReplacements.${userId}`]: FieldValue.delete(),
+          })
+        } else {
+          const rsvpsSnap = await adminDb
+            .collection('rsvps')
+            .where('matchId', '==', matchId)
+            .where('status', '==', 'confirmed')
+            .get()
+          const rsvpPositionsByUserId = new Map<string, string | null>()
+          rsvpsSnap.docs.forEach((d) => {
+            const ddata = d.data()
+            const u = ddata.userId as string
+            rsvpPositionsByUserId.set(u, (ddata.position as string | null) ?? null)
+          })
+          const usersSnap = await adminDb.collection('users').get()
+          const userPositionsByUserId = new Map<string, string | null>()
+          usersSnap.docs.forEach((d) => {
+            const u = d.id === d.data()?.uid ? d.id : (d.data()?.uid as string)
+            userPositionsByUserId.set(u, (d.data()?.position as string | null) ?? null)
+          })
+
+          const swapResult = await swapGkWithLowerPriority(
+            adminDb,
+            matchId,
+            userId,
+            currentUserTeamNumber,
+            rsvpPositionsByUserId,
+            userPositionsByUserId
+          )
+          if (swapResult.swapOccurred && swapResult.otherGkUserId) {
+            const otherUserSnap = await adminDb.collection('users').doc(swapResult.otherGkUserId).get()
+            otherPlayerDisplayName = otherUserSnap.exists ? (otherUserSnap.data()?.displayName as string) || undefined : undefined
+            await performGkSwap(adminDb, matchId, userId, swapResult.otherGkUserId)
+            swapOccurred = true
+          }
+        }
+      }
+
+      await rsvpRef.update({
+        position: newPosition,
+        updatedAt: Timestamp.now(),
+      })
+
+      return NextResponse.json({
+        updated: true,
+        swapOccurred,
+        otherPlayerDisplayName: swapOccurred ? otherPlayerDisplayName : undefined,
+        swapWithReplacedPlayer: swapOccurred ? swapWithReplacedPlayer : undefined,
+        teamsUpdated: swapOccurred,
+      })
+    }
+
+    // Cancel RSVP flow (no position in body)
     await rsvpRef.update({
       status: 'cancelled',
       updatedAt: Timestamp.now(),
@@ -142,7 +250,7 @@ export async function PATCH(request: NextRequest) {
       teamsUpdated: removed,
     })
   } catch (error: any) {
-    console.error('Error cancelling RSVP:', error)
+    console.error('Error updating/cancelling RSVP:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to cancel RSVP' },
       { status: 500 }

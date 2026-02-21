@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { transferPlayerAPI } from '@/lib/api/client'
+import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { cn } from '@/lib/utils'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
@@ -68,7 +69,14 @@ function DraggablePlayerRow({
       </span>
       <span className="truncate">{user.displayName}</span>
       {user.position && (
-        <Badge variant="outline" className="ml-auto text-xs">
+        <Badge
+          variant="outline"
+          className={cn(
+            'ml-auto text-xs',
+            isGoalkeeper(user.position) &&
+              'bg-amber-200/90 dark:bg-amber-700/50 border-amber-400 dark:border-amber-600 text-amber-900 dark:text-amber-100'
+          )}
+        >
           {user.position}
         </Badge>
       )}

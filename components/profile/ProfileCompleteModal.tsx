@@ -106,7 +106,7 @@ export function ProfileCompleteModal({ open, onOpenChange, onSaved }: ProfileCom
             Complete your profile
           </h2>
           <p id="profile-modal-desc" className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Set your display name and jersey number to RSVP to matches.
+            Set your display name to RSVP to matches.
           </p>
           </div>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -126,7 +126,7 @@ export function ProfileCompleteModal({ open, onOpenChange, onSaved }: ProfileCom
           </div>
           <div className="space-y-2">
             <Label htmlFor="modal-jerseyNumber">
-              Jersey Number <span className="text-zinc-400 dark:text-zinc-500">(optional)</span>
+              Jersey Number
             </Label>
             <Input
               id="modal-jerseyNumber"

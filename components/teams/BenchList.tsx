@@ -2,6 +2,7 @@
 
 import { User } from '@/types/user'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 
 interface BenchListProps {
   playerIds: string[]
@@ -31,7 +32,13 @@ export function BenchList({ playerIds, users }: BenchListProps) {
               </span>
               <span>{user.displayName}</span>
               {user.position && (
-                <span className="ml-auto text-xs text-zinc-600 dark:text-zinc-400">
+                <span
+                  className={`ml-auto text-xs ${
+                    isGoalkeeper(user.position)
+                      ? 'rounded px-1.5 py-0.5 bg-amber-200/90 dark:bg-amber-700/50 text-amber-900 dark:text-amber-100'
+                      : 'text-zinc-600 dark:text-zinc-400'
+                  }`}
+                >
                   {user.position}
                 </span>
               )}

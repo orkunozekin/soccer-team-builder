@@ -5,7 +5,7 @@
 
 import { Timestamp } from 'firebase-admin/firestore'
 import type { Firestore } from 'firebase-admin/firestore'
-import { computeTeamCountForRSVPCount, generateTeams } from '@/lib/utils/teamGenerator'
+import { computeTeamCountForRSVPCount, generateTeamsWithReplacements } from '@/lib/utils/teamGenerator'
 import type { RSVP } from '@/types/rsvp'
 import type { User } from '@/types/user'
 
@@ -35,6 +35,7 @@ export async function expandTeamsForMatch(
       matchId: data.matchId ?? matchId,
       userId: data.userId,
       status: data.status ?? 'confirmed',
+      position: data.position ?? null,
       rsvpAt: timestampToDate(data.rsvpAt) || new Date(),
       updatedAt: timestampToDate(data.updatedAt) || new Date(),
     }
@@ -74,9 +75,12 @@ export async function expandTeamsForMatch(
     }
   })
 
-  const teamAssignments = generateTeams(rsvpsToUse, users, 11, {
-    teamCount: desiredTeamCount,
-  })
+  const { teams: teamAssignments, gkReplacements } = generateTeamsWithReplacements(
+    rsvpsToUse,
+    users,
+    11,
+    { teamCount: desiredTeamCount }
+  )
 
   const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
 
@@ -85,6 +89,17 @@ export async function expandTeamsForMatch(
   await batch.commit()
 
   const now = Timestamp.now()
+  const gkReplacementsMap: Record<string, string> = {}
+  for (const r of gkReplacements) {
+    gkReplacementsMap[r.insertedGK] = r.removedPlayer
+  }
+  if (Object.keys(gkReplacementsMap).length > 0) {
+    await adminDb.collection('matches').doc(matchId).set(
+      { gkReplacements: gkReplacementsMap, updatedAt: now },
+      { merge: true }
+    )
+  }
+
   const writes: Promise<unknown>[] = []
   for (let i = 0; i < teamAssignments.length; i++) {
     const assignment = teamAssignments[i]

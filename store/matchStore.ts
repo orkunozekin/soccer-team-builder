@@ -17,6 +17,7 @@ interface MatchState {
   updateMatch: (matchId: string, updates: Partial<Match>) => void
   removeMatch: (matchId: string) => void
   addRSVP: (rsvp: RSVP) => void
+  updateRSVPPosition: (rsvpId: string, position: string | null) => void
   removeRSVP: (rsvpId: string) => void
 }
 
@@ -49,6 +50,12 @@ export const useMatchStore = create<MatchState>((set) => ({
     })),
   addRSVP: (rsvp) =>
     set((state) => ({ matchRSVPs: [...state.matchRSVPs, rsvp] })),
+  updateRSVPPosition: (rsvpId, position) =>
+    set((state) => ({
+      matchRSVPs: state.matchRSVPs.map((r) =>
+        r.id === rsvpId ? { ...r, position, updatedAt: new Date() } : r
+      ),
+    })),
   removeRSVP: (rsvpId) =>
     set((state) => ({
       matchRSVPs: state.matchRSVPs.filter((r) => r.id !== rsvpId),

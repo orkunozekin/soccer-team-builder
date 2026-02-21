@@ -68,16 +68,13 @@ function ProfileFormInner({
         setLoading(false)
         return
       }
-      const num = jerseyNumber ? parseInt(jerseyNumber, 10) : null
-      if (num === null || isNaN(num) || num < 0 || num > 99) {
-        setError('Jersey number is required and must be 0–99')
-        setLoading(false)
-        return
-      }
+      const parsed = jerseyNumber.trim() ? parseInt(jerseyNumber, 10) : NaN
+      const jersey =
+        Number.isNaN(parsed) || parsed < 0 || parsed > 99 ? null : parsed
 
       const updates: Partial<Pick<User, 'displayName' | 'jerseyNumber' | 'position'>> = {
         displayName: trimmedName,
-        jerseyNumber: num,
+        jerseyNumber: jersey,
         position,
       }
 
@@ -125,7 +122,7 @@ function ProfileFormInner({
 
       <div className="space-y-1.5">
         <Label htmlFor="jerseyNumber" className={formLabelClass}>
-          Jersey Number <span className="text-red-500">*</span>
+          Jersey Number
         </Label>
         <Input
           id="jerseyNumber"
@@ -139,7 +136,7 @@ function ProfileFormInner({
           className={inputClass}
         />
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-          Required to RSVP · 0 to 99
+          Optional · 0 to 99
         </p>
       </div>
 
@@ -152,9 +149,7 @@ function ProfileFormInner({
       />
 
       {error && (
-        <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50/80 dark:bg-red-950/30 px-4 py-3 text-sm font-medium text-red-800 dark:text-red-300">
-          {error}
-        </div>
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
 
       {success && (

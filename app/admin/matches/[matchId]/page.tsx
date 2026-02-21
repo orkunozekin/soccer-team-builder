@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { AdminRouteGuard } from '@/components/admin/AdminRouteGuard'
 import { getMatch } from '@/lib/services/matchService'
@@ -16,6 +16,7 @@ import { TeamsDisplay } from '@/components/teams/TeamsDisplay'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { BackLink } from '@/components/ui/back-link'
 import { Match } from '@/types/match'
+import { RSVP } from '@/types/rsvp'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
 
@@ -26,7 +27,16 @@ function AdminMatchManagementContent() {
   const [match, setMatch] = useState<Match | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
+  const [matchRSVPs, setMatchRSVPs] = useState<RSVP[]>([])
   const [rsvpCount, setRsvpCount] = useState(0)
+  const usersWithMatchPosition = useMemo(
+    () =>
+      allUsers.map((u) => {
+        const rsvp = matchRSVPs.find((r) => r.userId === u.uid)
+        return { ...u, position: rsvp?.position ?? u.position ?? null }
+      }),
+    [allUsers, matchRSVPs]
+  )
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
   const autoGenerateAttempted = useRef(false)
@@ -46,6 +56,7 @@ function AdminMatchManagementContent() {
       setMatch(matchData)
       setTeams(teamsData)
       setAllUsers(usersData)
+      setMatchRSVPs(rsvpsData)
       setRsvpCount(rsvpsData.length)
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -162,7 +173,7 @@ function AdminMatchManagementContent() {
               <PlayerTransfer
                 matchId={matchId}
                 teams={teams}
-                users={allUsers}
+                users={usersWithMatchPosition}
                 onTransferComplete={refreshData}
               />
             </div>

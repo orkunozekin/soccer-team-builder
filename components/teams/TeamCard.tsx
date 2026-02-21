@@ -4,6 +4,7 @@ import { User } from '@/types/user'
 import { Team } from '@/types/team'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 
 interface TeamCardProps {
   team: Team
@@ -48,7 +49,14 @@ export function TeamCard({ team, users }: TeamCardProps) {
                 </span>
                 <span>{user.displayName}</span>
                 {user.position && (
-                  <Badge variant="outline" className="ml-auto text-xs">
+                  <Badge
+                    variant="outline"
+                    className={`ml-auto text-xs ${
+                      isGoalkeeper(user.position)
+                        ? 'bg-amber-200/90 dark:bg-amber-700/50 border-amber-400 dark:border-amber-600 text-amber-900 dark:text-amber-100'
+                        : ''
+                    }`}
+                  >
                     {user.position}
                   </Badge>
                 )}

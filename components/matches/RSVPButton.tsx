@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { ProfileCompleteModal } from '@/components/profile/ProfileCompleteModal'
 import { Button } from '@/components/ui/button'
-import { ButtonSpinner } from '@/components/ui/button-spinner'
 import { cancelRSVPAPI, confirmRSVPAPI } from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getUserRSVP } from '@/lib/services/rsvpService'
@@ -45,12 +44,13 @@ export function RSVPButton({ match, onTeamsRegenerated }: RSVPButtonProps) {
     setLoading(true)
     setError('')
     try {
-      const { rsvpId, regenerated } = await confirmRSVPAPI(match.id)
+      const { rsvpId, regenerated, position } = await confirmRSVPAPI(match.id)
       const newRSVP = {
         id: rsvpId,
         matchId: match.id,
         userId: user.uid,
         status: 'confirmed' as const,
+        position: position ?? null,
         rsvpAt: new Date(),
         updatedAt: new Date(),
       }
@@ -82,11 +82,10 @@ export function RSVPButton({ match, onTeamsRegenerated }: RSVPButtonProps) {
       return
     }
 
-    setLoading(true)
-    setError('')
-
-    try {
-      if (hasRSVPed) {
+    if (hasRSVPed) {
+      setLoading(true)
+      setError('')
+      try {
         const rsvp = matchRSVPs.find((r) => r.userId === user.uid)
         if (rsvp) {
           const { teamsUpdated } = await cancelRSVPAPI(rsvp.id)
@@ -96,14 +95,15 @@ export function RSVPButton({ match, onTeamsRegenerated }: RSVPButtonProps) {
             await onTeamsRegenerated()
           }
         }
-      } else {
-        await submitConfirmRSVP()
+      } catch {
+        setError('Failed to update RSVP')
+      } finally {
+        setLoading(false)
       }
-    } catch {
-      setError('Failed to update RSVP')
-    } finally {
-      setLoading(false)
+      return
     }
+
+    await submitConfirmRSVP()
   }
 
   const handleProfileSaved = () => {

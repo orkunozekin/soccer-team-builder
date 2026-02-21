@@ -12,9 +12,14 @@ export function isGoalkeeper(position: string | null): boolean {
   return gkPositions.includes(normalized) || normalized.includes('GOALKEEPER')
 }
 
-interface TeamAssignment {
+export interface TeamAssignment {
   teamNumber: number
   playerIds: string[]
+}
+
+export interface GkReplacement {
+  insertedGK: string
+  removedPlayer: string
 }
 
 export function computeTeamCountForRSVPCount(
@@ -47,7 +52,9 @@ function fillTeam(
       deferred.push(rsvp)
       continue
     }
-    const isGk = isGoalkeeper(users.find((u) => u.uid === rsvp.userId)?.position ?? null)
+    const user = users.find((u) => u.uid === rsvp.userId)
+    const effectivePosition = rsvp.position ?? user?.position ?? null
+    const isGk = isGoalkeeper(effectivePosition)
     if (isGk && gkCount >= maxGk) {
       deferred.push(rsvp)
       continue
@@ -68,6 +75,18 @@ export function generateTeams(
   maxTeamSize: number = 11,
   options?: { teamCount?: number }
 ): TeamAssignment[] {
+  return generateTeamsWithReplacements(rsvps, users, maxTeamSize, options).teams
+}
+
+/**
+ * Same as generateTeams but also returns GK replacements (overflow GK inserted into first two teams, non-GK bumped to overflow).
+ */
+export function generateTeamsWithReplacements(
+  rsvps: RSVP[],
+  users: User[],
+  maxTeamSize: number = 11,
+  options?: { teamCount?: number }
+): { teams: TeamAssignment[]; gkReplacements: GkReplacement[] } {
   const teamCount =
     options?.teamCount ?? Math.max(2, Math.ceil(rsvps.length / maxTeamSize))
 
@@ -93,13 +112,61 @@ export function generateTeams(
     teamNumber += 1
   }
 
-  // Admins who RSVP'd after the first 22: swap them into the first two teams by replacing the last non-admin(s) by RSVP time
+  const userById = new Map(users.map((u) => [u.uid, u]))
+  const rsvpByUserId = new Map(sorted.map((r) => [r.userId, r]))
+  const rsvpAtByUserId = new Map(
+    sorted.map((r) => [r.userId, r.rsvpAt?.getTime() ?? 0])
+  )
+  const effectivePosition = (uid: string): string | null => {
+    const r = rsvpByUserId.get(uid)
+    const u = userById.get(uid)
+    return (r?.position ?? u?.position ?? null) ?? null
+  }
+
+  // Overflow GKs: promote into first two teams if a team has no GK; bump that team's last non-GK (by RSVP) to overflow
+  const gkReplacements: GkReplacement[] = []
   if (teams.length >= 3) {
-    const userById = new Map(users.map((u) => [u.uid, u]))
-    const rsvpAtByUserId = new Map(
-      sorted.map((r) => [r.userId, r.rsvpAt?.getTime() ?? 0])
+    const overflowTeams = teams.slice(2)
+    const overflowGkUserIds: string[] = []
+    for (const t of overflowTeams) {
+      for (const uid of t.playerIds) {
+        if (isGoalkeeper(effectivePosition(uid))) overflowGkUserIds.push(uid)
+      }
+    }
+    overflowGkUserIds.sort(
+      (a, b) => (rsvpAtByUserId.get(a) ?? 0) - (rsvpAtByUserId.get(b) ?? 0)
     )
 
+    for (let ti = 0; ti < 2 && ti < teams.length; ti++) {
+      const mainTeam = teams[ti]
+      const hasGk = mainTeam.playerIds.some((uid) =>
+        isGoalkeeper(effectivePosition(uid))
+      )
+      if (hasGk || overflowGkUserIds.length === 0) continue
+
+      const gkId = overflowGkUserIds.shift()!
+      const nonGksOnTeam = mainTeam.playerIds
+        .filter((uid) => !isGoalkeeper(effectivePosition(uid)))
+        .map((uid) => ({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 }))
+        .sort((a, b) => b.rsvpAt - a.rsvpAt)
+      const bumpedId = nonGksOnTeam[0]?.uid
+      if (!bumpedId) continue
+
+      mainTeam.playerIds = mainTeam.playerIds.map((id) =>
+        id === bumpedId ? gkId : id
+      )
+      const overflowTeam = overflowTeams.find((t) => t.playerIds.includes(gkId))
+      if (overflowTeam) {
+        overflowTeam.playerIds = overflowTeam.playerIds.map((id) =>
+          id === gkId ? bumpedId : id
+        )
+      }
+      gkReplacements.push({ insertedGK: gkId, removedPlayer: bumpedId })
+    }
+  }
+
+  // Admins who RSVP'd after the first 22: swap them into the first two teams by replacing the last non-admin(s) by RSVP time
+  if (teams.length >= 3) {
     const overflowTeams = teams.slice(2)
     const overflowAdminIds: string[] = []
     for (const t of overflowTeams) {
@@ -152,5 +219,5 @@ export function generateTeams(
     teams.push({ teamNumber: teams.length + 1, playerIds: [] })
   }
 
-  return teams
+  return { teams, gkReplacements }
 }

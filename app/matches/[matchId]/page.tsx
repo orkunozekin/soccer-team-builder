@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useAdmin } from '@/lib/hooks/useAdmin'
@@ -23,15 +23,25 @@ export default function MatchDetailsPage() {
   const router = useRouter()
   const params = useParams()
   const matchId = params?.matchId as string
-  const { user, loading: authLoading } = useAuth()
+  const { user, userData, loading: authLoading } = useAuth()
   const { isAdmin } = useAdmin()
   const { currentMatch, setCurrentMatch, matchRSVPs, setMatchRSVPs, setLoading } =
     useMatchStore()
+  const userRsvp = user ? matchRSVPs.find((r) => r.userId === user.uid) ?? null : null
+  const userProfilePosition = userData?.position ?? null
   const [loadingMatch, setLoadingMatch] = useState(true)
   const [teams, setTeams] = useState<Team[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [loadingTeams, setLoadingTeams] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const usersWithMatchPosition = useMemo(
+    () =>
+      allUsers.map((u) => {
+        const rsvp = matchRSVPs.find((r) => r.userId === u.uid)
+        return { ...u, position: rsvp?.position ?? u.position ?? null }
+      }),
+    [allUsers, matchRSVPs]
+  )
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -121,7 +131,13 @@ export default function MatchDetailsPage() {
 
       <div className="mt-2 grid gap-10 lg:grid-cols-2 lg:gap-12">
         <div className="space-y-6">
-          <MatchDetails match={currentMatch} rsvpCount={matchRSVPs.length} onTeamsRegenerated={refetchTeams} />
+          <MatchDetails
+            match={currentMatch}
+            rsvpCount={matchRSVPs.length}
+            userRsvp={userRsvp}
+            userProfilePosition={userProfilePosition}
+            onTeamsRegenerated={refetchTeams}
+          />
 
           {isAdmin && currentMatch && (
             <EditMatchCard
@@ -138,7 +154,7 @@ export default function MatchDetailsPage() {
             <TeamsDisplay
               matchId={matchId}
               teams={teams}
-              users={allUsers}
+              users={usersWithMatchPosition}
               isAdmin={isAdmin ?? false}
               onTeamsChanged={refetchAll}
               headerActions={
@@ -157,7 +173,7 @@ export default function MatchDetailsPage() {
             <PlayerTransfer
               matchId={matchId}
               teams={teams}
-              users={allUsers}
+              users={usersWithMatchPosition}
               onTransferComplete={refetchAll}
             />
           )}
