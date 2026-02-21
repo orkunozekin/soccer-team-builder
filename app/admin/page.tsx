@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { AdminRouteGuard } from '@/components/admin/AdminRouteGuard'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { AdminMatchControls } from '@/components/admin/AdminMatchControls'
+import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
 import { UserRoleManager } from '@/components/admin/UserRoleManager'
 import { getAllMatches } from '@/lib/services/matchService'
 import { useMatchStore } from '@/store/matchStore'
@@ -39,11 +39,8 @@ function AdminDashboardContent() {
       </div>
 
       <div className="space-y-6">
-        <AdminMatchControls
-          onMatchCreated={() => {
-            // Refresh matches list
-            getAllMatches().then(setMatches)
-          }}
+        <CreateMatchCard
+          onMatchCreated={() => getAllMatches().then(setMatches)}
         />
 
         <div>

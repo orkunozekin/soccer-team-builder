@@ -7,7 +7,7 @@ import { useAdmin } from '@/lib/hooks/useAdmin'
 import { getAllMatches } from '@/lib/services/matchService'
 import { useMatchStore } from '@/store/matchStore'
 import { MatchCard } from '@/components/matches/MatchCard'
-import { AdminMatchControls } from '@/components/admin/AdminMatchControls'
+import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -59,7 +59,7 @@ export default function MatchesPage() {
 
       {isAdmin && (
         <div className="mb-6">
-          <AdminMatchControls
+          <CreateMatchCard
             onMatchCreated={() => getAllMatches().then(setMatches)}
           />
         </div>

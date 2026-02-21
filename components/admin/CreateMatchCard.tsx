@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { ButtonSpinner } from '@/components/ui/button-spinner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DatePickerTime } from '@/components/ui/date-picker-time'
 import { Input } from '@/components/ui/input'
@@ -11,11 +10,11 @@ import { createMatchAPI } from '@/lib/api/client'
 import { getMatch } from '@/lib/services/matchService'
 import { useMatchStore } from '@/store/matchStore'
 
-interface AdminMatchControlsProps {
+interface CreateMatchCardProps {
   onMatchCreated?: () => void
 }
 
-export function AdminMatchControls({ onMatchCreated }: AdminMatchControlsProps) {
+export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
   const { addMatch } = useMatchStore()
   const [date, setDate] = useState('')
   const [time, setTime] = useState('09:00')
@@ -37,17 +36,13 @@ export function AdminMatchControls({ onMatchCreated }: AdminMatchControlsProps) 
     setLoading(true)
 
     try {
-      // Combine date and time in local time (avoid new Date(isoDate) which is UTC midnight and shifts the day in some timezones)
       const [y, m, d] = date.split('-').map(Number)
       const [hours, minutes] = time.split(':').map(Number)
       const matchDate = new Date(y, m - 1, d, hours, minutes, 0, 0)
 
-      // Call API route (validation on server)
       const { matchId } = await createMatchAPI(matchDate, time, location.trim() || null)
-      
-      // Fetch the created match to add to store
       const newMatch = await getMatch(matchId)
-      
+
       if (newMatch) {
         addMatch(newMatch)
       }
@@ -57,10 +52,7 @@ export function AdminMatchControls({ onMatchCreated }: AdminMatchControlsProps) 
       setTime('09:00')
       setLocation('')
       setTimeout(() => setSuccess(false), 3000)
-
-      if (onMatchCreated) {
-        onMatchCreated()
-      }
+      onMatchCreated?.()
     } catch {
       setError('Failed to create match')
     } finally {
@@ -68,7 +60,6 @@ export function AdminMatchControls({ onMatchCreated }: AdminMatchControlsProps) 
     }
   }
 
-  // Set default date to today
   const today = new Date().toISOString().split('T')[0]
 
   return (
@@ -99,7 +90,6 @@ export function AdminMatchControls({ onMatchCreated }: AdminMatchControlsProps) 
             <Input
               id="location"
               type="text"
-              placeholder="e.g. Central Park Field 3"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               disabled={loading}
