@@ -1,11 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { DatePickerTime } from '@/components/ui/date-picker-time'
+import { useEffect, useMemo, useState } from 'react'
+import { RSVPPollControls } from '@/components/admin/RSVPPollControls'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,9 +12,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 import { ButtonSpinner } from '@/components/ui/button-spinner'
-import { updateMatchAPI, deleteMatchAPI } from '@/lib/api/client'
-import { RSVPPollControls } from '@/components/admin/RSVPPollControls'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { DatePickerTime } from '@/components/ui/date-picker-time'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { deleteMatchAPI, updateMatchAPI } from '@/lib/api/client'
 import type { Match } from '@/types/match'
 
 interface EditMatchCardProps {
@@ -39,22 +39,38 @@ export function EditMatchCard({
   const [time, setTime] = useState('')
   const [location, setLocation] = useState('')
   const [saving, setSaving] = useState(false)
-  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  useEffect(() => {
+  const initialValues = useMemo(() => {
     const d = new Date(match.date)
-    setDate(d.toISOString().slice(0, 10))
-    setTime(match.time || '')
-    setLocation(match.location || '')
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return {
+      date: `${y}-${m}-${day}`,
+      time: match.time || '',
+      location: (match.location || '').trim(),
+    }
   }, [match])
+
+  useEffect(() => {
+    setDate(initialValues.date)
+    setTime(initialValues.time)
+    setLocation(match.location || '')
+  }, [match, initialValues.date, initialValues.time, initialValues.location])
+
+  const hasChanges =
+    date !== initialValues.date ||
+    time !== initialValues.time ||
+    (location || '').trim() !== initialValues.location
 
   const handleSaveDateTime = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!date || !time) return
     setSaving(true)
-    setSaveSuccess(false)
+    setSaveSuccessMessage(null)
     try {
       const [y, m, d] = date.split('-').map(Number)
       const [h, min] = time.split(':').map(Number)
@@ -64,8 +80,16 @@ export function EditMatchCard({
         time,
         location: location.trim() || null,
       })
-      setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
+      const updated: string[] = []
+      if (date !== initialValues.date) updated.push('Date')
+      if (time !== initialValues.time) updated.push('Time')
+      if ((location || '').trim() !== initialValues.location) updated.push('Location')
+      const message =
+        updated.length > 0
+          ? `${updated.join(', ')} saved.`
+          : 'Saved.'
+      setSaveSuccessMessage(message)
+      setTimeout(() => setSaveSuccessMessage(null), 3000)
       await onSaved?.()
     } catch {
       // Generic error; parent may show toast or rely on refetch
@@ -131,9 +155,9 @@ export function EditMatchCard({
                     className="h-11"
                   />
                 </div>
-                {saveSuccess && (
+                {saveSuccessMessage && (
                   <p className="text-sm text-green-600 dark:text-green-400">
-                    Date, time and location saved.
+                    {saveSuccessMessage}
                   </p>
                 )}
                 <div className="flex gap-2">
@@ -145,8 +169,8 @@ export function EditMatchCard({
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" loading={saving}>
-                    Save date, time & location
+                  <Button type="submit" loading={saving} disabled={!hasChanges}>
+                    Save
                   </Button>
                 </div>
               </form>

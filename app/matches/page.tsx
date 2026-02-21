@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/hooks/useAuth'
+import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
+import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
+import { MatchCard } from '@/components/matches/MatchCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAdmin } from '@/lib/hooks/useAdmin'
+import { useAuth } from '@/lib/hooks/useAuth'
 import { getAllMatches } from '@/lib/services/matchService'
 import { getMatchRsvpCount } from '@/lib/services/rsvpService'
 import { useMatchStore } from '@/store/matchStore'
-import { MatchCard } from '@/components/matches/MatchCard'
-import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
-import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function MatchesPage() {
   const router = useRouter()
@@ -109,6 +109,7 @@ export default function MatchesPage() {
               key={match.id}
               match={match}
               rsvpCount={rsvpCounts[match.id]}
+              isAdmin={isAdmin ?? false}
             />
           ))}
         </div>

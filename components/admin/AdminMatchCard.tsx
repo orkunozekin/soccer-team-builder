@@ -64,7 +64,7 @@ export function AdminMatchCard({
               </CardDescription>
               {match.location && (
                 <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-                  {match.location}
+                  @ {match.location}
                 </p>
               )}
             </div>

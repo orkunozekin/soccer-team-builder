@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { updateUser } from '@/lib/services/userService'
 import { useAuthStore } from '@/store/authStore'
@@ -40,7 +40,16 @@ function ProfileFormInner({
   const [position, setPosition] = useState<string | null>(userData.position ?? null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  const initialValues = useMemo(
+    () => ({
+      displayName: userData.displayName,
+      jerseyNumber: userData.jerseyNumber?.toString() ?? '',
+      position: userData.position ?? null,
+    }),
+    [userData]
+  )
 
   // Sync form when userData changes (e.g. after refetch or another tab)
   useEffect(() => {
@@ -49,10 +58,28 @@ function ProfileFormInner({
     setPosition(userData.position ?? null)
   }, [userData])
 
+  const currentJerseyNormalized = jerseyNumber.trim()
+    ? (() => {
+        const parsed = parseInt(jerseyNumber, 10)
+        return Number.isNaN(parsed) || parsed < 0 || parsed > 99 ? null : parsed
+      })()
+    : null
+  const initialJerseyNormalized = initialValues.jerseyNumber.trim()
+    ? (() => {
+        const parsed = parseInt(initialValues.jerseyNumber, 10)
+        return Number.isNaN(parsed) || parsed < 0 || parsed > 99 ? null : parsed
+      })()
+    : null
+
+  const hasChanges =
+    displayName.trim() !== initialValues.displayName ||
+    currentJerseyNormalized !== initialJerseyNormalized ||
+    position !== initialValues.position
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setSuccess(false)
+    setSuccessMessage(null)
 
     if (!user) {
       setError('You must be logged in to update your profile')
@@ -87,8 +114,14 @@ function ProfileFormInner({
       }
       setUserData(updatedUserData)
 
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      const updated: string[] = []
+      if (trimmedName !== initialValues.displayName) updated.push('Display name')
+      if (jersey !== initialJerseyNormalized) updated.push('Jersey number')
+      if (position !== initialValues.position) updated.push('Position')
+      const message =
+        updated.length > 0 ? `${updated.join(', ')} saved.` : 'Saved.'
+      setSuccessMessage(message)
+      setTimeout(() => setSuccessMessage(null), 3000)
     } catch {
       setError('Failed to update profile')
     } finally {
@@ -152,9 +185,9 @@ function ProfileFormInner({
         <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
 
-      {success && (
+      {successMessage && (
         <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/30 px-4 py-3 text-sm font-medium text-emerald-800 dark:text-emerald-300">
-          Profile updated successfully
+          {successMessage}
         </div>
       )}
 
@@ -162,6 +195,7 @@ function ProfileFormInner({
         <Button
           type="submit"
           loading={loading}
+          disabled={!hasChanges}
           className="w-full h-11 rounded-lg text-base font-semibold shadow-sm"
         >
           Update Profile
