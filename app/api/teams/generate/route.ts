@@ -121,8 +121,9 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Error generating teams:', error)
+    const { sanitizeErrorForClient } = await import('@/lib/api/sanitizeError')
     return NextResponse.json(
-      { error: error.message || 'Failed to generate teams' },
+      { error: sanitizeErrorForClient(error, 'Failed to generate teams') },
       { status: 500 }
     )
   }

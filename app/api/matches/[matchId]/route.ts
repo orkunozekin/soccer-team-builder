@@ -64,8 +64,9 @@ export async function PATCH(
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     console.error('Error updating match:', error)
+    const { sanitizeErrorForClient } = await import('@/lib/api/sanitizeError')
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update match' },
+      { error: sanitizeErrorForClient(error, 'Failed to update match') },
       { status: 500 }
     )
   }
@@ -123,8 +124,9 @@ export async function DELETE(
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     console.error('Error deleting match:', error)
+    const { sanitizeErrorForClient } = await import('@/lib/api/sanitizeError')
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete match' },
+      { error: sanitizeErrorForClient(error, 'Failed to delete match') },
       { status: 500 }
     )
   }

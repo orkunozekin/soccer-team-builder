@@ -243,8 +243,9 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Error rebalancing teams:', error)
+    const { sanitizeErrorForClient } = await import('@/lib/api/sanitizeError')
     return NextResponse.json(
-      { error: error.message || 'Failed to rebalance teams' },
+      { error: sanitizeErrorForClient(error, 'Failed to rebalance teams') },
       { status: 500 }
     )
   }

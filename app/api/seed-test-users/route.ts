@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { verifyAdmin } from '@/lib/api/auth'
+import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin'
 import { removeUserFromMatchTeams } from '@/lib/teams/removeUserFromMatchTeams'
 import { TEST_USERS } from '@/lib/testData/testUsers'
@@ -101,8 +102,11 @@ export async function POST(request: Request) {
         status: created ? 'created' : 'updated',
       })
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      results.push({ email: user.email, status: 'error', message })
+      results.push({
+        email: user.email,
+        status: 'error',
+        message: sanitizeErrorForClient(err, 'Failed to create or update user'),
+      })
     }
   }
 
@@ -176,8 +180,11 @@ export async function DELETE(request: Request) {
 
       results.push({ email: user.email, status: 'deleted' })
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      results.push({ email: user.email, status: 'error', message })
+      results.push({
+        email: user.email,
+        status: 'error',
+        message: sanitizeErrorForClient(err, 'Failed to delete user'),
+      })
     }
   }
 

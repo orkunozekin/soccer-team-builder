@@ -63,8 +63,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, matchId })
   } catch (error: any) {
     console.error('Error creating match:', error)
+    const { sanitizeErrorForClient } = await import('@/lib/api/sanitizeError')
     return NextResponse.json(
-      { error: error.message || 'Failed to create match' },
+      { error: sanitizeErrorForClient(error, 'Failed to create match') },
       { status: 500 }
     )
   }

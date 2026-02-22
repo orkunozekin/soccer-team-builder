@@ -196,8 +196,11 @@ export async function POST(request: Request) {
       },
     })
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
     console.error('seed-match-rsvps error:', err)
-    return NextResponse.json({ error: message }, { status: 500 })
+    const { sanitizeErrorForClient } = await import('@/lib/api/sanitizeError')
+    return NextResponse.json(
+      { error: sanitizeErrorForClient(err, 'Failed to seed match RSVPs') },
+      { status: 500 }
+    )
   }
 }

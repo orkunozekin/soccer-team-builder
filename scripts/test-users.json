@@ -1,0 +1,23 @@
+[
+  { "email": "alex.rivera@test.soccer", "password": "testpass123", "position": "GK" },
+  { "email": "jordan.lee@test.soccer", "password": "testpass123", "position": "RB" },
+  { "email": "sam.chen@test.soccer", "password": "testpass123", "position": "CB" },
+  { "email": "riley.morgan@test.soccer", "password": "testpass123", "position": "CB" },
+  { "email": "casey.kim@test.soccer", "password": "testpass123", "position": "LB" },
+  { "email": "quinn.taylor@test.soccer", "password": "testpass123", "position": "CDM" },
+  { "email": "morgan.james@test.soccer", "password": "testpass123", "position": "CM" },
+  { "email": "drew.patel@test.soccer", "password": "testpass123", "position": "CM" },
+  { "email": "jesse.wright@test.soccer", "password": "testpass123", "position": "CAM" },
+  { "email": "skyler.brooks@test.soccer", "password": "testpass123", "position": "RW" },
+  { "email": "taylor.nguyen@test.soccer", "password": "testpass123", "position": "LW" },
+  { "email": "cameron.davis@test.soccer", "password": "testpass123", "position": "ST" },
+  { "email": "avery.wilson@test.soccer", "password": "testpass123", "position": "CF" },
+  { "email": "parker.thomas@test.soccer", "password": "testpass123", "position": "RM" },
+  { "email": "reese.martin@test.soccer", "password": "testpass123", "position": "LM" },
+  { "email": "rowan.jackson@test.soccer", "password": "testpass123", "position": "RWB" },
+  { "email": "logan.white@test.soccer", "password": "testpass123", "position": "LWB" },
+  { "email": "hayden.harris@test.soccer", "password": "testpass123", "position": "CM" },
+  { "email": "finley.clark@test.soccer", "password": "testpass123", "position": "CDM" },
+  { "email": "noah.ortiz@test.soccer", "password": "testpass123", "position": "GK" },
+  { "email": "jordan.gk@test.soccer", "password": "testpass123", "position": "GK" }
+]

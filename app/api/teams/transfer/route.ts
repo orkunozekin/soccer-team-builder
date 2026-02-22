@@ -116,8 +116,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Error transferring player:', error)
+    const { sanitizeErrorForClient } = await import('@/lib/api/sanitizeError')
     return NextResponse.json(
-      { error: error.message || 'Failed to transfer player' },
+      { error: sanitizeErrorForClient(error, 'Failed to transfer player') },
       { status: 500 }
     )
   }

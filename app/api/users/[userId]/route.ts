@@ -63,9 +63,12 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
     console.error('Error deleting user:', err)
-    return NextResponse.json({ error: message || 'Failed to delete user' }, { status: 500 })
+    const { sanitizeErrorForClient } = await import('@/lib/api/sanitizeError')
+    return NextResponse.json(
+      { error: sanitizeErrorForClient(err, 'Failed to delete user') },
+      { status: 500 }
+    )
   }
 }
 

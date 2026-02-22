@@ -79,9 +79,12 @@ export async function GET(request: NextRequest) {
       closed,
     })
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
     console.error('cron/rsvp-schedule error:', err)
-    return NextResponse.json({ error: message }, { status: 500 })
+    const { sanitizeErrorForClient } = await import('@/lib/api/sanitizeError')
+    return NextResponse.json(
+      { error: sanitizeErrorForClient(err, 'Failed to update RSVP schedule') },
+      { status: 500 }
+    )
   }
 }
 
