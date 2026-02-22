@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/auth/AuthProvider'
+import { EmulatorAuthGate } from '@/components/auth/EmulatorAuthGate'
 import { Navigation } from '@/components/layout/Navigation'
 import { cn } from '@/lib/utils'
 
@@ -24,10 +25,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={cn(inter.variable, 'antialiased')}>
-        <AuthProvider>
-          <Navigation />
-          {children}
-        </AuthProvider>
+        <EmulatorAuthGate>
+          <AuthProvider>
+            <Navigation />
+            {children}
+          </AuthProvider>
+        </EmulatorAuthGate>
       </body>
     </html>
   )

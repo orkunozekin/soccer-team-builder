@@ -58,11 +58,21 @@ export const createDocument = async (
   data: DocumentData
 ): Promise<void> => {
   const docRef = getDocRef(collectionName, documentId)
-  await setDoc(docRef, {
-    ...data,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-  })
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Firestore] Writing document', collectionName + '/' + documentId)
+  }
+  try {
+    await setDoc(docRef, {
+      ...data,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    })
+  } catch (err) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[Firestore] setDoc failed:', err)
+    }
+    throw err
+  }
 }
 
 export const getDocument = async (

@@ -4,6 +4,8 @@
 2. run `yarn` to install dependencies
 3. run `yarn dev` to start local server
 
+To use a **local database** instead of production Firebase (Auth + Firestore), see [docs/local-development.md](docs/local-development.md).
+
 
 ## RSVP schedule (cron)
 
