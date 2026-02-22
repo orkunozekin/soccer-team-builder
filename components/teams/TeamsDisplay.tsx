@@ -1,24 +1,21 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import {
   DndContext,
-  PointerSensor,
+  type DragEndEvent,
   KeyboardSensor,
+  PointerSensor,
   useSensor,
   useSensors,
-  useDraggable,
-  useDroppable,
-  type DragEndEvent,
 } from '@dnd-kit/core'
-import { useMemo, useState } from 'react'
-import { Badge } from '@/components/ui/badge'
+import { DroppableTeamCard } from './DroppableTeamCard'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { transferPlayerAPI } from '@/lib/api/client'
-import { isGoalkeeper } from '@/lib/utils/teamGenerator'
-import { cn } from '@/lib/utils'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
+
+type DragData = { playerId: string; fromTeamId: string }
 
 interface TeamsDisplayProps {
   matchId?: string
@@ -29,133 +26,6 @@ interface TeamsDisplayProps {
   headerActions?: React.ReactNode
   /** When set, the current user's row is highlighted on team cards */
   currentUserId?: string | null
-}
-
-type DragData = { playerId: string; fromTeamId: string }
-
-function DraggablePlayerRow({
-  user,
-  team,
-  dndEnabled,
-  transferring,
-  isCurrentUser,
-}: {
-  user: User
-  team: Team
-  dndEnabled: boolean
-  transferring: string | null
-  isCurrentUser: boolean
-}) {
-  const id = `player:${user.uid}:${team.id}`
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id,
-    data: { playerId: user.uid, fromTeamId: team.id } satisfies DragData,
-    disabled: !dndEnabled,
-  })
-
-  return (
-    <div
-      ref={setNodeRef}
-      {...(dndEnabled ? { ...listeners, ...attributes } : {})}
-      className={cn(
-        'flex items-center gap-2 text-sm rounded-md px-2 py-1.5 -mx-1',
-        dndEnabled &&
-          'touch-none hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-grab active:cursor-grabbing',
-        isDragging && 'opacity-50',
-        transferring === user.uid && 'opacity-50',
-        isCurrentUser &&
-          'bg-primary/10 dark:bg-primary/20 ring-1 ring-primary/40 dark:ring-primary/50 font-medium'
-      )}
-    >
-      <span
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-        style={{ backgroundColor: team.color || '#3b82f6' }}
-      >
-        {user.jerseyNumber != null ? user.jerseyNumber : ''}
-      </span>
-      <span className="truncate">{user.displayName}</span>
-      {user.position && (
-        <Badge
-          variant="outline"
-          className={cn(
-            'ml-auto text-xs',
-            isGoalkeeper(user.position) &&
-              'bg-amber-200/90 dark:bg-amber-700/50 border-amber-400 dark:border-amber-600 text-amber-900 dark:text-amber-100'
-          )}
-        >
-          {user.position}
-        </Badge>
-      )}
-    </div>
-  )
-}
-
-function DroppableTeamCard({
-  team,
-  teamUsers,
-  users,
-  dndEnabled,
-  transferring,
-  currentUserId,
-}: {
-  team: Team
-  teamUsers: User[]
-  users: User[]
-  dndEnabled: boolean
-  transferring: string | null
-  currentUserId?: string | null
-}) {
-  const { isOver, setNodeRef } = useDroppable({
-    id: team.id,
-    disabled: !dndEnabled,
-  })
-
-  return (
-    <Card
-      ref={setNodeRef}
-      className={cn(
-        dndEnabled && 'outline outline-1 outline-transparent hover:outline-zinc-300',
-        isOver && dndEnabled && 'outline-2 outline-zinc-400 ring-2 ring-zinc-300 dark:ring-zinc-600'
-      )}
-    >
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>{team.name || `Team ${team.teamNumber}`}</CardTitle>
-          <Badge
-            style={{ backgroundColor: team.color || '#3b82f6' }}
-            className="text-white"
-          >
-            {team.playerIds.length}/{team.maxSize}
-          </Badge>
-        </div>
-        {dndEnabled && (
-          <p className="text-xs text-zinc-600 dark:text-zinc-400">
-            Drag players here to move teams. Works with touch on mobile.
-          </p>
-        )}
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          {teamUsers.length === 0 ? (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              No players assigned
-            </p>
-          ) : (
-            teamUsers.map((user) => (
-              <DraggablePlayerRow
-                key={user.uid}
-                user={user}
-                team={team}
-                dndEnabled={dndEnabled}
-                transferring={transferring}
-                isCurrentUser={currentUserId != null && user.uid === currentUserId}
-              />
-            ))
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  )
 }
 
 export function TeamsDisplay({
@@ -240,7 +110,6 @@ export function TeamsDisplay({
             key={team.id}
             team={team}
             teamUsers={teamUsers}
-            users={users}
             dndEnabled={dndEnabled}
             transferring={transferring}
             currentUserId={currentUserId}
