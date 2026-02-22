@@ -1,4 +1,4 @@
-import { Timestamp, FieldValue } from 'firebase-admin/firestore'
+import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
@@ -6,7 +6,7 @@ import { getAdminDb } from '@/lib/firebase/admin'
 import { acquireMatchLock } from '@/lib/locks/matchLock'
 import { expandTeamsForMatch } from '@/lib/teams/expandTeamsForMatch'
 import { removeUserFromMatchTeams } from '@/lib/teams/removeUserFromMatchTeams'
-import { swapGkWithLowerPriority, performGkSwap } from '@/lib/teams/swapGkWithLowerTeam'
+import { performGkSwap, swapGkWithLowerPriority } from '@/lib/teams/swapGkWithLowerTeam'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 
 /**
@@ -94,10 +94,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Atomic GK cap + RSVP create: transaction reads confirmed RSVPs, counts GKs, and creates RSVP or rejects.
-    // Retry on Firestore transaction abort (e.g. lock timeout under heavy concurrency).
-    const TX_MAX_ATTEMPTS = 3
-    const TX_BACKOFF_MS = 100
+    // Atomic GK cap + RSVP create using a single per-match state doc (minimal read set for less transaction contention).
+    // Retry on Firestore transaction abort.
+    const stateRef = adminDb.collection('matches').doc(matchId).collection('_state').doc('rsvp')
+    const TX_MAX_ATTEMPTS = 7
+    const TX_BACKOFF_BASE_MS = 80
+    const TX_BACKOFF_JITTER_MS = 120
     let txError: unknown
     rsvpId = `rsvp_${matchId}_${uid}_${Date.now()}`
     for (let attempt = 1; attempt <= TX_MAX_ATTEMPTS; attempt++) {
@@ -114,27 +116,21 @@ export async function POST(request: NextRequest) {
       }
       try {
         await adminDb.runTransaction(async (tx) => {
-          const confirmedSnap = await tx.get(
-            adminDb.collection('rsvps').where('matchId', '==', matchId).where('status', '==', 'confirmed')
-          )
-          const userIds = new Set<string>(confirmedSnap.docs.map((d) => d.data()?.userId as string).filter(Boolean))
-          userIds.add(uid)
-          const userPositions = new Map<string, string | null>()
-          for (const id of Array.from(userIds)) {
-            const u = await tx.get(adminDb.collection('users').doc(id))
-            userPositions.set(id, (u.data()?.position as string | null) ?? null)
-          }
-          const gkCount = confirmedSnap.docs.filter((d) => {
-            const data = d.data()
-            const rsvpPosition = (data?.position as string | null) ?? null
-            const effectivePosition = rsvpPosition ?? userPositions.get(data?.userId as string) ?? null
-            return isGoalkeeper(effectivePosition)
-          }).length
+          const stateSnap = await tx.get(stateRef)
+          const state = stateSnap.data() ?? {}
+          const confirmedCount = (state.confirmedCount as number) ?? 0
+          const gkCount = (state.gkCount as number) ?? 0
           if (isGoalkeeper(position) && gkCount >= 2) {
             const err = new Error('TOO_MANY_GKS') as Error & { code?: string }
             err.code = 'TOO_MANY_GKS'
             throw err
           }
+          const newGkCount = gkCount + (isGoalkeeper(position) ? 1 : 0)
+          tx.set(stateRef, {
+            confirmedCount: confirmedCount + 1,
+            gkCount: newGkCount,
+            updatedAt: now,
+          })
           tx.set(rsvpRef, rsvpData)
         })
         txError = null
@@ -155,7 +151,10 @@ export async function POST(request: NextRequest) {
         const msg = String(err?.message ?? e)
         const isAbort = msg.includes('ABORTED') || msg.includes('Transaction') || msg.includes('lock timeout')
         if (!isAbort || attempt === TX_MAX_ATTEMPTS) throw e
-        await new Promise((r) => setTimeout(r, TX_BACKOFF_MS * attempt))
+        const delay =
+          TX_BACKOFF_BASE_MS * attempt +
+          Math.floor(Math.random() * (TX_BACKOFF_JITTER_MS + 1))
+        await new Promise((r) => setTimeout(r, delay))
       }
     }
     if (txError) throw txError
@@ -321,10 +320,39 @@ export async function PATCH(request: NextRequest) {
         }
       }
 
-      await rsvpRef.update({
-        position: newPosition,
-        updatedAt: Timestamp.now(),
-      })
+      const stateRef = adminDb.collection('matches').doc(matchId).collection('_state').doc('rsvp')
+      const now = Timestamp.now()
+      try {
+        await adminDb.runTransaction(async (tx) => {
+          const stateSnap = await tx.get(stateRef)
+          if (stateSnap.exists) {
+            const state = stateSnap.data() ?? {}
+            let gkCount = (state.gkCount as number) ?? 0
+            if (!oldIsGk && newIsGk && gkCount >= 2) {
+              const err = new Error('TOO_MANY_GKS') as Error & { code?: string }
+              err.code = 'TOO_MANY_GKS'
+              throw err
+            }
+            if (oldIsGk && !newIsGk) gkCount -= 1
+            else if (!oldIsGk && newIsGk) gkCount += 1
+            tx.set(stateRef, { ...state, gkCount, updatedAt: now }, { merge: true })
+          }
+          tx.update(rsvpRef, { position: newPosition, updatedAt: now })
+        })
+      } catch (e: unknown) {
+        const err = e as { code?: string }
+        if (err?.code === 'TOO_MANY_GKS') {
+          return NextResponse.json(
+            {
+              error:
+                'There are already 2 goalkeepers for this match. Please choose a different position to RSVP.',
+              code: 'TOO_MANY_GKS',
+            },
+            { status: 400 }
+          )
+        }
+        throw e
+      }
 
       return NextResponse.json({
         updated: true,
@@ -335,13 +363,38 @@ export async function PATCH(request: NextRequest) {
       })
     }
 
-    // Cancel RSVP flow (no position in body)
-    await rsvpRef.update({
-      status: 'cancelled',
-      updatedAt: Timestamp.now(),
+    // Cancel RSVP flow (no position in body). Keep _state/rsvp in sync when present (new matches).
+    const stateRefForCancel = adminDb.collection('matches').doc(matchId).collection('_state').doc('rsvp')
+    const wasGk = isGoalkeeper((data.position as string | null) ?? null)
+    const now = Timestamp.now()
+    await adminDb.runTransaction(async (tx) => {
+      const stateSnap = await tx.get(stateRefForCancel)
+      tx.update(rsvpRef, { status: 'cancelled', updatedAt: now })
+      if (stateSnap.exists) {
+        const state = stateSnap.data() ?? {}
+        const confirmedCount = Math.max(0, ((state.confirmedCount as number) ?? 0) - 1)
+        const gkCount = Math.max(0, ((state.gkCount as number) ?? 0) - (wasGk ? 1 : 0))
+        tx.set(stateRefForCancel, { confirmedCount, gkCount, updatedAt: now }, { merge: true })
+      }
     })
 
     const { removed } = await removeUserFromMatchTeams(adminDb, matchId, userId)
+
+    // When the last person cancels, ensure all teams are removed (safeguard in case user wasn't in a team doc)
+    const confirmedAfter = await adminDb
+      .collection('rsvps')
+      .where('matchId', '==', matchId)
+      .where('status', '==', 'confirmed')
+      .limit(1)
+      .get()
+    if (confirmedAfter.empty) {
+      const teamsSnap = await adminDb.collection(`matches/${matchId}/teams`).get()
+      if (!teamsSnap.empty) {
+        const batch = adminDb.batch()
+        teamsSnap.docs.forEach((d) => batch.delete(d.ref))
+        await batch.commit()
+      }
+    }
 
     return NextResponse.json({
       cancelled: true,

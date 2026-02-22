@@ -27,6 +27,8 @@ interface TeamsDisplayProps {
   isAdmin?: boolean
   onTeamsChanged?: () => void
   headerActions?: React.ReactNode
+  /** When set, the current user's row is highlighted on team cards */
+  currentUserId?: string | null
 }
 
 type DragData = { playerId: string; fromTeamId: string }
@@ -36,11 +38,13 @@ function DraggablePlayerRow({
   team,
   dndEnabled,
   transferring,
+  isCurrentUser,
 }: {
   user: User
   team: Team
   dndEnabled: boolean
   transferring: string | null
+  isCurrentUser: boolean
 }) {
   const id = `player:${user.uid}:${team.id}`
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -54,11 +58,13 @@ function DraggablePlayerRow({
       ref={setNodeRef}
       {...(dndEnabled ? { ...listeners, ...attributes } : {})}
       className={cn(
-        'flex items-center gap-2 text-sm',
+        'flex items-center gap-2 text-sm rounded-md px-2 py-1.5 -mx-1',
         dndEnabled &&
-          'touch-none rounded-md px-1 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-grab active:cursor-grabbing',
+          'touch-none hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-grab active:cursor-grabbing',
         isDragging && 'opacity-50',
-        transferring === user.uid && 'opacity-50'
+        transferring === user.uid && 'opacity-50',
+        isCurrentUser &&
+          'bg-primary/10 dark:bg-primary/20 ring-1 ring-primary/40 dark:ring-primary/50 font-medium'
       )}
     >
       <span
@@ -90,12 +96,14 @@ function DroppableTeamCard({
   users,
   dndEnabled,
   transferring,
+  currentUserId,
 }: {
   team: Team
   teamUsers: User[]
   users: User[]
   dndEnabled: boolean
   transferring: string | null
+  currentUserId?: string | null
 }) {
   const { isOver, setNodeRef } = useDroppable({
     id: team.id,
@@ -140,6 +148,7 @@ function DroppableTeamCard({
                 team={team}
                 dndEnabled={dndEnabled}
                 transferring={transferring}
+                isCurrentUser={currentUserId != null && user.uid === currentUserId}
               />
             ))
           )}
@@ -156,6 +165,7 @@ export function TeamsDisplay({
   isAdmin = false,
   onTeamsChanged,
   headerActions,
+  currentUserId,
 }: TeamsDisplayProps) {
   const dndEnabled = Boolean(isAdmin && matchId && onTeamsChanged)
   const [pageIndex, setPageIndex] = useState(0)
@@ -233,6 +243,7 @@ export function TeamsDisplay({
             users={users}
             dndEnabled={dndEnabled}
             transferring={transferring}
+            currentUserId={currentUserId}
           />
         )
       })}

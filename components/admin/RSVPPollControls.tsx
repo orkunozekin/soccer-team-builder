@@ -12,9 +12,11 @@ import { Badge } from '@/components/ui/badge'
 
 interface RSVPPollControlsProps {
   match: Match
+  /** Called after RSVP status is updated so the parent can refetch and update UI */
+  onUpdated?: () => void | Promise<void>
 }
 
-export function RSVPPollControls({ match }: RSVPPollControlsProps) {
+export function RSVPPollControls({ match, onUpdated }: RSVPPollControlsProps) {
   const { updateMatch: updateMatchStore } = useMatchStore()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -57,6 +59,7 @@ export function RSVPPollControls({ match }: RSVPPollControlsProps) {
 
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
+      await onUpdated?.()
     } catch {
       setError('Failed to update RSVP status')
     } finally {

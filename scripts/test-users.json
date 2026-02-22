@@ -19,5 +19,7 @@
   { "email": "hayden.harris@test.soccer", "password": "testpass123", "position": "CM" },
   { "email": "finley.clark@test.soccer", "password": "testpass123", "position": "CDM" },
   { "email": "noah.ortiz@test.soccer", "password": "testpass123", "position": "GK" },
-  { "email": "jordan.gk@test.soccer", "password": "testpass123", "position": "GK" }
+  { "email": "jordan.gk@test.soccer", "password": "testpass123", "position": "CM" },
+  { "email": "riley.extra@test.soccer", "password": "testpass123", "position": "CM" },
+  { "email": "casey.extra@test.soccer", "password": "testpass123", "position": "ST" }
 ]

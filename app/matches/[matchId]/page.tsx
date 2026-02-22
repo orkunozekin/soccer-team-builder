@@ -158,6 +158,7 @@ export default function MatchDetailsPage() {
               users={usersWithMatchPosition}
               isAdmin={isAdmin ?? false}
               onTeamsChanged={refetchAll}
+              currentUserId={user.uid}
               headerActions={
                 isAdmin && teams.length >= 2 ? (
                   <RebalanceTeamsButton

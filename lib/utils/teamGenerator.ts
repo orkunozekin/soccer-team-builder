@@ -98,15 +98,16 @@ export function generateTeamsWithReplacements(
 
   const teams: TeamAssignment[] = []
 
-  // First two teams: 11 each, max 1 GK per team (keep 11 v 11)
-  for (let i = 0; i < 2 && pool.length > 0; i++) {
+  // First teams (1 or 2): up to 11 each, max 1 GK per team (keep 11 v 11 when 2 teams)
+  const initialTeamCount = Math.min(2, teamCount)
+  for (let i = 0; i < initialTeamCount && pool.length > 0; i++) {
     const playerIds = fillTeam(pool, users, maxTeamSize, 1)
     teams.push({ teamNumber: i + 1, playerIds })
   }
 
-  // Remaining players go to third team and beyond (extra teams)
+  // Remaining players go to third team and beyond (extra teams; skip when only 1 team desired)
   let teamNumber = 3
-  while (pool.length > 0) {
+  while (pool.length > 0 && teams.length < teamCount) {
     const playerIds = fillTeam(pool, users, maxTeamSize, 11) // no GK limit on extra teams
     teams.push({ teamNumber, playerIds })
     teamNumber += 1

@@ -213,7 +213,7 @@ export function EditMatchCard({
         </AlertDialogContent>
       </AlertDialog>
 
-      <RSVPPollControls match={match} />
+      <RSVPPollControls match={match} onUpdated={onSaved} />
     </>
   )
 }

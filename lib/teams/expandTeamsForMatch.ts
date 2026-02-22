@@ -1,5 +1,6 @@
 /**
- * Server-only: expand teams for a match when RSVP count warrants it (e.g. 3rd team when 23+ RSVPs).
+ * Server-only: expand teams for a match when RSVPs exist (1+ RSVP so the first person sees their team).
+ * Also adds more teams when count warrants it (e.g. 3rd team when 23+ RSVPs).
  * Called after an RSVP is created (or by admin when creating a team later).
  */
 
@@ -41,7 +42,7 @@ export async function expandTeamsForMatch(
     }
   })
 
-  if (rsvpsToUse.length < 2) {
+  if (rsvpsToUse.length < 1) {
     return { regenerated: false }
   }
 
@@ -52,7 +53,10 @@ export async function expandTeamsForMatch(
     0
   )
 
-  const desiredTeamCount = computeTeamCountForRSVPCount(rsvpsToUse.length, 11, 2)
+  const desiredTeamCount =
+    rsvpsToUse.length === 1
+      ? 1
+      : computeTeamCountForRSVPCount(rsvpsToUse.length, 11, 2)
   const needMoreTeams = currentTeamCount < desiredTeamCount
   const hasUnassignedRsvps = totalAssigned < rsvpsToUse.length
 
