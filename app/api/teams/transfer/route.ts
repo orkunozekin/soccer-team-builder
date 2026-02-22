@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
-import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 
 function uniq(ids: string[]): string[] {
   return Array.from(new Set(ids))
@@ -60,35 +59,10 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Load player and (if needed) target team players for GK check
-    const playerDocRef = adminDb.collection('users').doc(playerId)
-    const playerDoc = await playerDocRef.get()
-    if (!playerDoc.exists) {
-      return NextResponse.json({ error: 'Player not found' }, { status: 404 })
-    }
-    const playerData = playerDoc.data() as { position?: string | null } | undefined
-    const movingIsGK = isGoalkeeper(playerData?.position ?? null)
-
     // Moving to a team
     const targetTeam = teams.find((t) => t.id === targetTeamId)
     if (!targetTeam) {
       return NextResponse.json({ error: 'Target team not found' }, { status: 404 })
-    }
-
-    // Validation: Check goalkeeper limit
-    if (movingIsGK) {
-      const refs = targetTeam.playerIds.map((id) => adminDb.collection('users').doc(id))
-      const docs = refs.length > 0 ? await adminDb.getAll(...refs) : []
-      const hasGK = docs.some((d) => {
-        const pos = (d.data() as { position?: string | null } | undefined)?.position ?? null
-        return isGoalkeeper(pos)
-      })
-      if (hasGK) {
-        return NextResponse.json(
-          { error: 'Team already has a goalkeeper' },
-          { status: 400 }
-        )
-      }
     }
 
     const now = Timestamp.now()
