@@ -17,7 +17,7 @@ export const getMatch = async (matchId: string): Promise<Match | null> => {
   const rsvpOpenAt = matchDoc.rsvpOpenAt ? timestampToDate(matchDoc.rsvpOpenAt) : null
   const rsvpCloseAt = matchDoc.rsvpCloseAt ? timestampToDate(matchDoc.rsvpCloseAt) : null
 
-  // UI reflects admin intent: show Open when they've opened the poll (schedule is 6am–10pm CT for reference only)
+  // UI reflects admin intent: show Open when they've opened the poll (schedule is 9am–10pm CT for reference only)
   const rsvpOpen = matchDoc.rsvpOpen === true
 
   return {

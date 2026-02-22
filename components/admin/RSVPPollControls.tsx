@@ -2,13 +2,13 @@
 
 import { useState } from 'react'
 import { format } from 'date-fns'
-import { Match } from '@/types/match'
-import { updateMatch } from '@/lib/services/matchService'
-import { useMatchStore } from '@/store/matchStore'
-import { shouldRSVPBeOpen, getRSVPSchedule } from '@/lib/utils/rsvpScheduler'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { updateMatch } from '@/lib/services/matchService'
+import { getRSVPSchedule } from '@/lib/utils/rsvpScheduler'
+import { useMatchStore } from '@/store/matchStore'
+import { Match } from '@/types/match'
 
 interface RSVPPollControlsProps {
   match: Match
@@ -31,7 +31,7 @@ export function RSVPPollControls({ match, onUpdated }: RSVPPollControlsProps) {
 
     try {
       if (open) {
-        // Open RSVP - always use schedule: 6am–10pm CT on match day
+        // Open RSVP - always use schedule: 9am–10pm CT on match day
         const openAt = schedule.openAt!
         const closeAt = schedule.closeAt!
 
