@@ -2,6 +2,7 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { TEST_USERS } from '@/lib/testData/testUsers'
 import { computeTeamCountForRSVPCount, generateTeams } from '@/lib/utils/teamGenerator'
 import type { RSVP } from '@/types/rsvp'
 import type { User } from '@/types/user'
@@ -102,8 +103,17 @@ export async function POST(request: Request) {
       continue
     }
 
-    const userDoc = await adminDb.collection('users').doc(userId).get()
-    const userPosition = userDoc.exists ? (userDoc.data()?.position as string | null) ?? null : null
+    const userRef = adminDb.collection('users').doc(userId)
+    const userDoc = await userRef.get()
+    const userData = userDoc.exists ? userDoc.data() : undefined
+    const email = (userData?.email as string) ?? ''
+    const positionFromDoc = (userData?.position as string | null) ?? null
+    const positionFromSeed = TEST_USERS.find((u) => u.email.toLowerCase() === email.toLowerCase())?.position ?? null
+    const userPosition = positionFromSeed ?? positionFromDoc
+
+    if (positionFromSeed != null && positionFromSeed !== positionFromDoc) {
+      await userRef.set({ position: positionFromSeed, updatedAt: now }, { merge: true })
+    }
 
     const rsvpId = `rsvp_${matchId}_${userId}_${now.toMillis()}_${results.length}`
     await adminDb.collection('rsvps').doc(rsvpId).set({

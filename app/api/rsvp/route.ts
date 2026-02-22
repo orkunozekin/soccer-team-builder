@@ -5,6 +5,7 @@ import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { acquireMatchLock } from '@/lib/locks/matchLock'
 import { expandTeamsForMatch } from '@/lib/teams/expandTeamsForMatch'
+import { placeGkOnTeamWithoutGk } from '@/lib/teams/placeGkOnTeamWithoutGk'
 import { removeUserFromMatchTeams } from '@/lib/teams/removeUserFromMatchTeams'
 import { performGkSwap, swapGkWithLowerPriority } from '@/lib/teams/swapGkWithLowerTeam'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
@@ -352,6 +353,37 @@ export async function PATCH(request: NextRequest) {
           )
         }
         throw e
+      }
+
+      if (!oldIsGk && newIsGk && !swapOccurred) {
+        const rsvpsSnap = await adminDb
+          .collection('rsvps')
+          .where('matchId', '==', matchId)
+          .where('status', '==', 'confirmed')
+          .get()
+        const rsvpPositionsByUserId = new Map<string, string | null>()
+        rsvpsSnap.docs.forEach((d) => {
+          const ddata = d.data()
+          rsvpPositionsByUserId.set(ddata.userId as string, (ddata.position as string | null) ?? null)
+        })
+        const usersSnap = await adminDb.collection('users').get()
+        const userPositionsByUserId = new Map<string, string | null>()
+        usersSnap.docs.forEach((d) => {
+          const u = d.id === d.data()?.uid ? d.id : (d.data()?.uid as string)
+          userPositionsByUserId.set(u, (d.data()?.position as string | null) ?? null)
+        })
+        const placeResult = await placeGkOnTeamWithoutGk(
+          adminDb,
+          matchId,
+          userId,
+          rsvpPositionsByUserId,
+          userPositionsByUserId
+        )
+        if (placeResult.placed && placeResult.replacedUserId) {
+          swapOccurred = true
+          const replacedSnap = await adminDb.collection('users').doc(placeResult.replacedUserId).get()
+          otherPlayerDisplayName = replacedSnap.exists ? (replacedSnap.data()?.displayName as string) || undefined : undefined
+        }
       }
 
       return NextResponse.json({

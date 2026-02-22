@@ -9,7 +9,7 @@ export type TestUserSeed = {
 // 22 deterministic test users for local/dev seeding.
 // Keep password same to make testing easier.
 export const TEST_USERS: TestUserSeed[] = [
-  { email: 'alex.rivera@test.soccer', password: 'testpass123', displayName: 'Alex Rivera', jerseyNumber: 1, position: 'GK' },
+  { email: 'alex.rivera@test.soccer', password: 'testpass123', displayName: 'Alex Rivera', jerseyNumber: 1, position: 'CM' },
   { email: 'jordan.lee@test.soccer', password: 'testpass123', displayName: 'Jordan Lee', jerseyNumber: 2, position: 'RB' },
   { email: 'sam.chen@test.soccer', password: 'testpass123', displayName: 'Sam Chen', jerseyNumber: 3, position: 'CB' },
   { email: 'riley.morgan@test.soccer', password: 'testpass123', displayName: 'Riley Morgan', jerseyNumber: 4, position: 'CB' },

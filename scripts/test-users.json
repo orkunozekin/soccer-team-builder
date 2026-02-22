@@ -1,5 +1,5 @@
 [
-  { "email": "alex.rivera@test.soccer", "password": "testpass123", "position": "GK" },
+  { "email": "alex.rivera@test.soccer", "password": "testpass123", "position": "CM" },
   { "email": "jordan.lee@test.soccer", "password": "testpass123", "position": "RB" },
   { "email": "sam.chen@test.soccer", "password": "testpass123", "position": "CB" },
   { "email": "riley.morgan@test.soccer", "password": "testpass123", "position": "CB" },
