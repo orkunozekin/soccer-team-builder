@@ -165,9 +165,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Admins first (by RSVP time), then non-admins (by RSVP time), so admins land on teams 0 & 1
     const roster = Array.from(rosterSet)
-      .map((id) => ({ id, rsvpAt: earliestByUser.get(id) ?? new Date(0) }))
-      .sort((a, b) => a.rsvpAt.getTime() - b.rsvpAt.getTime())
+      .map((id) => ({
+        id,
+        rsvpAt: earliestByUser.get(id) ?? new Date(0),
+        isAdmin: userById.get(id)?.role === 'admin',
+      }))
+      .sort((a, b) => {
+        if (a.isAdmin !== b.isAdmin) return a.isAdmin ? -1 : 1
+        return a.rsvpAt.getTime() - b.rsvpAt.getTime()
+      })
       .map((x) => x.id)
 
     // Process teams in pairs: (1&2), (3&4), (5&6), ... Each pair gets the next N players
