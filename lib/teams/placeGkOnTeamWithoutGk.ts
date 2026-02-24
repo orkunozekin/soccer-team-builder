@@ -109,7 +109,7 @@ export async function placeGkOnTeamWithoutGk(
   )
 
   const otherTeams = teams.filter((t) => t.teamNumber >= 3).sort((a, b) => a.teamNumber - b.teamNumber)
-  let fallbackTeam: TeamDoc | null = otherTeams.find((t) => t.playerIds.length < t.maxSize) ?? null
+  const fallbackTeam: TeamDoc | null = otherTeams.find((t) => t.playerIds.length < t.maxSize) ?? null
   if (fallbackTeam) {
     await fallbackTeam.ref.update({
       playerIds: [...fallbackTeam.playerIds, lastOnTeam],

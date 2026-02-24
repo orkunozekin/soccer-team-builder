@@ -13,26 +13,44 @@ function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
 }
 
 /**
+ * Canonical URL for this endpoint. QStash signs the destination URL; verification
+ * must use the same URL. On Vercel, request.url can differ (proxy/internal), so
+ * we use BASE_URL when set (e.g. https://soccerville.club).
+ */
+function getCronEndpointUrl(request: NextRequest): string {
+  const base = (process.env.BASE_URL || process.env.VERCEL_URL)
+    ?.replace(/\/$/, '')
+  if (base) {
+    const scheme = base.startsWith('http') ? '' : 'https://'
+    return `${scheme}${base}/api/cron/rsvp-schedule`
+  }
+  return request.url
+}
+
+/**
  * Authorize the request: QStash signature (when keys set) or CRON_SECRET.
  */
 async function authorizeCronRequest(
   request: NextRequest,
   body: string
 ): Promise<boolean> {
-  const signature = request.headers.get('Upstash-Signature')
-  const currentKey = process.env.QSTASH_CURRENT_SIGNING_KEY
-  const nextKey = process.env.QSTASH_NEXT_SIGNING_KEY
+  const signature =
+    request.headers.get('Upstash-Signature') ??
+    request.headers.get('upstash-signature')
+  const currentKey = process.env.QSTASH_CURRENT_SIGNING_KEY?.trim() ?? ''
+  const nextKey = process.env.QSTASH_NEXT_SIGNING_KEY?.trim() ?? ''
 
   if (signature && (currentKey || nextKey)) {
     try {
       const receiver = new Receiver({
-        currentSigningKey: currentKey ?? '',
-        nextSigningKey: nextKey ?? '',
+        currentSigningKey: currentKey,
+        nextSigningKey: nextKey,
       })
+      const verifyUrl = getCronEndpointUrl(request)
       const isValid = await receiver.verify({
         body,
         signature,
-        url: request.url,
+        url: verifyUrl,
       })
       return isValid
     } catch {
@@ -136,6 +154,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const body = await request.text()
   if (!(await authorizeCronRequest(request, body))) {
+    console.warn('cron/rsvp-schedule: unauthorized (signature verification failed or missing CRON_SECRET)')
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
