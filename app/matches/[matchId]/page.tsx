@@ -126,12 +126,13 @@ export default function MatchDetailsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-2">
-      <BackLink href="/matches" label="Back to Matches" />
+    <div className="w-full min-w-0 flex flex-col items-center overflow-x-hidden">
+      <div className="w-full max-w-full min-w-0 container mx-auto px-4 py-2">
+        <BackLink href="/matches" label="Back to Matches" />
 
-      <div className="mt-2 grid gap-10 lg:grid-cols-2 lg:gap-12">
-        <div className="space-y-6">
-          <MatchDetails
+        <div className="mt-2 grid gap-10 lg:grid-cols-2 lg:gap-12 min-w-0">
+          <div className="min-w-0 space-y-6">
+            <MatchDetails
             match={currentMatch}
             rsvpCount={matchRSVPs.length}
             userRsvp={userRsvp}
@@ -148,10 +149,10 @@ export default function MatchDetailsPage() {
               onDeleted={() => router.push('/matches')}
             />
           )}
-        </div>
+          </div>
 
-        <div className="space-y-6">
-          {!loadingTeams && teams.length > 0 && (
+          <div className="min-w-0 space-y-6">
+            {!loadingTeams && teams.length > 0 && (
             <TeamsDisplay
               matchId={matchId}
               teams={teams}
@@ -170,15 +171,16 @@ export default function MatchDetailsPage() {
                 ) : null
               }
             />
-          )}
-          {isAdmin && teams.length > 0 && (
-            <PlayerTransfer
-              matchId={matchId}
-              teams={teams}
-              users={usersWithMatchPosition}
-              onTransferComplete={refetchAll}
-            />
-          )}
+            )}
+            {isAdmin && teams.length > 0 && (
+              <PlayerTransfer
+                matchId={matchId}
+                teams={teams}
+                users={usersWithMatchPosition}
+                onTransferComplete={refetchAll}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>

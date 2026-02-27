@@ -99,30 +99,31 @@ export function TeamsDisplay({
   }
 
   const content = (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="grid min-w-0 gap-4 sm:grid-cols-2">
       {visibleTeams.map((team) => {
         const teamUsers = team.playerIds
           .map((userId) => users.find((u) => u.uid === userId))
           .filter((u): u is User => !!u)
 
         return (
-          <DroppableTeamCard
-            key={team.id}
-            team={team}
-            teamUsers={teamUsers}
-            dndEnabled={dndEnabled}
-            transferring={transferring}
-            currentUserId={currentUserId}
-          />
+          <div key={team.id} className="min-w-0">
+            <DroppableTeamCard
+              team={team}
+              teamUsers={teamUsers}
+              dndEnabled={dndEnabled}
+              transferring={transferring}
+              currentUserId={currentUserId}
+            />
+          </div>
         )
       })}
     </div>
   )
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-2xl font-bold">Teams</h2>
+    <div className="min-w-0 space-y-2 overflow-hidden">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+        <h2 className="min-w-0 truncate text-2xl font-bold">Teams</h2>
         {headerActions ? <div className="shrink-0">{headerActions}</div> : null}
       </div>
 

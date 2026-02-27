@@ -82,7 +82,7 @@ export function MatchDetails({
     !isGoalkeeper(editPosition)
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -135,7 +135,7 @@ export function MatchDetails({
                 </span>
               </p>
               <div className="flex flex-wrap items-end gap-2">
-                <div className="min-w-[12rem]">
+                <div className="min-w-0 basis-full sm:basis-auto sm:min-w-[12rem]">
                   <PositionSelector
                     value={editPosition}
                     onValueChange={setEditPosition}
@@ -148,7 +148,7 @@ export function MatchDetails({
                   onClick={handleSavePosition}
                   loading={positionLoading}
                   disabled={editPosition === currentPosition || positionLoading}
-                  className="min-w-[8.5rem] h-11"
+                  className="min-w-0 shrink-0 sm:min-w-[8.5rem] h-11"
                 >
                   Update position
                 </Button>

@@ -35,7 +35,7 @@ function DraggablePlayerRow({
     <div
       ref={setNodeRef}
       className={cn(
-        'flex items-center gap-2 text-sm rounded-md px-2 py-1.5 -mx-1',
+        'flex min-w-0 items-center gap-2 text-sm rounded-md px-2 py-1.5 -mx-1',
         dndEnabled && 'hover:bg-zinc-50 dark:hover:bg-zinc-900',
         isDragging && 'opacity-50',
         transferring === user.uid && 'opacity-50',
@@ -60,12 +60,12 @@ function DraggablePlayerRow({
       >
         {user.jerseyNumber != null ? user.jerseyNumber : ''}
       </span>
-      <span className="truncate">{user.displayName}</span>
+      <span className="min-w-0 truncate">{user.displayName}</span>
       {user.position && (
         <Badge
           variant="outline"
           className={cn(
-            'ml-auto text-xs',
+            'ml-auto shrink-0 text-xs',
             isGoalkeeper(user.position) &&
               'bg-amber-200/90 dark:bg-amber-700/50 border-amber-400 dark:border-amber-600 text-amber-900 dark:text-amber-100'
           )}
@@ -101,16 +101,17 @@ export function DroppableTeamCard({
     <Card
       ref={setNodeRef}
       className={cn(
+        'min-w-0 overflow-hidden',
         dndEnabled && 'outline outline-1 outline-transparent hover:outline-zinc-300',
         isOver && dndEnabled && 'outline-2 outline-zinc-400 ring-2 ring-zinc-300 dark:ring-zinc-600'
       )}
     >
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>{team.name || `Team ${team.teamNumber}`}</CardTitle>
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <CardTitle className="min-w-0 truncate">{team.name || `Team ${team.teamNumber}`}</CardTitle>
           <Badge
             style={{ backgroundColor: team.color || '#3b82f6' }}
-            className="text-white"
+            className="shrink-0 text-white"
           >
             {team.playerIds.length}/{team.maxSize}
           </Badge>
