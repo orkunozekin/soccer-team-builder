@@ -5,7 +5,6 @@ import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { acquireMatchLock } from '@/lib/locks/matchLock'
 import { expandTeamsForMatch } from '@/lib/teams/expandTeamsForMatch'
-import { placeGkOnTeamWithoutGk } from '@/lib/teams/placeGkOnTeamWithoutGk'
 import { removeUserFromMatchTeams } from '@/lib/teams/removeUserFromMatchTeams'
 import { performGkSwap, swapGkWithLowerPriority } from '@/lib/teams/swapGkWithLowerTeam'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
@@ -67,6 +66,14 @@ export async function POST(request: NextRequest) {
       : null
     const position = positionFromBody ?? (userData?.position as string | null) ?? null
 
+    const hasPosition = typeof position === 'string' && position.trim().length > 0
+    if (!hasPosition) {
+      return NextResponse.json(
+        { error: 'Set your position in your profile to RSVP' },
+        { status: 400 }
+      )
+    }
+
     const existing = await adminDb
       .collection('rsvps')
       .where('matchId', '==', matchId)
@@ -121,11 +128,6 @@ export async function POST(request: NextRequest) {
           const state = stateSnap.data() ?? {}
           const confirmedCount = (state.confirmedCount as number) ?? 0
           const gkCount = (state.gkCount as number) ?? 0
-          if (isGoalkeeper(position) && gkCount >= 2) {
-            const err = new Error('TOO_MANY_GKS') as Error & { code?: string }
-            err.code = 'TOO_MANY_GKS'
-            throw err
-          }
           const newGkCount = gkCount + (isGoalkeeper(position) ? 1 : 0)
           tx.set(stateRef, {
             confirmedCount: confirmedCount + 1,
@@ -137,19 +139,8 @@ export async function POST(request: NextRequest) {
         txError = null
         break
       } catch (e: unknown) {
-        const err = e as { code?: string | number; message?: string }
-        if (String(err?.code) === 'TOO_MANY_GKS') {
-          return NextResponse.json(
-            {
-              error:
-                'There are already 2 goalkeepers for this match. Please choose a different position to RSVP.',
-              code: 'TOO_MANY_GKS',
-            },
-            { status: 400 }
-          )
-        }
         txError = e
-        const msg = String(err?.message ?? e)
+        const msg = String((e as { message?: string })?.message ?? e)
         const isAbort = msg.includes('ABORTED') || msg.includes('Transaction') || msg.includes('lock timeout')
         if (!isAbort || attempt === TX_MAX_ATTEMPTS) throw e
         const delay =
@@ -323,68 +314,17 @@ export async function PATCH(request: NextRequest) {
 
       const stateRef = adminDb.collection('matches').doc(matchId).collection('_state').doc('rsvp')
       const now = Timestamp.now()
-      try {
-        await adminDb.runTransaction(async (tx) => {
-          const stateSnap = await tx.get(stateRef)
-          if (stateSnap.exists) {
-            const state = stateSnap.data() ?? {}
-            let gkCount = (state.gkCount as number) ?? 0
-            if (!oldIsGk && newIsGk && gkCount >= 2) {
-              const err = new Error('TOO_MANY_GKS') as Error & { code?: string }
-              err.code = 'TOO_MANY_GKS'
-              throw err
-            }
-            if (oldIsGk && !newIsGk) gkCount -= 1
-            else if (!oldIsGk && newIsGk) gkCount += 1
-            tx.set(stateRef, { ...state, gkCount, updatedAt: now }, { merge: true })
-          }
-          tx.update(rsvpRef, { position: newPosition, updatedAt: now })
-        })
-      } catch (e: unknown) {
-        const err = e as { code?: string }
-        if (err?.code === 'TOO_MANY_GKS') {
-          return NextResponse.json(
-            {
-              error:
-                'There are already 2 goalkeepers for this match. Please choose a different position to RSVP.',
-              code: 'TOO_MANY_GKS',
-            },
-            { status: 400 }
-          )
+      await adminDb.runTransaction(async (tx) => {
+        const stateSnap = await tx.get(stateRef)
+        if (stateSnap.exists) {
+          const state = stateSnap.data() ?? {}
+          let gkCount = (state.gkCount as number) ?? 0
+          if (oldIsGk && !newIsGk) gkCount -= 1
+          else if (!oldIsGk && newIsGk) gkCount += 1
+          tx.set(stateRef, { ...state, gkCount, updatedAt: now }, { merge: true })
         }
-        throw e
-      }
-
-      if (!oldIsGk && newIsGk && !swapOccurred) {
-        const rsvpsSnap = await adminDb
-          .collection('rsvps')
-          .where('matchId', '==', matchId)
-          .where('status', '==', 'confirmed')
-          .get()
-        const rsvpPositionsByUserId = new Map<string, string | null>()
-        rsvpsSnap.docs.forEach((d) => {
-          const ddata = d.data()
-          rsvpPositionsByUserId.set(ddata.userId as string, (ddata.position as string | null) ?? null)
-        })
-        const usersSnap = await adminDb.collection('users').get()
-        const userPositionsByUserId = new Map<string, string | null>()
-        usersSnap.docs.forEach((d) => {
-          const u = d.id === d.data()?.uid ? d.id : (d.data()?.uid as string)
-          userPositionsByUserId.set(u, (d.data()?.position as string | null) ?? null)
-        })
-        const placeResult = await placeGkOnTeamWithoutGk(
-          adminDb,
-          matchId,
-          userId,
-          rsvpPositionsByUserId,
-          userPositionsByUserId
-        )
-        if (placeResult.placed && placeResult.replacedUserId) {
-          swapOccurred = true
-          const replacedSnap = await adminDb.collection('users').doc(placeResult.replacedUserId).get()
-          otherPlayerDisplayName = replacedSnap.exists ? (replacedSnap.data()?.displayName as string) || undefined : undefined
-        }
-      }
+        tx.update(rsvpRef, { position: newPosition, updatedAt: now })
+      })
 
       return NextResponse.json({
         updated: true,

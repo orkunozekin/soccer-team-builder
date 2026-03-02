@@ -1,5 +1,6 @@
 'use client'
 
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -7,12 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
 import { SOCCER_POSITIONS } from '@/lib/constants/positions'
-
-/** Sentinel value for "no position"; empty string is reserved by Radix Select for clearing. */
-const NONE_POSITION_VALUE = '__none__'
+import { cn } from '@/lib/utils'
 
 interface PositionSelectorProps {
   value: string | null
@@ -39,8 +36,8 @@ export function PositionSelector({
         </Label>
       )}
       <Select
-        value={value ?? NONE_POSITION_VALUE}
-        onValueChange={(val) => onValueChange(val === NONE_POSITION_VALUE ? null : val)}
+        value={value ?? ''}
+        onValueChange={(val) => onValueChange(val === '' ? null : val)}
         disabled={disabled}
       >
         <SelectTrigger
@@ -53,7 +50,6 @@ export function PositionSelector({
           <SelectValue placeholder="Select your position" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={NONE_POSITION_VALUE}>None</SelectItem>
           {SOCCER_POSITIONS.map((position) => (
             <SelectItem key={position.value} value={position.value}>
               {position.label}

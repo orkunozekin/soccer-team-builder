@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PositionSelector } from '@/components/profile/PositionSelector'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { updateUser } from '@/lib/services/userService'
 import { cn } from '@/lib/utils'
@@ -23,6 +24,7 @@ export function ProfileCompleteModal({ open, onOpenChange, onSaved }: ProfileCom
   const setUserData = useAuthStore((state) => state.setUserData)
   const [displayName, setDisplayName] = useState('')
   const [jerseyNumber, setJerseyNumber] = useState('')
+  const [position, setPosition] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [mounted, setMounted] = useState(false)
@@ -32,6 +34,7 @@ export function ProfileCompleteModal({ open, onOpenChange, onSaved }: ProfileCom
     if (userData) {
       setDisplayName(userData.displayName ?? '')
       setJerseyNumber(userData.jerseyNumber?.toString() ?? '')
+      setPosition(userData.position ?? null)
     }
   }, [userData, open])
 
@@ -45,14 +48,19 @@ export function ProfileCompleteModal({ open, onOpenChange, onSaved }: ProfileCom
       setError('Display name is required')
       return
     }
+    if (!position || !position.trim()) {
+      setError('Position is required to RSVP')
+      return
+    }
     const num = jerseyNumber.trim() ? parseInt(jerseyNumber, 10) : NaN
     const jersey = Number.isNaN(num) || num < 0 || num > 99 ? null : num
 
     setLoading(true)
     try {
-      const updates: Partial<Pick<User, 'displayName' | 'jerseyNumber'>> = {
+      const updates: Partial<Pick<User, 'displayName' | 'jerseyNumber' | 'position'>> = {
         displayName: trimmedName,
         jerseyNumber: jersey,
+        position: position.trim(),
       }
       await updateUser(user.uid, updates)
       const updatedUserData: User = {
@@ -106,7 +114,7 @@ export function ProfileCompleteModal({ open, onOpenChange, onSaved }: ProfileCom
             Complete your profile
           </h2>
           <p id="profile-modal-desc" className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Set your display name to RSVP to matches.
+            Set your display name and position to RSVP to matches. You can change your position later in Profile or per match.
           </p>
           </div>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -122,6 +130,17 @@ export function ProfileCompleteModal({ open, onOpenChange, onSaved }: ProfileCom
               onChange={(e) => setDisplayName(e.target.value)}
               disabled={loading}
               className="h-11"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="position">
+              Position <span className="text-red-500">*</span>
+            </Label>
+            <PositionSelector
+              value={position}
+              onValueChange={setPosition}
+              disabled={loading}
+              hideLabel
             />
           </div>
           <div className="space-y-2">

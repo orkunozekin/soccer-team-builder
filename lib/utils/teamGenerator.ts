@@ -79,7 +79,9 @@ export function generateTeams(
 }
 
 /**
- * Same as generateTeams but also returns GK replacements (overflow GK inserted into first two teams, non-GK bumped to overflow).
+ * Same as generateTeams but also returns gkReplacements.
+ * Teams 1–2: at most 1 GK each from first 22; if one has no GK, a GK from teams 3+ (earliest by RSVP) is moved up and that team's last non-GK (by RSVP) is bumped to overflow.
+ * Teams 3+: any number of GKs. No global GK cap.
  */
 export function generateTeamsWithReplacements(
   rsvps: RSVP[],
@@ -124,7 +126,7 @@ export function generateTeamsWithReplacements(
     return (r?.position ?? u?.position ?? null) ?? null
   }
 
-  // Overflow GKs: promote into first two teams if a team has no GK; bump that team's last non-GK (by RSVP) to overflow
+  // If team 1 or 2 has no GK, fill from overflow (teams 3+): move a GK from overflow into that team, bump that team's last non-GK (by RSVP) to overflow
   const gkReplacements: GkReplacement[] = []
   if (teams.length >= 3) {
     const overflowTeams = teams.slice(2)
