@@ -1,8 +1,8 @@
 /**
  * Server-only: remove a user from their team for a match. If that team becomes
  * empty, delete the team and renumber remaining teams (1, 2, 3, ...).
- * If the vacated spot was on team 1 or 2, the earliest-RSVP'd player from
- * team 3+ is moved into that spot (first come first serve).
+ * If the vacated spot was on any team, the earliest-RSVP'd player from the next
+ * team(s) (team N+1, N+2, ...) is moved into that spot (e.g. team 3 vacancy → fill from team 4+).
  */
 
 import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore'
@@ -57,9 +57,9 @@ export async function removeUserFromMatchTeams(
     })
   }
 
-  // If vacated spot was on team 1 or 2 and we didn't delete the team, backfill from team 3+ (earliest RSVP first)
+  // If we didn't delete the team, backfill from the next team(s): earliest RSVP from teams with number > vacatedTeamNumber
   let backfilled = false
-  if (!teamDeleted && vacatedTeamNumber >= 1 && vacatedTeamNumber <= 2) {
+  if (!teamDeleted) {
     const rsvpsSnap = await adminDb
       .collection('rsvps')
       .where('matchId', '==', matchId)
@@ -80,7 +80,7 @@ export async function removeUserFromMatchTeams(
     for (const d of teamsSnap2.docs) {
       const tdata = d.data()
       const num = (tdata.teamNumber as number) ?? 0
-      if (num >= 3) {
+      if (num > vacatedTeamNumber) {
         const ids = (tdata.playerIds as string[]) ?? []
         ids.forEach((uid) => overflowPlayers.push({ userId: uid, teamDoc: d }))
       }

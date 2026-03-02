@@ -80,8 +80,8 @@ export function generateTeams(
 
 /**
  * Same as generateTeams but also returns gkReplacements.
- * Teams 1–2: at most 1 GK each from first 22; if one has no GK, a GK from teams 3+ (earliest by RSVP) is moved up and that team's last non-GK (by RSVP) is bumped to overflow.
- * Teams 3+: any number of GKs. No global GK cap.
+ * For any team (1, 2, 3, …) that has no GK: the earliest RSVPing GK from a higher-indexed team is moved into that team, and that team's last non-GK (by RSVP) is bumped to the GK's former team.
+ * No global GK cap.
  */
 export function generateTeamsWithReplacements(
   rsvps: RSVP[],
@@ -126,46 +126,45 @@ export function generateTeamsWithReplacements(
     return (r?.position ?? u?.position ?? null) ?? null
   }
 
-  // If team 1 or 2 has no GK, fill from overflow (teams 3+): move a GK from overflow into that team, bump that team's last non-GK (by RSVP) to overflow
+  // For each team in order: if it has no GK, take the earliest GK by RSVP from any team with higher index and swap with this team's last non-GK (by RSVP). Applies to all teams (1, 2, 3, …).
   const gkReplacements: GkReplacement[] = []
-  if (teams.length >= 3) {
-    const overflowTeams = teams.slice(2)
-    const overflowGkUserIds: string[] = []
-    for (const t of overflowTeams) {
+  const teamHasGk = (t: TeamAssignment) =>
+    t.playerIds.some((uid) => isGoalkeeper(effectivePosition(uid)))
+
+  for (let targetTi = 0; targetTi < teams.length; targetTi++) {
+    if (teamHasGk(teams[targetTi])) continue
+
+    const laterTeams = teams.slice(targetTi + 1)
+    const gksLater: { uid: string; rsvpAt: number }[] = []
+    for (const t of laterTeams) {
       for (const uid of t.playerIds) {
-        if (isGoalkeeper(effectivePosition(uid))) overflowGkUserIds.push(uid)
+        if (isGoalkeeper(effectivePosition(uid))) {
+          gksLater.push({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 })
+        }
       }
     }
-    overflowGkUserIds.sort(
-      (a, b) => (rsvpAtByUserId.get(a) ?? 0) - (rsvpAtByUserId.get(b) ?? 0)
+    if (gksLater.length === 0) continue
+    gksLater.sort((a, b) => a.rsvpAt - b.rsvpAt)
+    const gkId = gksLater[0].uid
+
+    const gkCurrentTeamIndex = teams.findIndex((t) => t.playerIds.includes(gkId))
+    if (gkCurrentTeamIndex < 0) continue
+    const mainTeam = teams[targetTi]
+    const gkTeam = teams[gkCurrentTeamIndex]
+    const nonGksOnMain = mainTeam.playerIds
+      .filter((uid) => !isGoalkeeper(effectivePosition(uid)))
+      .map((uid) => ({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 }))
+      .sort((a, b) => b.rsvpAt - a.rsvpAt)
+    const bumpedId = nonGksOnMain[0]?.uid
+    if (!bumpedId) continue
+
+    mainTeam.playerIds = mainTeam.playerIds.map((id) =>
+      id === bumpedId ? gkId : id
     )
-
-    for (let ti = 0; ti < 2 && ti < teams.length; ti++) {
-      const mainTeam = teams[ti]
-      const hasGk = mainTeam.playerIds.some((uid) =>
-        isGoalkeeper(effectivePosition(uid))
-      )
-      if (hasGk || overflowGkUserIds.length === 0) continue
-
-      const gkId = overflowGkUserIds.shift()!
-      const nonGksOnTeam = mainTeam.playerIds
-        .filter((uid) => !isGoalkeeper(effectivePosition(uid)))
-        .map((uid) => ({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 }))
-        .sort((a, b) => b.rsvpAt - a.rsvpAt)
-      const bumpedId = nonGksOnTeam[0]?.uid
-      if (!bumpedId) continue
-
-      mainTeam.playerIds = mainTeam.playerIds.map((id) =>
-        id === bumpedId ? gkId : id
-      )
-      const overflowTeam = overflowTeams.find((t) => t.playerIds.includes(gkId))
-      if (overflowTeam) {
-        overflowTeam.playerIds = overflowTeam.playerIds.map((id) =>
-          id === gkId ? bumpedId : id
-        )
-      }
-      gkReplacements.push({ insertedGK: gkId, removedPlayer: bumpedId })
-    }
+    gkTeam.playerIds = gkTeam.playerIds.map((id) =>
+      id === gkId ? bumpedId : id
+    )
+    gkReplacements.push({ insertedGK: gkId, removedPlayer: bumpedId })
   }
 
   // Admins who RSVP'd after the first 22: swap them into the first two teams by replacing the last non-admin(s) by RSVP time
