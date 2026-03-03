@@ -1,9 +1,16 @@
 'use client'
 
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, MoreVertical } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { Team } from '@/types/team'
@@ -17,12 +24,16 @@ function DraggablePlayerRow({
   dndEnabled,
   transferring,
   isCurrentUser,
+  isAdmin,
+  onCancelRSVP,
 }: {
   user: User
   team: Team
   dndEnabled: boolean
   transferring: string | null
   isCurrentUser: boolean
+  isAdmin: boolean
+  onCancelRSVP?: (userId: string, displayName: string) => void
 }) {
   const id = `player:${user.uid}:${team.id}`
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -30,6 +41,7 @@ function DraggablePlayerRow({
     data: { playerId: user.uid, fromTeamId: team.id } satisfies DragData,
     disabled: !dndEnabled,
   })
+  const displayName = user.displayName || user.email || ''
 
   return (
     <div
@@ -60,18 +72,46 @@ function DraggablePlayerRow({
       >
         {user.jerseyNumber != null ? user.jerseyNumber : ''}
       </span>
-      <span className="min-w-0 truncate">{user.displayName}</span>
+      <span
+        className="flex-1 min-w-0 truncate"
+        title={displayName}
+      >
+        {displayName}
+      </span>
       {user.position && (
         <Badge
           variant="outline"
           className={cn(
-            'ml-auto shrink-0 text-xs',
+            'shrink-0 text-xs',
             isGoalkeeper(user.position) &&
               'bg-amber-200/90 dark:bg-amber-700/50 border-amber-400 dark:border-amber-600 text-amber-900 dark:text-amber-100'
           )}
         >
           {user.position}
         </Badge>
+      )}
+      {isAdmin && onCancelRSVP && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              aria-label="Player actions"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
+              onClick={() => onCancelRSVP(user.uid, displayName)}
+            >
+              Cancel RSVP
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
     </div>
   )
@@ -83,6 +123,8 @@ export interface DroppableTeamCardProps {
   dndEnabled: boolean
   transferring: string | null
   currentUserId?: string | null
+  isAdmin?: boolean
+  onCancelRSVP?: (userId: string, displayName: string) => void
 }
 
 export function DroppableTeamCard({
@@ -91,6 +133,8 @@ export function DroppableTeamCard({
   dndEnabled,
   transferring,
   currentUserId,
+  isAdmin = false,
+  onCancelRSVP,
 }: DroppableTeamCardProps) {
   const { isOver, setNodeRef } = useDroppable({
     id: team.id,
@@ -137,6 +181,8 @@ export function DroppableTeamCard({
                 dndEnabled={dndEnabled}
                 transferring={transferring}
                 isCurrentUser={currentUserId != null && user.uid === currentUserId}
+                isAdmin={isAdmin}
+                onCancelRSVP={onCancelRSVP}
               />
             ))
           )}

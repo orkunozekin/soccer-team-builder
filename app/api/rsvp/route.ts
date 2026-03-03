@@ -1,6 +1,6 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/api/auth'
+import { verifyAuth, verifyAdmin } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { acquireMatchLock } from '@/lib/locks/matchLock'
@@ -10,7 +10,7 @@ import { performGkSwap, swapGkWithLowerPriority } from '@/lib/teams/swapGkWithLo
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 
 /**
- * POST: Confirm RSVP for the authenticated user.
+ * POST: Confirm RSVP for the authenticated user (or for impersonateUserId when requester is admin).
  * Creates the RSVP document, then expands teams if needed (e.g. 3rd team when 23+ RSVPs).
  */
 export async function POST(request: NextRequest) {
@@ -27,6 +27,16 @@ export async function POST(request: NextRequest) {
     const matchId = body?.matchId
     if (!matchId || typeof matchId !== 'string') {
       return NextResponse.json({ error: 'Match ID required' }, { status: 400 })
+    }
+
+    const impersonateUserId = typeof body?.impersonateUserId === 'string' ? body.impersonateUserId.trim() || null : null
+    let effectiveUid: string = uid
+    if (impersonateUserId) {
+      const { isAdmin } = await verifyAdmin(request)
+      if (!isAdmin) {
+        return NextResponse.json({ error: 'Admin required to RSVP on behalf of another user' }, { status: 403 })
+      }
+      effectiveUid = impersonateUserId
     }
 
     const adminDb = getAdminDb()
@@ -49,7 +59,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const userSnap = await adminDb.collection('users').doc(uid).get()
+    const userSnap = await adminDb.collection('users').doc(effectiveUid).get()
     const userData = userSnap.exists ? userSnap.data() : null
     const displayName = userData?.displayName
     const hasName = typeof displayName === 'string' && displayName.trim().length > 0
@@ -77,7 +87,7 @@ export async function POST(request: NextRequest) {
     const existing = await adminDb
       .collection('rsvps')
       .where('matchId', '==', matchId)
-      .where('userId', '==', uid)
+      .where('userId', '==', effectiveUid)
       .where('status', '==', 'confirmed')
       .limit(1)
       .get()
@@ -109,14 +119,14 @@ export async function POST(request: NextRequest) {
     const TX_BACKOFF_BASE_MS = 80
     const TX_BACKOFF_JITTER_MS = 120
     let txError: unknown
-    rsvpId = `rsvp_${matchId}_${uid}_${Date.now()}`
+    rsvpId = `rsvp_${matchId}_${effectiveUid}_${Date.now()}`
     for (let attempt = 1; attempt <= TX_MAX_ATTEMPTS; attempt++) {
-      rsvpId = `rsvp_${matchId}_${uid}_${Date.now()}`
+      rsvpId = `rsvp_${matchId}_${effectiveUid}_${Date.now()}`
       const now = Timestamp.now()
       const rsvpRef = adminDb.collection('rsvps').doc(rsvpId)
       const rsvpData = {
         matchId,
-        userId: uid,
+        userId: effectiveUid,
         status: 'confirmed' as const,
         position: position ?? null,
         rsvpAt: now,
@@ -222,8 +232,12 @@ export async function PATCH(request: NextRequest) {
     }
 
     const data = rsvpSnap.data()!
-    if (data.userId !== uid) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const isOwner = data.userId === uid
+    if (!isOwner) {
+      const { isAdmin } = await verifyAdmin(request)
+      if (!isAdmin) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
     }
     if (data.status === 'cancelled') {
       return NextResponse.json({ cancelled: true, teamsUpdated: false })

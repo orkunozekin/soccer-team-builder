@@ -62,14 +62,17 @@ export async function generateTeamsAPI(matchId: string): Promise<{
 
 export async function confirmRSVPAPI(
   matchId: string,
-  position?: string | null
+  position?: string | null,
+  /** When set (admin only), RSVP is created for this user instead of the authenticated user. */
+  impersonateUserId?: string | null
 ): Promise<{
   rsvpId: string
   regenerated: boolean
   position: string | null
 }> {
-  const body: { matchId: string; position?: string | null } = { matchId }
+  const body: { matchId: string; position?: string | null; impersonateUserId?: string } = { matchId }
   if (position !== undefined) body.position = position
+  if (impersonateUserId) body.impersonateUserId = impersonateUserId
   const response = await apiRequest('/rsvp', {
     method: 'POST',
     body: JSON.stringify(body),
