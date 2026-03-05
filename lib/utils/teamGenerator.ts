@@ -198,10 +198,9 @@ export function generateTeamsWithReplacements(
       bumped = pushOff
     }
 
-    // 3. GK's team: fill GK's spot with the last bumped
-    teams[gkTeamIndex].playerIds = teams[gkTeamIndex].playerIds.map((id) =>
-      id === gkId ? bumped : id
-    )
+    // 3. GK's team: same shift-down rule — insert bumped at first spot, remove GK (no in-place replacement)
+    const gkTeamWithoutGk = teams[gkTeamIndex].playerIds.filter((id) => id !== gkId)
+    teams[gkTeamIndex].playerIds = [bumped, ...teamSortedByRsvp(gkTeamWithoutGk)]
 
     gkReplacements.push({ insertedGK: gkId, removedPlayer: p0 })
     insertedGkIds.add(gkId)
