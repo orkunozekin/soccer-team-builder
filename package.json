@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "test:rsvp-concurrency": "node scripts/concurrency-test.mjs",
-    "setup:qstash-rsvp": "node scripts/setup-qstash-rsvp-schedule.mjs"
+    "setup:qstash-rsvp": "node scripts/setup-qstash-rsvp-schedule.mjs",
+    "rsvp-order": "node scripts/rsvp-order.mjs",
+    "regenerate-teams": "npx tsx scripts/regenerate-teams.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

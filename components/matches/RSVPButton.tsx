@@ -1,15 +1,25 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ProfileCompleteModal } from '@/components/profile/ProfileCompleteModal'
 import { PositionSelector } from '@/components/profile/PositionSelector'
+import { ProfileCompleteModal } from '@/components/profile/ProfileCompleteModal'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { cancelRSVPAPI, confirmRSVPAPI } from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getUserRSVP } from '@/lib/services/rsvpService'
 import { isProfileComplete } from '@/lib/utils/profile'
-import { useMatchStore } from '@/store/matchStore'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
+import { useMatchStore } from '@/store/matchStore'
 import { Match } from '@/types/match'
 
 interface RSVPButtonProps {
@@ -29,6 +39,7 @@ export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPBu
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false)
   const [showPositionPickerForGkBlock, setShowPositionPickerForGkBlock] = useState(false)
   const [positionForRsvp, setPositionForRsvp] = useState<string | null>(null)
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
 
   useEffect(() => {
     if (user && matchRSVPs.length > 0) {
@@ -102,23 +113,7 @@ export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPBu
     }
 
     if (hasRSVPed) {
-      setLoading(true)
-      setError('')
-      try {
-        const rsvp = matchRSVPs.find((r) => r.userId === user.uid)
-        if (rsvp) {
-          const { teamsUpdated } = await cancelRSVPAPI(rsvp.id)
-          removeRSVP(rsvp.id)
-          setHasRSVPed(false)
-          if (teamsUpdated && onTeamsRegenerated) {
-            await onTeamsRegenerated()
-          }
-        }
-      } catch {
-        setError('Failed to update RSVP')
-      } finally {
-        setLoading(false)
-      }
+      setCancelConfirmOpen(true)
       return
     }
 
@@ -135,12 +130,62 @@ export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPBu
     }
   }
 
+  const handleConfirmCancelRSVP = async () => {
+    const rsvp = matchRSVPs.find((r) => r.userId === user?.uid)
+    if (!rsvp) {
+      setCancelConfirmOpen(false)
+      return
+    }
+    setLoading(true)
+    setError('')
+    try {
+      const { teamsUpdated } = await cancelRSVPAPI(rsvp.id)
+      removeRSVP(rsvp.id)
+      setHasRSVPed(false)
+      setCancelConfirmOpen(false)
+      if (teamsUpdated && onTeamsRegenerated) {
+        await onTeamsRegenerated()
+      }
+    } catch {
+      setError('Failed to update RSVP')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   if (!match.rsvpOpen) {
     return null
   }
 
   return (
     <div className="space-y-2">
+      <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel RSVP?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will be removed from the team. You can RSVP again while the poll is open, but you won&apos;t be guaranteed the same spot.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>Keep RSVP</AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button
+                variant="default"
+                loading={loading}
+                onClick={(e) => {
+                  e.preventDefault()
+                  handleConfirmCancelRSVP()
+                }}
+                className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-600 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-600"
+              >
+                Cancel RSVP
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <ProfileCompleteModal
         open={profileDrawerOpen}
         onOpenChange={setProfileDrawerOpen}

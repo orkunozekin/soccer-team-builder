@@ -21,7 +21,8 @@ function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
 
 export async function expandTeamsForMatch(
   adminDb: Firestore,
-  matchId: string
+  matchId: string,
+  options?: { forceRegenerate?: boolean }
 ): Promise<{ regenerated: boolean }> {
   const rsvpSnap = await adminDb
     .collection('rsvps')
@@ -59,8 +60,9 @@ export async function expandTeamsForMatch(
       : computeTeamCountForRSVPCount(rsvpsToUse.length, 11, 2)
   const needMoreTeams = currentTeamCount < desiredTeamCount
   const hasUnassignedRsvps = totalAssigned < rsvpsToUse.length
+  const forceRegenerate = options?.forceRegenerate === true
 
-  if (!needMoreTeams && !hasUnassignedRsvps) {
+  if (!forceRegenerate && !needMoreTeams && !hasUnassignedRsvps) {
     return { regenerated: false }
   }
 

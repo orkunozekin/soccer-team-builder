@@ -126,45 +126,74 @@ export function generateTeamsWithReplacements(
     return (r?.position ?? u?.position ?? null) ?? null
   }
 
-  // For each team in order: if it has no GK, take the earliest GK by RSVP from any team with higher index and swap with this team's last non-GK (by RSVP). Applies to all teams (1, 2, 3, …).
+  // For each team that has no GK, take the earliest GK by RSVP from a later team.
+  // Process from highest team index down to 0 so a GK from overflow goes to the closest team (e.g. team 2 before team 1).
+  // When moving a GK from team G to team T (G > T), do a CASCADE: GK → team T (bump T's last);
+  // bumped player from T → team T+1 (bump T+1's last non-GK); ...; last bumped → team G (GK's vacated spot).
   const gkReplacements: GkReplacement[] = []
   const teamHasGk = (t: TeamAssignment) =>
     t.playerIds.some((uid) => isGoalkeeper(effectivePosition(uid)))
+  const insertedGkIds = new Set<string>()
 
-  for (let targetTi = 0; targetTi < teams.length; targetTi++) {
+  const lastByRsvp = (playerIds: string[], nonGkOnly: boolean): string | null => {
+    const withRsvp = playerIds
+      .filter((uid) => !nonGkOnly || !isGoalkeeper(effectivePosition(uid)))
+      .map((uid) => ({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 }))
+      .sort((a, b) => b.rsvpAt - a.rsvpAt)
+    return withRsvp[0]?.uid ?? null
+  }
+
+  for (let targetTi = teams.length - 1; targetTi >= 0; targetTi--) {
     if (teamHasGk(teams[targetTi])) continue
 
     const laterTeams = teams.slice(targetTi + 1)
     const gksLater: { uid: string; rsvpAt: number }[] = []
     for (const t of laterTeams) {
       for (const uid of t.playerIds) {
-        if (isGoalkeeper(effectivePosition(uid))) {
-          gksLater.push({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 })
-        }
+        if (!isGoalkeeper(effectivePosition(uid))) continue
+        if (insertedGkIds.has(uid)) continue
+        gksLater.push({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 })
       }
     }
     if (gksLater.length === 0) continue
     gksLater.sort((a, b) => a.rsvpAt - b.rsvpAt)
     const gkId = gksLater[0].uid
 
-    const gkCurrentTeamIndex = teams.findIndex((t) => t.playerIds.includes(gkId))
-    if (gkCurrentTeamIndex < 0) continue
-    const mainTeam = teams[targetTi]
-    const gkTeam = teams[gkCurrentTeamIndex]
-    const nonGksOnMain = mainTeam.playerIds
-      .filter((uid) => !isGoalkeeper(effectivePosition(uid)))
-      .map((uid) => ({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 }))
-      .sort((a, b) => b.rsvpAt - a.rsvpAt)
-    const bumpedId = nonGksOnMain[0]?.uid
-    if (!bumpedId) continue
+    const gkTeamIndex = teams.findIndex((t) => t.playerIds.includes(gkId))
+    if (gkTeamIndex < 0 || gkTeamIndex <= targetTi) continue
 
-    mainTeam.playerIds = mainTeam.playerIds.map((id) =>
-      id === bumpedId ? gkId : id
+    // Cascade: team targetTi gets GK; team targetTi's last → targetTi+1; ...; team gkTeamIndex-1's last non-GK → gkTeamIndex (GK's spot).
+    const chain: string[] = []
+    const p0 = lastByRsvp(teams[targetTi].playerIds, false)
+    if (!p0) continue
+    chain[targetTi] = p0
+    for (let i = targetTi + 1; i < gkTeamIndex; i++) {
+      const pi = lastByRsvp(teams[i].playerIds, true)
+      if (!pi) break
+      chain[i] = pi
+    }
+    const lastBumped = chain[gkTeamIndex - 1] ?? chain[targetTi]
+    if (!lastBumped) continue
+
+    // Apply cascade: targetTi: replace chain[targetTi] with GK; i in [targetTi+1, gkTeamIndex-1]: replace chain[i] with chain[i-1]; gkTeamIndex: replace GK with lastBumped.
+    teams[targetTi].playerIds = teams[targetTi].playerIds.map((id) =>
+      id === chain[targetTi] ? gkId : id
     )
-    gkTeam.playerIds = gkTeam.playerIds.map((id) =>
-      id === gkId ? bumpedId : id
+    for (let i = targetTi + 1; i < gkTeamIndex; i++) {
+      const prev = chain[i - 1]
+      const curr = chain[i]
+      if (prev != null && curr != null) {
+        teams[i].playerIds = teams[i].playerIds.map((id) =>
+          id === curr ? prev : id
+        )
+      }
+    }
+    teams[gkTeamIndex].playerIds = teams[gkTeamIndex].playerIds.map((id) =>
+      id === gkId ? lastBumped : id
     )
-    gkReplacements.push({ insertedGK: gkId, removedPlayer: bumpedId })
+
+    gkReplacements.push({ insertedGK: gkId, removedPlayer: chain[targetTi] })
+    insertedGkIds.add(gkId)
   }
 
   // Admins who RSVP'd after the first 22: swap them into the first two teams by replacing the last non-admin(s) by RSVP time
