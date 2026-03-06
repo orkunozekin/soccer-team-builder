@@ -2,6 +2,7 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { deleteMatch } from '@/lib/matches/deleteMatch'
 
 function dateToTimestamp(d: string | null): Timestamp | null {
   if (!d) return null
@@ -103,24 +104,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Match not found' }, { status: 404 })
     }
 
-    // Delete subcollections: teams and bench
-    const teamsSnap = await adminDb.collection(`matches/${matchId}/teams`).get()
-    const benchSnap = await adminDb.collection(`matches/${matchId}/bench`).get()
-    const batch = adminDb.batch()
-    teamsSnap.docs.forEach((d) => batch.delete(d.ref))
-    benchSnap.docs.forEach((d) => batch.delete(d.ref))
-    await batch.commit()
-
-    // Delete RSVPs for this match (top-level collection with matchId field)
-    const rsvpsSnap = await adminDb
-      .collection('rsvps')
-      .where('matchId', '==', matchId)
-      .get()
-    const rsvpBatch = adminDb.batch()
-    rsvpsSnap.docs.forEach((d) => rsvpBatch.delete(d.ref))
-    if (!rsvpsSnap.empty) await rsvpBatch.commit()
-
-    await matchRef.delete()
+    await deleteMatch(adminDb, matchId)
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     console.error('Error deleting match:', error)

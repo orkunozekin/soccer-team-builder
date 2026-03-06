@@ -2,6 +2,7 @@ import { Receiver } from '@upstash/qstash'
 import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { deleteMatch } from '@/lib/matches/deleteMatch'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -64,14 +65,14 @@ async function authorizeCronRequest(
 }
 
 /**
- * Apply RSVP open/close for all matches with rsvpOpenAt/rsvpCloseAt.
+ * Apply RSVP open for matches with rsvpOpenAt/rsvpCloseAt; at close time delete the match instead of closing.
  * Triggered by Upstash QStash (9am + 10pm CT) or manually with CRON_SECRET.
  */
 async function runRsvpSchedule(): Promise<{
   ok: boolean
   checked: number
   opened: number
-  closed: number
+  deleted: number
 }> {
   const adminDb = getAdminDb()
   if (!adminDb) {
@@ -85,7 +86,7 @@ async function runRsvpSchedule(): Promise<{
     .get()
 
   let opened = 0
-  let closed = 0
+  const matchIdsToDelete: string[] = []
   const batch = adminDb.batch()
 
   for (const doc of matchesSnap.docs) {
@@ -96,6 +97,7 @@ async function runRsvpSchedule(): Promise<{
 
     const shouldBeOpen = now >= openAt && now <= closeAt
     const currentlyOpen = data.rsvpOpen === true
+    const pastClose = now > closeAt
 
     if (shouldBeOpen && !currentlyOpen) {
       batch.update(doc.ref, {
@@ -103,24 +105,25 @@ async function runRsvpSchedule(): Promise<{
         updatedAt: Timestamp.now(),
       })
       opened += 1
-    } else if (!shouldBeOpen && currentlyOpen) {
-      batch.update(doc.ref, {
-        rsvpOpen: false,
-        updatedAt: Timestamp.now(),
-      })
-      closed += 1
+    } else if (pastClose && currentlyOpen) {
+      // At close time: delete the match instead of setting rsvpOpen false
+      matchIdsToDelete.push(doc.id)
     }
   }
 
-  if (opened > 0 || closed > 0) {
+  if (opened > 0) {
     await batch.commit()
+  }
+
+  for (const matchId of matchIdsToDelete) {
+    await deleteMatch(adminDb, matchId)
   }
 
   return {
     ok: true,
     checked: matchesSnap.size,
     opened,
-    closed,
+    deleted: matchIdsToDelete.length,
   }
 }
 
