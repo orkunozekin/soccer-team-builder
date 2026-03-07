@@ -1,49 +1,79 @@
-import { Team } from '@/interfaces/Team.interface'
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion'
-import { cn } from '@/lib/utils'
-import TeamPlayerRow from './TeamPlayerRow'
-import TeamColorEdit from './TeamColorEdit'
+'use client'
 
-type Props = {
+import { User } from '@/types/user'
+import { Team } from '@/types/team'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { isGoalkeeper } from '@/lib/utils/teamGenerator'
+
+interface TeamCardProps {
   team: Team
+  users: User[]
+  /** When set, the current user's row is highlighted */
+  currentUserId?: string | null
 }
 
-export default function TeamCard({ team }: Props) {
-  const colors = {
-    ORANGE: 'bg-pinny-orange',
-    GREEN: 'bg-pinny-green',
-    BLUE: 'bg-pinny-blue',
-    RED: 'bg-red-60',
-  }
-
-  const playerCount = team.players.length
+export function TeamCard({ team, users, currentUserId }: TeamCardProps) {
+  const teamUsers = team.playerIds
+    .map((userId) => users.find((u) => u.uid === userId))
+    .filter((u): u is User => !!u)
 
   return (
-    <Accordion type="single" collapsible className="w-full">
-      <AccordionItem
-        value={team.id}
-        className={cn(
-          'rounded-lg border border-neutral-50 px-2',
-          colors[team.color]
-        )}
-      >
-        <AccordionTrigger className="hover:no-underline [&_svg]:text-black">
-          <p className="text-sm font-semibold">
-            {team.name} ({playerCount})
-          </p>
-        </AccordionTrigger>
-        <AccordionContent>
-          <section className="flex flex-col gap-4">
-            <TeamColorEdit team={team} />
-            <TeamPlayerRow team={team} />
-          </section>
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>{team.name || `Team ${team.teamNumber}`}</CardTitle>
+          <Badge
+            style={{ backgroundColor: team.color || '#3b82f6' }}
+            className="text-white"
+          >
+            {team.playerIds.length}/{team.maxSize}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {teamUsers.length === 0 ? (
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              No players assigned
+            </p>
+          ) : (
+            teamUsers.map((user) => {
+              const isCurrentUser = currentUserId != null && user.uid === currentUserId
+              return (
+                <div
+                  key={user.uid}
+                  className={`flex items-center gap-2 text-sm rounded-md px-2 py-1.5 -mx-2 ${
+                    isCurrentUser
+                      ? 'bg-primary/10 dark:bg-primary/20 ring-1 ring-primary/40 dark:ring-primary/50 font-medium'
+                      : ''
+                  }`}
+                >
+                  <span
+                    className="flex items-center justify-center w-8 h-8 rounded-full text-white text-xs font-bold"
+                    style={{ backgroundColor: team.color || '#3b82f6' }}
+                  >
+                    {user.jerseyNumber != null ? user.jerseyNumber : ''}
+                  </span>
+                  <span>{user.displayName}</span>
+                  {user.position && (
+                    <Badge
+                      variant="outline"
+                      className={`ml-auto shrink-0 text-xs ${
+                        isGoalkeeper(user.position)
+                          ? 'bg-amber-200/90 dark:bg-amber-700/50 border-amber-400 dark:border-amber-600 text-amber-900 dark:text-amber-100'
+                          : ''
+                      }`}
+                    >
+                      {user.position}
+                    </Badge>
+                  )}
+                </div>
+              )
+            })
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }

@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { AuthProvider } from '@/components/auth/AuthProvider'
+import { EmulatorAuthGate } from '@/components/auth/EmulatorAuthGate'
+import { Navigation } from '@/components/layout/Navigation'
 import { cn } from '@/lib/utils'
 
 // Use the Google Inter font from next/font
@@ -10,8 +13,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Jville Soccer',
-  description: 'Jville Soccer Team Builder',
+  title: 'Soccerville',
+  description: 'Soccerville Team Builder',
 }
 
 export default function RootLayout({
@@ -22,10 +25,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={cn(inter.variable, 'antialiased')}>
-        <header className="sticky top-0 z-20 mb-4 flex items-center justify-center bg-red-50 py-2 font-semibold text-white">
-          Jville Soccer Team Builder
-        </header>
-        {children}
+        <EmulatorAuthGate>
+          <AuthProvider>
+            <Navigation />
+            {children}
+          </AuthProvider>
+        </EmulatorAuthGate>
       </body>
     </html>
   )

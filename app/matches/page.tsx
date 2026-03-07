@@ -1,0 +1,119 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
+import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
+import { MatchCard } from '@/components/matches/MatchCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useAdmin } from '@/lib/hooks/useAdmin'
+import { useAuth } from '@/lib/hooks/useAuth'
+import { getAllMatches } from '@/lib/services/matchService'
+import { getMatchRsvpCount } from '@/lib/services/rsvpService'
+import { useMatchStore } from '@/store/matchStore'
+
+export default function MatchesPage() {
+  const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
+  const { isAdmin } = useAdmin()
+  const { matches, loading, setMatches, setLoading } = useMatchStore()
+  const [rsvpCounts, setRsvpCounts] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login')
+      return
+    }
+
+    const fetchMatches = async () => {
+      if (user) {
+        setLoading(true)
+        try {
+          const allMatches = await getAllMatches()
+          setMatches(allMatches)
+          const counts: Record<string, number> = {}
+          await Promise.all(
+            allMatches.map(async (m) => {
+              counts[m.id] = await getMatchRsvpCount(m.id)
+            })
+          )
+          setRsvpCounts(counts)
+        } catch (error) {
+          console.error('Error fetching matches:', error)
+        } finally {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchMatches()
+  }, [user, authLoading, router, setMatches, setLoading])
+
+  const refetchMatchesAndCounts = async () => {
+    const allMatches = await getAllMatches()
+    setMatches(allMatches)
+    const counts: Record<string, number> = {}
+    await Promise.all(
+      allMatches.map(async (m) => {
+        counts[m.id] = await getMatchRsvpCount(m.id)
+      })
+    )
+    setRsvpCounts(counts)
+  }
+
+  if (authLoading || loading) {
+    return <PageLoadingSkeleton variant="container" />
+  }
+
+  if (!user) {
+    return null
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">Matches</h1>
+        <p className="text-zinc-600 dark:text-zinc-400">
+          View and RSVP to upcoming matches
+        </p>
+      </div>
+
+      {isAdmin && (
+        <div className="mb-6">
+          <CreateMatchCard
+            onMatchCreated={refetchMatchesAndCounts}
+          />
+        </div>
+      )}
+
+      {matches.length === 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>No Matches</CardTitle>
+            <CardDescription>
+              No matches have been created yet. Check back soon!
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              {isAdmin
+                ? 'Create a match using the form above.'
+                : 'Check back soon for upcoming matches!'}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {matches.map((match) => (
+            <MatchCard
+              key={match.id}
+              match={match}
+              rsvpCount={rsvpCounts[match.id]}
+              isAdmin={isAdmin ?? false}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
