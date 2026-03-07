@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest'
-
-import { type RSVP } from '@/types/rsvp'
-import { type User } from '@/types/user'
 import {
   computeTeamCountForRSVPCount,
   generateTeamsWithReplacements,
   isGoalkeeper,
 } from './teamGenerator'
+import { type RSVP } from '@/types/rsvp'
+import { type User } from '@/types/user'
 
 function makeUser(id: string, overrides: Partial<User> = {}): User {
   return {
