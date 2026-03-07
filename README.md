@@ -16,3 +16,10 @@ RSVP opens automatically at 6:00 AM CT and the match gets deleted at 10:00 PM CT
 1. Zustand (State management)
 2. Shadcn/ui (headless UI components)
 3. Tailwindcss for styling
+
+## Testing
+
+Unit tests use [Vitest](https://vitest.dev/) and [React Testing Library](https://testing-library.com/react). Run tests:
+
+- `yarn test` — watch mode
+- `yarn test:run` — single run
