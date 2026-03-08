@@ -1,8 +1,8 @@
-import { useTeamsStore } from '@/store/useTeamsStore'
+import PlayersRowItem from './PlayersRowItem'
+import TrashIcon from '../icons/TrashIcon'
 import PlayerTransferTeamOptions from '../player/PlayerTransferTeamOptions'
 import { KebabMenuItem } from '@/interfaces/KebabMenu.interface'
-import TrashIcon from '../icons/TrashIcon'
-import PlayersRowItem from './PlayersRowItem'
+import { useTeamsStore } from '@/store/useTeamsStore'
 
 const AllPlayersList = () => {
   const { players, teams, deletePlayer, removeTeamPlayer, reassignPlayer } =

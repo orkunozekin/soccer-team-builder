@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { matchId, playerId, targetTeamId, currentTeamId, isOnBench } =
+    const { matchId, playerId, targetTeamId, currentTeamId } =
       await request.json()
 
     if (!matchId || !playerId || targetTeamId === undefined) {

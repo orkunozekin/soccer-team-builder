@@ -1,4 +1,5 @@
 import React, { Fragment } from 'react'
+import EllipsisHorizontal from './icons/EllipsisHorizontal'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -6,7 +7,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import EllipsisHorizontal from './icons/EllipsisHorizontal'
 import { KebabMenuItem } from '@/interfaces/KebabMenu.interface'
 
 type Props = {

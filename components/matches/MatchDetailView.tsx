@@ -45,7 +45,6 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
   const [teams, setTeams] = useState<Team[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [loadingTeams, setLoadingTeams] = useState(true)
-  const [fetchError, setFetchError] = useState<string | null>(null)
   const usersWithMatchPosition = useMemo(
     () =>
       allUsers.map(u => {
@@ -60,7 +59,6 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
       if (!matchId || !user) return
 
       setLoadingMatch(true)
-      setFetchError(null)
       try {
         const match = await getMatch(matchId)
         if (!match) {
@@ -74,7 +72,7 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
           const rsvps = await getMatchRSVPs(matchId)
           setMatchRSVPs(rsvps)
         } catch {
-          setFetchError('Failed to load RSVPs')
+          console.error('Failed to load RSVPs')
         }
 
         try {
@@ -85,10 +83,10 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
           setTeams(matchTeams)
           setAllUsers(users)
         } catch {
-          setFetchError('Failed to load teams or players')
+          console.error('Failed to load teams or players')
         }
       } catch {
-        setFetchError('Failed to load match')
+        console.error('Failed to load match')
         router.push(backLink.href)
         return
       } finally {

@@ -1,5 +1,7 @@
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Form,
   FormControl,
@@ -7,9 +9,7 @@ import {
   FormItem,
   FormMessage,
 } from '@/components/ui/form'
-import { z } from 'zod'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { Textarea } from '@/components/ui/textarea'
 import { capitalizeFirstLetter } from '@/lib/stringUtils'
 import { useTeamsStore } from '@/store/useTeamsStore'
 

@@ -1,16 +1,15 @@
 import {
   createDocument,
-  getDocument,
-  updateDocument,
   deleteDocument,
+  getDocument,
   queryCollectionAtPath,
   timestampToDate,
+  updateDocument,
 } from '@/lib/firebase/firestore'
-import { Team, TeamFirestore, Bench } from '@/types/team'
+import { Team, TeamFirestore } from '@/types/team'
 
 // Teams are stored as subcollection under matches
 const getTeamsCollectionPath = (matchId: string) => `matches/${matchId}/teams`
-const getBenchCollectionPath = (matchId: string) => `matches/${matchId}/bench`
 
 export const createTeam = async (
   matchId: string,
@@ -84,19 +83,3 @@ export const deleteTeam = async (
   await deleteDocument(getTeamsCollectionPath(matchId), teamId)
 }
 
-// Bench is no longer used; return empty stub for backwards compatibility
-export const getBench = async (matchId: string): Promise<Bench | null> => {
-  return {
-    id: `bench_${matchId}`,
-    matchId,
-    playerIds: [],
-    updatedAt: new Date(),
-  }
-}
-
-export const updateBench = async (
-  _matchId: string,
-  _playerIds: string[]
-): Promise<void> => {
-  // No-op: bench removed; all players are on teams
-}

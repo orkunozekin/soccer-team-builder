@@ -10,7 +10,7 @@ import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 
 export function Navigation() {
-  const { user, userData, loading } = useAuth()
+  const { user, loading } = useAuth()
   const { isAdmin } = useAdmin()
   const router = useRouter()
   const [isMenuOpen, setIsMenuOpen] = useState(false)

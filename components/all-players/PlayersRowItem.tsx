@@ -1,8 +1,8 @@
-import { Player } from '@/interfaces/Player.interface'
 import React from 'react'
+import KebabMenu from '../KebabMenu'
 import PlayerName from '../player/PlayerName'
 import { KebabMenuItem } from '@/interfaces/KebabMenu.interface'
-import KebabMenu from '../KebabMenu'
+import { Player } from '@/interfaces/Player.interface'
 import { cn } from '@/lib/utils'
 
 type Props = {

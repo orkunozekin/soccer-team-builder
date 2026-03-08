@@ -1,16 +1,16 @@
 'use client'
 
-import { useTeamsStore } from '@/store/useTeamsStore'
 import AllPlayersList from './AllPlayersList'
-import { cn } from '@/lib/utils'
+import CloseIcon from '../icons/CloseIcon'
+import { Button } from '../ui/button'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
-import CloseIcon from '../icons/CloseIcon'
-import { Button } from '../ui/button'
+import { cn } from '@/lib/utils'
+import { useTeamsStore } from '@/store/useTeamsStore'
 
 export default function AllPlayersScrollArea() {
   const { players, clearPlayers } = useTeamsStore()

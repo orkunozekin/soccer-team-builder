@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { PositionSelector } from '@/components/profile/PositionSelector'
 import { Button } from '@/components/ui/button'
-import { ButtonSpinner } from '@/components/ui/button-spinner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/lib/hooks/useAuth'

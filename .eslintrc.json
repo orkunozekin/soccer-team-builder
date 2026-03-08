@@ -9,9 +9,16 @@
     "prettier"
   ],
   "rules": {
-    "@typescript-eslint/no-unused-vars": "warn",
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/no-var-requires": "off",
+    "react-hooks/exhaustive-deps": "off",
     "jsx-quotes": [
       "warn",
       "prefer-double"

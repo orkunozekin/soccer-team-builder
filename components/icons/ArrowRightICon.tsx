@@ -1,5 +1,5 @@
-import { cn } from '@/lib/utils'
 import React from 'react'
+import { cn } from '@/lib/utils'
 
 type Props = {
   onClick?: () => void
@@ -9,6 +9,7 @@ type Props = {
 const ArrowRightICon = ({ onClick, className = '' }: Props) => {
   return (
     <svg
+      onClick={onClick}
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
       viewBox="0 0 24 24"
