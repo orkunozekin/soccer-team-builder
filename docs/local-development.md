@@ -36,8 +36,8 @@ firebase emulators:start --only auth,firestore
 
 Leave this running. You’ll get:
 
-- **Auth emulator** – http://127.0.0.1:9099  
-- **Firestore emulator** – http://127.0.0.1:8080  
+- **Auth emulator** – http://127.0.0.1:9099
+- **Firestore emulator** – http://127.0.0.1:8080
 - **Emulator UI** – http://127.0.0.1:4000 (inspect data and users)
 
 ## 3. Point the app at the emulators

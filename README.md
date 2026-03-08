@@ -6,7 +6,6 @@
 
 To use a **local database** instead of production Firebase (Auth + Firestore), see [docs/local-development.md](docs/local-development.md).
 
-
 ## RSVP schedule (cron)
 
 RSVP opens automatically at 6:00 AM CT and the match gets deleted at 10:00 PM CT on match day. See [docs/rsvp-cron.md](docs/rsvp-cron.md) for cron setup.

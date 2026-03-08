@@ -29,7 +29,8 @@ export function computeTeamCountForRSVPCount(
 ): number {
   const baseCapacity = baseTeams * maxTeamSize
   const extraPlayers = Math.max(0, rsvpCount - baseCapacity)
-  const extraTeams = extraPlayers > 0 ? Math.ceil(extraPlayers / maxTeamSize) : 0
+  const extraTeams =
+    extraPlayers > 0 ? Math.ceil(extraPlayers / maxTeamSize) : 0
   return Math.max(baseTeams, baseTeams + extraTeams)
 }
 
@@ -52,7 +53,7 @@ function fillTeam(
       deferred.push(rsvp)
       continue
     }
-    const user = users.find((u) => u.uid === rsvp.userId)
+    const user = users.find(u => u.uid === rsvp.userId)
     const effectivePosition = rsvp.position ?? user?.position ?? null
     const isGk = isGoalkeeper(effectivePosition)
     if (isGk && gkCount >= maxGk) {
@@ -96,7 +97,7 @@ export function generateTeamsWithReplacements(
   const sorted = [...rsvps].sort(
     (a, b) => (a.rsvpAt?.getTime() ?? 0) - (b.rsvpAt?.getTime() ?? 0)
   )
-  const pool = sorted.filter((r) => users.some((u) => u.uid === r.userId))
+  const pool = sorted.filter(r => users.some(u => u.uid === r.userId))
 
   const teams: TeamAssignment[] = []
 
@@ -115,15 +116,15 @@ export function generateTeamsWithReplacements(
     teamNumber += 1
   }
 
-  const userById = new Map(users.map((u) => [u.uid, u]))
-  const rsvpByUserId = new Map(sorted.map((r) => [r.userId, r]))
+  const userById = new Map(users.map(u => [u.uid, u]))
+  const rsvpByUserId = new Map(sorted.map(r => [r.userId, r]))
   const rsvpAtByUserId = new Map(
-    sorted.map((r) => [r.userId, r.rsvpAt?.getTime() ?? 0])
+    sorted.map(r => [r.userId, r.rsvpAt?.getTime() ?? 0])
   )
   const effectivePosition = (uid: string): string | null => {
     const r = rsvpByUserId.get(uid)
     const u = userById.get(uid)
-    return (r?.position ?? u?.position ?? null) ?? null
+    return r?.position ?? u?.position ?? null ?? null
   }
 
   // For each team that has no GK, take the earliest GK by RSVP from a later team.
@@ -133,13 +134,16 @@ export function generateTeamsWithReplacements(
   // push off last non-GK to preserve GK spot); repeat until the last bumped fills the GK's vacated spot on G.
   const gkReplacements: GkReplacement[] = []
   const teamHasGk = (t: TeamAssignment) =>
-    t.playerIds.some((uid) => isGoalkeeper(effectivePosition(uid)))
+    t.playerIds.some(uid => isGoalkeeper(effectivePosition(uid)))
   const insertedGkIds = new Set<string>()
 
-  const lastByRsvp = (playerIds: string[], nonGkOnly: boolean): string | null => {
+  const lastByRsvp = (
+    playerIds: string[],
+    nonGkOnly: boolean
+  ): string | null => {
     const withRsvp = playerIds
-      .filter((uid) => !nonGkOnly || !isGoalkeeper(effectivePosition(uid)))
-      .map((uid) => ({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 }))
+      .filter(uid => !nonGkOnly || !isGoalkeeper(effectivePosition(uid)))
+      .map(uid => ({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 }))
       .sort((a, b) => b.rsvpAt - a.rsvpAt)
     return withRsvp[0]?.uid ?? null
   }
@@ -153,7 +157,7 @@ export function generateTeamsWithReplacements(
   /** Last non-GK by RSVP (latest RSVP among non-GKs) so we keep GK on the team when pushing someone off. */
   const lastNonGkByRsvp = (playerIds: string[]): string | null => {
     const nonGks = playerIds.filter(
-      (uid) => !isGoalkeeper(effectivePosition(uid))
+      uid => !isGoalkeeper(effectivePosition(uid))
     )
     if (nonGks.length === 0) return null
     return lastByRsvp(nonGks, false)
@@ -175,7 +179,7 @@ export function generateTeamsWithReplacements(
     gksLater.sort((a, b) => a.rsvpAt - b.rsvpAt)
     const gkId = gksLater[0].uid
 
-    const gkTeamIndex = teams.findIndex((t) => t.playerIds.includes(gkId))
+    const gkTeamIndex = teams.findIndex(t => t.playerIds.includes(gkId))
     if (gkTeamIndex < 0 || gkTeamIndex <= targetTi) continue
 
     // Shift-down: target team gets GK (bump its last by RSVP); bumped goes to first spot on next team, etc.
@@ -183,7 +187,7 @@ export function generateTeamsWithReplacements(
     if (!p0) continue
 
     // 1. Target team: replace p0 with GK
-    teams[targetTi].playerIds = teams[targetTi].playerIds.map((id) =>
+    teams[targetTi].playerIds = teams[targetTi].playerIds.map(id =>
       id === p0 ? gkId : id
     )
 
@@ -194,13 +198,18 @@ export function generateTeamsWithReplacements(
       const sorted = teamSortedByRsvp(teams[i].playerIds)
       const pushOff = lastNonGkByRsvp(teams[i].playerIds)
       if (!pushOff) break
-      teams[i].playerIds = [bumped, ...sorted.filter((uid) => uid !== pushOff)]
+      teams[i].playerIds = [bumped, ...sorted.filter(uid => uid !== pushOff)]
       bumped = pushOff
     }
 
     // 3. GK's team: same shift-down rule — insert bumped at first spot, remove GK (no in-place replacement)
-    const gkTeamWithoutGk = teams[gkTeamIndex].playerIds.filter((id) => id !== gkId)
-    teams[gkTeamIndex].playerIds = [bumped, ...teamSortedByRsvp(gkTeamWithoutGk)]
+    const gkTeamWithoutGk = teams[gkTeamIndex].playerIds.filter(
+      id => id !== gkId
+    )
+    teams[gkTeamIndex].playerIds = [
+      bumped,
+      ...teamSortedByRsvp(gkTeamWithoutGk),
+    ]
 
     gkReplacements.push({ insertedGK: gkId, removedPlayer: p0 })
     insertedGkIds.add(gkId)
@@ -231,24 +240,28 @@ export function generateTeamsWithReplacements(
     }
     firstTwoNonAdmins.sort(
       (a, b) =>
-        (rsvpAtByUserId.get(b.userId) ?? 0) - (rsvpAtByUserId.get(a.userId) ?? 0)
+        (rsvpAtByUserId.get(b.userId) ?? 0) -
+        (rsvpAtByUserId.get(a.userId) ?? 0)
     )
 
-    const swapCount = Math.min(overflowAdminIds.length, firstTwoNonAdmins.length)
+    const swapCount = Math.min(
+      overflowAdminIds.length,
+      firstTwoNonAdmins.length
+    )
     for (let i = 0; i < swapCount; i++) {
       const adminId = overflowAdminIds[i]
       const { userId: bumpedId, teamIndex } = firstTwoNonAdmins[i]
 
       const mainTeam = teams[teamIndex]
-      mainTeam.playerIds = mainTeam.playerIds.map((id) =>
+      mainTeam.playerIds = mainTeam.playerIds.map(id =>
         id === bumpedId ? adminId : id
       )
 
-      const overflowTeam = overflowTeams.find((t) =>
+      const overflowTeam = overflowTeams.find(t =>
         t.playerIds.includes(adminId)
       )
       if (overflowTeam) {
-        overflowTeam.playerIds = overflowTeam.playerIds.map((id) =>
+        overflowTeam.playerIds = overflowTeam.playerIds.map(id =>
           id === adminId ? bumpedId : id
         )
       }

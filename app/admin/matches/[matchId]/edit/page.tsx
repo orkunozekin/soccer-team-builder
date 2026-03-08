@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { AdminRouteGuard } from '@/components/admin/AdminRouteGuard'
 
 function EditMatchRedirect() {

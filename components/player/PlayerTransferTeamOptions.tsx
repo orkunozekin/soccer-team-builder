@@ -1,7 +1,7 @@
+import React from 'react'
 import { Player } from '@/interfaces/Player.interface'
 import { Team } from '@/interfaces/Team.interface'
 import { cn } from '@/lib/utils'
-import React from 'react'
 
 type Props = {
   player: Player

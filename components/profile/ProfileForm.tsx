@@ -1,14 +1,13 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { PositionSelector } from '@/components/profile/PositionSelector'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { updateUser } from '@/lib/services/userService'
 import { useAuthStore } from '@/store/authStore'
-import { PositionSelector } from '@/components/profile/PositionSelector'
-import { Button } from '@/components/ui/button'
-import { ButtonSpinner } from '@/components/ui/button-spinner'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { User } from '@/types/user'
 
 export function ProfileForm() {
@@ -32,12 +31,14 @@ function ProfileFormInner({
   user: import('firebase/auth').User
   userData: User
 }) {
-  const setUserData = useAuthStore((state) => state.setUserData)
+  const setUserData = useAuthStore(state => state.setUserData)
   const [displayName, setDisplayName] = useState(userData.displayName)
   const [jerseyNumber, setJerseyNumber] = useState<string>(
     userData.jerseyNumber?.toString() || ''
   )
-  const [position, setPosition] = useState<string | null>(userData.position ?? null)
+  const [position, setPosition] = useState<string | null>(
+    userData.position ?? null
+  )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -99,7 +100,9 @@ function ProfileFormInner({
       const jersey =
         Number.isNaN(parsed) || parsed < 0 || parsed > 99 ? null : parsed
 
-      const updates: Partial<Pick<User, 'displayName' | 'jerseyNumber' | 'position'>> = {
+      const updates: Partial<
+        Pick<User, 'displayName' | 'jerseyNumber' | 'position'>
+      > = {
         displayName: trimmedName,
         jerseyNumber: jersey,
         position,
@@ -115,7 +118,8 @@ function ProfileFormInner({
       setUserData(updatedUserData)
 
       const updated: string[] = []
-      if (trimmedName !== initialValues.displayName) updated.push('Display name')
+      if (trimmedName !== initialValues.displayName)
+        updated.push('Display name')
       if (jersey !== initialJerseyNormalized) updated.push('Jersey number')
       if (position !== initialValues.position) updated.push('Position')
       const message =
@@ -145,7 +149,7 @@ function ProfileFormInner({
           type="text"
           placeholder="Enter your name"
           value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
+          onChange={e => setDisplayName(e.target.value)}
           required
           disabled={loading}
           className={inputClass}
@@ -164,11 +168,11 @@ function ProfileFormInner({
           max="99"
           placeholder="0–99"
           value={jerseyNumber}
-          onChange={(e) => setJerseyNumber(e.target.value)}
+          onChange={e => setJerseyNumber(e.target.value)}
           disabled={loading}
           className={inputClass}
         />
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
           Optional · 0 to 99
         </p>
       </div>
@@ -186,7 +190,7 @@ function ProfileFormInner({
       )}
 
       {successMessage && (
-        <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/30 px-4 py-3 text-sm font-medium text-emerald-800 dark:text-emerald-300">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">
           {successMessage}
         </div>
       )}
@@ -196,7 +200,7 @@ function ProfileFormInner({
           type="submit"
           loading={loading}
           disabled={!hasChanges}
-          className="w-full h-11 rounded-lg text-base font-semibold shadow-sm"
+          className="h-11 w-full rounded-lg text-base font-semibold shadow-sm"
         >
           Update Profile
         </Button>

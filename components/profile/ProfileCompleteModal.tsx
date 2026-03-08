@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { createPortal } from 'react-dom'
+import { PositionSelector } from '@/components/profile/PositionSelector'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { PositionSelector } from '@/components/profile/PositionSelector'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { updateUser } from '@/lib/services/userService'
 import { cn } from '@/lib/utils'
@@ -19,9 +19,13 @@ interface ProfileCompleteModalProps {
   onSaved?: () => void
 }
 
-export function ProfileCompleteModal({ open, onOpenChange, onSaved }: ProfileCompleteModalProps) {
+export function ProfileCompleteModal({
+  open,
+  onOpenChange,
+  onSaved,
+}: ProfileCompleteModalProps) {
   const { user, userData } = useAuth()
-  const setUserData = useAuthStore((state) => state.setUserData)
+  const setUserData = useAuthStore(state => state.setUserData)
   const [displayName, setDisplayName] = useState('')
   const [jerseyNumber, setJerseyNumber] = useState('')
   const [position, setPosition] = useState<string | null>(null)
@@ -57,7 +61,9 @@ export function ProfileCompleteModal({ open, onOpenChange, onSaved }: ProfileCom
 
     setLoading(true)
     try {
-      const updates: Partial<Pick<User, 'displayName' | 'jerseyNumber' | 'position'>> = {
+      const updates: Partial<
+        Pick<User, 'displayName' | 'jerseyNumber' | 'position'>
+      > = {
         displayName: trimmedName,
         jerseyNumber: jersey,
         position: position.trim(),
@@ -94,9 +100,9 @@ export function ProfileCompleteModal({ open, onOpenChange, onSaved }: ProfileCom
         className={cn(
           'fixed left-1/2 top-1/2 z-50 w-full max-w-[min(calc(100vw-2rem),28rem)] -translate-x-1/2 -translate-y-1/2',
           'rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-950',
-          'animate-in fade-in-0 zoom-in-95 duration-200'
+          'duration-200 animate-in fade-in-0 zoom-in-95'
         )}
-        onClick={(e) => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
       >
         <div className="relative">
           <Button
@@ -110,62 +116,67 @@ export function ProfileCompleteModal({ open, onOpenChange, onSaved }: ProfileCom
             <X className="h-4 w-4" />
           </Button>
           <div className="mb-4 pr-8">
-          <h2 id="profile-modal-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            Complete your profile
-          </h2>
-          <p id="profile-modal-desc" className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Set your display name and position to RSVP to matches. You can change your position later in Profile or per match.
-          </p>
+            <h2
+              id="profile-modal-title"
+              className="text-lg font-semibold text-zinc-900 dark:text-zinc-100"
+            >
+              Complete your profile
+            </h2>
+            <p
+              id="profile-modal-desc"
+              className="mt-1 text-sm text-zinc-500 dark:text-zinc-400"
+            >
+              Set your display name and position to RSVP to matches. You can
+              change your position later in Profile or per match.
+            </p>
           </div>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="modal-displayName">
-              Display Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="modal-displayName"
-              type="text"
-              placeholder="Your name"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              disabled={loading}
-              className="h-11"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="position">
-              Position <span className="text-red-500">*</span>
-            </Label>
-            <PositionSelector
-              value={position}
-              onValueChange={setPosition}
-              disabled={loading}
-              hideLabel
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="modal-jerseyNumber">
-              Jersey Number
-            </Label>
-            <Input
-              id="modal-jerseyNumber"
-              type="number"
-              min={0}
-              max={99}
-              placeholder="0–99"
-              value={jerseyNumber}
-              onChange={(e) => setJerseyNumber(e.target.value)}
-              disabled={loading}
-              className="h-11"
-            />
-          </div>
-          {error && (
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-          )}
-          <Button type="submit" loading={loading} className="mt-2">
-            Save and continue
-          </Button>
-        </form>
+            <div className="space-y-2">
+              <Label htmlFor="modal-displayName">
+                Display Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="modal-displayName"
+                type="text"
+                placeholder="Your name"
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
+                disabled={loading}
+                className="h-11"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="position">
+                Position <span className="text-red-500">*</span>
+              </Label>
+              <PositionSelector
+                value={position}
+                onValueChange={setPosition}
+                disabled={loading}
+                hideLabel
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="modal-jerseyNumber">Jersey Number</Label>
+              <Input
+                id="modal-jerseyNumber"
+                type="number"
+                min={0}
+                max={99}
+                placeholder="0–99"
+                value={jerseyNumber}
+                onChange={e => setJerseyNumber(e.target.value)}
+                disabled={loading}
+                className="h-11"
+              />
+            </div>
+            {error && (
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            )}
+            <Button type="submit" loading={loading} className="mt-2">
+              Save and continue
+            </Button>
+          </form>
         </div>
       </div>
     </>

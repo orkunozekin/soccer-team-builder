@@ -2,11 +2,21 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
-import { computeTeamCountForRSVPCount, generateTeams } from '@/lib/utils/teamGenerator'
+import {
+  computeTeamCountForRSVPCount,
+  generateTeams,
+} from '@/lib/utils/teamGenerator'
 import type { RSVP } from '@/types/rsvp'
 import type { User } from '@/types/user'
 
-const TEAM_COLORS = ['#f97316', '#3b82f6', '#eab308', '#65a30d', '#ef4444', '#8b5cf6']
+const TEAM_COLORS = [
+  '#f97316',
+  '#3b82f6',
+  '#eab308',
+  '#65a30d',
+  '#ef4444',
+  '#8b5cf6',
+]
 const TEAM_NAMES = ['Orange', 'Blue', 'Yellow', 'Lime', 'Red', 'Purple']
 
 function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
@@ -50,7 +60,7 @@ export async function POST(request: NextRequest) {
       .where('status', '==', 'confirmed')
       .get()
 
-    const rsvpsToUse: RSVP[] = rsvpSnap.docs.map((d) => {
+    const rsvpsToUse: RSVP[] = rsvpSnap.docs.map(d => {
       const data = d.data()
       return {
         id: d.id,
@@ -72,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     // Fetch all users
     const usersSnap = await adminDb.collection('users').get()
-    const users: User[] = usersSnap.docs.map((d) => {
+    const users: User[] = usersSnap.docs.map(d => {
       const data = d.data()
       return {
         uid: data.uid ?? d.id,
@@ -93,7 +103,7 @@ export async function POST(request: NextRequest) {
 
     const existingTeams = await teamsCol.get()
     const batch = adminDb.batch()
-    existingTeams.docs.forEach((d) => batch.delete(d.ref))
+    existingTeams.docs.forEach(d => batch.delete(d.ref))
     await batch.commit()
 
     const now = Timestamp.now()
@@ -101,16 +111,20 @@ export async function POST(request: NextRequest) {
     for (let i = 0; i < teamAssignments.length; i++) {
       const assignment = teamAssignments[i]
       const teamId = `team_${matchId}_${assignment.teamNumber}_${Date.now()}`
-      writes.push(teamsCol.doc(teamId).set({
-        matchId,
-        teamNumber: assignment.teamNumber,
-        name: TEAM_NAMES[i % TEAM_NAMES.length] ?? `Team ${assignment.teamNumber}`,
-        color: TEAM_COLORS[i % TEAM_COLORS.length] ?? '#3b82f6',
-        playerIds: assignment.playerIds,
-        maxSize: 11,
-        createdAt: now,
-        updatedAt: now,
-      }))
+      writes.push(
+        teamsCol.doc(teamId).set({
+          matchId,
+          teamNumber: assignment.teamNumber,
+          name:
+            TEAM_NAMES[i % TEAM_NAMES.length] ??
+            `Team ${assignment.teamNumber}`,
+          color: TEAM_COLORS[i % TEAM_COLORS.length] ?? '#3b82f6',
+          playerIds: assignment.playerIds,
+          maxSize: 11,
+          createdAt: now,
+          updatedAt: now,
+        })
+      )
     }
 
     await Promise.all(writes)

@@ -1,4 +1,12 @@
-import { createDocument, getDocument, updateDocument, queryDocuments, queryDocumentsPaginated, getCollectionCount, timestampToDate } from '@/lib/firebase/firestore'
+import {
+  createDocument,
+  getCollectionCount,
+  getDocument,
+  queryDocuments,
+  queryDocumentsPaginated,
+  timestampToDate,
+  updateDocument,
+} from '@/lib/firebase/firestore'
 import { User, UserFirestore } from '@/types/user'
 
 export const createUser = async (
@@ -63,7 +71,7 @@ export const getUsersPaginated = async (
     pageSize,
     cursor
   )
-  const users = documents.map((d) => mapDocToUser(d as Record<string, unknown>))
+  const users = documents.map(d => mapDocToUser(d as Record<string, unknown>))
   return { users, nextCursor }
 }
 
@@ -73,7 +81,9 @@ export const getUsersCount = async (): Promise<number> => {
 
 export const updateUser = async (
   uid: string,
-  updates: Partial<Pick<User, 'displayName' | 'jerseyNumber' | 'position' | 'role'>>
+  updates: Partial<
+    Pick<User, 'displayName' | 'jerseyNumber' | 'position' | 'role'>
+  >
 ): Promise<void> => {
   await updateDocument('users', uid, updates)
 }

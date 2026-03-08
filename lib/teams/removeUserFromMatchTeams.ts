@@ -66,7 +66,7 @@ export async function removeUserFromMatchTeams(
       .where('status', '==', 'confirmed')
       .get()
     const rsvpAtByUserId = new Map<string, number>()
-    rsvpsSnap.docs.forEach((d) => {
+    rsvpsSnap.docs.forEach(d => {
       const ddata = d.data()
       rsvpAtByUserId.set(
         ddata.userId as string,
@@ -75,14 +75,16 @@ export async function removeUserFromMatchTeams(
     })
 
     const teamsSnap2 = await teamsCol.get()
-    const overflowPlayers: { userId: string; teamDoc: QueryDocumentSnapshot }[] =
-      []
+    const overflowPlayers: {
+      userId: string
+      teamDoc: QueryDocumentSnapshot
+    }[] = []
     for (const d of teamsSnap2.docs) {
       const tdata = d.data()
       const num = (tdata.teamNumber as number) ?? 0
       if (num > vacatedTeamNumber) {
         const ids = (tdata.playerIds as string[]) ?? []
-        ids.forEach((uid) => overflowPlayers.push({ userId: uid, teamDoc: d }))
+        ids.forEach(uid => overflowPlayers.push({ userId: uid, teamDoc: d }))
       }
     }
     if (overflowPlayers.length > 0) {
@@ -101,9 +103,9 @@ export async function removeUserFromMatchTeams(
       })
 
       const promoteTeamData = promote.teamDoc.data()
-      const promoteTeamIds = ((promoteTeamData.playerIds as string[]) ?? []).filter(
-        (id: string) => id !== promote.userId
-      )
+      const promoteTeamIds = (
+        (promoteTeamData.playerIds as string[]) ?? []
+      ).filter((id: string) => id !== promote.userId)
       if (promoteTeamIds.length === 0) {
         await promoteTeamRef.delete()
         const remainingSnap = await teamsCol.orderBy('teamNumber').get()

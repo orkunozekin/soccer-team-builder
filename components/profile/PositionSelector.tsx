@@ -37,20 +37,20 @@ export function PositionSelector({
       )}
       <Select
         value={value ?? ''}
-        onValueChange={(val) => onValueChange(val === '' ? null : val)}
+        onValueChange={val => onValueChange(val === '' ? null : val)}
         disabled={disabled}
       >
         <SelectTrigger
           id="position"
           className={cn(
-            'h-11 rounded-lg text-sm border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50',
+            'h-11 rounded-lg border-zinc-200 bg-zinc-50/50 text-sm dark:border-zinc-700 dark:bg-zinc-900/50',
             triggerClassName
           )}
         >
           <SelectValue placeholder="Select your position" />
         </SelectTrigger>
         <SelectContent>
-          {SOCCER_POSITIONS.map((position) => (
+          {SOCCER_POSITIONS.map(position => (
             <SelectItem key={position.value} value={position.value}>
               {position.label}
             </SelectItem>

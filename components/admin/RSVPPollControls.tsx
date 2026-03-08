@@ -4,7 +4,13 @@ import { useState } from 'react'
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { updateMatch } from '@/lib/services/matchService'
 import { getRSVPSchedule } from '@/lib/utils/rsvpScheduler'
 import { useMatchStore } from '@/store/matchStore'
@@ -86,8 +92,8 @@ export function RSVPPollControls({ match, onUpdated }: RSVPPollControlsProps) {
         {schedule.openAt && schedule.closeAt && (
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             <span className="font-medium">Default window:</span>{' '}
-            {format(schedule.openAt, 'MMM d, h:mm a')} – {format(schedule.closeAt, 'h:mm a')} CT
-            (match day)
+            {format(schedule.openAt, 'MMM d, h:mm a')} –{' '}
+            {format(schedule.closeAt, 'h:mm a')} CT (match day)
           </p>
         )}
 
@@ -108,7 +114,7 @@ export function RSVPPollControls({ match, onUpdated }: RSVPPollControlsProps) {
             onClick={() => handleToggleRSVP(true)}
             disabled={loading || match.rsvpOpen}
             loading={loading}
-            className="flex-1 h-11 sm:h-9"
+            className="h-11 flex-1 sm:h-9"
           >
             Open RSVP
           </Button>
@@ -117,7 +123,7 @@ export function RSVPPollControls({ match, onUpdated }: RSVPPollControlsProps) {
             disabled={!match.rsvpOpen}
             loading={loading}
             variant="outline"
-            className="flex-1 h-11 sm:h-9"
+            className="h-11 flex-1 sm:h-9"
           >
             Close RSVP
           </Button>

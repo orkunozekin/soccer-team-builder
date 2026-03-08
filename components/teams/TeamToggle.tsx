@@ -8,14 +8,18 @@ interface TeamToggleProps {
   onSelect: (index: number) => void
 }
 
-export function TeamToggle({ teams, selectedIndex, onSelect }: TeamToggleProps) {
+export function TeamToggle({
+  teams,
+  selectedIndex,
+  onSelect,
+}: TeamToggleProps) {
   return (
-    <div className="flex gap-2 justify-center">
+    <div className="flex justify-center gap-2">
       {teams.map((team, index) => (
         <button
           key={team.id}
           onClick={() => onSelect(index)}
-          className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+          className={`rounded px-4 py-2 text-sm font-medium transition-colors ${
             selectedIndex === index
               ? 'bg-primary text-primary-foreground'
               : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'

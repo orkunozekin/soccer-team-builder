@@ -28,7 +28,7 @@ export function Pagination({
   const hasNext = page < totalPages
 
   return (
-    <div className="flex flex-col gap-3 border-t pt-4 mt-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         Showing {start}–{end} of {totalCount} {itemLabel}
       </p>
@@ -41,7 +41,7 @@ export function Pagination({
         >
           Previous
         </Button>
-        <span className="text-sm text-zinc-600 dark:text-zinc-400 px-2">
+        <span className="px-2 text-sm text-zinc-600 dark:text-zinc-400">
           Page {page} of {totalPages}
         </span>
         <Button

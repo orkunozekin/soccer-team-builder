@@ -1,9 +1,9 @@
-import { Player } from '@/interfaces/Player.interface'
 import React, { KeyboardEvent, useEffect, useRef, useState } from 'react'
-import PencilIcon from '@/components/icons/PencilIcon'
 import CheckIcon from '../icons/CheckIcon'
-import { useTeamsStore } from '@/store/useTeamsStore'
+import PencilIcon from '@/components/icons/PencilIcon'
+import { Player } from '@/interfaces/Player.interface'
 import { cn } from '@/lib/utils'
+import { useTeamsStore } from '@/store/useTeamsStore'
 
 type Props = {
   player: Player

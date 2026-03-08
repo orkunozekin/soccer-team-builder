@@ -1,12 +1,12 @@
+import { where } from 'firebase/firestore'
 import {
   createDocument,
-  getDocument,
-  updateDocument,
   deleteDocument,
+  getDocument,
   queryDocuments,
   timestampToDate,
+  updateDocument,
 } from '@/lib/firebase/firestore'
-import { where } from 'firebase/firestore'
 import { RSVP, RSVPStatus } from '@/types/rsvp'
 
 export const createRSVP = async (

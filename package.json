@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "format": "npx prettier --write \"**/*.{js,jsx,ts,tsx,css,scss,md,mdx}\"",
+    "format:check": "npx prettier --check \"**/*.{js,jsx,ts,tsx,css,scss,md,mdx}\"",
     "test": "vitest",
     "test:run": "vitest run",
     "test:rsvp-concurrency": "node scripts/concurrency-test.mjs",
@@ -59,13 +62,15 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.15",
     "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
     "jsdom": "^25.0.1",
+    "lint-staged": "^16.3.2",
     "postcss": "^8",
     "prettier": "^3.3.3",
     "prettier-plugin-tailwindcss": "^0.6.8",
     "tailwind-merge": "^2.5.4",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5",
+    "typescript": "~5.5.4",
     "vitest": "^2.1.6"
   }
 }

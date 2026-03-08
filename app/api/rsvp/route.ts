@@ -1,12 +1,15 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth, verifyAdmin } from '@/lib/api/auth'
+import { verifyAdmin, verifyAuth } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { acquireMatchLock } from '@/lib/locks/matchLock'
 import { expandTeamsForMatch } from '@/lib/teams/expandTeamsForMatch'
 import { removeUserFromMatchTeams } from '@/lib/teams/removeUserFromMatchTeams'
-import { performGkSwap, swapGkWithLowerPriority } from '@/lib/teams/swapGkWithLowerTeam'
+import {
+  performGkSwap,
+  swapGkWithLowerPriority,
+} from '@/lib/teams/swapGkWithLowerTeam'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 
 /**
@@ -29,12 +32,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Match ID required' }, { status: 400 })
     }
 
-    const impersonateUserId = typeof body?.impersonateUserId === 'string' ? body.impersonateUserId.trim() || null : null
+    const impersonateUserId =
+      typeof body?.impersonateUserId === 'string'
+        ? body.impersonateUserId.trim() || null
+        : null
     let effectiveUid: string = uid
     if (impersonateUserId) {
       const { isAdmin } = await verifyAdmin(request)
       if (!isAdmin) {
-        return NextResponse.json({ error: 'Admin required to RSVP on behalf of another user' }, { status: 403 })
+        return NextResponse.json(
+          { error: 'Admin required to RSVP on behalf of another user' },
+          { status: 403 }
+        )
       }
       effectiveUid = impersonateUserId
     }
@@ -62,7 +71,8 @@ export async function POST(request: NextRequest) {
     const userSnap = await adminDb.collection('users').doc(effectiveUid).get()
     const userData = userSnap.exists ? userSnap.data() : null
     const displayName = userData?.displayName
-    const hasName = typeof displayName === 'string' && displayName.trim().length > 0
+    const hasName =
+      typeof displayName === 'string' && displayName.trim().length > 0
     if (!hasName) {
       return NextResponse.json(
         { error: 'Set your display name to RSVP' },
@@ -71,12 +81,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Use provided position or fall back to profile position (per-RSVP position is stored and not changed by later profile updates)
-    const positionFromBody = body?.position != null
-      ? (typeof body.position === 'string' ? body.position.trim() || null : null)
-      : null
-    const position = positionFromBody ?? (userData?.position as string | null) ?? null
+    const positionFromBody =
+      body?.position != null
+        ? typeof body.position === 'string'
+          ? body.position.trim() || null
+          : null
+        : null
+    const position =
+      positionFromBody ?? (userData?.position as string | null) ?? null
 
-    const hasPosition = typeof position === 'string' && position.trim().length > 0
+    const hasPosition =
+      typeof position === 'string' && position.trim().length > 0
     if (!hasPosition) {
       return NextResponse.json(
         { error: 'Set your position in your profile to RSVP' },
@@ -96,17 +111,25 @@ export async function POST(request: NextRequest) {
     if (!existing.empty) {
       const existingDoc = existing.docs[0]
       rsvpId = existingDoc.id
-      const existingPosition = (existingDoc.data()?.position as string | null) ?? null
+      const existingPosition =
+        (existingDoc.data()?.position as string | null) ?? null
       const lock = await acquireMatchLock(adminDb, matchId)
       if (!lock) {
         return NextResponse.json(
-          { error: 'Team update is busy. Please try again in a moment.', code: 'LOCK_BUSY' },
+          {
+            error: 'Team update is busy. Please try again in a moment.',
+            code: 'LOCK_BUSY',
+          },
           { status: 503 }
         )
       }
       try {
         const { regenerated } = await expandTeamsForMatch(adminDb, matchId)
-        return NextResponse.json({ rsvpId, regenerated, position: existingPosition })
+        return NextResponse.json({
+          rsvpId,
+          regenerated,
+          position: existingPosition,
+        })
       } finally {
         await lock.release()
       }
@@ -114,7 +137,11 @@ export async function POST(request: NextRequest) {
 
     // Atomic GK cap + RSVP create using a single per-match state doc (minimal read set for less transaction contention).
     // Retry on Firestore transaction abort.
-    const stateRef = adminDb.collection('matches').doc(matchId).collection('_state').doc('rsvp')
+    const stateRef = adminDb
+      .collection('matches')
+      .doc(matchId)
+      .collection('_state')
+      .doc('rsvp')
     const TX_MAX_ATTEMPTS = 7
     const TX_BACKOFF_BASE_MS = 80
     const TX_BACKOFF_JITTER_MS = 120
@@ -133,7 +160,7 @@ export async function POST(request: NextRequest) {
         updatedAt: now,
       }
       try {
-        await adminDb.runTransaction(async (tx) => {
+        await adminDb.runTransaction(async tx => {
           const stateSnap = await tx.get(stateRef)
           const state = stateSnap.data() ?? {}
           const confirmedCount = (state.confirmedCount as number) ?? 0
@@ -151,12 +178,15 @@ export async function POST(request: NextRequest) {
       } catch (e: unknown) {
         txError = e
         const msg = String((e as { message?: string })?.message ?? e)
-        const isAbort = msg.includes('ABORTED') || msg.includes('Transaction') || msg.includes('lock timeout')
+        const isAbort =
+          msg.includes('ABORTED') ||
+          msg.includes('Transaction') ||
+          msg.includes('lock timeout')
         if (!isAbort || attempt === TX_MAX_ATTEMPTS) throw e
         const delay =
           TX_BACKOFF_BASE_MS * attempt +
           Math.floor(Math.random() * (TX_BACKOFF_JITTER_MS + 1))
-        await new Promise((r) => setTimeout(r, delay))
+        await new Promise(r => setTimeout(r, delay))
       }
     }
     if (txError) throw txError
@@ -164,7 +194,10 @@ export async function POST(request: NextRequest) {
     const lock = await acquireMatchLock(adminDb, matchId)
     if (!lock) {
       return NextResponse.json(
-        { error: 'Team update is busy. Please try again in a moment.', code: 'LOCK_BUSY' },
+        {
+          error: 'Team update is busy. Please try again in a moment.',
+          code: 'LOCK_BUSY',
+        },
         { status: 503 }
       )
     }
@@ -185,7 +218,9 @@ export async function POST(request: NextRequest) {
     console.error('Error creating RSVP:', error)
     const msg = error?.message ?? ''
     const isTransactionAbort =
-      msg.includes('ABORTED') || msg.includes('Transaction') || msg.includes('lock timeout')
+      msg.includes('ABORTED') ||
+      msg.includes('Transaction') ||
+      msg.includes('lock timeout')
     const userMessage = isTransactionAbort
       ? 'Too many people RSVPing at once. Please try again in a moment.'
       : sanitizeErrorForClient(error, 'Failed to create RSVP')
@@ -248,10 +283,16 @@ export async function PATCH(request: NextRequest) {
 
     // Update position flow (PATCH with position field)
     if (positionFromBody !== undefined) {
-      const newPosition = typeof positionFromBody === 'string' ? positionFromBody.trim() || null : null
+      const newPosition =
+        typeof positionFromBody === 'string'
+          ? positionFromBody.trim() || null
+          : null
       const userSnap = await adminDb.collection('users').doc(userId).get()
       const userData = userSnap.exists ? userSnap.data() : null
-      const oldPosition = (data.position as string | null) ?? (userData?.position as string | null) ?? null
+      const oldPosition =
+        (data.position as string | null) ??
+        (userData?.position as string | null) ??
+        null
       const oldIsGk = isGoalkeeper(oldPosition)
       const newIsGk = isGoalkeeper(newPosition)
 
@@ -273,23 +314,36 @@ export async function PATCH(request: NextRequest) {
 
         // If this GK had replaced a non-GK (e.g. via rebalance), swap back with that person first
         const matchSnap = await adminDb.collection('matches').doc(matchId).get()
-        const gkReplacements = (matchSnap.exists ? matchSnap.data()?.gkReplacements : null) as Record<string, string> | undefined
+        const gkReplacements = (
+          matchSnap.exists ? matchSnap.data()?.gkReplacements : null
+        ) as Record<string, string> | undefined
         const replacedUserId = gkReplacements?.[userId]
-        const replacedUserTeamNumber = replacedUserId != null ? teamNumbersByUserId.get(replacedUserId) : undefined
+        const replacedUserTeamNumber =
+          replacedUserId != null
+            ? teamNumbersByUserId.get(replacedUserId)
+            : undefined
         const replacedUserOnLowerTeam =
           replacedUserId != null &&
           replacedUserTeamNumber != null &&
           replacedUserTeamNumber > currentUserTeamNumber
 
         if (replacedUserOnLowerTeam) {
-          const otherUserSnap = await adminDb.collection('users').doc(replacedUserId).get()
-          otherPlayerDisplayName = otherUserSnap.exists ? (otherUserSnap.data()?.displayName as string) || undefined : undefined
+          const otherUserSnap = await adminDb
+            .collection('users')
+            .doc(replacedUserId)
+            .get()
+          otherPlayerDisplayName = otherUserSnap.exists
+            ? (otherUserSnap.data()?.displayName as string) || undefined
+            : undefined
           swapWithReplacedPlayer = true
           await performGkSwap(adminDb, matchId, userId, replacedUserId)
           swapOccurred = true
-          await adminDb.collection('matches').doc(matchId).update({
-            [`gkReplacements.${userId}`]: FieldValue.delete(),
-          })
+          await adminDb
+            .collection('matches')
+            .doc(matchId)
+            .update({
+              [`gkReplacements.${userId}`]: FieldValue.delete(),
+            })
         } else {
           const rsvpsSnap = await adminDb
             .collection('rsvps')
@@ -297,16 +351,22 @@ export async function PATCH(request: NextRequest) {
             .where('status', '==', 'confirmed')
             .get()
           const rsvpPositionsByUserId = new Map<string, string | null>()
-          rsvpsSnap.docs.forEach((d) => {
+          rsvpsSnap.docs.forEach(d => {
             const ddata = d.data()
             const u = ddata.userId as string
-            rsvpPositionsByUserId.set(u, (ddata.position as string | null) ?? null)
+            rsvpPositionsByUserId.set(
+              u,
+              (ddata.position as string | null) ?? null
+            )
           })
           const usersSnap = await adminDb.collection('users').get()
           const userPositionsByUserId = new Map<string, string | null>()
-          usersSnap.docs.forEach((d) => {
+          usersSnap.docs.forEach(d => {
             const u = d.id === d.data()?.uid ? d.id : (d.data()?.uid as string)
-            userPositionsByUserId.set(u, (d.data()?.position as string | null) ?? null)
+            userPositionsByUserId.set(
+              u,
+              (d.data()?.position as string | null) ?? null
+            )
           })
 
           const swapResult = await swapGkWithLowerPriority(
@@ -318,24 +378,42 @@ export async function PATCH(request: NextRequest) {
             userPositionsByUserId
           )
           if (swapResult.swapOccurred && swapResult.otherGkUserId) {
-            const otherUserSnap = await adminDb.collection('users').doc(swapResult.otherGkUserId).get()
-            otherPlayerDisplayName = otherUserSnap.exists ? (otherUserSnap.data()?.displayName as string) || undefined : undefined
-            await performGkSwap(adminDb, matchId, userId, swapResult.otherGkUserId)
+            const otherUserSnap = await adminDb
+              .collection('users')
+              .doc(swapResult.otherGkUserId)
+              .get()
+            otherPlayerDisplayName = otherUserSnap.exists
+              ? (otherUserSnap.data()?.displayName as string) || undefined
+              : undefined
+            await performGkSwap(
+              adminDb,
+              matchId,
+              userId,
+              swapResult.otherGkUserId
+            )
             swapOccurred = true
           }
         }
       }
 
-      const stateRef = adminDb.collection('matches').doc(matchId).collection('_state').doc('rsvp')
+      const stateRef = adminDb
+        .collection('matches')
+        .doc(matchId)
+        .collection('_state')
+        .doc('rsvp')
       const now = Timestamp.now()
-      await adminDb.runTransaction(async (tx) => {
+      await adminDb.runTransaction(async tx => {
         const stateSnap = await tx.get(stateRef)
         if (stateSnap.exists) {
           const state = stateSnap.data() ?? {}
           let gkCount = (state.gkCount as number) ?? 0
           if (oldIsGk && !newIsGk) gkCount -= 1
           else if (!oldIsGk && newIsGk) gkCount += 1
-          tx.set(stateRef, { ...state, gkCount, updatedAt: now }, { merge: true })
+          tx.set(
+            stateRef,
+            { ...state, gkCount, updatedAt: now },
+            { merge: true }
+          )
         }
         tx.update(rsvpRef, { position: newPosition, updatedAt: now })
       })
@@ -343,24 +421,42 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({
         updated: true,
         swapOccurred,
-        otherPlayerDisplayName: swapOccurred ? otherPlayerDisplayName : undefined,
-        swapWithReplacedPlayer: swapOccurred ? swapWithReplacedPlayer : undefined,
+        otherPlayerDisplayName: swapOccurred
+          ? otherPlayerDisplayName
+          : undefined,
+        swapWithReplacedPlayer: swapOccurred
+          ? swapWithReplacedPlayer
+          : undefined,
         teamsUpdated: swapOccurred,
       })
     }
 
     // Cancel RSVP flow (no position in body). Keep _state/rsvp in sync when present (new matches).
-    const stateRefForCancel = adminDb.collection('matches').doc(matchId).collection('_state').doc('rsvp')
+    const stateRefForCancel = adminDb
+      .collection('matches')
+      .doc(matchId)
+      .collection('_state')
+      .doc('rsvp')
     const wasGk = isGoalkeeper((data.position as string | null) ?? null)
     const now = Timestamp.now()
-    await adminDb.runTransaction(async (tx) => {
+    await adminDb.runTransaction(async tx => {
       const stateSnap = await tx.get(stateRefForCancel)
       tx.update(rsvpRef, { status: 'cancelled', updatedAt: now })
       if (stateSnap.exists) {
         const state = stateSnap.data() ?? {}
-        const confirmedCount = Math.max(0, ((state.confirmedCount as number) ?? 0) - 1)
-        const gkCount = Math.max(0, ((state.gkCount as number) ?? 0) - (wasGk ? 1 : 0))
-        tx.set(stateRefForCancel, { confirmedCount, gkCount, updatedAt: now }, { merge: true })
+        const confirmedCount = Math.max(
+          0,
+          ((state.confirmedCount as number) ?? 0) - 1
+        )
+        const gkCount = Math.max(
+          0,
+          ((state.gkCount as number) ?? 0) - (wasGk ? 1 : 0)
+        )
+        tx.set(
+          stateRefForCancel,
+          { confirmedCount, gkCount, updatedAt: now },
+          { merge: true }
+        )
       }
     })
 
@@ -374,10 +470,12 @@ export async function PATCH(request: NextRequest) {
       .limit(1)
       .get()
     if (confirmedAfter.empty) {
-      const teamsSnap = await adminDb.collection(`matches/${matchId}/teams`).get()
+      const teamsSnap = await adminDb
+        .collection(`matches/${matchId}/teams`)
+        .get()
       if (!teamsSnap.empty) {
         const batch = adminDb.batch()
-        teamsSnap.docs.forEach((d) => batch.delete(d.ref))
+        teamsSnap.docs.forEach(d => batch.delete(d.ref))
         await batch.commit()
       }
     }

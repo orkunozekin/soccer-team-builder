@@ -1,11 +1,11 @@
 import {
+  GoogleAuthProvider,
+  User,
+  UserCredential,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
-  GoogleAuthProvider,
   signOut,
-  User,
-  UserCredential,
 } from 'firebase/auth'
 import { auth } from './config'
 

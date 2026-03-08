@@ -1,10 +1,10 @@
 'use client'
 
-import { User } from '@/types/user'
-import { Team } from '@/types/team'
+import { formatPitchDisplayName } from '@/lib/utils/displayName'
 import { PitchPosition } from '@/lib/utils/pitchLayout'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
-import { formatPitchDisplayName } from '@/lib/utils/displayName'
+import { Team } from '@/types/team'
+import { User } from '@/types/user'
 
 interface PlayerMarkerProps {
   user: User
@@ -40,26 +40,30 @@ export function PlayerMarker({
           height: isMobile ? 28 : 44,
           minWidth: isMobile ? 28 : 44,
           minHeight: isMobile ? 28 : 44,
-          backgroundColor: isGK ? '#eab308' : (team.color || '#1e40af'),
+          backgroundColor: isGK ? '#eab308' : team.color || '#1e40af',
         }}
       >
         <span
-          className={`font-bold leading-none tabular-nums drop-shadow-sm ${
+          className={`font-bold tabular-nums leading-none drop-shadow-sm ${
             isGK ? 'text-zinc-900' : 'text-white'
           } ${isMobile ? 'text-[10px]' : 'text-sm'}`}
         >
           {user.jerseyNumber != null ? user.jerseyNumber : ''}
         </span>
       </div>
-      <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-px text-center flex flex-col items-center gap-px ${isMobile ? 'w-[3rem]' : 'w-[4.5rem]'}`}>
+      <div
+        className={`absolute left-1/2 top-full mt-px flex -translate-x-1/2 flex-col items-center gap-px text-center ${isMobile ? 'w-[3rem]' : 'w-[4.5rem]'}`}
+      >
         <span
-          className={`font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] whitespace-nowrap truncate block leading-tight ${isMobile ? 'text-[8px]' : 'text-[10px]'}`}
+          className={`block truncate whitespace-nowrap font-medium leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] ${isMobile ? 'text-[8px]' : 'text-[10px]'}`}
           title={user.displayName}
         >
           {formatPitchDisplayName(user.displayName, isMobile ? 10 : 14)}
         </span>
         {user.position && (
-          <span className={`text-white/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] leading-tight ${isMobile ? 'text-[7px]' : 'text-[9px]'}`}>
+          <span
+            className={`leading-tight text-white/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${isMobile ? 'text-[7px]' : 'text-[9px]'}`}
+          >
             {user.position}
           </span>
         )}
@@ -69,7 +73,7 @@ export function PlayerMarker({
 
   return (
     <div
-      className={`absolute transform -translate-x-1/2 -translate-y-1/2 z-10 transition-transform ${
+      className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 transform transition-transform ${
         clickable ? 'cursor-pointer hover:scale-110' : ''
       }`}
       style={{ left: `${position.x}%`, top: `${position.y}%` }}

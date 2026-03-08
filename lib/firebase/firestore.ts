@@ -39,7 +39,9 @@ function getDocRef(collectionPath: string, documentId: string) {
 }
 
 // Helper to convert Firestore timestamps to Date
-export const timestampToDate = (timestamp: Timestamp | Date | null): Date | null => {
+export const timestampToDate = (
+  timestamp: Timestamp | Date | null
+): Date | null => {
   if (!timestamp) return null
   if (timestamp instanceof Date) return timestamp
   return timestamp.toDate()
@@ -59,7 +61,10 @@ export const createDocument = async (
 ): Promise<void> => {
   const docRef = getDocRef(collectionName, documentId)
   if (process.env.NODE_ENV === 'development') {
-    console.log('[Firestore] Writing document', collectionName + '/' + documentId)
+    console.log(
+      '[Firestore] Writing document',
+      collectionName + '/' + documentId
+    )
   }
   try {
     await setDoc(docRef, {
@@ -114,7 +119,7 @@ export const queryDocuments = async (
   const collectionRef = getCollectionRef(collectionName)
   const q = query(collectionRef, ...constraints)
   const querySnapshot = await getDocs(q)
-  return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
 }
 
 /**
@@ -143,11 +148,11 @@ export const queryDocumentsPaginated = async (
   const docs = querySnapshot.docs
   const hasMore = docs.length > pageSize
   const pageDocs = hasMore ? docs.slice(0, pageSize) : docs
-  const documents = pageDocs.map((d) => ({ id: d.id, ...d.data() }))
+  const documents = pageDocs.map(d => ({ id: d.id, ...d.data() }))
   const lastDoc = pageDocs[pageDocs.length - 1]
   const nextCursor =
     hasMore && lastDoc
-      ? (lastDoc.data()[orderByField] as string) ?? lastDoc.id
+      ? ((lastDoc.data()[orderByField] as string) ?? lastDoc.id)
       : null
   return { documents, nextCursor }
 }

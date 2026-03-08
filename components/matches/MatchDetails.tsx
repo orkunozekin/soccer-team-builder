@@ -6,7 +6,13 @@ import { RSVPButton } from '@/components/matches/RSVPButton'
 import { PositionSelector } from '@/components/profile/PositionSelector'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { updateRSVPPositionAPI } from '@/lib/api/client'
 import { SOCCER_POSITIONS } from '@/lib/constants/positions'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
@@ -25,7 +31,7 @@ interface MatchDetailsProps {
 
 function positionLabel(value: string | null): string {
   if (!value) return 'None'
-  const p = SOCCER_POSITIONS.find((x) => x.value === value)
+  const p = SOCCER_POSITIONS.find(x => x.value === value)
   return p ? p.label : value
 }
 
@@ -43,7 +49,9 @@ export function MatchDetails({
 
   const { updateRSVPPosition } = useMatchStore()
   const currentPosition = userRsvp?.position ?? userProfilePosition ?? null
-  const [editPosition, setEditPosition] = useState<string | null>(currentPosition)
+  const [editPosition, setEditPosition] = useState<string | null>(
+    currentPosition
+  )
   const [positionLoading, setPositionLoading] = useState(false)
   const [positionError, setPositionError] = useState('')
   const [swapMessage, setSwapMessage] = useState<string | null>(null)
@@ -87,7 +95,7 @@ export function MatchDetails({
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <CardTitle className="text-2xl sm:text-3xl mb-2">
+              <CardTitle className="mb-2 text-2xl sm:text-3xl">
                 {formattedDate}
               </CardTitle>
               <CardDescription className="text-base sm:text-lg">
@@ -109,7 +117,7 @@ export function MatchDetails({
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+            <p className="mb-1 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
               Current headcount
             </p>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -118,7 +126,7 @@ export function MatchDetails({
           </div>
 
           {showEditPosition && (
-            <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-3">
+            <div className="space-y-3 border-t border-zinc-200 pt-2 dark:border-zinc-800">
               <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
                 Your position for this match
               </p>
@@ -127,7 +135,7 @@ export function MatchDetails({
                 <span
                   className={
                     isGoalkeeper(currentPosition)
-                      ? 'rounded px-1.5 py-0.5 bg-amber-200/90 dark:bg-amber-700/50 text-amber-900 dark:text-amber-100'
+                      ? 'rounded bg-amber-200/90 px-1.5 py-0.5 text-amber-900 dark:bg-amber-700/50 dark:text-amber-100'
                       : undefined
                   }
                 >
@@ -135,7 +143,7 @@ export function MatchDetails({
                 </span>
               </p>
               <div className="flex flex-wrap items-end gap-2">
-                <div className="min-w-0 basis-full sm:basis-auto sm:min-w-[12rem]">
+                <div className="min-w-0 basis-full sm:min-w-[12rem] sm:basis-auto">
                   <PositionSelector
                     value={editPosition}
                     onValueChange={setEditPosition}
@@ -148,14 +156,15 @@ export function MatchDetails({
                   onClick={handleSavePosition}
                   loading={positionLoading}
                   disabled={editPosition === currentPosition || positionLoading}
-                  className="min-w-0 shrink-0 sm:min-w-[8.5rem] h-11"
+                  className="h-11 min-w-0 shrink-0 sm:min-w-[8.5rem]"
                 >
                   Update position
                 </Button>
               </div>
               {isGkChangingToNonGk && (
                 <p className="text-sm text-amber-600 dark:text-amber-400">
-                  If you change from goalkeeper, another goalkeeper may take your spot on this team and you may move to a different team.
+                  If you change from goalkeeper, another goalkeeper may take
+                  your spot on this team and you may move to a different team.
                 </p>
               )}
               {swapMessage && (
@@ -164,7 +173,9 @@ export function MatchDetails({
                 </p>
               )}
               {positionError && (
-                <p className="text-sm text-red-600 dark:text-red-400">{positionError}</p>
+                <p className="text-sm text-red-600 dark:text-red-400">
+                  {positionError}
+                </p>
               )}
             </div>
           )}

@@ -16,8 +16,8 @@ export async function deleteMatch(
   const teamsSnap = await adminDb.collection(`matches/${matchId}/teams`).get()
   const benchSnap = await adminDb.collection(`matches/${matchId}/bench`).get()
   const batch = adminDb.batch()
-  teamsSnap.docs.forEach((d) => batch.delete(d.ref))
-  benchSnap.docs.forEach((d) => batch.delete(d.ref))
+  teamsSnap.docs.forEach(d => batch.delete(d.ref))
+  benchSnap.docs.forEach(d => batch.delete(d.ref))
   await batch.commit()
 
   // Delete RSVPs for this match (top-level collection with matchId field)
@@ -26,7 +26,7 @@ export async function deleteMatch(
     .where('matchId', '==', matchId)
     .get()
   const rsvpBatch = adminDb.batch()
-  rsvpsSnap.docs.forEach((d) => rsvpBatch.delete(d.ref))
+  rsvpsSnap.docs.forEach(d => rsvpBatch.delete(d.ref))
   if (!rsvpsSnap.empty) await rsvpBatch.commit()
 
   await matchRef.delete()

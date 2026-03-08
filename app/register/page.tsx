@@ -2,7 +2,13 @@
 
 import Link from 'next/link'
 import { RegisterForm } from '@/components/auth/RegisterForm'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 
 export default function RegisterPage() {
   return (
@@ -10,7 +16,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <Card>
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">
+            <CardTitle className="text-center text-2xl font-bold">
               Create Account
             </CardTitle>
             <CardDescription className="text-center">

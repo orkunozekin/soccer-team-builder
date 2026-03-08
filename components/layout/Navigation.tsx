@@ -1,16 +1,16 @@
 'use client'
 
-import Link from 'next/link'
-import { useAuth } from '@/lib/hooks/useAuth'
-import { useAdmin } from '@/lib/hooks/useAdmin'
-import { logoutUser } from '@/lib/firebase/auth'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { NavLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { NavLoadingSkeleton } from '@/components/LoadingSkeleton'
+import { Button } from '@/components/ui/button'
+import { logoutUser } from '@/lib/firebase/auth'
+import { useAdmin } from '@/lib/hooks/useAdmin'
+import { useAuth } from '@/lib/hooks/useAuth'
 
 export function Navigation() {
-  const { user, userData, loading } = useAuth()
+  const { user, loading } = useAuth()
   const { isAdmin } = useAdmin()
   const router = useRouter()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -51,20 +51,20 @@ export function Navigation() {
           <nav className="hidden items-center gap-4 md:flex">
             <Link
               href="/matches"
-              className="hover:opacity-80 transition-opacity"
+              className="transition-opacity hover:opacity-80"
             >
               Matches
             </Link>
             <Link
               href="/profile"
-              className="hover:opacity-80 transition-opacity"
+              className="transition-opacity hover:opacity-80"
             >
               Profile
             </Link>
             {isAdmin && (
               <Link
                 href="/admin"
-                className="hover:opacity-80 transition-opacity"
+                className="transition-opacity hover:opacity-80"
               >
                 Admin
               </Link>
@@ -73,7 +73,7 @@ export function Navigation() {
               onClick={handleLogout}
               variant="outline"
               size="sm"
-              className="h-8 border-white/40 bg-red-40 text-white hover:bg-red-30 hover:text-white shadow-sm"
+              className="h-8 border-white/40 bg-red-40 text-white shadow-sm hover:bg-red-30 hover:text-white"
             >
               Sign Out
             </Button>
@@ -82,12 +82,12 @@ export function Navigation() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden flex flex-col gap-1.5 p-2"
+            className="flex flex-col gap-1.5 p-2 md:hidden"
             aria-label="Toggle menu"
           >
             <span
               className={`block h-0.5 w-6 bg-white transition-all ${
-                isMenuOpen ? 'rotate-45 translate-y-2' : ''
+                isMenuOpen ? 'translate-y-2 rotate-45' : ''
               }`}
             />
             <span
@@ -97,7 +97,7 @@ export function Navigation() {
             />
             <span
               className={`block h-0.5 w-6 bg-white transition-all ${
-                isMenuOpen ? '-rotate-45 -translate-y-2' : ''
+                isMenuOpen ? '-translate-y-2 -rotate-45' : ''
               }`}
             />
           </button>
@@ -109,14 +109,14 @@ export function Navigation() {
             <Link
               href="/matches"
               onClick={() => setIsMenuOpen(false)}
-              className="py-2 hover:opacity-80 transition-opacity"
+              className="py-2 transition-opacity hover:opacity-80"
             >
               Matches
             </Link>
             <Link
               href="/profile"
               onClick={() => setIsMenuOpen(false)}
-              className="py-2 hover:opacity-80 transition-opacity"
+              className="py-2 transition-opacity hover:opacity-80"
             >
               Profile
             </Link>
@@ -124,7 +124,7 @@ export function Navigation() {
               <Link
                 href="/admin"
                 onClick={() => setIsMenuOpen(false)}
-                className="py-2 hover:opacity-80 transition-opacity"
+                className="py-2 transition-opacity hover:opacity-80"
               >
                 Admin
               </Link>
@@ -132,7 +132,7 @@ export function Navigation() {
             <Button
               onClick={handleLogout}
               variant="outline"
-              className="mt-2 h-11 border-white/40 bg-red-40 text-white hover:bg-red-30 hover:text-white shadow-sm"
+              className="mt-2 h-11 border-white/40 bg-red-40 text-white shadow-sm hover:bg-red-30 hover:text-white"
             >
               Sign Out
             </Button>

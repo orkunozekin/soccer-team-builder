@@ -2,8 +2,8 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { MatchDetailView } from '@/components/matches/MatchDetailView'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
+import { MatchDetailView } from '@/components/matches/MatchDetailView'
 import { useAuth } from '@/lib/hooks/useAuth'
 
 export default function MatchDetailsPage() {

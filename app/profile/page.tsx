@@ -2,10 +2,16 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/hooks/useAuth'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { ProfileForm } from '@/components/profile/ProfileForm'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { useAuth } from '@/lib/hooks/useAuth'
 
 export default function ProfilePage() {
   const router = useRouter()

@@ -3,7 +3,7 @@
  * on a lower-priority team and swap them so the other GK takes this user's spot.
  */
 
-import type { Firestore, DocumentReference } from 'firebase-admin/firestore'
+import type { DocumentReference, Firestore } from 'firebase-admin/firestore'
 import { Timestamp } from 'firebase-admin/firestore'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 
@@ -24,10 +24,14 @@ export async function swapGkWithLowerPriority(
   currentUserTeamNumber: number,
   rsvpPositionsByUserId: Map<string, string | null>,
   userPositionsByUserId: Map<string, string | null>
-): Promise<{ swapOccurred: boolean; otherGkUserId?: string; otherGkDisplayName?: string }> {
+): Promise<{
+  swapOccurred: boolean
+  otherGkUserId?: string
+  otherGkDisplayName?: string
+}> {
   const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
   const teamsSnap = await teamsCol.orderBy('teamNumber').get()
-  const teams: TeamDoc[] = teamsSnap.docs.map((d) => {
+  const teams: TeamDoc[] = teamsSnap.docs.map(d => {
     const data = d.data()
     return {
       id: d.id,
@@ -40,7 +44,8 @@ export async function swapGkWithLowerPriority(
     if (team.teamNumber <= currentUserTeamNumber) continue
     for (let i = 0; i < team.playerIds.length; i++) {
       const uid = team.playerIds[i]
-      const effectivePos = rsvpPositionsByUserId.get(uid) ?? userPositionsByUserId.get(uid) ?? null
+      const effectivePos =
+        rsvpPositionsByUserId.get(uid) ?? userPositionsByUserId.get(uid) ?? null
       if (isGoalkeeper(effectivePos)) {
         return { swapOccurred: true, otherGkUserId: uid }
       }
@@ -81,7 +86,13 @@ export async function performGkSwap(
     }
   }
 
-  if (!currentTeamRef || currentIndex === -1 || !otherTeamRef || otherIndex === -1) return
+  if (
+    !currentTeamRef ||
+    currentIndex === -1 ||
+    !otherTeamRef ||
+    otherIndex === -1
+  )
+    return
 
   const currentDoc = await currentTeamRef.get()
   const otherDoc = await otherTeamRef.get()

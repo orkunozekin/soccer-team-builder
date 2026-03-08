@@ -10,8 +10,9 @@ Use the users at lib\testData\testUsers.ts\ to register accounts via the app’s
 
 You can create all 22 users in Firebase Auth and Firestore in one go:
 
-**Option A – As admin (from browser or Postman)**  
-1. Log in to the app as an admin.  
+**Option A – As admin (from browser or Postman)**
+
+1. Log in to the app as an admin.
 2. Send a POST request to `/api/seed-test-users` with your auth token:
    ```bash
    curl -X POST https://your-app.com/api/seed-test-users \
@@ -19,8 +20,9 @@ You can create all 22 users in Firebase Auth and Firestore in one go:
    ```
    (Get `YOUR_ID_TOKEN` from the browser’s Application tab → Firebase auth token, or from your client after login.)
 
-**Option B – With a secret (for local/scripted use)**  
-1. Set `SEED_SECRET` in `.env.local` (e.g. `SEED_SECRET=your-secret-here`).  
+**Option B – With a secret (for local/scripted use)**
+
+1. Set `SEED_SECRET` in `.env.local` (e.g. `SEED_SECRET=your-secret-here`).
 2. Call the endpoint with that secret:
    ```bash
    curl -X POST http://localhost:3001/api/seed-test-users \
@@ -39,6 +41,7 @@ To have all test users RSVP for a specific match in one go:
 Use the same auth as above (admin Bearer token **or** `X-Seed-Secret` header).
 
 **Example (with secret):**
+
 ```bash
 curl -X POST http://localhost:3001/api/seed-match-rsvps \
   -H "Content-Type: application/json" \
@@ -60,12 +63,14 @@ To remove all test users (from the table above) and their data in one go:
 **Request:** `DELETE /api/seed-test-users` with the same auth as seeding (admin Bearer token **or** `X-Seed-Secret` header).
 
 **Example (with secret):**
+
 ```bash
 curl -X DELETE http://localhost:3001/api/seed-test-users \
   -H "X-Seed-Secret: your-secret-here"
 ```
 
 **Example (as admin with Bearer token):**
+
 ```bash
 curl -X DELETE https://your-app.com/api/seed-test-users \
   -H "Authorization: Bearer YOUR_ID_TOKEN"

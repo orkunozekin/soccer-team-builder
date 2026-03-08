@@ -1,10 +1,10 @@
 'use client'
 
-import { User } from '@/types/user'
-import { Team } from '@/types/team'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
+import { Team } from '@/types/team'
+import { User } from '@/types/user'
 
 interface TeamCardProps {
   team: Team
@@ -15,7 +15,7 @@ interface TeamCardProps {
 
 export function TeamCard({ team, users, currentUserId }: TeamCardProps) {
   const teamUsers = team.playerIds
-    .map((userId) => users.find((u) => u.uid === userId))
+    .map(userId => users.find(u => u.uid === userId))
     .filter((u): u is User => !!u)
 
   return (
@@ -38,19 +38,20 @@ export function TeamCard({ team, users, currentUserId }: TeamCardProps) {
               No players assigned
             </p>
           ) : (
-            teamUsers.map((user) => {
-              const isCurrentUser = currentUserId != null && user.uid === currentUserId
+            teamUsers.map(user => {
+              const isCurrentUser =
+                currentUserId != null && user.uid === currentUserId
               return (
                 <div
                   key={user.uid}
-                  className={`flex items-center gap-2 text-sm rounded-md px-2 py-1.5 -mx-2 ${
+                  className={`-mx-2 flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
                     isCurrentUser
-                      ? 'bg-primary/10 dark:bg-primary/20 ring-1 ring-primary/40 dark:ring-primary/50 font-medium'
+                      ? 'bg-primary/10 font-medium ring-1 ring-primary/40 dark:bg-primary/20 dark:ring-primary/50'
                       : ''
                   }`}
                 >
                   <span
-                    className="flex items-center justify-center w-8 h-8 rounded-full text-white text-xs font-bold"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white"
                     style={{ backgroundColor: team.color || '#3b82f6' }}
                   >
                     {user.jerseyNumber != null ? user.jerseyNumber : ''}
@@ -61,7 +62,7 @@ export function TeamCard({ team, users, currentUserId }: TeamCardProps) {
                       variant="outline"
                       className={`ml-auto shrink-0 text-xs ${
                         isGoalkeeper(user.position)
-                          ? 'bg-amber-200/90 dark:bg-amber-700/50 border-amber-400 dark:border-amber-600 text-amber-900 dark:text-amber-100'
+                          ? 'border-amber-400 bg-amber-200/90 text-amber-900 dark:border-amber-600 dark:bg-amber-700/50 dark:text-amber-100'
                           : ''
                       }`}
                     >

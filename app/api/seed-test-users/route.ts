@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
+import { NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin'
@@ -15,13 +15,23 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return chunks
 }
 
-async function requireSeedAuth(request: Request): Promise<{ ok: true; currentUid?: string } | { ok: false; status: number; body: object }> {
+async function requireSeedAuth(
+  request: Request
+): Promise<
+  | { ok: true; currentUid?: string }
+  | { ok: false; status: number; body: object }
+> {
   const seedSecret = request.headers.get('x-seed-secret')
-  const useSecret = process.env.SEED_SECRET && seedSecret === process.env.SEED_SECRET
+  const useSecret =
+    process.env.SEED_SECRET && seedSecret === process.env.SEED_SECRET
   if (useSecret) return { ok: true }
   const { uid, isAdmin, error } = await verifyAdmin(request)
   if (error || !isAdmin) {
-    return { ok: false, status: 403, body: { error: 'Admin required or valid X-Seed-Secret' } }
+    return {
+      ok: false,
+      status: 403,
+      body: { error: 'Admin required or valid X-Seed-Secret' },
+    }
   }
   return { ok: true, currentUid: uid ?? undefined }
 }
@@ -55,26 +65,30 @@ export async function POST(request: Request) {
   for (const user of TEST_USERS) {
     try {
       let created = true
-      let record = await adminAuth.createUser({
-        email: user.email,
-        password: user.password,
-        displayName: user.displayName,
-      }).catch(async (err: unknown) => {
-        const code = (err as { code?: string })?.code
-        const message = err instanceof Error ? err.message : String(err)
-        if (
-          code === 'auth/email-already-exists' ||
-          String(message).includes('already exists')
-        ) {
-          created = false
-          return await adminAuth.getUserByEmail(user.email)
-        }
-        throw err
-      })
+      let record = await adminAuth
+        .createUser({
+          email: user.email,
+          password: user.password,
+          displayName: user.displayName,
+        })
+        .catch(async (err: unknown) => {
+          const code = (err as { code?: string })?.code
+          const message = err instanceof Error ? err.message : String(err)
+          if (
+            code === 'auth/email-already-exists' ||
+            String(message).includes('already exists')
+          ) {
+            created = false
+            return await adminAuth.getUserByEmail(user.email)
+          }
+          throw err
+        })
 
       // Ensure Auth displayName matches seed data
       if (record.displayName !== user.displayName) {
-        record = await adminAuth.updateUser(record.uid, { displayName: user.displayName })
+        record = await adminAuth.updateUser(record.uid, {
+          displayName: user.displayName,
+        })
       }
 
       const now = Timestamp.now()
@@ -91,7 +105,9 @@ export async function POST(request: Request) {
           position: user.position,
           role: 'user',
           isTestUser: true,
-          createdAt: existing.exists ? existing.data()?.createdAt ?? now : now,
+          createdAt: existing.exists
+            ? (existing.data()?.createdAt ?? now)
+            : now,
           updatedAt: now,
         },
         { merge: true }
@@ -114,9 +130,9 @@ export async function POST(request: Request) {
     success: true,
     results,
     summary: {
-      created: results.filter((r) => r.status === 'created').length,
-      updated: results.filter((r) => r.status === 'updated').length,
-      error: results.filter((r) => r.status === 'error').length,
+      created: results.filter(r => r.status === 'created').length,
+      updated: results.filter(r => r.status === 'updated').length,
+      error: results.filter(r => r.status === 'error').length,
     },
   })
 }
@@ -142,19 +158,29 @@ export async function DELETE(request: Request) {
     )
   }
 
-  const results: { email: string; status: 'deleted' | 'skipped' | 'error'; message?: string }[] = []
+  const results: {
+    email: string
+    status: 'deleted' | 'skipped' | 'error'
+    message?: string
+  }[] = []
   const currentUid = auth.currentUid
 
   for (const user of TEST_USERS) {
     try {
-      const record = await adminAuth.getUserByEmail(user.email).catch(() => null)
+      const record = await adminAuth
+        .getUserByEmail(user.email)
+        .catch(() => null)
       if (!record) {
         results.push({ email: user.email, status: 'skipped' })
         continue
       }
       const userId = record.uid
       if (currentUid && userId === currentUid) {
-        results.push({ email: user.email, status: 'skipped', message: 'Cannot delete current user' })
+        results.push({
+          email: user.email,
+          status: 'skipped',
+          message: 'Cannot delete current user',
+        })
         continue
       }
 
@@ -165,13 +191,20 @@ export async function DELETE(request: Request) {
       }
 
       // 2) Delete user doc
-      await adminDb.collection('users').doc(userId).delete().catch(() => {})
+      await adminDb
+        .collection('users')
+        .doc(userId)
+        .delete()
+        .catch(() => {})
 
       // 3) Delete all RSVPs for this user
-      const rsvpSnap = await adminDb.collection('rsvps').where('userId', '==', userId).get()
+      const rsvpSnap = await adminDb
+        .collection('rsvps')
+        .where('userId', '==', userId)
+        .get()
       for (const batchDocs of chunk(rsvpSnap.docs, 450)) {
         const batch = adminDb.batch()
-        batchDocs.forEach((d) => batch.delete(d.ref))
+        batchDocs.forEach(d => batch.delete(d.ref))
         await batch.commit()
       }
 
@@ -192,9 +225,9 @@ export async function DELETE(request: Request) {
     success: true,
     results,
     summary: {
-      deleted: results.filter((r) => r.status === 'deleted').length,
-      skipped: results.filter((r) => r.status === 'skipped').length,
-      error: results.filter((r) => r.status === 'error').length,
+      deleted: results.filter(r => r.status === 'deleted').length,
+      skipped: results.filter(r => r.status === 'skipped').length,
+      error: results.filter(r => r.status === 'error').length,
     },
   })
 }

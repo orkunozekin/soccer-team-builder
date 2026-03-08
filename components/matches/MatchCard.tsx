@@ -3,8 +3,17 @@
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { getNextRSVPCloseTime, getNextRSVPOpenTime } from '@/lib/utils/rsvpScheduler'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
+  getNextRSVPCloseTime,
+  getNextRSVPOpenTime,
+} from '@/lib/utils/rsvpScheduler'
 import { Match } from '@/types/match'
 
 interface MatchCardProps {
@@ -38,14 +47,14 @@ export function MatchCard({ match, rsvpCount, isAdmin }: MatchCardProps) {
     <Card
       className={
         isClickable
-          ? 'transition-all hover:shadow-md cursor-pointer h-full'
+          ? 'h-full cursor-pointer transition-all hover:shadow-md'
           : 'h-full cursor-default opacity-95'
       }
     >
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
-            <CardTitle className="text-xl mb-2">{formattedDate}</CardTitle>
+            <CardTitle className="mb-2 text-xl">{formattedDate}</CardTitle>
             <CardDescription className="text-base">
               {formattedTime}
             </CardDescription>

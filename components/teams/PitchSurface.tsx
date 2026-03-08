@@ -6,7 +6,7 @@ import { PitchMarkings } from './PitchMarkings'
  */
 export function PitchSurface() {
   return (
-    <div className="relative w-full h-full overflow-hidden rounded-lg border-2 border-white shadow-xl">
+    <div className="relative h-full w-full overflow-hidden rounded-lg border-2 border-white shadow-xl">
       <div
         className="absolute inset-0 opacity-95"
         style={{

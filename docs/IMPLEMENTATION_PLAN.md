@@ -36,7 +36,6 @@ Since we're using Next.js App Router, follow these patterns:
 ### Data Models (Firestore Collections)
 
 1. **users** collection
-
    - `uid` (document ID from Firebase Auth)
    - `email`: string
    - `displayName`: string
@@ -47,7 +46,6 @@ Since we're using Next.js App Router, follow these patterns:
    - `updatedAt`: timestamp
 
 2. **matches** collection
-
    - `id`: string (document ID)
    - `date`: timestamp
    - `time`: string (HH:mm format)
@@ -58,7 +56,6 @@ Since we're using Next.js App Router, follow these patterns:
    - `updatedAt`: timestamp
 
 3. **rsvps** collection
-
    - `id`: string (document ID)
    - `matchId`: string (reference to matches)
    - `userId`: string (reference to users)
@@ -67,7 +64,6 @@ Since we're using Next.js App Router, follow these patterns:
    - `updatedAt`: timestamp
 
 4. **teams** collection (subcollection under matches)
-
    - `id`: string (document ID)
    - `matchId`: string (parent match)
    - `teamNumber`: number (1, 2, 3, etc.)
@@ -79,7 +75,6 @@ Since we're using Next.js App Router, follow these patterns:
    - `updatedAt`: timestamp
 
 5. **bench** collection (subcollection under matches)
-
    - `id`: string (document ID)
    - `matchId`: string (parent match)
    - `playerIds`: string[] (array of user IDs)
@@ -184,7 +179,6 @@ soccer-team-builder/
 ### Phase 1: Project Setup & Authentication
 
 1. **Project Setup**
-
    - Use existing Next.js App Router project structure
    - Ensure Tailwind CSS is configured
    - Ensure Prettier and ESLint are set up
@@ -194,7 +188,6 @@ soccer-team-builder/
    - Install date utilities: `yarn add date-fns date-fns-tz`
 
 2. **Firebase Setup**
-
    - Create Firebase project
    - Enable Authentication (Email/Password)
    - Create Firestore database
@@ -203,7 +196,6 @@ soccer-team-builder/
    - Add environment variables (`.env.local`)
 
 3. **Authentication Implementation**
-
    - Create `lib/firebase/auth.ts` with auth helpers
    - Create `store/authStore.ts` for auth state
    - Create `lib/hooks/useAuth.ts` hook
@@ -216,9 +208,9 @@ soccer-team-builder/
 ### Phase 2: User Management & Profile
 
 4. **User Service & Types**
-
    - Define `types/user.ts` interface with `position: string | null`
    - Create `lib/constants/positions.ts` with available soccer positions array:
+
      ```typescript
      export const SOCCER_POSITIONS = [
        { value: 'GK', label: 'GK (Goalkeeper)' },
@@ -235,7 +227,7 @@ soccer-team-builder/
        { value: 'LW', label: 'LW (Left Winger)' },
        { value: 'RW', label: 'RW (Right Winger)' },
        { value: 'CF', label: 'CF (Center Forward)' },
-       { value: 'ST', label: 'ST (Striker)' }
+       { value: 'ST', label: 'ST (Striker)' },
      ]
      ```
 
@@ -245,7 +237,6 @@ soccer-team-builder/
    - Add user creation on registration
 
 5. **Admin Role System**
-
    - Add role checking utilities
    - Create `lib/hooks/useAdmin.ts` for admin permissions
    - Add admin route protection (client-side checks in components or middleware)
@@ -254,7 +245,6 @@ soccer-team-builder/
 ### Phase 3: Match Management
 
 6. **Match Service & Types**
-
    - Define `types/match.ts` interface
    - Create `lib/services/matchService.ts`
    - Create `store/matchStore.ts` for match state
@@ -262,7 +252,6 @@ soccer-team-builder/
    - Build match details page (`app/matches/[matchId]/page.tsx`) - Client Component
 
 7. **RSVP System**
-
    - Define `types/rsvp.ts` interface
    - Create `lib/services/rsvpService.ts`
    - Build `components/matches/RSVPButton.tsx`
@@ -272,7 +261,6 @@ soccer-team-builder/
 ### Phase 4: RSVP Poll Scheduling
 
 8. **Scheduling Logic**
-
    - Create `lib/utils/rsvpScheduler.ts`
    - Implement automatic schedule:
      - Monday/Wednesday: Open 6am CT, Close 8pm CT
@@ -282,7 +270,6 @@ soccer-team-builder/
    - Use client-side checks on page load to update RSVP status based on schedule
 
 9. **RSVP Poll Controls (Admin)**
-
    - Build `components/admin/RSVPPollControls.tsx`
    - Add manual open/close functionality
    - Display current poll status
@@ -290,7 +277,6 @@ soccer-team-builder/
 ### Phase 5: Team Generation
 
 10. **Team Generation Algorithm**
-
     - Create `lib/utils/teamGenerator.ts`
     - Implement helper function `isGoalkeeper()` to check if position string indicates goalkeeper (handles 'GK', 'Goalkeeper', case variations)
     - Implement team generation logic:
@@ -302,7 +288,6 @@ soccer-team-builder/
     - Define `types/team.ts` interface
 
 11. **Team Display**
-
     - Build `components/teams/SoccerPitch.tsx`:
       - Create soccer field visualization (green field with white lines, center circle, penalty boxes, goals)
       - Map player positions to pitch coordinates using `lib/utils/pitchLayout.ts`
@@ -329,7 +314,6 @@ soccer-team-builder/
 ### Phase 6: Admin Features
 
 12. **Admin Match Management**
-
     - Create admin dashboard (`app/admin/page.tsx`) - Client Component
     - Build `components/admin/AdminMatchControls.tsx`:
       - Set match date/time
@@ -341,7 +325,6 @@ soccer-team-builder/
       - Update pitch display in real-time as players are moved
 
 13. **Player Transfer Component**
-
     - Build `components/admin/PlayerTransfer.tsx`
     - Implement drag-and-drop or dropdown-based transfers
     - Add validation (max team size, goalkeeper limits)
@@ -349,7 +332,6 @@ soccer-team-builder/
 ### Phase 7: UI/UX Polish
 
 14. **Styling & Components**
-
     - Style all pages with Tailwind CSS
     - **100% Responsive Design Requirements**:
       - Mobile-first approach using Tailwind breakpoints (sm, md, lg, xl, 2xl)
@@ -366,7 +348,6 @@ soccer-team-builder/
     - Add toast notifications for actions (mobile-friendly positioning)
 
 15. **Real-time Updates**
-
     - Implement Firestore real-time listeners for:
       - RSVP status changes
       - Team updates
@@ -381,33 +362,33 @@ soccer-team-builder/
 // Position to pitch coordinates mapping
 // Coordinates are relative (0-100%) for responsive design
 interface PitchPosition {
-  x: number  // 0-100, left to right
-  y: number  // 0-100, top to bottom
+  x: number // 0-100, left to right
+  y: number // 0-100, top to bottom
 }
 
 const POSITION_COORDINATES: Record<string, PitchPosition> = {
   // Goalkeeper
-  'GK': { x: 50, y: 5 },
-  
+  GK: { x: 50, y: 5 },
+
   // Defenders
-  'LB': { x: 15, y: 25 },
-  'LWB': { x: 10, y: 30 },
-  'CB': { x: 50, y: 20 },
-  'RWB': { x: 90, y: 30 },
-  'RB': { x: 85, y: 25 },
-  
+  LB: { x: 15, y: 25 },
+  LWB: { x: 10, y: 30 },
+  CB: { x: 50, y: 20 },
+  RWB: { x: 90, y: 30 },
+  RB: { x: 85, y: 25 },
+
   // Midfielders
-  'CDM': { x: 50, y: 40 },
-  'LM': { x: 20, y: 50 },
-  'CM': { x: 50, y: 50 },
-  'CAM': { x: 50, y: 60 },
-  'RM': { x: 80, y: 50 },
-  
+  CDM: { x: 50, y: 40 },
+  LM: { x: 20, y: 50 },
+  CM: { x: 50, y: 50 },
+  CAM: { x: 50, y: 60 },
+  RM: { x: 80, y: 50 },
+
   // Forwards
-  'LW': { x: 25, y: 75 },
-  'CF': { x: 50, y: 80 },
-  'ST': { x: 50, y: 85 },
-  'RW': { x: 75, y: 75 },
+  LW: { x: 25, y: 75 },
+  CF: { x: 50, y: 80 },
+  ST: { x: 50, y: 85 },
+  RW: { x: 75, y: 75 },
 }
 
 function getPitchPosition(position: string | null): PitchPosition {
@@ -416,11 +397,15 @@ function getPitchPosition(position: string | null): PitchPosition {
 }
 
 // For multiple players in same position, offset them slightly
-function getOffsetPosition(basePosition: PitchPosition, index: number, total: number): PitchPosition {
+function getOffsetPosition(
+  basePosition: PitchPosition,
+  index: number,
+  total: number
+): PitchPosition {
   const offsetX = (index - (total - 1) / 2) * 8 // Spread horizontally
   return {
     x: Math.max(5, Math.min(95, basePosition.x + offsetX)),
-    y: basePosition.y
+    y: basePosition.y,
   }
 }
 ```
@@ -432,8 +417,10 @@ function getOffsetPosition(basePosition: PitchPosition, index: number, total: nu
 function isGoalkeeper(position: string | null): boolean {
   if (!position) return false
   const gkPositions = ['GK', 'Goalkeeper', 'goalkeeper', 'gk']
-  return gkPositions.includes(position.toUpperCase()) || 
-         position.toLowerCase().includes('goalkeeper')
+  return (
+    gkPositions.includes(position.toUpperCase()) ||
+    position.toLowerCase().includes('goalkeeper')
+  )
 }
 
 function generateTeams(rsvps: RSVP[], users: User[], maxTeamSize = 11) {
@@ -446,22 +433,22 @@ function generateTeams(rsvps: RSVP[], users: User[], maxTeamSize = 11) {
     const user = users.find(u => u.uid === r.userId)
     return user && user.role === 'admin'
   })
-  const regularPlayers = rsvps.filter(r => 
-    !goalkeepers.includes(r) && !admins.includes(r)
+  const regularPlayers = rsvps.filter(
+    r => !goalkeepers.includes(r) && !admins.includes(r)
   )
-  
+
   // 2. Create teams (at least 2)
   const teamCount = Math.max(2, Math.ceil(rsvps.length / maxTeamSize))
   const teams = Array.from({ length: teamCount }, (_, i) => ({
     teamNumber: i + 1,
-    playerIds: []
+    playerIds: [],
   }))
-  
+
   // 3. Assign goalkeepers to first two teams (max 1 per team)
   goalkeepers.forEach((gk, idx) => {
     if (idx < 2) teams[idx].playerIds.push(gk.userId)
   })
-  
+
   // 4. Assign admins to first two teams
   admins.forEach((admin, idx) => {
     const teamIdx = idx % 2
@@ -469,18 +456,18 @@ function generateTeams(rsvps: RSVP[], users: User[], maxTeamSize = 11) {
       teams[teamIdx].playerIds.push(admin.userId)
     }
   })
-  
+
   // 5. Fill remaining spots first come first serve
   regularPlayers.forEach(player => {
     // Find team with most space
-    const team = teams.reduce((min, t) => 
+    const team = teams.reduce((min, t) =>
       t.playerIds.length < min.playerIds.length ? t : min
     )
     if (team.playerIds.length < maxTeamSize) {
       team.playerIds.push(player.userId)
     }
   })
-  
+
   return teams
 }
 ```
@@ -488,19 +475,21 @@ function generateTeams(rsvps: RSVP[], users: User[], maxTeamSize = 11) {
 ### RSVP Scheduler (`lib/utils/rsvpScheduler.ts`)
 
 ```typescript
-function getRSVPSchedule(date: Date): { openAt: Date, closeAt: Date } {
+function getRSVPSchedule(date: Date): { openAt: Date; closeAt: Date } {
   const dayOfWeek = date.getDay() // 0 = Sunday, 1 = Monday, etc.
   const openAt = new Date(date)
   const closeAt = new Date(date)
-  
-  if (dayOfWeek === 1 || dayOfWeek === 3) { // Monday or Wednesday
-    openAt.setHours(6, 0, 0, 0)  // 6am CT
+
+  if (dayOfWeek === 1 || dayOfWeek === 3) {
+    // Monday or Wednesday
+    openAt.setHours(6, 0, 0, 0) // 6am CT
     closeAt.setHours(20, 0, 0, 0) // 8pm CT
-  } else if (dayOfWeek === 0) { // Sunday
-    openAt.setHours(6, 0, 0, 0)  // 6am CT
+  } else if (dayOfWeek === 0) {
+    // Sunday
+    openAt.setHours(6, 0, 0, 0) // 6am CT
     closeAt.setHours(17, 0, 0, 0) // 5pm CT
   }
-  
+
   return { openAt, closeAt }
 }
 ```
@@ -513,31 +502,31 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Users can read their own data, admins can read all
     match /users/{userId} {
-      allow read: if request.auth != null && 
-        (request.auth.uid == userId || 
+      allow read: if request.auth != null &&
+        (request.auth.uid == userId ||
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       allow write: if request.auth != null && request.auth.uid == userId;
     }
-    
+
     // Matches: all authenticated users can read, only admins can write
     match /matches/{matchId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && 
+      allow write: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      
+
       // RSVPs: users can create/update their own, admins can manage all
       match /rsvps/{rsvpId} {
         allow read: if request.auth != null;
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-        allow update, delete: if request.auth != null && 
+        allow update, delete: if request.auth != null &&
           (request.resource.data.userId == request.auth.uid ||
            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       }
-      
+
       // Teams: all can read, only admins can write
       match /teams/{teamId} {
         allow read: if request.auth != null;
-        allow write: if request.auth != null && 
+        allow write: if request.auth != null &&
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       }
     }
@@ -571,6 +560,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=
 ```
 
 **Existing dependencies** (already in project):
+
 - next, react, react-dom
 - zustand
 - tailwindcss, postcss, autoprefixer
@@ -641,6 +631,7 @@ The primary team display will show rosters on a soccer pitch visualization:
 The application must be **100% responsive** across all components and pages:
 
 ### Breakpoints (Tailwind CSS)
+
 - **Mobile**: < 640px (sm)
 - **Tablet**: 640px - 1023px (sm to lg)
 - **Desktop**: ≥ 1024px (lg and above)

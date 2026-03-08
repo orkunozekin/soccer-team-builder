@@ -46,19 +46,25 @@ export async function PATCH(
     const updates: Record<string, unknown> = { updatedAt: Timestamp.now() }
 
     if (body.date !== undefined) {
-      const ts = typeof body.date === 'string' ? dateToTimestamp(body.date) : null
+      const ts =
+        typeof body.date === 'string' ? dateToTimestamp(body.date) : null
       if (ts) updates.date = ts
     }
     if (body.time !== undefined) updates.time = body.time
     if (body.location !== undefined) {
-      updates.location = typeof body.location === 'string' ? body.location.trim() || null : null
+      updates.location =
+        typeof body.location === 'string' ? body.location.trim() || null : null
     }
     if (body.rsvpOpen !== undefined) updates.rsvpOpen = body.rsvpOpen
     if (body.rsvpOpenAt !== undefined) {
-      updates.rsvpOpenAt = body.rsvpOpenAt ? dateToTimestamp(body.rsvpOpenAt) : null
+      updates.rsvpOpenAt = body.rsvpOpenAt
+        ? dateToTimestamp(body.rsvpOpenAt)
+        : null
     }
     if (body.rsvpCloseAt !== undefined) {
-      updates.rsvpCloseAt = body.rsvpCloseAt ? dateToTimestamp(body.rsvpCloseAt) : null
+      updates.rsvpCloseAt = body.rsvpCloseAt
+        ? dateToTimestamp(body.rsvpCloseAt)
+        : null
     }
 
     await matchRef.update(updates)

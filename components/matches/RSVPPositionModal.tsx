@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { createPortal } from 'react-dom'
 import { PositionSelector } from '@/components/profile/PositionSelector'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 interface RSVPPositionModalProps {
@@ -51,9 +51,9 @@ export function RSVPPositionModal({
         className={cn(
           'fixed left-1/2 top-1/2 z-50 w-full max-w-[min(calc(100vw-2rem),28rem)] -translate-x-1/2 -translate-y-1/2',
           'rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-950',
-          'animate-in fade-in-0 zoom-in-95 duration-200'
+          'duration-200 animate-in fade-in-0 zoom-in-95'
         )}
-        onClick={(e) => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
       >
         <div className="relative">
           <Button
@@ -68,15 +68,22 @@ export function RSVPPositionModal({
             <X className="h-4 w-4" />
           </Button>
           <div className="mb-4 pr-8">
-            <h2 id="rsvp-position-modal-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+            <h2
+              id="rsvp-position-modal-title"
+              className="text-lg font-semibold text-zinc-900 dark:text-zinc-100"
+            >
               Select your position
             </h2>
             <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
               Choose the position you want to play for this match.
             </p>
           </div>
-          <PositionSelector value={position} onValueChange={setPosition} disabled={loading} />
-          <div className="mt-6 flex gap-2 justify-end">
+          <PositionSelector
+            value={position}
+            onValueChange={setPosition}
+            disabled={loading}
+          />
+          <div className="mt-6 flex justify-end gap-2">
             <Button
               type="button"
               variant="outline"

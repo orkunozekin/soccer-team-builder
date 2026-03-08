@@ -1,9 +1,9 @@
 'use client'
 
-import { Team } from '@/types/team'
 import { PitchSurface } from './PitchSurface'
 import { PlayerMarker } from './PlayerMarker'
 import type { PlayerOnPitch } from '@/lib/utils/pitchLayout'
+import { Team } from '@/types/team'
 
 interface SinglePitchViewProps {
   team: Team
@@ -44,7 +44,7 @@ export function SinglePitchView({
         transformOrigin: 'center',
       }}
     >
-      <div className="relative w-full h-full overflow-visible">
+      <div className="relative h-full w-full overflow-visible">
         <PitchSurface />
         {players.map(({ user, position }) => (
           <PlayerMarker

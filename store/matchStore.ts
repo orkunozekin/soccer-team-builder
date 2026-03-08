@@ -21,20 +21,19 @@ interface MatchState {
   removeRSVP: (rsvpId: string) => void
 }
 
-export const useMatchStore = create<MatchState>((set) => ({
+export const useMatchStore = create<MatchState>(set => ({
   matches: [],
   currentMatch: null,
   matchRSVPs: [],
   loading: false,
-  setMatches: (matches) => set({ matches }),
-  setCurrentMatch: (match) => set({ currentMatch: match }),
-  setMatchRSVPs: (rsvps) => set({ matchRSVPs: rsvps }),
-  setLoading: (loading) => set({ loading }),
-  addMatch: (match) =>
-    set((state) => ({ matches: [...state.matches, match] })),
+  setMatches: matches => set({ matches }),
+  setCurrentMatch: match => set({ currentMatch: match }),
+  setMatchRSVPs: rsvps => set({ matchRSVPs: rsvps }),
+  setLoading: loading => set({ loading }),
+  addMatch: match => set(state => ({ matches: [...state.matches, match] })),
   updateMatch: (matchId, updates) =>
-    set((state) => ({
-      matches: state.matches.map((m) =>
+    set(state => ({
+      matches: state.matches.map(m =>
         m.id === matchId ? { ...m, ...updates } : m
       ),
       currentMatch:
@@ -42,22 +41,21 @@ export const useMatchStore = create<MatchState>((set) => ({
           ? { ...state.currentMatch, ...updates }
           : state.currentMatch,
     })),
-  removeMatch: (matchId) =>
-    set((state) => ({
-      matches: state.matches.filter((m) => m.id !== matchId),
+  removeMatch: matchId =>
+    set(state => ({
+      matches: state.matches.filter(m => m.id !== matchId),
       currentMatch:
         state.currentMatch?.id === matchId ? null : state.currentMatch,
     })),
-  addRSVP: (rsvp) =>
-    set((state) => ({ matchRSVPs: [...state.matchRSVPs, rsvp] })),
+  addRSVP: rsvp => set(state => ({ matchRSVPs: [...state.matchRSVPs, rsvp] })),
   updateRSVPPosition: (rsvpId, position) =>
-    set((state) => ({
-      matchRSVPs: state.matchRSVPs.map((r) =>
+    set(state => ({
+      matchRSVPs: state.matchRSVPs.map(r =>
         r.id === rsvpId ? { ...r, position, updatedAt: new Date() } : r
       ),
     })),
-  removeRSVP: (rsvpId) =>
-    set((state) => ({
-      matchRSVPs: state.matchRSVPs.filter((r) => r.id !== rsvpId),
+  removeRSVP: rsvpId =>
+    set(state => ({
+      matchRSVPs: state.matchRSVPs.filter(r => r.id !== rsvpId),
     })),
 }))

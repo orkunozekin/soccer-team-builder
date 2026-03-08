@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Team } from '@/types/team'
-import { User } from '@/types/user'
-import { getTeamPlayers } from '@/lib/utils/pitchLayout'
-import { useWindowWidth } from '@/lib/hooks/useWindowWidth'
 import { SinglePitchView } from './SinglePitchView'
 import { TeamToggle } from './TeamToggle'
+import { useWindowWidth } from '@/lib/hooks/useWindowWidth'
+import { getTeamPlayers } from '@/lib/utils/pitchLayout'
+import { Team } from '@/types/team'
+import { User } from '@/types/user'
 
 export interface SoccerPitchProps {
   teams: Team[]
@@ -28,7 +28,7 @@ export function SoccerPitch({
 
   if (teams.length === 0) {
     return (
-      <div className="text-center py-8 text-zinc-600 dark:text-zinc-400">
+      <div className="py-8 text-center text-zinc-600 dark:text-zinc-400">
         No teams generated yet
       </div>
     )
