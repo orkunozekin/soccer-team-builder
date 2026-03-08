@@ -6,11 +6,21 @@
 
 import { Timestamp } from 'firebase-admin/firestore'
 import type { Firestore } from 'firebase-admin/firestore'
-import { computeTeamCountForRSVPCount, generateTeamsWithReplacements } from '@/lib/utils/teamGenerator'
+import {
+  computeTeamCountForRSVPCount,
+  generateTeamsWithReplacements,
+} from '@/lib/utils/teamGenerator'
 import type { RSVP } from '@/types/rsvp'
 import type { User } from '@/types/user'
 
-const TEAM_COLORS = ['#f97316', '#3b82f6', '#eab308', '#65a30d', '#ef4444', '#8b5cf6']
+const TEAM_COLORS = [
+  '#f97316',
+  '#3b82f6',
+  '#eab308',
+  '#65a30d',
+  '#ef4444',
+  '#8b5cf6',
+]
 const TEAM_NAMES = ['Orange', 'Blue', 'Yellow', 'Lime', 'Red', 'Purple']
 
 function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
@@ -30,7 +40,7 @@ export async function expandTeamsForMatch(
     .where('status', '==', 'confirmed')
     .get()
 
-  const rsvpsToUse: RSVP[] = rsvpSnap.docs.map((d) => {
+  const rsvpsToUse: RSVP[] = rsvpSnap.docs.map(d => {
     const data = d.data()
     return {
       id: d.id,
@@ -47,7 +57,9 @@ export async function expandTeamsForMatch(
     return { regenerated: false }
   }
 
-  const existingTeamsSnap = await adminDb.collection(`matches/${matchId}/teams`).get()
+  const existingTeamsSnap = await adminDb
+    .collection(`matches/${matchId}/teams`)
+    .get()
   const currentTeamCount = existingTeamsSnap.size
   const totalAssigned = existingTeamsSnap.docs.reduce(
     (sum, d) => sum + ((d.data().playerIds as string[])?.length ?? 0),
@@ -67,7 +79,7 @@ export async function expandTeamsForMatch(
   }
 
   const usersSnap = await adminDb.collection('users').get()
-  const users: User[] = usersSnap.docs.map((d) => {
+  const users: User[] = usersSnap.docs.map(d => {
     const data = d.data()
     return {
       uid: data.uid ?? d.id,
@@ -81,17 +93,15 @@ export async function expandTeamsForMatch(
     }
   })
 
-  const { teams: teamAssignments, gkReplacements } = generateTeamsWithReplacements(
-    rsvpsToUse,
-    users,
-    11,
-    { teamCount: desiredTeamCount }
-  )
+  const { teams: teamAssignments, gkReplacements } =
+    generateTeamsWithReplacements(rsvpsToUse, users, 11, {
+      teamCount: desiredTeamCount,
+    })
 
   const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
 
   const batch = adminDb.batch()
-  existingTeamsSnap.docs.forEach((d) => batch.delete(d.ref))
+  existingTeamsSnap.docs.forEach(d => batch.delete(d.ref))
   await batch.commit()
 
   const now = Timestamp.now()
@@ -100,10 +110,13 @@ export async function expandTeamsForMatch(
     gkReplacementsMap[r.insertedGK] = r.removedPlayer
   }
   if (Object.keys(gkReplacementsMap).length > 0) {
-    await adminDb.collection('matches').doc(matchId).set(
-      { gkReplacements: gkReplacementsMap, updatedAt: now },
-      { merge: true }
-    )
+    await adminDb
+      .collection('matches')
+      .doc(matchId)
+      .set(
+        { gkReplacements: gkReplacementsMap, updatedAt: now },
+        { merge: true }
+      )
   }
 
   const writes: Promise<unknown>[] = []
@@ -114,7 +127,8 @@ export async function expandTeamsForMatch(
       teamsCol.doc(teamId).set({
         matchId,
         teamNumber: assignment.teamNumber,
-        name: TEAM_NAMES[i % TEAM_NAMES.length] ?? `Team ${assignment.teamNumber}`,
+        name:
+          TEAM_NAMES[i % TEAM_NAMES.length] ?? `Team ${assignment.teamNumber}`,
         color: TEAM_COLORS[i % TEAM_COLORS.length] ?? '#3b82f6',
         playerIds: assignment.playerIds,
         maxSize: 11,

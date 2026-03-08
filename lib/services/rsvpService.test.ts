@@ -1,13 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
-
 import {
   cancelRSVP,
   createRSVP,
-  getMatchRsvpCount,
+  deleteRSVP,
   getMatchRSVPs,
+  getMatchRsvpCount,
   getRSVP,
   getUserRSVP,
-  deleteRSVP,
 } from './rsvpService'
 
 const mocks = vi.hoisted(() => {
@@ -16,7 +15,7 @@ const mocks = vi.hoisted(() => {
   const updateDocumentMock = vi.fn()
   const deleteDocumentMock = vi.fn()
   const queryDocumentsMock = vi.fn()
-  const timestampToDateMock = vi.fn((value) =>
+  const timestampToDateMock = vi.fn(value =>
     value instanceof Date ? value : new Date()
   )
 

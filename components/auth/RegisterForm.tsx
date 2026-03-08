@@ -13,7 +13,7 @@ import { useAuthStore } from '@/store/authStore'
 
 export function RegisterForm() {
   const router = useRouter()
-  const setUser = useAuthStore((state) => state.setUser)
+  const setUser = useAuthStore(state => state.setUser)
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -83,7 +83,7 @@ export function RegisterForm() {
           type="text"
           placeholder="Enter your name"
           value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
+          onChange={e => setDisplayName(e.target.value)}
           required
           disabled={loading || googleLoading}
           className="h-11 text-base sm:h-9 sm:text-sm"
@@ -98,7 +98,7 @@ export function RegisterForm() {
           type="email"
           placeholder="Enter your email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
           required
           disabled={loading || googleLoading}
           className="h-11 text-base sm:h-9 sm:text-sm"
@@ -113,7 +113,7 @@ export function RegisterForm() {
           type="password"
           placeholder="Enter your password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={e => setPassword(e.target.value)}
           required
           disabled={loading || googleLoading}
           className="h-11 text-base sm:h-9 sm:text-sm"
@@ -128,7 +128,7 @@ export function RegisterForm() {
           type="password"
           placeholder="Confirm your password"
           value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
+          onChange={e => setConfirmPassword(e.target.value)}
           required
           disabled={loading || googleLoading}
           className="h-11 text-base sm:h-9 sm:text-sm"
@@ -142,7 +142,7 @@ export function RegisterForm() {
         type="submit"
         disabled={googleLoading}
         loading={loading}
-        className="w-full h-11 text-base sm:h-9 sm:text-sm"
+        className="h-11 w-full text-base sm:h-9 sm:text-sm"
       >
         Create Account
       </Button>
@@ -160,7 +160,7 @@ export function RegisterForm() {
         variant="outline"
         disabled={loading}
         loading={googleLoading}
-        className="w-full h-11 text-base sm:h-9 sm:text-sm"
+        className="h-11 w-full text-base sm:h-9 sm:text-sm"
         onClick={handleGoogleSignIn}
       >
         <span className="inline-flex items-center justify-center">

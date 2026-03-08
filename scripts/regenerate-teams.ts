@@ -48,11 +48,14 @@ if (!matchId) {
 
 async function main() {
   const { getAdminDb } = await import('../lib/firebase/admin')
-  const { expandTeamsForMatch } = await import('../lib/teams/expandTeamsForMatch')
+  const { expandTeamsForMatch } =
+    await import('../lib/teams/expandTeamsForMatch')
 
   const adminDb = getAdminDb()
   if (!adminDb) {
-    console.error('Firebase Admin not initialized. Set FIREBASE_SERVICE_ACCOUNT_KEY or GOOGLE_APPLICATION_CREDENTIALS.')
+    console.error(
+      'Firebase Admin not initialized. Set FIREBASE_SERVICE_ACCOUNT_KEY or GOOGLE_APPLICATION_CREDENTIALS.'
+    )
     process.exit(1)
   }
 
@@ -64,15 +67,19 @@ async function main() {
   }
 
   console.log(`Regenerating teams for match ${matchId}...`)
-  const result = await expandTeamsForMatch(adminDb, matchId, { forceRegenerate: true })
+  const result = await expandTeamsForMatch(adminDb, matchId, {
+    forceRegenerate: true,
+  })
   if (result.regenerated) {
-    console.log('Done. Teams have been refilled by RSVP order and goalkeeper rules.')
+    console.log(
+      'Done. Teams have been refilled by RSVP order and goalkeeper rules.'
+    )
   } else {
     console.log('No teams to regenerate (no confirmed RSVPs or error).')
   }
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error(err)
   process.exit(1)
 })

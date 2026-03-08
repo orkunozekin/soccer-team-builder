@@ -1,6 +1,10 @@
-import { initializeApp, getApps, FirebaseApp } from 'firebase/app'
-import { getAuth, Auth, connectAuthEmulator } from 'firebase/auth'
-import { getFirestore, Firestore, connectFirestoreEmulator } from 'firebase/firestore'
+import { FirebaseApp, getApps, initializeApp } from 'firebase/app'
+import { Auth, connectAuthEmulator, getAuth } from 'firebase/auth'
+import {
+  Firestore,
+  connectFirestoreEmulator,
+  getFirestore,
+} from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -30,7 +34,10 @@ export function connectToEmulators(): void {
   connectFirestoreEmulator(db, '127.0.0.1', 8080)
   if (process.env.NODE_ENV === 'development') {
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? '(not set)'
-    console.log('[Firebase] Using Auth + Firestore emulators (Auth: 127.0.0.1:9099, Firestore: 127.0.0.1:8080) — projectId:', projectId)
+    console.log(
+      '[Firebase] Using Auth + Firestore emulators (Auth: 127.0.0.1:9099, Firestore: 127.0.0.1:8080) — projectId:',
+      projectId
+    )
   }
 }
 

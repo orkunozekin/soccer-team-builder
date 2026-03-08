@@ -1,7 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-
 import { UserRoleManager } from './UserRoleManager'
 
 const useAuthMock = vi.fn()
@@ -25,7 +24,8 @@ const mocks = vi.hoisted(() => {
 })
 
 vi.mock('@/lib/services/userService', () => ({
-  getUsersPaginated: (...args: unknown[]) => mocks.getUsersPaginatedMock(...args),
+  getUsersPaginated: (...args: unknown[]) =>
+    mocks.getUsersPaginatedMock(...args),
   getUsersCount: (...args: unknown[]) => mocks.getUsersCountMock(...args),
   updateUser: (...args: unknown[]) => mocks.updateUserMock(...args),
 }))
@@ -113,4 +113,3 @@ describe('UserRoleManager', () => {
     })
   })
 })
-

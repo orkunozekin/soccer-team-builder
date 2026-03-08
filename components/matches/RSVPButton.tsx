@@ -29,7 +29,11 @@ interface RSVPButtonProps {
   onMatchRefetch?: () => void | Promise<void>
 }
 
-export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPButtonProps) {
+export function RSVPButton({
+  match,
+  onTeamsRegenerated,
+  onMatchRefetch,
+}: RSVPButtonProps) {
   const { user, userData } = useAuth()
   const profileComplete = isProfileComplete(userData)
   const { matchRSVPs, addRSVP, removeRSVP } = useMatchStore()
@@ -37,13 +41,14 @@ export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPBu
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false)
-  const [showPositionPickerForGkBlock, setShowPositionPickerForGkBlock] = useState(false)
+  const [showPositionPickerForGkBlock, setShowPositionPickerForGkBlock] =
+    useState(false)
   const [positionForRsvp, setPositionForRsvp] = useState<string | null>(null)
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
 
   useEffect(() => {
     if (user && matchRSVPs.length > 0) {
-      const userRSVP = matchRSVPs.find((r) => r.userId === user.uid)
+      const userRSVP = matchRSVPs.find(r => r.userId === user.uid)
       setHasRSVPed(!!userRSVP)
     } else {
       const checkRSVP = async () => {
@@ -131,7 +136,7 @@ export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPBu
   }
 
   const handleConfirmCancelRSVP = async () => {
-    const rsvp = matchRSVPs.find((r) => r.userId === user?.uid)
+    const rsvp = matchRSVPs.find(r => r.userId === user?.uid)
     if (!rsvp) {
       setCancelConfirmOpen(false)
       return
@@ -164,7 +169,8 @@ export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPBu
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel RSVP?</AlertDialogTitle>
             <AlertDialogDescription>
-              You will be removed from the team. You can RSVP again while the poll is open, but you won&apos;t be guaranteed the same spot.
+              You will be removed from the team. You can RSVP again while the
+              poll is open, but you won&apos;t be guaranteed the same spot.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -173,7 +179,7 @@ export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPBu
               <Button
                 variant="default"
                 loading={loading}
-                onClick={(e) => {
+                onClick={e => {
                   e.preventDefault()
                   handleConfirmCancelRSVP()
                 }}
@@ -192,9 +198,10 @@ export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPBu
         onSaved={handleProfileSaved}
       />
       {showPositionPickerForGkBlock && (
-        <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-950/30 p-3 space-y-3">
+        <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/80 p-3 dark:border-amber-800 dark:bg-amber-950/30">
           <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-            There are already 2 goalkeepers for this match. Choose a different position to RSVP.
+            There are already 2 goalkeepers for this match. Choose a different
+            position to RSVP.
           </p>
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-[12rem]">
@@ -227,7 +234,7 @@ export function RSVPButton({ match, onTeamsRegenerated, onMatchRefetch }: RSVPBu
           disabled={!user}
           loading={loading}
           variant={hasRSVPed ? 'outline' : 'default'}
-          className="w-full h-11 text-base sm:h-9 sm:text-sm"
+          className="h-11 w-full text-base sm:h-9 sm:text-sm"
         >
           {hasRSVPed ? 'Cancel RSVP' : 'RSVP to Match'}
         </Button>

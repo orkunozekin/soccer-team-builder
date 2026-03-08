@@ -34,7 +34,10 @@ export async function POST(request: NextRequest) {
 
     const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/
     if (!timeRegex.test(time)) {
-      return NextResponse.json({ error: 'Invalid time format' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Invalid time format' },
+        { status: 400 }
+      )
     }
 
     const adminDb = getAdminDb()
@@ -48,17 +51,21 @@ export async function POST(request: NextRequest) {
     const { openAt, closeAt } = getRSVPSchedule(matchDate)
     const matchId = `match_${Date.now()}`
     const now = Timestamp.now()
-    const locationStr = typeof location === 'string' ? location.trim() || null : null
-    await adminDb.collection('matches').doc(matchId).set({
-      date: Timestamp.fromDate(matchDate),
-      time,
-      location: locationStr ?? null,
-      rsvpOpen: false,
-      rsvpOpenAt: openAt ? Timestamp.fromDate(openAt) : null,
-      rsvpCloseAt: closeAt ? Timestamp.fromDate(closeAt) : null,
-      createdAt: now,
-      updatedAt: now,
-    })
+    const locationStr =
+      typeof location === 'string' ? location.trim() || null : null
+    await adminDb
+      .collection('matches')
+      .doc(matchId)
+      .set({
+        date: Timestamp.fromDate(matchDate),
+        time,
+        location: locationStr ?? null,
+        rsvpOpen: false,
+        rsvpOpenAt: openAt ? Timestamp.fromDate(openAt) : null,
+        rsvpCloseAt: closeAt ? Timestamp.fromDate(closeAt) : null,
+        createdAt: now,
+        updatedAt: now,
+      })
 
     return NextResponse.json({ success: true, matchId })
   } catch (error: any) {

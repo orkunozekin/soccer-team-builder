@@ -1,10 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-
+import { ImpersonateRSVP } from './ImpersonateRSVP'
 import type { Match } from '@/types/match'
 import type { RSVP } from '@/types/rsvp'
-import { ImpersonateRSVP } from './ImpersonateRSVP'
 
 const mocks = vi.hoisted(() => ({
   confirmRSVPAPIMock: vi.fn(),
@@ -121,12 +120,9 @@ describe('ImpersonateRSVP', () => {
     })
     await user.click(resultButton)
 
-    await user.click(
-      screen.getByRole('button', { name: /cancel rsvp/i })
-    )
+    await user.click(screen.getByRole('button', { name: /cancel rsvp/i }))
 
     expect(mocks.cancelRSVPAPIMock).toHaveBeenCalledWith('r1')
     expect(onDone).toHaveBeenCalled()
   })
 })
-

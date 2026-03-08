@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-
 import { RebalanceTeamsButton } from './RebalanceTeamsButton'
 
 const mocks = vi.hoisted(() => ({
@@ -9,7 +8,8 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/api/client', () => ({
-  rebalanceTeamsAPI: (...args: unknown[]) => mocks.rebalanceTeamsAPIMock(...args),
+  rebalanceTeamsAPI: (...args: unknown[]) =>
+    mocks.rebalanceTeamsAPIMock(...args),
 }))
 
 describe('RebalanceTeamsButton', () => {
@@ -19,7 +19,11 @@ describe('RebalanceTeamsButton', () => {
     mocks.rebalanceTeamsAPIMock.mockResolvedValueOnce(undefined)
 
     render(
-      <RebalanceTeamsButton matchId="match1" onDone={onDone} showError="inline" />
+      <RebalanceTeamsButton
+        matchId="match1"
+        onDone={onDone}
+        showError="inline"
+      />
     )
 
     const button = screen.getByRole('button', { name: /rebalance teams/i })
@@ -38,16 +42,17 @@ describe('RebalanceTeamsButton', () => {
     mocks.rebalanceTeamsAPIMock.mockRejectedValueOnce(new Error('boom'))
 
     render(
-      <RebalanceTeamsButton matchId="match1" onDone={onDone} showError="inline" />
+      <RebalanceTeamsButton
+        matchId="match1"
+        onDone={onDone}
+        showError="inline"
+      />
     )
 
     const button = screen.getByRole('button', { name: /rebalance teams/i })
     await user.click(button)
 
     expect(onDone).not.toHaveBeenCalled()
-    expect(
-      screen.getByText(/failed to rebalance teams/i)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/failed to rebalance teams/i)).toBeInTheDocument()
   })
 })
-

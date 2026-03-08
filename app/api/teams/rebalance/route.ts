@@ -26,7 +26,10 @@ function bucketForPosition(position: string | null | undefined): Bucket {
   return 'UNK'
 }
 
-function computeTargetSizes(totalPlayers: number, capacities: number[]): number[] {
+function computeTargetSizes(
+  totalPlayers: number,
+  capacities: number[]
+): number[] {
   const targets = capacities.map(() => 0)
   let remaining = totalPlayers
   let i = 0
@@ -50,29 +53,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     if (!isAdmin) {
-      return NextResponse.json({ error: 'Admin privileges required' }, { status: 403 })
+      return NextResponse.json(
+        { error: 'Admin privileges required' },
+        { status: 403 }
+      )
     }
 
     const body = await request.json().catch(() => ({}))
     const matchId = body?.matchId as string | undefined
     if (!matchId) {
-      return NextResponse.json({ error: 'matchId is required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'matchId is required' },
+        { status: 400 }
+      )
     }
 
     const adminDb = getAdminDb()
     if (!adminDb) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
     }
 
     const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
 
     const teamsSnap = await teamsCol.get()
     if (teamsSnap.empty) {
-      return NextResponse.json({ error: 'No teams found for match' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'No teams found for match' },
+        { status: 400 }
+      )
     }
 
     const teams = teamsSnap.docs
-      .map((d) => {
+      .map(d => {
         const data = d.data()
         return {
           id: d.id,
@@ -82,7 +97,7 @@ export async function POST(request: NextRequest) {
       })
       .sort((a, b) => a.teamNumber - b.teamNumber)
 
-    const capacities = teams.map((t) => t.maxSize)
+    const capacities = teams.map(t => t.maxSize)
     const rosterLimit = capacities.reduce((sum, n) => sum + n, 0)
 
     // Load confirmed RSVPs, sorted by rsvpAt asc (earliest first)
@@ -93,23 +108,26 @@ export async function POST(request: NextRequest) {
       .get()
 
     const rsvps = rsvpSnap.docs
-      .map((d) => {
+      .map(d => {
         const data = d.data()
         return {
           userId: data.userId as string,
           rsvpAt: timestampToDate(data.rsvpAt) ?? new Date(0),
         }
       })
-      .filter((r) => !!r.userId)
+      .filter(r => !!r.userId)
       .sort((a, b) => a.rsvpAt.getTime() - b.rsvpAt.getTime())
 
     if (rsvps.length < 2) {
-      return NextResponse.json({ error: 'Need at least 2 RSVPs to rebalance' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Need at least 2 RSVPs to rebalance' },
+        { status: 400 }
+      )
     }
 
     // Build user map (position/role/etc)
     const usersSnap = await adminDb.collection('users').get()
-    const users: User[] = usersSnap.docs.map((d) => {
+    const users: User[] = usersSnap.docs.map(d => {
       const data = d.data()
       return {
         uid: (data.uid as string) ?? d.id,
@@ -122,7 +140,7 @@ export async function POST(request: NextRequest) {
         updatedAt: timestampToDate(data.updatedAt) || new Date(),
       }
     })
-    const userById = new Map(users.map((u) => [u.uid, u]))
+    const userById = new Map(users.map(u => [u.uid, u]))
 
     // Deduplicate RSVP list by userId, keep earliest RSVP timestamp
     const earliestByUser = new Map<string, Date>()
@@ -136,15 +154,18 @@ export async function POST(request: NextRequest) {
       .sort((a, b) => a.rsvpAt.getTime() - b.rsvpAt.getTime())
 
     // Base roster: first N RSVPs by time
-    const baseRoster = uniqueRsvpsSorted.slice(0, rosterLimit).map((r) => r.userId)
+    const baseRoster = uniqueRsvpsSorted
+      .slice(0, rosterLimit)
+      .map(r => r.userId)
 
     // GK priority: ensure earliest goalkeepers are included, even if outside the base roster.
     const gkCandidates = uniqueRsvpsSorted
-      .filter((r) => isGoalkeeper(userById.get(r.userId)?.position ?? null))
-      .map((r) => r.userId)
+      .filter(r => isGoalkeeper(userById.get(r.userId)?.position ?? null))
+      .map(r => r.userId)
 
     const rosterSet = new Set(baseRoster)
-    const replacements: Array<{ insertedGK: string; removedPlayer: string }> = []
+    const replacements: Array<{ insertedGK: string; removedPlayer: string }> =
+      []
 
     for (const gkId of gkCandidates) {
       if (rosterSet.size >= rosterLimit && rosterSet.has(gkId)) continue
@@ -167,7 +188,7 @@ export async function POST(request: NextRequest) {
 
     // Admins first (by RSVP time), then non-admins (by RSVP time), so admins land on teams 0 & 1
     const roster = Array.from(rosterSet)
-      .map((id) => ({
+      .map(id => ({
         id,
         rsvpAt: earliestByUser.get(id) ?? new Date(0),
         isAdmin: userById.get(id)?.role === 'admin',
@@ -176,7 +197,7 @@ export async function POST(request: NextRequest) {
         if (a.isAdmin !== b.isAdmin) return a.isAdmin ? -1 : 1
         return a.rsvpAt.getTime() - b.rsvpAt.getTime()
       })
-      .map((x) => x.id)
+      .map(x => x.id)
 
     // Process teams in pairs: (1&2), (3&4), (5&6), ... Each pair gets the next N players
     // by RSVP order and keeps them within that pair only (balanced between the two).
@@ -226,14 +247,14 @@ export async function POST(request: NextRequest) {
       }
 
       const teamHasGK = (idx: number) =>
-        assigned[idx]!.some((id) =>
+        assigned[idx]!.some(id =>
           isGoalkeeper(userById.get(id)?.position ?? null)
         )
 
       const assignFrom = (bucket: Bucket) => {
         for (const playerId of buckets[bucket]) {
           const eligible = [t0, t1].filter(
-            (idx) => assigned[idx]!.length < targets[idx]!
+            idx => assigned[idx]!.length < targets[idx]!
           )
           if (eligible.length === 0) break
           const teamIdx = pickNextTeam(eligible)
@@ -244,8 +265,7 @@ export async function POST(request: NextRequest) {
       // GK: at most one per team so we never give one team two GKs and the other none
       for (const playerId of buckets.GK) {
         const eligible = [t0, t1].filter(
-          (idx) =>
-            assigned[idx]!.length < targets[idx]! && !teamHasGK(idx)
+          idx => assigned[idx]!.length < targets[idx]! && !teamHasGK(idx)
         )
         if (eligible.length === 0) break
         const teamIdx = pickNextTeam(eligible)
@@ -295,16 +315,13 @@ export async function POST(request: NextRequest) {
     }
     if (Object.keys(gkReplacements).length > 0) {
       const matchRef = adminDb.collection('matches').doc(matchId)
-      await matchRef.set(
-        { gkReplacements, updatedAt: now },
-        { merge: true }
-      )
+      await matchRef.set({ gkReplacements, updatedAt: now }, { merge: true })
     }
 
     return NextResponse.json({
       success: true,
       teamsRebalanced: teams.length,
-      assignedCounts: assigned.map((a) => a.length),
+      assignedCounts: assigned.map(a => a.length),
       benchCount: 0,
       rosterLimit,
       replacements,
@@ -318,4 +335,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-

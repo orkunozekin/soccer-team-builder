@@ -1,9 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-
-import type { Match } from '@/types/match'
 import { AdminMatchCard } from './AdminMatchCard'
+import type { Match } from '@/types/match'
 
 const deleteMatchAPIMock = vi.fn()
 
@@ -34,12 +33,8 @@ describe('AdminMatchCard', () => {
 
     expect(screen.getByText(/test field/i)).toBeInTheDocument()
     expect(screen.getByText(/rsvp open/i)).toBeInTheDocument()
-    expect(
-      screen.getByText(/3 players confirmed/i)
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /delete/i })
-    ).toBeInTheDocument()
+    expect(screen.getByText(/3 players confirmed/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument()
   })
 
   it('confirms and deletes match, then calls onDeleted', async () => {
@@ -49,9 +44,7 @@ describe('AdminMatchCard', () => {
 
     render(<AdminMatchCard match={baseMatch} onDeleted={onDeleted} />)
 
-    await user.click(
-      screen.getByRole('button', { name: /^delete$/i })
-    )
+    await user.click(screen.getByRole('button', { name: /^delete$/i }))
 
     const confirmButton = await screen.findByRole('button', {
       name: /delete/i,
@@ -62,4 +55,3 @@ describe('AdminMatchCard', () => {
     expect(onDeleted).toHaveBeenCalledTimes(1)
   })
 })
-

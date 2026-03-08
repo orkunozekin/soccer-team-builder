@@ -14,7 +14,13 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { ButtonSpinner } from '@/components/ui/button-spinner'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { DatePickerTime } from '@/components/ui/date-picker-time'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -39,7 +45,9 @@ export function EditMatchCard({
   const [time, setTime] = useState('')
   const [location, setLocation] = useState('')
   const [saving, setSaving] = useState(false)
-  const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null)
+  const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(
+    null
+  )
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -83,11 +91,10 @@ export function EditMatchCard({
       const updated: string[] = []
       if (date !== initialValues.date) updated.push('Date')
       if (time !== initialValues.time) updated.push('Time')
-      if ((location || '').trim() !== initialValues.location) updated.push('Location')
+      if ((location || '').trim() !== initialValues.location)
+        updated.push('Location')
       const message =
-        updated.length > 0
-          ? `${updated.join(', ')} saved.`
-          : 'Saved.'
+        updated.length > 0 ? `${updated.join(', ')} saved.` : 'Saved.'
       setSaveSuccessMessage(message)
       setTimeout(() => setSaveSuccessMessage(null), 3000)
       await onSaved?.()
@@ -150,7 +157,7 @@ export function EditMatchCard({
                     id="match-location"
                     type="text"
                     value={location}
-                    onChange={(e) => setLocation(e.target.value)}
+                    onChange={e => setLocation(e.target.value)}
                     disabled={saving}
                     className="h-11"
                   />
@@ -194,13 +201,14 @@ export function EditMatchCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete match?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the match, its teams, and RSVPs. This cannot be undone.
+              This will remove the match, its teams, and RSVPs. This cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => {
+              onClick={e => {
                 e.preventDefault()
                 handleConfirmDelete()
               }}

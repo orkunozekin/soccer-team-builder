@@ -22,7 +22,7 @@ function AdminDashboardContent() {
         setMatches(allMatches)
         const counts: Record<string, number> = {}
         await Promise.all(
-          allMatches.map(async (m) => {
+          allMatches.map(async m => {
             counts[m.id] = await getMatchRsvpCount(m.id)
           })
         )
@@ -42,7 +42,7 @@ function AdminDashboardContent() {
     setMatches(allMatches)
     const counts: Record<string, number> = {}
     await Promise.all(
-      allMatches.map(async (m) => {
+      allMatches.map(async m => {
         counts[m.id] = await getMatchRsvpCount(m.id)
       })
     )
@@ -59,12 +59,10 @@ function AdminDashboardContent() {
       </div>
 
       <div className="space-y-6">
-        <CreateMatchCard
-          onMatchCreated={refetchMatches}
-        />
+        <CreateMatchCard onMatchCreated={refetchMatches} />
 
         <div>
-          <h2 className="text-2xl font-bold mb-4">All Matches</h2>
+          <h2 className="mb-4 text-2xl font-bold">All Matches</h2>
           {matches.length === 0 ? (
             <Card>
               <CardContent className="py-6">
@@ -75,7 +73,7 @@ function AdminDashboardContent() {
             </Card>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {matches.map((match) => (
+              {matches.map(match => (
                 <AdminMatchCard
                   key={match.id}
                   match={match}

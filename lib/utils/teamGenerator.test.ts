@@ -69,7 +69,11 @@ describe('generateTeamsWithReplacements', () => {
     const rsvps: RSVP[] = []
 
     // Two goalkeepers and 20 outfield players
-    const ids = ['gk1', 'gk2', ...Array.from({ length: 20 }, (_, i) => `p${i + 1}`)]
+    const ids = [
+      'gk1',
+      'gk2',
+      ...Array.from({ length: 20 }, (_, i) => `p${i + 1}`),
+    ]
     ids.forEach((id, index) => {
       const isGk = id.startsWith('gk')
       users.push(
@@ -90,8 +94,8 @@ describe('generateTeamsWithReplacements', () => {
 
     const firstTwo = teams.slice(0, 2)
     for (const team of firstTwo) {
-      const gkCount = team.playerIds.filter((uid) => {
-        const user = users.find((u) => u.uid === uid)
+      const gkCount = team.playerIds.filter(uid => {
+        const user = users.find(u => u.uid === uid)
         return isGoalkeeper(user?.position ?? null)
       }).length
       expect(gkCount).toBeLessThanOrEqual(1)
@@ -117,9 +121,8 @@ describe('generateTeamsWithReplacements', () => {
     })
 
     const { teams } = generateTeamsWithReplacements(rsvps, users, 11)
-    const assignedIds = teams.flatMap((t) => t.playerIds)
+    const assignedIds = teams.flatMap(t => t.playerIds)
 
     expect(new Set(assignedIds)).toEqual(new Set(ids))
   })
 })
-

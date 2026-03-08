@@ -1,7 +1,7 @@
 'use client'
 
-import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface PageLoadingSkeletonProps {
   /** Show a short “back” link skeleton at the top */
@@ -17,14 +17,18 @@ export function PageLoadingSkeleton({
 }: PageLoadingSkeletonProps) {
   const content = (
     <div className="space-y-6">
-      {showBack && (
-        <Skeleton className="h-4 w-32" />
-      )}
+      {showBack && <Skeleton className="h-4 w-32" />}
       <div className="space-y-2">
         <Skeleton className="h-8 w-3/4 max-w-md" />
         <Skeleton className="h-4 w-full max-w-sm" />
       </div>
-      <div className={variant === 'centered' ? 'mx-auto max-w-2xl space-y-4' : 'grid gap-6 lg:grid-cols-2'}>
+      <div
+        className={
+          variant === 'centered'
+            ? 'mx-auto max-w-2xl space-y-4'
+            : 'grid gap-6 lg:grid-cols-2'
+        }
+      >
         <Skeleton className="h-40 w-full rounded-lg" />
         <Skeleton className="h-40 w-full rounded-lg" />
         {variant === 'container' && (
@@ -49,9 +53,7 @@ export function PageLoadingSkeleton({
   }
 
   return (
-    <div className="container mx-auto min-h-screen px-4 py-8">
-      {content}
-    </div>
+    <div className="container mx-auto min-h-screen px-4 py-8">{content}</div>
   )
 }
 
@@ -64,7 +66,7 @@ export function CardLoadingSkeleton() {
         <Skeleton className="h-4 w-full" />
       </CardHeader>
       <CardContent className="space-y-3">
-        {[1, 2, 3, 4].map((i) => (
+        {[1, 2, 3, 4].map(i => (
           <Skeleton key={i} className="h-10 w-full" />
         ))}
       </CardContent>

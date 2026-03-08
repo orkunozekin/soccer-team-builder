@@ -10,9 +10,7 @@ interface AdminRouteGuardProps {
   children: React.ReactNode
 }
 
-export function AdminRouteGuard({
-  children,
-}: AdminRouteGuardProps) {
+export function AdminRouteGuard({ children }: AdminRouteGuardProps) {
   const router = useRouter()
   const { user, loading } = useAuth()
   const { isAdmin } = useAdmin()

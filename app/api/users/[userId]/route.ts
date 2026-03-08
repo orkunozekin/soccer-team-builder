@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin'
 import { removeUserFromMatchTeams } from '@/lib/teams/removeUserFromMatchTeams'
@@ -22,7 +21,10 @@ export async function DELETE(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   if (!isAdmin) {
-    return NextResponse.json({ error: 'Admin privileges required' }, { status: 403 })
+    return NextResponse.json(
+      { error: 'Admin privileges required' },
+      { status: 403 }
+    )
   }
 
   const { userId } = await params
@@ -30,13 +32,19 @@ export async function DELETE(
     return NextResponse.json({ error: 'User ID required' }, { status: 400 })
   }
   if (userId === uid) {
-    return NextResponse.json({ error: 'You cannot remove your own account.' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'You cannot remove your own account.' },
+      { status: 400 }
+    )
   }
 
   const adminAuth = getAdminAuth()
   const adminDb = getAdminDb()
   if (!adminAuth || !adminDb) {
-    return NextResponse.json({ error: 'Firebase Admin not configured' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Firebase Admin not configured' },
+      { status: 500 }
+    )
   }
 
   try {
@@ -48,13 +56,20 @@ export async function DELETE(
     }
 
     // 2) Delete user doc (if present)
-    await adminDb.collection('users').doc(userId).delete().catch(() => {})
+    await adminDb
+      .collection('users')
+      .doc(userId)
+      .delete()
+      .catch(() => {})
 
     // 3) Delete RSVPs authored by this user (top-level collection)
-    const rsvpSnap = await adminDb.collection('rsvps').where('userId', '==', userId).get()
+    const rsvpSnap = await adminDb
+      .collection('rsvps')
+      .where('userId', '==', userId)
+      .get()
     for (const batchDocs of chunk(rsvpSnap.docs, 450)) {
       const batch = adminDb.batch()
-      batchDocs.forEach((d) => batch.delete(d.ref))
+      batchDocs.forEach(d => batch.delete(d.ref))
       await batch.commit()
     }
 
@@ -71,4 +86,3 @@ export async function DELETE(
     )
   }
 }
-

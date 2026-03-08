@@ -1,11 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { PositionSelector } from '@/components/profile/PositionSelector'
 import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { PositionSelector } from '@/components/profile/PositionSelector'
 import { cancelRSVPAPI, confirmRSVPAPI, searchUsersAPI } from '@/lib/api/client'
 import { Match } from '@/types/match'
 import { RSVP } from '@/types/rsvp'
@@ -23,7 +29,11 @@ interface ImpersonateRSVPProps {
   onDone?: () => void | Promise<void>
 }
 
-export function ImpersonateRSVP({ match, matchRSVPs, onDone }: ImpersonateRSVPProps) {
+export function ImpersonateRSVP({
+  match,
+  matchRSVPs,
+  onDone,
+}: ImpersonateRSVPProps) {
   const [query, setQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchUser[]>([])
   const [searching, setSearching] = useState(false)
@@ -43,7 +53,7 @@ export function ImpersonateRSVP({ match, matchRSVPs, onDone }: ImpersonateRSVPPr
     setSearching(true)
     const t = setTimeout(() => {
       searchUsersAPI(q, 15)
-        .then((res) => {
+        .then(res => {
           if (!cancelled) setSearchResults(res.users)
         })
         .catch(() => {
@@ -59,7 +69,9 @@ export function ImpersonateRSVP({ match, matchRSVPs, onDone }: ImpersonateRSVPPr
     }
   }, [query])
 
-  const selectedRsvp = selected ? matchRSVPs.find((r) => r.userId === selected.uid) ?? null : null
+  const selectedRsvp = selected
+    ? (matchRSVPs.find(r => r.userId === selected.uid) ?? null)
+    : null
   const hasRsvp = !!selectedRsvp
 
   const handleConfirmRSVP = async () => {
@@ -112,40 +124,41 @@ export function ImpersonateRSVP({ match, matchRSVPs, onDone }: ImpersonateRSVPPr
             type="text"
             placeholder="Type to search..."
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={e => setQuery(e.target.value)}
             className="w-full"
           />
         </div>
 
-        {searching && (
-          <p className="text-sm text-zinc-500">Searching...</p>
-        )}
+        {searching && <p className="text-sm text-zinc-500">Searching...</p>}
 
-        {!searching && query.trim() && searchResults.length > 0 && !selected && (
-          <ul className="border rounded-md divide-y max-h-40 overflow-y-auto">
-            {searchResults.map((u) => (
-              <li key={u.uid}>
-                <button
-                  type="button"
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                  onClick={() => {
-                    setSelected(u)
-                    setQuery('')
-                    setSearchResults([])
-                  }}
-                >
-                  {u.displayName || u.email || u.uid}
-                  {u.email && u.displayName && (
-                    <span className="text-zinc-500 ml-1">({u.email})</span>
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+        {!searching &&
+          query.trim() &&
+          searchResults.length > 0 &&
+          !selected && (
+            <ul className="max-h-40 divide-y overflow-y-auto rounded-md border">
+              {searchResults.map(u => (
+                <li key={u.uid}>
+                  <button
+                    type="button"
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    onClick={() => {
+                      setSelected(u)
+                      setQuery('')
+                      setSearchResults([])
+                    }}
+                  >
+                    {u.displayName || u.email || u.uid}
+                    {u.email && u.displayName && (
+                      <span className="ml-1 text-zinc-500">({u.email})</span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
 
         {selected && (
-          <div className="rounded-md border p-3 space-y-3 bg-zinc-50 dark:bg-zinc-900/50">
+          <div className="space-y-3 rounded-md border bg-zinc-50 p-3 dark:bg-zinc-900/50">
             <p className="text-sm font-medium">
               {hasRsvp ? 'Cancel RSVP for' : 'RSVP as'}{' '}
               <span className="text-zinc-900 dark:text-zinc-100">
@@ -192,7 +205,10 @@ export function ImpersonateRSVP({ match, matchRSVPs, onDone }: ImpersonateRSVPPr
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => { setSelected(null); setPosition(null) }}
+                    onClick={() => {
+                      setSelected(null)
+                      setPosition(null)
+                    }}
                     disabled={loading}
                   >
                     Clear

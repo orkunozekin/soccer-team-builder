@@ -21,7 +21,7 @@ When multiple users RSVP to the same match at the same time (e.g. up to ~30 peop
    After each new RSVP, the API calls `expandTeamsForMatch(matchId)`, which:
    - Reads all confirmed RSVPs for the match
    - Deletes all existing team docs under `matches/{matchId}/teams`
-   - Writes new team docs  
+   - Writes new team docs
 
    This is a read–modify–write on the same logical resource. With concurrent RSVPs:
    - Multiple requests can run `expandTeamsForMatch` in parallel.
@@ -54,11 +54,11 @@ When multiple users RSVP to the same match at the same time (e.g. up to ~30 peop
 
 ## UX Summary
 
-| Question | Answer |
-|----------|--------|
+| Question                                                   | Answer                                                                                                        |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | Will users see their RSVP reflected in a team immediately? | **Yes** — as soon as their request completes (RSVP written + one serialized regeneration that includes them). |
-| Do they have to wait for everyone to finish RSVPing? | **No** — they only wait for their own request and, if the lock is held, for one other regeneration to finish. |
-| Extra delay under load? | In a burst (e.g. 30 at once), some users may wait an extra 1–2 seconds while the per-match lock is held. |
+| Do they have to wait for everyone to finish RSVPing?       | **No** — they only wait for their own request and, if the lock is held, for one other regeneration to finish. |
+| Extra delay under load?                                    | In a burst (e.g. 30 at once), some users may wait an extra 1–2 seconds while the per-match lock is held.      |
 
 ---
 
@@ -87,8 +87,8 @@ Use **local dev** (emulators + `yarn dev`) so you don’t affect production.
 
 **Goal:** Under concurrent RSVPs, every confirmed user appears in the teams and no 503 (or 503 then retry succeeds).
 
-- **Manual:** Open 3–5 browser tabs (or a mix of normal + incognito), each logged in as a **different** user. Create or pick a match with RSVP open. In quick succession click **RSVP to Match** in each tab.  
-  - **Expect:** All tabs eventually show “RSVP’d” and teams; roster total = number of RSVPs. If any tab shows “Team update is busy”, click RSVP again and it should succeed.  
+- **Manual:** Open 3–5 browser tabs (or a mix of normal + incognito), each logged in as a **different** user. Create or pick a match with RSVP open. In quick succession click **RSVP to Match** in each tab.
+  - **Expect:** All tabs eventually show “RSVP’d” and teams; roster total = number of RSVPs. If any tab shows “Team update is busy”, click RSVP again and it should succeed.
   - **Check:** In Emulator UI → Firestore → `matches/{matchId}/teams`, each team doc’s `playerIds` should account for all confirmed RSVPs (no duplicates, no missing UIDs).
 
 - **Concurrent requests from browser:** While logged in on the match page, open DevTools → Console and run (replace `MATCH_ID` with the match id):
@@ -103,21 +103,21 @@ console.log(res.map(r => r.status))  // expect mostly 200, maybe one 503
 res.filter(r => r.status === 503).forEach(r => r.json().then(d => console.log('503:', d)))
 ```
 
-  Same user RSVPing 8 times: first is 200 (new RSVP), rest are 200 (existing RSVP, regeneration runs each time). You’re stressing the lock; all should succeed (or one 503 and retry).
+Same user RSVPing 8 times: first is 200 (new RSVP), rest are 200 (existing RSVP, regeneration runs each time). You’re stressing the lock; all should succeed (or one 503 and retry).
 
 ### 2. Atomic GK cap (at most 2 GKs)
 
 **Goal:** With 3+ users trying to RSVP as GK at once, exactly 2 succeed and the rest get “already 2 goalkeepers”.
 
-- **Manual:** Use 3 different users whose **profile position is GK** (or use the position picker when RSVPing). Open 3 tabs, one per user, same match. Click **RSVP to Match** in all 3 at roughly the same time (e.g. count down and click in each).  
-  - **Expect:** Two tabs get success; one gets the “There are already 2 goalkeepers” message (and can pick another position).  
+- **Manual:** Use 3 different users whose **profile position is GK** (or use the position picker when RSVPing). Open 3 tabs, one per user, same match. Click **RSVP to Match** in all 3 at roughly the same time (e.g. count down and click in each).
+  - **Expect:** Two tabs get success; one gets the “There are already 2 goalkeepers” message (and can pick another position).
   - **Check:** In Firestore, count confirmed RSVPs for that match with effective position = GK; should be 2.
 
 ### 3. 503 and retry
 
 **Goal:** When the lock is busy, API returns 503 and the UI message is clear; retrying works.
 
-- Trigger many concurrent RSVPs (e.g. script below or 5+ tabs with different users). You may see one or two 503 responses.  
+- Trigger many concurrent RSVPs (e.g. script below or 5+ tabs with different users). You may see one or two 503 responses.
 - **Expect:** Response body has `code: 'LOCK_BUSY'` and a message like “Team update is busy. Please try again in a moment.” In the app, the user sees that message; clicking RSVP again succeeds.
 
 ### 4. Automated script (create users + concurrent RSVPs)
@@ -144,13 +144,13 @@ node scripts/concurrency-test.mjs <matchId> --position=GK --seed
 
 **Options:**
 
-| Option | Meaning |
-|--------|--------|
-| `--seed` | Call `POST /api/seed-test-users` first (requires `SEED_SECRET` in `.env.local`). |
-| `--count=N` | Use first N users (default 10). Ignored if `--indices` or `--position` is set. |
-| `--offset=N` | Start from user index N, then take `count` users (default offset 0). |
-| `--indices=0,5,19` | Use only these comma-separated indices from `test-users.json`. |
-| `--position=GK` | Use only users whose `position` equals this (e.g. GK for 2-GK cap test). |
+| Option             | Meaning                                                                          |
+| ------------------ | -------------------------------------------------------------------------------- |
+| `--seed`           | Call `POST /api/seed-test-users` first (requires `SEED_SECRET` in `.env.local`). |
+| `--count=N`        | Use first N users (default 10). Ignored if `--indices` or `--position` is set.   |
+| `--offset=N`       | Start from user index N, then take `count` users (default offset 0).             |
+| `--indices=0,5,19` | Use only these comma-separated indices from `test-users.json`.                   |
+| `--position=GK`    | Use only users whose `position` equals this (e.g. GK for 2-GK cap test).         |
 
 **Env (from `.env.local`):** `SEED_SECRET` (for `--seed`), `FIREBASE_AUTH_EMULATOR_HOST` (default `127.0.0.1:9099`). App URL defaults to `http://localhost:3001`; override with `CONCURRENCY_TEST_APP_URL` if your app runs elsewhere.
 

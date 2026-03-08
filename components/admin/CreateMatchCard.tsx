@@ -2,7 +2,13 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { DatePickerTime } from '@/components/ui/date-picker-time'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -41,7 +47,11 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
       const [hours, minutes] = time.split(':').map(Number)
       const matchDate = new Date(y, m - 1, d, hours, minutes, 0, 0)
 
-      const { matchId } = await createMatchAPI(matchDate, time, location.trim() || null)
+      const { matchId } = await createMatchAPI(
+        matchDate,
+        time,
+        location.trim() || null
+      )
       const newMatch = await getMatch(matchId)
 
       if (newMatch) {
@@ -102,7 +112,7 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
                 id="location"
                 type="text"
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                onChange={e => setLocation(e.target.value)}
                 disabled={loading}
                 className="h-11"
               />
@@ -132,7 +142,7 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
               <Button
                 type="submit"
                 loading={loading}
-                className="flex-1 h-11 text-base sm:h-9 sm:text-sm"
+                className="h-11 flex-1 text-base sm:h-9 sm:text-sm"
               >
                 Create Match
               </Button>

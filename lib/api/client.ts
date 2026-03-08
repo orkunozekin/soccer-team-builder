@@ -14,7 +14,8 @@ async function getIdToken(forceRefresh?: boolean): Promise<string | null> {
   if (currentUser) {
     return currentUser.getIdToken(forceRefresh === true)
   }
-  const storeUser = typeof window !== 'undefined' ? useAuthStore.getState().user : null
+  const storeUser =
+    typeof window !== 'undefined' ? useAuthStore.getState().user : null
   if (storeUser) {
     return storeUser.getIdToken(forceRefresh === true)
   }
@@ -70,7 +71,11 @@ export async function confirmRSVPAPI(
   regenerated: boolean
   position: string | null
 }> {
-  const body: { matchId: string; position?: string | null; impersonateUserId?: string } = { matchId }
+  const body: {
+    matchId: string
+    position?: string | null
+    impersonateUserId?: string
+  } = { matchId }
   if (position !== undefined) body.position = position
   if (impersonateUserId) body.impersonateUserId = impersonateUserId
   const response = await apiRequest('/rsvp', {
@@ -203,7 +208,9 @@ export async function updateMatchAPI(
   return response.json()
 }
 
-export async function deleteMatchAPI(matchId: string): Promise<{ success: boolean }> {
+export async function deleteMatchAPI(
+  matchId: string
+): Promise<{ success: boolean }> {
   const response = await apiRequest(`/matches/${matchId}`, {
     method: 'DELETE',
   })
@@ -216,7 +223,9 @@ export async function deleteMatchAPI(matchId: string): Promise<{ success: boolea
   return response.json()
 }
 
-export async function deleteUserAPI(userId: string): Promise<{ success: boolean }> {
+export async function deleteUserAPI(
+  userId: string
+): Promise<{ success: boolean }> {
   const response = await apiRequest(`/users/${userId}`, {
     method: 'DELETE',
   })

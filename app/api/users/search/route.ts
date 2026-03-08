@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 
@@ -31,18 +30,26 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   if (!isAdmin) {
-    return NextResponse.json({ error: 'Admin privileges required' }, { status: 403 })
+    return NextResponse.json(
+      { error: 'Admin privileges required' },
+      { status: 403 }
+    )
   }
 
   const adminDb = getAdminDb()
   if (!adminDb) {
-    return NextResponse.json({ error: 'Firebase Admin not configured' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Firebase Admin not configured' },
+      { status: 500 }
+    )
   }
 
   const { searchParams } = new URL(request.url)
   const qRaw = (searchParams.get('q') ?? '').trim()
   const limitRaw = Number(searchParams.get('limit') ?? '25')
-  const limit = Number.isFinite(limitRaw) ? Math.min(50, Math.max(1, limitRaw)) : 25
+  const limit = Number.isFinite(limitRaw)
+    ? Math.min(50, Math.max(1, limitRaw))
+    : 25
 
   if (!qRaw) {
     return NextResponse.json({ error: 'q is required' }, { status: 400 })
@@ -104,11 +111,12 @@ export async function GET(request: NextRequest) {
   const unique = uniqByUid(rows)
 
   // Consistent ordering for UI.
-  unique.sort((a, b) => (a.displayName || a.email).localeCompare(b.displayName || b.email))
+  unique.sort((a, b) =>
+    (a.displayName || a.email).localeCompare(b.displayName || b.email)
+  )
 
   return NextResponse.json({
     success: true,
     users: unique.slice(0, limit),
   })
 }
-

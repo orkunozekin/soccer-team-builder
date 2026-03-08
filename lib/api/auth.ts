@@ -28,12 +28,14 @@ export async function verifyAuth(request: Request): Promise<{
   try {
     // Use Firebase Admin SDK to verify the token
     const adminAuth = getAdminAuth()
-    
+
     // If Admin SDK is not configured, fall back to client SDK approach
     if (!adminAuth) {
       // Fallback: Accept token but rely on Firestore security rules
       // This is less secure but allows development without service account
-      console.warn('Firebase Admin SDK not configured, using fallback verification')
+      console.warn(
+        'Firebase Admin SDK not configured, using fallback verification'
+      )
       return { uid: 'fallback', error: null }
     }
 

@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest'
-
 import {
   getNextRSVPCloseTime,
   getNextRSVPOpenTime,
@@ -19,7 +18,9 @@ describe('rsvpScheduler', () => {
     const closeIso = closeAt!.toISOString()
 
     expect(openIso.startsWith('2024-03-01T')).toBe(true)
-    expect(closeIso.startsWith('2024-03-02T') || closeIso.startsWith('2024-03-01T')).toBe(true)
+    expect(
+      closeIso.startsWith('2024-03-02T') || closeIso.startsWith('2024-03-01T')
+    ).toBe(true)
   })
 
   it('getNextRSVPOpenTime/getNextRSVPCloseTime delegate to schedule', () => {
@@ -49,4 +50,3 @@ describe('rsvpScheduler', () => {
     }
   })
 })
-

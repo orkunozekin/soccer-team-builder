@@ -22,9 +22,9 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { cancelRSVPAPI, transferPlayerAPI } from '@/lib/api/client'
+import { RSVP } from '@/types/rsvp'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
-import { RSVP } from '@/types/rsvp'
 
 type DragData = { playerId: string; fromTeamId: string }
 
@@ -61,14 +61,17 @@ export function TeamsDisplay({
   } | null>(null)
   const [cancelling, setCancelling] = useState(false)
 
-  const onRequestCancelRSVP = useCallback((userId: string, displayName: string) => {
-    setPendingCancel({ userId, displayName })
-  }, [])
+  const onRequestCancelRSVP = useCallback(
+    (userId: string, displayName: string) => {
+      setPendingCancel({ userId, displayName })
+    },
+    []
+  )
 
   const handleConfirmCancelRSVP = useCallback(async () => {
     if (!pendingCancel) return
     const rsvp = matchRSVPs.find(
-      (r) => r.userId === pendingCancel.userId && r.status === 'confirmed'
+      r => r.userId === pendingCancel.userId && r.status === 'confirmed'
     )
     if (!rsvp) {
       setPendingCancel(null)
@@ -97,7 +100,9 @@ export function TeamsDisplay({
       const teamStart = start + 1
       const teamEnd = end
       const label =
-        teamStart === teamEnd ? `Team ${teamStart}` : `Teams ${teamStart}–${teamEnd}`
+        teamStart === teamEnd
+          ? `Team ${teamStart}`
+          : `Teams ${teamStart}–${teamEnd}`
       out.push({ start, end, label })
     }
     return out
@@ -105,7 +110,9 @@ export function TeamsDisplay({
 
   const safePageIndex = Math.min(pageIndex, Math.max(0, pages.length - 1))
   const page = pages[safePageIndex]
-  const visibleTeams = page ? teamsSorted.slice(page.start, page.end) : teamsSorted.slice(0, 2)
+  const visibleTeams = page
+    ? teamsSorted.slice(page.start, page.end)
+    : teamsSorted.slice(0, 2)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -144,9 +151,9 @@ export function TeamsDisplay({
 
   const content = (
     <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-      {visibleTeams.map((team) => {
+      {visibleTeams.map(team => {
         const teamUsers = team.playerIds
-          .map((userId) => users.find((u) => u.uid === userId))
+          .map(userId => users.find(u => u.uid === userId))
           .filter((u): u is User => !!u)
 
         return (
@@ -158,7 +165,11 @@ export function TeamsDisplay({
               transferring={transferring}
               currentUserId={currentUserId}
               isAdmin={isAdmin}
-              onCancelRSVP={isAdmin && matchRSVPs.length > 0 ? onRequestCancelRSVP : undefined}
+              onCancelRSVP={
+                isAdmin && matchRSVPs.length > 0
+                  ? onRequestCancelRSVP
+                  : undefined
+              }
             />
           </div>
         )
@@ -170,7 +181,7 @@ export function TeamsDisplay({
     <div className="min-w-0 space-y-2 overflow-hidden">
       <AlertDialog
         open={!!pendingCancel}
-        onOpenChange={(open) => !open && setPendingCancel(null)}
+        onOpenChange={open => !open && setPendingCancel(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -178,7 +189,8 @@ export function TeamsDisplay({
             <AlertDialogDescription>
               {pendingCancel ? (
                 <>
-                  Cancel RSVP for <strong>{pendingCancel.displayName || 'this player'}</strong>?
+                  Cancel RSVP for{' '}
+                  <strong>{pendingCancel.displayName || 'this player'}</strong>?
                   They will be removed from the team.
                 </>
               ) : (
@@ -187,9 +199,11 @@ export function TeamsDisplay({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={cancelling}>Keep RSVP</AlertDialogCancel>
+            <AlertDialogCancel disabled={cancelling}>
+              Keep RSVP
+            </AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => {
+              onClick={e => {
                 e.preventDefault()
                 handleConfirmCancelRSVP()
               }}

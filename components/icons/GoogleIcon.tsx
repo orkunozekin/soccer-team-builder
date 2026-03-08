@@ -31,4 +31,3 @@ export function GoogleIcon({ className, ...props }: GoogleIconProps) {
     </svg>
   )
 }
-

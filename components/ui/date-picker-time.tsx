@@ -60,7 +60,7 @@ export function DatePickerTime({
               variant="outline"
               id={dateId}
               disabled={disabled}
-              className="w-full min-w-[8rem] justify-between font-normal h-11 text-base sm:h-9 sm:text-sm"
+              className="h-11 w-full min-w-[8rem] justify-between text-base font-normal sm:h-9 sm:text-sm"
             >
               {dateObj ? format(dateObj, 'PPP') : datePlaceholder}
               <ChevronDownIcon className="h-4 w-4 opacity-50" />
@@ -73,8 +73,8 @@ export function DatePickerTime({
               captionLayout="dropdown"
               defaultMonth={dateObj}
               hideNavigation
-              disabled={min ? (day) => day < min : undefined}
-              onSelect={(d) => {
+              disabled={min ? day => day < min : undefined}
+              onSelect={d => {
                 onDateChange(d ? format(d, 'yyyy-MM-dd') : '')
                 setOpen(false)
               }}
@@ -89,9 +89,9 @@ export function DatePickerTime({
           id={timeId}
           step={timeStep}
           value={time}
-          onChange={(e) => onTimeChange(e.target.value)}
+          onChange={e => onTimeChange(e.target.value)}
           disabled={disabled}
-          className="h-11 text-base sm:h-9 sm:text-sm w-full bg-background [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+          className="h-11 w-full bg-background text-base sm:h-9 sm:text-sm [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
         />
       </Field>
     </FieldGroup>

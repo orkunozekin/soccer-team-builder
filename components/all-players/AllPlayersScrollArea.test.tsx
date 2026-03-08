@@ -42,4 +42,3 @@ describe('AllPlayersScrollArea', () => {
     expect(storeState.clearPlayers).toHaveBeenCalledTimes(1)
   })
 })
-

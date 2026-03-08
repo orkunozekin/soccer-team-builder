@@ -1,8 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-
-import type { Player } from '@/interfaces/Player.interface'
 import PlayersRowItem from './PlayersRowItem'
+import type { Player } from '@/interfaces/Player.interface'
 
 vi.mock('../player/PlayerName', () => ({
   __esModule: true,
@@ -37,4 +36,3 @@ describe('PlayersRowItem', () => {
     expect(screen.getByText(/kebabmenu: 2 items/i)).toBeInTheDocument()
   })
 })
-

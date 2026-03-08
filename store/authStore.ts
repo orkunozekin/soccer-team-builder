@@ -1,7 +1,7 @@
 'use client'
 
-import { create } from 'zustand'
 import { User as FirebaseUser } from 'firebase/auth'
+import { create } from 'zustand'
 import { User } from '@/types/user'
 
 interface AuthState {
@@ -14,12 +14,12 @@ interface AuthState {
   logout: () => void
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>(set => ({
   user: null,
   userData: null,
   loading: true,
-  setUser: (user) => set({ user }),
-  setUserData: (userData) => set({ userData }),
-  setLoading: (loading) => set({ loading }),
+  setUser: user => set({ user }),
+  setUserData: userData => set({ userData }),
+  setLoading: loading => set({ loading }),
   logout: () => set({ user: null, userData: null }),
 }))

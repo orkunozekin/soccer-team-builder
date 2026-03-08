@@ -9,9 +9,6 @@ interface ButtonSpinnerProps {
 
 export function ButtonSpinner({ className }: ButtonSpinnerProps) {
   return (
-    <Loader2
-      className={cn('h-4 w-4 animate-spin', className)}
-      aria-hidden
-    />
+    <Loader2 className={cn('h-4 w-4 animate-spin', className)} aria-hidden />
   )
 }

@@ -3,14 +3,24 @@ import { NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { TEST_USERS } from '@/lib/testData/testUsers'
-import { computeTeamCountForRSVPCount, generateTeams } from '@/lib/utils/teamGenerator'
+import {
+  computeTeamCountForRSVPCount,
+  generateTeams,
+} from '@/lib/utils/teamGenerator'
 import type { RSVP } from '@/types/rsvp'
 import type { User } from '@/types/user'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const TEAM_COLORS = ['#f97316', '#3b82f6', '#eab308', '#65a30d', '#ef4444', '#8b5cf6']
+const TEAM_COLORS = [
+  '#f97316',
+  '#3b82f6',
+  '#eab308',
+  '#65a30d',
+  '#ef4444',
+  '#8b5cf6',
+]
 const TEAM_NAMES = ['Orange', 'Blue', 'Yellow', 'Lime', 'Red', 'Purple']
 
 function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
@@ -33,7 +43,8 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const seedSecret = request.headers.get('x-seed-secret')
-    const useSecret = process.env.SEED_SECRET && seedSecret === process.env.SEED_SECRET
+    const useSecret =
+      process.env.SEED_SECRET && seedSecret === process.env.SEED_SECRET
 
     if (!useSecret) {
       const { isAdmin, error } = await verifyAdmin(request)
@@ -54,7 +65,10 @@ export async function POST(request: Request) {
 
     const matchId = body.matchId
     if (!matchId || typeof matchId !== 'string') {
-      return NextResponse.json({ error: 'matchId is required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'matchId is required' },
+        { status: 400 }
+      )
     }
     const regenerateTeamsAfter = body.regenerateTeams !== false
 
@@ -77,7 +91,7 @@ export async function POST(request: Request) {
       .collection('users')
       .where('isTestUser', '==', true)
       .get()
-    const testUserIds = usersSnap.docs.map((d) => d.id)
+    const testUserIds = usersSnap.docs.map(d => d.id)
 
     if (testUserIds.length === 0) {
       return NextResponse.json(
@@ -90,110 +104,117 @@ export async function POST(request: Request) {
     const results: { userId: string; status: 'created' | 'exists' }[] = []
 
     for (const userId of testUserIds) {
-    const existing = await adminDb
-      .collection('rsvps')
-      .where('matchId', '==', matchId)
-      .where('userId', '==', userId)
-      .where('status', '==', 'confirmed')
-      .limit(1)
-      .get()
+      const existing = await adminDb
+        .collection('rsvps')
+        .where('matchId', '==', matchId)
+        .where('userId', '==', userId)
+        .where('status', '==', 'confirmed')
+        .limit(1)
+        .get()
 
-    if (!existing.empty) {
-      results.push({ userId, status: 'exists' })
-      continue
-    }
-
-    const userRef = adminDb.collection('users').doc(userId)
-    const userDoc = await userRef.get()
-    const userData = userDoc.exists ? userDoc.data() : undefined
-    const email = (userData?.email as string) ?? ''
-    const positionFromDoc = (userData?.position as string | null) ?? null
-    const positionFromSeed = TEST_USERS.find((u) => u.email.toLowerCase() === email.toLowerCase())?.position ?? null
-    const userPosition = positionFromSeed ?? positionFromDoc
-
-    if (positionFromSeed != null && positionFromSeed !== positionFromDoc) {
-      await userRef.set({ position: positionFromSeed, updatedAt: now }, { merge: true })
-    }
-
-    const rsvpId = `rsvp_${matchId}_${userId}_${now.toMillis()}_${results.length}`
-    await adminDb.collection('rsvps').doc(rsvpId).set({
-      matchId,
-      userId,
-      status: 'confirmed',
-      position: userPosition,
-      rsvpAt: now,
-      createdAt: now,
-      updatedAt: now,
-    })
-    results.push({ userId, status: 'created' })
-  }
-
-  // Optional: regenerate teams so the match reflects the new RSVP count immediately
-  if (regenerateTeamsAfter) {
-    const rsvpSnap = await adminDb
-      .collection('rsvps')
-      .where('matchId', '==', matchId)
-      .where('status', '==', 'confirmed')
-      .get()
-
-    const rsvpsToUse: RSVP[] = rsvpSnap.docs.map((d) => {
-      const data = d.data()
-      return {
-        id: d.id,
-        matchId: data.matchId ?? matchId,
-        userId: data.userId,
-        status: data.status ?? 'confirmed',
-        position: data.position ?? null,
-        rsvpAt: timestampToDate(data.rsvpAt) || new Date(),
-        updatedAt: timestampToDate(data.updatedAt) || new Date(),
+      if (!existing.empty) {
+        results.push({ userId, status: 'exists' })
+        continue
       }
-    })
 
-    const usersSnapAll = await adminDb.collection('users').get()
-    const users: User[] = usersSnapAll.docs.map((d) => {
-      const data = d.data()
-      return {
-        uid: data.uid ?? d.id,
-        email: data.email ?? '',
-        displayName: data.displayName ?? '',
-        jerseyNumber: data.jerseyNumber ?? null,
-        position: data.position ?? null,
-        role: data.role || 'user',
-        createdAt: timestampToDate(data.createdAt) || new Date(),
-        updatedAt: timestampToDate(data.updatedAt) || new Date(),
+      const userRef = adminDb.collection('users').doc(userId)
+      const userDoc = await userRef.get()
+      const userData = userDoc.exists ? userDoc.data() : undefined
+      const email = (userData?.email as string) ?? ''
+      const positionFromDoc = (userData?.position as string | null) ?? null
+      const positionFromSeed =
+        TEST_USERS.find(u => u.email.toLowerCase() === email.toLowerCase())
+          ?.position ?? null
+      const userPosition = positionFromSeed ?? positionFromDoc
+
+      if (positionFromSeed != null && positionFromSeed !== positionFromDoc) {
+        await userRef.set(
+          { position: positionFromSeed, updatedAt: now },
+          { merge: true }
+        )
       }
-    })
 
-    const teamCount = computeTeamCountForRSVPCount(rsvpsToUse.length, 11, 2)
-    const teamAssignments = generateTeams(rsvpsToUse, users, 11, { teamCount })
-
-    const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
-
-    const existingTeams = await teamsCol.get()
-    const deleteBatch = adminDb.batch()
-    existingTeams.docs.forEach((d) => deleteBatch.delete(d.ref))
-    await deleteBatch.commit()
-
-    const writes: Promise<unknown>[] = []
-    for (let i = 0; i < teamAssignments.length; i++) {
-      const assignment = teamAssignments[i]
-      const teamId = `team_${matchId}_${assignment.teamNumber}_${Date.now()}`
-      writes.push(
-        teamsCol.doc(teamId).set({
-          matchId,
-          teamNumber: assignment.teamNumber,
-          name: TEAM_NAMES[i] ?? `Team ${assignment.teamNumber}`,
-          color: TEAM_COLORS[i] ?? '#3b82f6',
-          playerIds: assignment.playerIds,
-          maxSize: 11,
-          createdAt: now,
-          updatedAt: now,
-        })
-      )
+      const rsvpId = `rsvp_${matchId}_${userId}_${now.toMillis()}_${results.length}`
+      await adminDb.collection('rsvps').doc(rsvpId).set({
+        matchId,
+        userId,
+        status: 'confirmed',
+        position: userPosition,
+        rsvpAt: now,
+        createdAt: now,
+        updatedAt: now,
+      })
+      results.push({ userId, status: 'created' })
     }
 
-    await Promise.all(writes)
-  }
+    // Optional: regenerate teams so the match reflects the new RSVP count immediately
+    if (regenerateTeamsAfter) {
+      const rsvpSnap = await adminDb
+        .collection('rsvps')
+        .where('matchId', '==', matchId)
+        .where('status', '==', 'confirmed')
+        .get()
+
+      const rsvpsToUse: RSVP[] = rsvpSnap.docs.map(d => {
+        const data = d.data()
+        return {
+          id: d.id,
+          matchId: data.matchId ?? matchId,
+          userId: data.userId,
+          status: data.status ?? 'confirmed',
+          position: data.position ?? null,
+          rsvpAt: timestampToDate(data.rsvpAt) || new Date(),
+          updatedAt: timestampToDate(data.updatedAt) || new Date(),
+        }
+      })
+
+      const usersSnapAll = await adminDb.collection('users').get()
+      const users: User[] = usersSnapAll.docs.map(d => {
+        const data = d.data()
+        return {
+          uid: data.uid ?? d.id,
+          email: data.email ?? '',
+          displayName: data.displayName ?? '',
+          jerseyNumber: data.jerseyNumber ?? null,
+          position: data.position ?? null,
+          role: data.role || 'user',
+          createdAt: timestampToDate(data.createdAt) || new Date(),
+          updatedAt: timestampToDate(data.updatedAt) || new Date(),
+        }
+      })
+
+      const teamCount = computeTeamCountForRSVPCount(rsvpsToUse.length, 11, 2)
+      const teamAssignments = generateTeams(rsvpsToUse, users, 11, {
+        teamCount,
+      })
+
+      const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
+
+      const existingTeams = await teamsCol.get()
+      const deleteBatch = adminDb.batch()
+      existingTeams.docs.forEach(d => deleteBatch.delete(d.ref))
+      await deleteBatch.commit()
+
+      const writes: Promise<unknown>[] = []
+      for (let i = 0; i < teamAssignments.length; i++) {
+        const assignment = teamAssignments[i]
+        const teamId = `team_${matchId}_${assignment.teamNumber}_${Date.now()}`
+        writes.push(
+          teamsCol.doc(teamId).set({
+            matchId,
+            teamNumber: assignment.teamNumber,
+            name: TEAM_NAMES[i] ?? `Team ${assignment.teamNumber}`,
+            color: TEAM_COLORS[i] ?? '#3b82f6',
+            playerIds: assignment.playerIds,
+            maxSize: 11,
+            createdAt: now,
+            updatedAt: now,
+          })
+        )
+      }
+
+      await Promise.all(writes)
+    }
 
     return NextResponse.json({
       success: true,
@@ -201,8 +222,8 @@ export async function POST(request: Request) {
       results,
       regenerateTeams: regenerateTeamsAfter,
       summary: {
-        created: results.filter((r) => r.status === 'created').length,
-        exists: results.filter((r) => r.status === 'exists').length,
+        created: results.filter(r => r.status === 'created').length,
+        exists: results.filter(r => r.status === 'exists').length,
       },
     })
   } catch (err) {

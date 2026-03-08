@@ -12,7 +12,11 @@ const DEFAULT_MAX_RETRIES = 3
 const DEFAULT_RETRY_DELAY_MS = 500
 
 function lockRef(adminDb: Firestore, matchId: string) {
-  return adminDb.collection('matches').doc(matchId).collection('_lock').doc(LOCK_DOC_ID)
+  return adminDb
+    .collection('matches')
+    .doc(matchId)
+    .collection('_lock')
+    .doc(LOCK_DOC_ID)
 }
 
 export interface AcquireMatchLockOptions {
@@ -49,10 +53,13 @@ export async function acquireMatchLock(
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      const acquired = await adminDb.runTransaction(async (tx) => {
+      const acquired = await adminDb.runTransaction(async tx => {
         const snap = await tx.get(ref)
         const data = snap.data()
-        if (data?.heldAt && (data.heldAt as Timestamp).toMillis() > expiryCutoff.getTime()) {
+        if (
+          data?.heldAt &&
+          (data.heldAt as Timestamp).toMillis() > expiryCutoff.getTime()
+        ) {
           return false // lock held
         }
         tx.set(ref, { holder: holderId, heldAt: now })
@@ -72,7 +79,7 @@ export async function acquireMatchLock(
       // transaction failed, retry
     }
     if (attempt < maxRetries - 1) {
-      await new Promise((r) => setTimeout(r, retryDelayMs))
+      await new Promise(r => setTimeout(r, retryDelayMs))
     }
   }
   return null

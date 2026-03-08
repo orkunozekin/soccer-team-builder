@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
     const teamsSnap = await teamsCol.get()
 
-    const teams = teamsSnap.docs.map((d) => {
+    const teams = teamsSnap.docs.map(d => {
       const data = d.data()
       return {
         id: d.id,
@@ -60,9 +60,12 @@ export async function POST(request: NextRequest) {
     })
 
     // Moving to a team
-    const targetTeam = teams.find((t) => t.id === targetTeamId)
+    const targetTeam = teams.find(t => t.id === targetTeamId)
     if (!targetTeam) {
-      return NextResponse.json({ error: 'Target team not found' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Target team not found' },
+        { status: 404 }
+      )
     }
 
     const now = Timestamp.now()
@@ -70,10 +73,10 @@ export async function POST(request: NextRequest) {
 
     // Remove from current team if provided
     if (currentTeamId) {
-      const currentTeam = teams.find((t) => t.id === currentTeamId)
+      const currentTeam = teams.find(t => t.id === currentTeamId)
       if (currentTeam) {
         batch.update(teamsCol.doc(currentTeamId), {
-          playerIds: currentTeam.playerIds.filter((id) => id !== playerId),
+          playerIds: currentTeam.playerIds.filter(id => id !== playerId),
           updatedAt: now,
         })
       }

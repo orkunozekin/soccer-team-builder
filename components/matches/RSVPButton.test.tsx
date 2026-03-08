@@ -1,9 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-
-import type { Match } from '@/types/match'
 import { RSVPButton } from './RSVPButton'
+import type { Match } from '@/types/match'
 
 const confirmRSVPAPIMock = vi.fn()
 const cancelRSVPAPIMock = vi.fn()
@@ -89,9 +88,7 @@ describe('RSVPButton', () => {
 
     render(<RSVPButton match={baseMatch} />)
 
-    await user.click(
-      screen.getByRole('button', { name: /rsvp to match/i })
-    )
+    await user.click(screen.getByRole('button', { name: /rsvp to match/i }))
 
     expect(screen.getByText(/profile modal open/i)).toBeInTheDocument()
   })
@@ -117,9 +114,7 @@ describe('RSVPButton', () => {
 
     render(<RSVPButton match={baseMatch} />)
 
-    await user.click(
-      screen.getByRole('button', { name: /rsvp to match/i })
-    )
+    await user.click(screen.getByRole('button', { name: /rsvp to match/i }))
 
     expect(confirmRSVPAPIMock).toHaveBeenCalledWith('match1', undefined)
     expect(
@@ -127,4 +122,3 @@ describe('RSVPButton', () => {
     ).toBeInTheDocument()
   })
 })
-

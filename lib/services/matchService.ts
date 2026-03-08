@@ -1,12 +1,12 @@
+import { orderBy } from 'firebase/firestore'
 import {
-  getDocument,
-  updateDocument,
+  dateToTimestamp,
   deleteDocument,
+  getDocument,
   queryDocuments,
   timestampToDate,
-  dateToTimestamp,
+  updateDocument,
 } from '@/lib/firebase/firestore'
-import { orderBy } from 'firebase/firestore'
 import { Match } from '@/types/match'
 
 export const getMatch = async (matchId: string): Promise<Match | null> => {
@@ -14,8 +14,12 @@ export const getMatch = async (matchId: string): Promise<Match | null> => {
   if (!matchDoc) return null
 
   const matchDate = timestampToDate(matchDoc.date) || new Date()
-  const rsvpOpenAt = matchDoc.rsvpOpenAt ? timestampToDate(matchDoc.rsvpOpenAt) : null
-  const rsvpCloseAt = matchDoc.rsvpCloseAt ? timestampToDate(matchDoc.rsvpCloseAt) : null
+  const rsvpOpenAt = matchDoc.rsvpOpenAt
+    ? timestampToDate(matchDoc.rsvpOpenAt)
+    : null
+  const rsvpCloseAt = matchDoc.rsvpCloseAt
+    ? timestampToDate(matchDoc.rsvpCloseAt)
+    : null
 
   // UI reflects admin intent: show Open when they've opened the poll (schedule is 9am–10pm CT for reference only)
   const rsvpOpen = matchDoc.rsvpOpen === true
@@ -39,8 +43,12 @@ export const getAllMatches = async (): Promise<Match[]> => {
 
   const mapped = matches.map((match: any) => {
     const matchDate = timestampToDate(match.date) || new Date()
-    const rsvpOpenAt = match.rsvpOpenAt ? timestampToDate(match.rsvpOpenAt) : null
-    const rsvpCloseAt = match.rsvpCloseAt ? timestampToDate(match.rsvpCloseAt) : null
+    const rsvpOpenAt = match.rsvpOpenAt
+      ? timestampToDate(match.rsvpOpenAt)
+      : null
+    const rsvpCloseAt = match.rsvpCloseAt
+      ? timestampToDate(match.rsvpCloseAt)
+      : null
 
     const rsvpOpen = match.rsvpOpen === true
 
@@ -68,10 +76,15 @@ export const getAllMatches = async (): Promise<Match[]> => {
 
 export const updateMatch = async (
   matchId: string,
-  updates: Partial<Pick<Match, 'date' | 'time' | 'location' | 'rsvpOpen' | 'rsvpOpenAt' | 'rsvpCloseAt'>>
+  updates: Partial<
+    Pick<
+      Match,
+      'date' | 'time' | 'location' | 'rsvpOpen' | 'rsvpOpenAt' | 'rsvpCloseAt'
+    >
+  >
 ): Promise<void> => {
   const firestoreUpdates: any = {}
-  
+
   if (updates.date !== undefined) {
     firestoreUpdates.date = dateToTimestamp(updates.date)
   }
@@ -79,16 +92,23 @@ export const updateMatch = async (
     firestoreUpdates.time = updates.time
   }
   if (updates.location !== undefined) {
-    firestoreUpdates.location = typeof updates.location === 'string' ? updates.location.trim() || null : null
+    firestoreUpdates.location =
+      typeof updates.location === 'string'
+        ? updates.location.trim() || null
+        : null
   }
   if (updates.rsvpOpen !== undefined) {
     firestoreUpdates.rsvpOpen = updates.rsvpOpen
   }
   if (updates.rsvpOpenAt !== undefined) {
-    firestoreUpdates.rsvpOpenAt = updates.rsvpOpenAt ? dateToTimestamp(updates.rsvpOpenAt) : null
+    firestoreUpdates.rsvpOpenAt = updates.rsvpOpenAt
+      ? dateToTimestamp(updates.rsvpOpenAt)
+      : null
   }
   if (updates.rsvpCloseAt !== undefined) {
-    firestoreUpdates.rsvpCloseAt = updates.rsvpCloseAt ? dateToTimestamp(updates.rsvpCloseAt) : null
+    firestoreUpdates.rsvpCloseAt = updates.rsvpCloseAt
+      ? dateToTimestamp(updates.rsvpCloseAt)
+      : null
   }
 
   await updateDocument('matches', matchId, firestoreUpdates)

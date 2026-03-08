@@ -1,10 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-
+import { MatchDetails } from './MatchDetails'
 import type { Match } from '@/types/match'
 import type { RSVP } from '@/types/rsvp'
-import { MatchDetails } from './MatchDetails'
 
 const storeState = vi.hoisted(() => ({
   updateRSVPPosition: vi.fn(),
@@ -17,7 +16,8 @@ vi.mock('@/store/matchStore', () => ({
 const updateRSVPPositionAPIMock = vi.fn()
 
 vi.mock('@/lib/api/client', () => ({
-  updateRSVPPositionAPI: (...args: unknown[]) => updateRSVPPositionAPIMock(...args),
+  updateRSVPPositionAPI: (...args: unknown[]) =>
+    updateRSVPPositionAPIMock(...args),
 }))
 
 vi.mock('@/components/matches/RSVPButton', () => ({
@@ -113,9 +113,7 @@ describe('MatchDetails', () => {
     )
 
     await user.click(screen.getByText(/change position/i))
-    await user.click(
-      screen.getByRole('button', { name: /update position/i })
-    )
+    await user.click(screen.getByRole('button', { name: /update position/i }))
 
     expect(updateRSVPPositionAPIMock).toHaveBeenCalledWith('r1', 'ST')
     expect(storeState.updateRSVPPosition).toHaveBeenCalledWith('r1', 'ST')
@@ -124,4 +122,3 @@ describe('MatchDetails', () => {
     ).toBeInTheDocument()
   })
 })
-

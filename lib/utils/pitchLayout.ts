@@ -1,5 +1,5 @@
-import type { User } from '@/types/user'
 import type { Team } from '@/types/team'
+import type { User } from '@/types/user'
 
 /**
  * Position to pitch coordinates mapping
@@ -20,11 +20,11 @@ export interface PlayerOnPitch {
  */
 export function getTeamPlayers(team: Team, users: User[]): PlayerOnPitch[] {
   const teamUsers = team.playerIds
-    .map((id) => users.find((u) => u.uid === id))
+    .map(id => users.find(u => u.uid === id))
     .filter((u): u is User => !!u)
 
   const positionGroups: Record<string, User[]> = {}
-  teamUsers.forEach((user) => {
+  teamUsers.forEach(user => {
     const pos = user.position || 'CM'
     if (!positionGroups[pos]) positionGroups[pos] = []
     positionGroups[pos].push(user)
@@ -68,9 +68,7 @@ const POSITION_COORDINATES: Record<string, PitchPosition> = {
 
 export function getPitchPosition(position: string | null): PitchPosition {
   if (!position) return { x: 50, y: 50 } // Default center
-  return (
-    POSITION_COORDINATES[position.toUpperCase()] || { x: 50, y: 50 }
-  )
+  return POSITION_COORDINATES[position.toUpperCase()] || { x: 50, y: 50 }
 }
 
 /**

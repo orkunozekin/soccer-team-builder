@@ -13,11 +13,13 @@ UI Components → API Client → Next.js API Routes → Firebase Services → Fi
 ### What Goes Through API Routes (Server-Side)
 
 **Complex Business Logic:**
+
 - ✅ Team generation algorithm (`/api/teams/generate`)
 - ✅ Player transfers with validation (`/api/teams/transfer`)
 - ✅ Match creation with validation (`/api/matches`)
 
 **Why:** These operations contain business logic that shouldn't be exposed to clients:
+
 - Team generation algorithm (prioritization rules)
 - Validation logic (team size limits, goalkeeper rules)
 - Data integrity checks
@@ -25,12 +27,14 @@ UI Components → API Client → Next.js API Routes → Firebase Services → Fi
 ### What Stays Client-Side (Direct Firebase)
 
 **Simple CRUD Operations:**
+
 - ✅ Reading matches, teams, RSVPs
 - ✅ User profile updates
 - ✅ RSVP creation/cancellation
 - ✅ Real-time data fetching
 
 **Why:** These are simple operations that benefit from:
+
 - Lower latency (direct client-to-Firebase)
 - Real-time updates via Firestore listeners
 - Reduced server load
@@ -38,6 +42,7 @@ UI Components → API Client → Next.js API Routes → Firebase Services → Fi
 ### Security
 
 **Current Implementation:**
+
 - ✅ Firebase Admin SDK installed and configured
 - ✅ API routes verify authentication tokens using Admin SDK
 - ✅ Admin role verification on server-side

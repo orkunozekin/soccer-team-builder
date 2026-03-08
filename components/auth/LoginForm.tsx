@@ -2,19 +2,19 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { loginUser, loginWithGoogle } from '@/lib/firebase/auth'
-import { getUser, createUser } from '@/lib/services/userService'
-import { useAuthStore } from '@/store/authStore'
 import { FormError } from '@/components/auth/FormError'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
 import { Button } from '@/components/ui/button'
 import { ButtonSpinner } from '@/components/ui/button-spinner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { loginUser, loginWithGoogle } from '@/lib/firebase/auth'
+import { createUser, getUser } from '@/lib/services/userService'
+import { useAuthStore } from '@/store/authStore'
 
 export function LoginForm() {
   const router = useRouter()
-  const setUser = useAuthStore((state) => state.setUser)
+  const setUser = useAuthStore(state => state.setUser)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -67,7 +67,7 @@ export function LoginForm() {
           type="email"
           placeholder="Enter your email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
           required
           disabled={loading || googleLoading}
           className="h-11 text-base sm:h-9 sm:text-sm"
@@ -82,7 +82,7 @@ export function LoginForm() {
           type="password"
           placeholder="Enter your password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={e => setPassword(e.target.value)}
           required
           disabled={loading || googleLoading}
           className="h-11 text-base sm:h-9 sm:text-sm"
@@ -96,7 +96,7 @@ export function LoginForm() {
         type="submit"
         disabled={loading || googleLoading}
         loading={loading}
-        className="w-full h-11 text-base sm:h-9 sm:text-sm"
+        className="h-11 w-full text-base sm:h-9 sm:text-sm"
       >
         Sign In
       </Button>
@@ -114,7 +114,7 @@ export function LoginForm() {
         variant="outline"
         disabled={loading}
         loading={googleLoading}
-        className="w-full h-11 text-base sm:h-9 sm:text-sm"
+        className="h-11 w-full text-base sm:h-9 sm:text-sm"
         onClick={handleGoogleSignIn}
       >
         <span className="inline-flex items-center justify-center">

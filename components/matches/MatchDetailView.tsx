@@ -37,7 +37,9 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
   const { isAdmin } = useAdmin()
   const { currentMatch, setCurrentMatch, matchRSVPs, setMatchRSVPs } =
     useMatchStore()
-  const userRsvp = user ? matchRSVPs.find((r) => r.userId === user.uid) ?? null : null
+  const userRsvp = user
+    ? (matchRSVPs.find(r => r.userId === user.uid) ?? null)
+    : null
   const userProfilePosition = userData?.position ?? null
   const [loadingMatch, setLoadingMatch] = useState(true)
   const [teams, setTeams] = useState<Team[]>([])
@@ -46,8 +48,8 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const usersWithMatchPosition = useMemo(
     () =>
-      allUsers.map((u) => {
-        const rsvp = matchRSVPs.find((r) => r.userId === u.uid)
+      allUsers.map(u => {
+        const rsvp = matchRSVPs.find(r => r.userId === u.uid)
         return { ...u, position: rsvp?.position ?? u.position ?? null }
       }),
     [allUsers, matchRSVPs]
@@ -131,11 +133,11 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
   }
 
   return (
-    <div className="w-full min-w-0 flex flex-col items-center overflow-x-hidden">
-      <div className="w-full max-w-full min-w-0 container mx-auto px-4 py-2">
+    <div className="flex w-full min-w-0 flex-col items-center overflow-x-hidden">
+      <div className="container mx-auto w-full min-w-0 max-w-full px-4 py-2">
         <BackLink href={backLink.href} label={backLink.label} />
 
-        <div className="mt-2 grid gap-10 lg:grid-cols-2 lg:gap-12 min-w-0">
+        <div className="mt-2 grid min-w-0 gap-10 lg:grid-cols-2 lg:gap-12">
           <div className="min-w-0 space-y-6">
             <MatchDetails
               match={currentMatch}

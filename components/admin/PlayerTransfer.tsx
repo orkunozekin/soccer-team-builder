@@ -2,7 +2,13 @@
 
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -33,9 +39,9 @@ export function PlayerTransfer({
   const [error, setError] = useState('')
 
   const allPlayerIds = new Set<string>()
-  teams.forEach((team) => team.playerIds.forEach((id) => allPlayerIds.add(id)))
+  teams.forEach(team => team.playerIds.forEach(id => allPlayerIds.add(id)))
 
-  const availablePlayers = users.filter((u) => allPlayerIds.has(u.uid))
+  const availablePlayers = users.filter(u => allPlayerIds.has(u.uid))
 
   const teamColorByPlayerId = useMemo(() => {
     const map = new Map<string, string>()
@@ -49,11 +55,11 @@ export function PlayerTransfer({
   }, [teams])
 
   const teamNameById = useMemo(
-    () => new Map(teams.map((t) => [t.id, t.name || `Team ${t.teamNumber}`])),
+    () => new Map(teams.map(t => [t.id, t.name || `Team ${t.teamNumber}`])),
     [teams]
   )
   const teamColorById = useMemo(
-    () => new Map(teams.map((t) => [t.id, t.color || '#3b82f6'])),
+    () => new Map(teams.map(t => [t.id, t.color || '#3b82f6'])),
     [teams]
   )
 
@@ -68,7 +74,9 @@ export function PlayerTransfer({
     return map
   }, [teams])
 
-  const styleForTeamColor = (hex: string | null): React.CSSProperties | undefined => {
+  const styleForTeamColor = (
+    hex: string | null
+  ): React.CSSProperties | undefined => {
     if (!hex) return undefined
     // Inline style so it wins over SelectItem focus background classes.
     return {
@@ -119,9 +127,7 @@ export function PlayerTransfer({
     <Card>
       <CardHeader>
         <CardTitle>Transfer Player</CardTitle>
-        <CardDescription>
-          Move players between teams
-        </CardDescription>
+        <CardDescription>Move players between teams</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -131,14 +137,17 @@ export function PlayerTransfer({
               <SelectValue placeholder="Choose a player" />
             </SelectTrigger>
             <SelectContent>
-              {availablePlayers.map((user) => (
+              {availablePlayers.map(user => (
                 <SelectItem key={user.uid} value={user.uid}>
                   <span
                     className="flex items-center justify-between gap-2 rounded-sm px-2 py-1"
-                    style={styleForTeamColor(teamColorByPlayerId.get(user.uid) ?? null)}
+                    style={styleForTeamColor(
+                      teamColorByPlayerId.get(user.uid) ?? null
+                    )}
                   >
                     <span className="truncate">
-                      {user.displayName} {user.jerseyNumber && `#${user.jerseyNumber}`}
+                      {user.displayName}{' '}
+                      {user.jerseyNumber && `#${user.jerseyNumber}`}
                       {user.position && ` (${user.position})`}
                     </span>
                     <span className="shrink-0 text-xs opacity-90">
@@ -158,15 +167,18 @@ export function PlayerTransfer({
               <SelectValue placeholder="Choose destination" />
             </SelectTrigger>
             <SelectContent>
-              {teams.map((team) => (
+              {teams.map(team => (
                 <SelectItem key={team.id} value={team.id}>
                   <span
                     className="flex items-center justify-between gap-2 rounded-sm px-2 py-1"
-                    style={styleForTeamColor(teamColorById.get(team.id) ?? null)}
+                    style={styleForTeamColor(
+                      teamColorById.get(team.id) ?? null
+                    )}
                     title={teamNameById.get(team.id)}
                   >
                     <span className="truncate">
-                      {teamNameById.get(team.id)} ({team.playerIds.length}/{team.maxSize})
+                      {teamNameById.get(team.id)} ({team.playerIds.length}/
+                      {team.maxSize})
                     </span>
                   </span>
                 </SelectItem>
@@ -185,7 +197,7 @@ export function PlayerTransfer({
           onClick={handleTransfer}
           disabled={!selectedPlayerId || !targetTeamId}
           loading={loading}
-          className="w-full h-11 sm:h-9"
+          className="h-11 w-full sm:h-9"
         >
           Transfer Player
         </Button>

@@ -1,6 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-
 import { MatchDetailView } from './MatchDetailView'
 
 const routerMock = {
@@ -118,15 +117,9 @@ describe('MatchDetailView', () => {
 
     render(<MatchDetailView backLink={backLink} />)
 
-    expect(
-      await screen.findByText('MatchDetailsMock')
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText('TeamsDisplayMock')
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByText('EditMatchCardMock')
-    ).not.toBeInTheDocument()
+    expect(await screen.findByText('MatchDetailsMock')).toBeInTheDocument()
+    expect(screen.getByText('TeamsDisplayMock')).toBeInTheDocument()
+    expect(screen.queryByText('EditMatchCardMock')).not.toBeInTheDocument()
   })
 
   it('shows admin controls when user is admin', async () => {
@@ -182,10 +175,7 @@ describe('MatchDetailView', () => {
     expect(screen.getByText('ImpersonateRSVPMock')).toBeInTheDocument()
     expect(screen.getByText('TeamsDisplayMock')).toBeInTheDocument()
     await waitFor(() => {
-      expect(
-        screen.getByText('PlayerTransferMock')
-      ).toBeInTheDocument()
+      expect(screen.getByText('PlayerTransferMock')).toBeInTheDocument()
     })
   })
 })
-

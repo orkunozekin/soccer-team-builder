@@ -73,7 +73,7 @@ async function main() {
     .where('status', '==', 'confirmed')
     .get()
 
-  const rows = rsvpsSnap.docs.map((d) => {
+  const rows = rsvpsSnap.docs.map(d => {
     const data = d.data()
     const rsvpAt = timestampToDate(data.rsvpAt)
     return {
@@ -92,10 +92,10 @@ async function main() {
     return
   }
 
-  const userIds = [...new Set(rows.map((r) => r.userId))]
+  const userIds = [...new Set(rows.map(r => r.userId))]
   const usersSnap = await db.collection('users').get()
   const displayNameByUid = new Map()
-  usersSnap.docs.forEach((d) => {
+  usersSnap.docs.forEach(d => {
     const data = d.data()
     const uid = data.uid ?? d.id
     displayNameByUid.set(uid, data.displayName || data.email || uid)
@@ -123,7 +123,7 @@ async function main() {
   console.log(`Total: ${rows.length} confirmed RSVP(s)\n`)
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error(err)
   process.exit(1)
 })

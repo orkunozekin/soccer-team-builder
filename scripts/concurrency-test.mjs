@@ -32,7 +32,9 @@ try {
   for (const raw of content.split(/\r?\n/)) {
     const line = raw.trim()
     if (!line || line.startsWith('#')) continue
-    const m = line.replace(/^export\s+/i, '').match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/)
+    const m = line
+      .replace(/^export\s+/i, '')
+      .match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/)
     if (m) {
       const val = m[2].replace(/^["']|["']$/g, '').trim()
       process.env[m[1]] = val
@@ -42,11 +44,13 @@ try {
   // .env.local optional
 }
 
-const AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099'
+const AUTH_EMULATOR_HOST =
+  process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099'
 const AUTH_EMULATOR_URL = `http://${AUTH_EMULATOR_HOST}`
-const API_BASE = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL || process.env.NEXT_PUBLIC_APP_URL}`
-  : (process.env.CONCURRENCY_TEST_APP_URL || 'http://localhost:3001')
+const API_BASE =
+  process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL || process.env.NEXT_PUBLIC_APP_URL}`
+    : process.env.CONCURRENCY_TEST_APP_URL || 'http://localhost:3001'
 const SEED_SECRET = process.env.SEED_SECRET
 
 async function signInWithPassword(email, password) {
@@ -69,9 +73,13 @@ async function seedTestUsers() {
     const envPath = join(rootDir, '.env.local')
     console.error('--seed requires SEED_SECRET in .env.local.')
     console.error('  Add a line: SEED_SECRET=your-secret')
-    console.error('  (no spaces around =, file must be at project root: ' + envPath + ')')
+    console.error(
+      '  (no spaces around =, file must be at project root: ' + envPath + ')'
+    )
     console.error('Or seed manually:')
-    console.error(`  curl -X POST ${API_BASE}/api/seed-test-users -H "X-Seed-Secret: your-secret"`)
+    console.error(
+      `  curl -X POST ${API_BASE}/api/seed-test-users -H "X-Seed-Secret: your-secret"`
+    )
     process.exit(1)
   }
   const res = await fetch(`${API_BASE}/api/seed-test-users`, {
@@ -83,13 +91,13 @@ async function seedTestUsers() {
 }
 
 function parseArg(args, name, defaultValue) {
-  const a = args.find((x) => x.startsWith('--' + name + '='))
+  const a = args.find(x => x.startsWith('--' + name + '='))
   return a ? a.split('=')[1] : defaultValue
 }
 
 async function main() {
   const args = process.argv.slice(2)
-  const matchId = args.find((a) => !a.startsWith('--'))
+  const matchId = args.find(a => !a.startsWith('--'))
   const doSeed = args.includes('--seed')
   const count = parseInt(parseArg(args, 'count', '10'), 10)
   const offset = parseInt(parseArg(args, 'offset', '0'), 10)
@@ -97,7 +105,9 @@ async function main() {
   const positionFilter = parseArg(args, 'position', null)
 
   if (!matchId) {
-    console.error('Usage: node scripts/concurrency-test.mjs <matchId> [--seed] [--count=N] [--offset=N] [--indices=0,5,19] [--position=GK]')
+    console.error(
+      'Usage: node scripts/concurrency-test.mjs <matchId> [--seed] [--count=N] [--offset=N] [--indices=0,5,19] [--position=GK]'
+    )
     process.exit(1)
   }
 
@@ -106,17 +116,23 @@ async function main() {
 
   let subset
   if (indicesStr) {
-    const indices = indicesStr.split(',').map((s) => parseInt(s.trim(), 10))
-    subset = indices.map((i) => users[i]).filter(Boolean)
+    const indices = indicesStr.split(',').map(s => parseInt(s.trim(), 10))
+    subset = indices.map(i => users[i]).filter(Boolean)
     if (subset.length !== indices.length) {
-      console.error('Invalid --indices: some indices out of range (max ' + (users.length - 1) + ')')
+      console.error(
+        'Invalid --indices: some indices out of range (max ' +
+          (users.length - 1) +
+          ')'
+      )
       process.exit(1)
     }
   } else if (positionFilter) {
     const pos = positionFilter.toUpperCase().trim()
-    subset = users.filter((u) => (u.position || '').toUpperCase().trim() === pos)
+    subset = users.filter(u => (u.position || '').toUpperCase().trim() === pos)
     if (subset.length === 0) {
-      console.error('No users with position "' + positionFilter + '" in test-users.json')
+      console.error(
+        'No users with position "' + positionFilter + '" in test-users.json'
+      )
       process.exit(1)
     }
   } else {
@@ -137,7 +153,9 @@ async function main() {
       tokens.push({ email: u.email, position: u.position, token })
     } catch (e) {
       console.error(e.message)
-      console.error('Ensure test users exist (run with --seed or POST /api/seed-test-users).')
+      console.error(
+        'Ensure test users exist (run with --seed or POST /api/seed-test-users).'
+      )
       process.exit(1)
     }
   }
@@ -162,20 +180,34 @@ async function main() {
   const elapsed = Date.now() - start
 
   // Summary
-  const ok = results.filter((r) => r.status === 200).length
-  const busy = results.filter((r) => r.status === 503).length
-  const tooManyGks = results.filter((r) => r.status === 400 && r.body?.code === 'TOO_MANY_GKS').length
-  const other = results.filter((r) => r.status !== 200 && r.status !== 503 && (r.status !== 400 || r.body?.code !== 'TOO_MANY_GKS'))
+  const ok = results.filter(r => r.status === 200).length
+  const busy = results.filter(r => r.status === 503).length
+  const tooManyGks = results.filter(
+    r => r.status === 400 && r.body?.code === 'TOO_MANY_GKS'
+  ).length
+  const other = results.filter(
+    r =>
+      r.status !== 200 &&
+      r.status !== 503 &&
+      (r.status !== 400 || r.body?.code !== 'TOO_MANY_GKS')
+  )
 
   console.log(`\nDone in ${elapsed}ms`)
-  console.log(`  200: ${ok}, 503 (lock busy): ${busy}, 400 (TOO_MANY_GKS): ${tooManyGks}, other: ${other.length}`)
+  console.log(
+    `  200: ${ok}, 503 (lock busy): ${busy}, 400 (TOO_MANY_GKS): ${tooManyGks}, other: ${other.length}`
+  )
   if (other.length) {
-    other.forEach((r) => console.log(`  ${r.email}: ${r.status}`, r.body?.error || r.body))
+    other.forEach(r =>
+      console.log(`  ${r.email}: ${r.status}`, r.body?.error || r.body)
+    )
   }
-  if (busy) console.log('\nTip: 503 means lock was held; retrying those requests would succeed.')
+  if (busy)
+    console.log(
+      '\nTip: 503 means lock was held; retrying those requests would succeed.'
+    )
 }
 
-main().catch((e) => {
+main().catch(e => {
   console.error(e)
   process.exit(1)
 })

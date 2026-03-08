@@ -19,8 +19,10 @@ function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
  * we use BASE_URL when set (e.g. https://soccerville.club).
  */
 function getCronEndpointUrl(request: NextRequest): string {
-  const base = (process.env.BASE_URL || process.env.VERCEL_URL)
-    ?.replace(/\/$/, '')
+  const base = (process.env.BASE_URL || process.env.VERCEL_URL)?.replace(
+    /\/$/,
+    ''
+  )
   if (base) {
     const scheme = base.startsWith('http') ? '' : 'https://'
     return `${scheme}${base}/api/cron/rsvp-schedule`
@@ -157,7 +159,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const body = await request.text()
   if (!(await authorizeCronRequest(request, body))) {
-    console.warn('cron/rsvp-schedule: unauthorized (signature verification failed or missing CRON_SECRET)')
+    console.warn(
+      'cron/rsvp-schedule: unauthorized (signature verification failed or missing CRON_SECRET)'
+    )
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

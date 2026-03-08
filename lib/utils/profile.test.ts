@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
-
-import type { User } from '@/types/user'
 import { isProfileComplete } from './profile'
+import type { User } from '@/types/user'
 
 function makeUser(overrides: Partial<User> = {}): User {
   const now = new Date()
@@ -53,4 +52,3 @@ describe('isProfileComplete', () => {
     ).toBe(false)
   })
 })
-

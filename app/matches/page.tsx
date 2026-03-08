@@ -5,7 +5,13 @@ import { useRouter } from 'next/navigation'
 import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { MatchCard } from '@/components/matches/MatchCard'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getAllMatches } from '@/lib/services/matchService'
@@ -33,7 +39,7 @@ export default function MatchesPage() {
           setMatches(allMatches)
           const counts: Record<string, number> = {}
           await Promise.all(
-            allMatches.map(async (m) => {
+            allMatches.map(async m => {
               counts[m.id] = await getMatchRsvpCount(m.id)
             })
           )
@@ -54,7 +60,7 @@ export default function MatchesPage() {
     setMatches(allMatches)
     const counts: Record<string, number> = {}
     await Promise.all(
-      allMatches.map(async (m) => {
+      allMatches.map(async m => {
         counts[m.id] = await getMatchRsvpCount(m.id)
       })
     )
@@ -80,9 +86,7 @@ export default function MatchesPage() {
 
       {isAdmin && (
         <div className="mb-6">
-          <CreateMatchCard
-            onMatchCreated={refetchMatchesAndCounts}
-          />
+          <CreateMatchCard onMatchCreated={refetchMatchesAndCounts} />
         </div>
       )}
 
@@ -104,7 +108,7 @@ export default function MatchesPage() {
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {matches.map((match) => (
+          {matches.map(match => (
             <MatchCard
               key={match.id}
               match={match}

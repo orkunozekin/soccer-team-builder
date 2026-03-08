@@ -1,9 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-
-import type { Match } from '@/types/match'
 import { RSVPPollControls } from './RSVPPollControls'
+import type { Match } from '@/types/match'
 
 const storeState = vi.hoisted(() => ({
   updateMatch: vi.fn(),
@@ -47,9 +46,7 @@ describe('RSVPPollControls', () => {
     render(<RSVPPollControls match={baseMatch} />)
 
     expect(screen.getByText(/current status/i)).toBeInTheDocument()
-    expect(
-      screen.getByText((content) => content === 'Open')
-    ).toBeInTheDocument()
+    expect(screen.getByText(content => content === 'Open')).toBeInTheDocument()
 
     const openButton = screen.getByRole('button', { name: /open rsvp/i })
     const closeButton = screen.getByRole('button', { name: /close rsvp/i })
@@ -100,4 +97,3 @@ describe('RSVPPollControls', () => {
     expect(onUpdated).toHaveBeenCalled()
   })
 })
-

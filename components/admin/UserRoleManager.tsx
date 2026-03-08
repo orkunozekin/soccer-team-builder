@@ -15,7 +15,13 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { ButtonSpinner } from '@/components/ui/button-spinner'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/pagination'
 import {
@@ -27,7 +33,11 @@ import {
 } from '@/components/ui/select'
 import { deleteUserAPI, searchUsersAPI } from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
-import { getUsersCount, getUsersPaginated, updateUser } from '@/lib/services/userService'
+import {
+  getUsersCount,
+  getUsersPaginated,
+  updateUser,
+} from '@/lib/services/userService'
 import { User, UserRole } from '@/types/user'
 
 const PAGE_SIZE = 10
@@ -43,7 +53,9 @@ export function UserRoleManager() {
   const [searchUsers, setSearchUsers] = useState<UserRow[] | null>(null)
   const [updating, setUpdating] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
-  const [deleteDialogUserId, setDeleteDialogUserId] = useState<string | null>(null)
+  const [deleteDialogUserId, setDeleteDialogUserId] = useState<string | null>(
+    null
+  )
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [page, setPage] = useState(1)
@@ -55,7 +67,7 @@ export function UserRoleManager() {
 
   const visibleUsers = useMemo(() => {
     if (!currentUser?.uid) return baseUsers
-    return baseUsers.filter((u) => u.uid !== currentUser.uid)
+    return baseUsers.filter(u => u.uid !== currentUser.uid)
   }, [baseUsers, currentUser?.uid])
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
@@ -68,7 +80,7 @@ export function UserRoleManager() {
         pageNum === 1 ? getUsersCount() : Promise.resolve(0),
       ])
       setUsers(
-        pageResult.users.map((u) => ({
+        pageResult.users.map(u => ({
           uid: u.uid,
           email: u.email,
           displayName: u.displayName,
@@ -78,7 +90,7 @@ export function UserRoleManager() {
       if (pageNum === 1) {
         setTotalCount(count)
       }
-      setCursors((prev) => {
+      setCursors(prev => {
         const next = [...prev]
         next[pageNum - 1] = pageResult.nextCursor
         return next
@@ -94,7 +106,7 @@ export function UserRoleManager() {
   // Load page when page number changes (only when not searching).
   useEffect(() => {
     if (query.trim() !== '') return
-    const cursorForRequest = page === 1 ? null : cursors[page - 2] ?? null
+    const cursorForRequest = page === 1 ? null : (cursors[page - 2] ?? null)
     fetchPage(page, cursorForRequest)
   }, [page, query])
 
@@ -112,7 +124,7 @@ export function UserRoleManager() {
 
     const t = setTimeout(() => {
       searchUsersAPI(q, 25)
-        .then((res) => {
+        .then(res => {
           if (cancelled) return
           setSearchUsers(res.users)
         })
@@ -139,10 +151,16 @@ export function UserRoleManager() {
 
     try {
       await updateUser(userId, { role: newRole })
-      
+
       // Update local state
-      setUsers((prevUsers) => prevUsers.map((u) => (u.uid === userId ? { ...u, role: newRole } : u)))
-      setSearchUsers((prev) => (prev ? prev.map((u) => (u.uid === userId ? { ...u, role: newRole } : u)) : prev))
+      setUsers(prevUsers =>
+        prevUsers.map(u => (u.uid === userId ? { ...u, role: newRole } : u))
+      )
+      setSearchUsers(prev =>
+        prev
+          ? prev.map(u => (u.uid === userId ? { ...u, role: newRole } : u))
+          : prev
+      )
 
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
@@ -161,14 +179,14 @@ export function UserRoleManager() {
     try {
       await deleteUserAPI(userId)
 
-      setUsers((prev) => prev.filter((u) => u.uid !== userId))
-      setSearchUsers((prev) => (prev ? prev.filter((u) => u.uid !== userId) : prev))
-      setTotalCount((prev) => Math.max(0, prev - 1))
+      setUsers(prev => prev.filter(u => u.uid !== userId))
+      setSearchUsers(prev => (prev ? prev.filter(u => u.uid !== userId) : prev))
+      setTotalCount(prev => Math.max(0, prev - 1))
       setDeleteDialogUserId(null)
 
       // If we just deleted the last visible row on this page, go back a page.
       if (visibleUsers.length <= 1 && page > 1) {
-        setPage((p) => Math.max(1, p - 1))
+        setPage(p => Math.max(1, p - 1))
       }
 
       setSuccess(true)
@@ -207,12 +225,12 @@ export function UserRoleManager() {
 
         <Input
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={e => setQuery(e.target.value)}
           placeholder="Search users by name or email…"
           className="h-11 text-base sm:h-9 sm:text-sm"
         />
 
-        <div className="space-y-2 max-h-96 overflow-y-auto">
+        <div className="max-h-96 space-y-2 overflow-y-auto">
           {searchLoading ? (
             <div className="rounded-md border p-4 text-sm text-zinc-600 dark:text-zinc-400">
               Searching…
@@ -222,53 +240,55 @@ export function UserRoleManager() {
               No users found.
             </div>
           ) : (
-            visibleUsers.map((user) => (
-            <div
-              key={user.uid}
-              className="flex items-center justify-between gap-4 p-3 border rounded-lg"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{user.displayName}</p>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 truncate">
-                  {user.email}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <Select
-                  value={user.role}
-                  onValueChange={(value: UserRole) =>
-                    handleRoleChange(user.uid, value)
-                  }
-                  disabled={updating === user.uid || deleting === user.uid}
-                >
-                  <SelectTrigger className="w-24 h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
+            visibleUsers.map(user => (
+              <div
+                key={user.uid}
+                className="flex items-center justify-between gap-4 rounded-lg border p-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{user.displayName}</p>
+                  <p className="truncate text-sm text-zinc-600 dark:text-zinc-400">
+                    {user.email}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Select
+                    value={user.role}
+                    onValueChange={(value: UserRole) =>
+                      handleRoleChange(user.uid, value)
+                    }
+                    disabled={updating === user.uid || deleting === user.uid}
+                  >
+                    <SelectTrigger className="h-9 w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  disabled={updating === user.uid || deleting === user.uid}
-                  onClick={() => setDeleteDialogUserId(user.uid)}
-                  aria-label={`Remove ${user.displayName || user.email}`}
-                >
-                  <CloseIcon className={deleting === user.uid ? 'opacity-50' : ''} />
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    disabled={updating === user.uid || deleting === user.uid}
+                    onClick={() => setDeleteDialogUserId(user.uid)}
+                    aria-label={`Remove ${user.displayName || user.email}`}
+                  >
+                    <CloseIcon
+                      className={deleting === user.uid ? 'opacity-50' : ''}
+                    />
+                  </Button>
+                </div>
               </div>
-            </div>
             ))
           )}
         </div>
 
         <AlertDialog
           open={deleteDialogUserId != null}
-          onOpenChange={(open) => {
+          onOpenChange={open => {
             if (!open) setDeleteDialogUserId(null)
           }}
         >
@@ -276,16 +296,20 @@ export function UserRoleManager() {
             <AlertDialogHeader>
               <AlertDialogTitle>Remove user?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will delete the user from the system (Auth + database) and remove them from teams/RSVPs. This cannot be undone.
+                This will delete the user from the system (Auth + database) and
+                remove them from teams/RSVPs. This cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleting != null}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={deleting != null}>
+                Cancel
+              </AlertDialogCancel>
               <AlertDialogAction
                 disabled={deleteDialogUserId == null || deleting != null}
-                onClick={(e) => {
+                onClick={e => {
                   e.preventDefault()
-                  if (deleteDialogUserId) handleConfirmDelete(deleteDialogUserId)
+                  if (deleteDialogUserId)
+                    handleConfirmDelete(deleteDialogUserId)
                 }}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
@@ -301,8 +325,8 @@ export function UserRoleManager() {
             totalPages={totalPages}
             totalCount={totalCount}
             pageSize={PAGE_SIZE}
-            onPrevious={() => setPage((p) => Math.max(1, p - 1))}
-            onNext={() => setPage((p) => p + 1)}
+            onPrevious={() => setPage(p => Math.max(1, p - 1))}
+            onNext={() => setPage(p => p + 1)}
             itemLabel="users"
           />
         )}
