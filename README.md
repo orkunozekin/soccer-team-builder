@@ -1,10 +1,11 @@
 # To get started:
 
 1. Clone the app
-2. run `yarn` to install dependencies
-3. run `yarn dev` to start local server
+2. Run `yarn` to install dependencies
+3. **Set up the local database (required for local development)** — You **must** use the Firebase emulators when running the app locally. Do not run against production Firebase. Copy `.env.sample` to `.env.local`, then follow [docs/local-development.md](docs/local-development.md) for prerequisites (Java, Firebase CLI), starting the emulators, and configuring `.env.local` with the emulator settings.
+4. Run `yarn dev` to start the local server
 
-To use a **local database** instead of production Firebase (Auth + Firestore), see [docs/local-development.md](docs/local-development.md).
+**Do not skip step 3.** Running `yarn dev` without the emulator and with production credentials will connect to the **production** database and can affect live data. Local development must use the emulators only.
 
 ## RSVP schedule (cron)
 
