@@ -10,8 +10,11 @@ export function getRSVPSchedule(date: Date): {
   closeAt: Date | null
 } {
   const dateStr = formatInTimeZone(date, CT_TIMEZONE, 'yyyy-MM-dd')
-  const openAt = new Date(`${dateStr}T09:00:00-06:00`) // 9am CT
-  const closeAt = new Date(`${dateStr}T22:00:00-06:00`) // 10pm CT
+  // Compute the correct UTC offset for that calendar day in America/Chicago
+  const offset = formatInTimeZone(date, CT_TIMEZONE, 'xxx') // e.g. -06:00 or -05:00
+  // 9am and 10pm on that day in America/Chicago (DST-aware via the offset)
+  const openAt = new Date(`${dateStr}T09:00:00${offset}`)
+  const closeAt = new Date(`${dateStr}T22:00:00${offset}`)
   return { openAt, closeAt }
 }
 
