@@ -3,6 +3,7 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { deleteMatch } from '@/lib/matches/deleteMatch'
+import { getRSVPSchedule } from '@/lib/utils/rsvpScheduler'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -82,10 +83,7 @@ async function runRsvpSchedule(): Promise<{
   }
 
   const now = new Date()
-  const matchesSnap = await adminDb
-    .collection('matches')
-    .where('rsvpOpenAt', '!=', null)
-    .get()
+  const matchesSnap = await adminDb.collection('matches').get()
 
   let opened = 0
   const matchIdsToDelete: string[] = []
@@ -93,8 +91,12 @@ async function runRsvpSchedule(): Promise<{
 
   for (const doc of matchesSnap.docs) {
     const data = doc.data()
-    const openAt = timestampToDate(data.rsvpOpenAt)
-    const closeAt = timestampToDate(data.rsvpCloseAt)
+    const matchDate = timestampToDate(data.date)
+    if (!matchDate) continue
+
+    // Compute the canonical RSVP window from the match date so DST and
+    // scheduling rules are always respected, even if stored fields are wrong.
+    const { openAt, closeAt } = getRSVPSchedule(matchDate)
     if (!openAt || !closeAt) continue
 
     const shouldBeOpen = now >= openAt && now <= closeAt
