@@ -215,59 +215,6 @@ export function generateTeamsWithReplacements(
     insertedGkIds.add(gkId)
   }
 
-  // Admins who RSVP'd after the first 22: swap them into the first two teams by replacing the last non-admin(s) by RSVP time
-  if (teams.length >= 3) {
-    const overflowTeams = teams.slice(2)
-    const overflowAdminIds: string[] = []
-    for (const t of overflowTeams) {
-      for (const uid of t.playerIds) {
-        if (userById.get(uid)?.role === 'admin') {
-          overflowAdminIds.push(uid)
-        }
-      }
-    }
-    overflowAdminIds.sort(
-      (a, b) => (rsvpAtByUserId.get(a) ?? 0) - (rsvpAtByUserId.get(b) ?? 0)
-    )
-
-    const firstTwoNonAdmins: { userId: string; teamIndex: number }[] = []
-    for (let ti = 0; ti < 2 && ti < teams.length; ti++) {
-      for (const uid of teams[ti].playerIds) {
-        if (userById.get(uid)?.role !== 'admin') {
-          firstTwoNonAdmins.push({ userId: uid, teamIndex: ti })
-        }
-      }
-    }
-    firstTwoNonAdmins.sort(
-      (a, b) =>
-        (rsvpAtByUserId.get(b.userId) ?? 0) -
-        (rsvpAtByUserId.get(a.userId) ?? 0)
-    )
-
-    const swapCount = Math.min(
-      overflowAdminIds.length,
-      firstTwoNonAdmins.length
-    )
-    for (let i = 0; i < swapCount; i++) {
-      const adminId = overflowAdminIds[i]
-      const { userId: bumpedId, teamIndex } = firstTwoNonAdmins[i]
-
-      const mainTeam = teams[teamIndex]
-      mainTeam.playerIds = mainTeam.playerIds.map(id =>
-        id === bumpedId ? adminId : id
-      )
-
-      const overflowTeam = overflowTeams.find(t =>
-        t.playerIds.includes(adminId)
-      )
-      if (overflowTeam) {
-        overflowTeam.playerIds = overflowTeam.playerIds.map(id =>
-          id === adminId ? bumpedId : id
-        )
-      }
-    }
-  }
-
   // If we needed more teams by count but had no overflow, add empty slots
   while (teams.length < teamCount) {
     teams.push({ teamNumber: teams.length + 1, playerIds: [] })
