@@ -8,9 +8,13 @@ import { Timestamp } from 'firebase-admin/firestore'
 import type { Firestore, QuerySnapshot } from 'firebase-admin/firestore'
 import {
   assignUnassignedPlayersToTeams,
+  applyManualTeamTransfers,
   computeTeamCountForRSVPCount,
+  deriveManualTransfers,
   generateTeamsWithReplacements,
+  mergeManualTransfers,
 } from '@/lib/utils/teamGenerator'
+import type { TeamAssignment } from '@/lib/utils/teamGenerator'
 import type { RSVP } from '@/types/rsvp'
 import type { User } from '@/types/user'
 
@@ -121,10 +125,36 @@ async function fullyRegenerateTeams(
   users: User[],
   desiredTeamCount: number
 ): Promise<void> {
-  const { teams: teamAssignments, gkReplacements } =
+  const currentAssignments: TeamAssignment[] = existingTeamsSnap.docs
+    .map(d => {
+      const data = d.data()
+      return {
+        teamNumber: (data.teamNumber as number) ?? 0,
+        playerIds: (data.playerIds as string[]) ?? [],
+      }
+    })
+    .sort((a, b) => a.teamNumber - b.teamNumber)
+
+  const { teams: baselineTeams, gkReplacements } =
     generateTeamsWithReplacements(rsvpsToUse, users, 11, {
       teamCount: desiredTeamCount,
     })
+
+  const matchSnap = await adminDb.collection('matches').doc(matchId).get()
+  const persisted = matchSnap.exists
+    ? ((matchSnap.data()?.manualTeamAssignments as
+        | Record<string, number>
+        | undefined) ?? {})
+    : {}
+
+  const manualTransfers = mergeManualTransfers(
+    deriveManualTransfers(currentAssignments, baselineTeams),
+    persisted
+  )
+  const teamAssignments = applyManualTeamTransfers(
+    baselineTeams,
+    manualTransfers
+  )
 
   const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
 

@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  applyManualTeamTransfers,
   assignUnassignedPlayersToTeams,
   computeTeamCountForRSVPCount,
+  deriveManualTransfers,
   generateTeamsWithReplacements,
   isGoalkeeper,
+  mergeManualTransfers,
 } from './teamGenerator'
 import { type RSVP } from '@/types/rsvp'
 import { type User } from '@/types/user'
@@ -343,5 +346,37 @@ describe('assignUnassignedPlayersToTeams', () => {
 
     expect(result[0]?.playerIds).toEqual(['gk1', 'p1', 'p3'])
     expect(result[1]?.playerIds).toEqual(['p2', 'gk2'])
+  })
+})
+
+describe('deriveManualTransfers and applyManualTeamTransfers', () => {
+  it('detects players on a different team than RSVP-order baseline', () => {
+    const { users, rsvps } = buildRoster(['p1', 'p2', 'p3', 'p4'])
+    const { teams: baseline } = generateTeamsWithReplacements(rsvps, users, 11, {
+      teamCount: 2,
+    })
+
+    const currentTeams = baseline.map(t => ({
+      teamNumber: t.teamNumber,
+      playerIds: [...t.playerIds],
+    }))
+    const movedPlayer = currentTeams[0]!.playerIds[0]!
+    currentTeams[0]!.playerIds = currentTeams[0]!.playerIds.filter(
+      id => id !== movedPlayer
+    )
+    currentTeams[1]!.playerIds.push(movedPlayer)
+
+    const manual = deriveManualTransfers(currentTeams, baseline)
+    expect(manual.get(movedPlayer)).toBe(2)
+
+    const restored = applyManualTeamTransfers(baseline, manual)
+    expect(restored[1]?.playerIds).toContain(movedPlayer)
+    expect(restored[0]?.playerIds).not.toContain(movedPlayer)
+  })
+
+  it('merges persisted manual assignments with current-state diff', () => {
+    const manual = mergeManualTransfers(new Map([['p1', 2]]), { p2: 1 })
+    expect(manual.get('p1')).toBe(2)
+    expect(manual.get('p2')).toBe(1)
   })
 })

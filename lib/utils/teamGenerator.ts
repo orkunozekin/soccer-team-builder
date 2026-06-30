@@ -173,6 +173,87 @@ export function assignUnassignedPlayersToTeams(
 }
 
 /**
+ * Players whose current team differs from a fresh RSVP-order baseline are treated as
+ * explicit admin transfers and should be preserved across regeneration.
+ */
+export function deriveManualTransfers(
+  currentTeams: TeamAssignment[],
+  baselineTeams: TeamAssignment[]
+): Map<string, number> {
+  const baselineTeamByUser = new Map<string, number>()
+  for (const team of baselineTeams) {
+    for (const userId of team.playerIds) {
+      baselineTeamByUser.set(userId, team.teamNumber)
+    }
+  }
+
+  const manual = new Map<string, number>()
+  for (const team of currentTeams) {
+    for (const userId of team.playerIds) {
+      const baselineTeam = baselineTeamByUser.get(userId)
+      if (baselineTeam !== undefined && baselineTeam !== team.teamNumber) {
+        manual.set(userId, team.teamNumber)
+      }
+    }
+  }
+  return manual
+}
+
+/** Re-apply explicit team overrides onto a freshly generated baseline roster. */
+export function applyManualTeamTransfers(
+  baselineTeams: TeamAssignment[],
+  manualTransfers: Map<string, number>
+): TeamAssignment[] {
+  if (manualTransfers.size === 0) {
+    return baselineTeams.map(t => ({
+      teamNumber: t.teamNumber,
+      playerIds: [...t.playerIds],
+    }))
+  }
+
+  const teams = baselineTeams.map(t => ({
+    teamNumber: t.teamNumber,
+    playerIds: [...t.playerIds],
+  }))
+
+  const ensureTeam = (teamNumber: number): TeamAssignment => {
+    let team = teams.find(t => t.teamNumber === teamNumber)
+    if (!team) {
+      team = { teamNumber, playerIds: [] }
+      teams.push(team)
+      teams.sort((a, b) => a.teamNumber - b.teamNumber)
+    }
+    return team
+  }
+
+  for (const [userId, targetTeamNumber] of manualTransfers) {
+    for (const team of teams) {
+      team.playerIds = team.playerIds.filter(id => id !== userId)
+    }
+    const target = ensureTeam(targetTeamNumber)
+    if (!target.playerIds.includes(userId)) {
+      target.playerIds.push(userId)
+    }
+  }
+
+  return teams
+}
+
+export function mergeManualTransfers(
+  fromDiff: Map<string, number>,
+  persisted?: Record<string, number>
+): Map<string, number> {
+  const merged = new Map(fromDiff)
+  if (!persisted) return merged
+  for (const [userId, teamNumber] of Object.entries(persisted)) {
+    if (typeof teamNumber === 'number' && Number.isFinite(teamNumber)) {
+      merged.set(userId, teamNumber)
+    }
+  }
+  return merged
+}
+
+/**
  * Same as generateTeams but also returns gkReplacements.
  * For any team (1, 2, 3, …) that has no GK: the earliest RSVPing GK from a higher-indexed team is moved into that team, and that team's last non-GK (by RSVP) is bumped to the GK's former team.
  * No global GK cap.

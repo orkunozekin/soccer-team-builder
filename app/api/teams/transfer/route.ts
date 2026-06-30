@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       const data = d.data()
       return {
         id: d.id,
+        teamNumber: (data.teamNumber as number) ?? 0,
         playerIds: (data.playerIds as string[]) ?? [],
         maxSize: Number(data.maxSize ?? 11),
       }
@@ -89,6 +90,24 @@ export async function POST(request: NextRequest) {
     })
 
     await batch.commit()
+
+    const matchRef = adminDb.collection('matches').doc(matchId)
+    const matchSnap = await matchRef.get()
+    const existingAssignments = matchSnap.exists
+      ? ((matchSnap.data()?.manualTeamAssignments as
+          | Record<string, number>
+          | undefined) ?? {})
+      : {}
+    await matchRef.set(
+      {
+        manualTeamAssignments: {
+          ...existingAssignments,
+          [playerId]: targetTeam.teamNumber,
+        },
+        updatedAt: now,
+      },
+      { merge: true }
+    )
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

@@ -1,5 +1,6 @@
 /**
- * Regenerate teams for a match from scratch by RSVP order and goalkeeper logic.
+ * Regenerate teams for a match from RSVP order and goalkeeper logic, preserving
+ * explicit admin transfers.
  * Uses the same logic as the app (expandTeamsForMatch with forceRegenerate).
  * Requires Firebase Admin credentials (FIREBASE_SERVICE_ACCOUNT_KEY or GOOGLE_APPLICATION_CREDENTIALS).
  *
@@ -72,7 +73,7 @@ async function main() {
   })
   if (result.regenerated) {
     console.log(
-      'Done. Teams have been refilled by RSVP order and goalkeeper rules.'
+      'Done. Teams refilled by RSVP order and goalkeeper rules; manual transfers preserved.'
     )
   } else {
     console.log('No teams to regenerate (no confirmed RSVPs or error).')
