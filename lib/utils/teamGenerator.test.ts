@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assignUnassignedPlayersToTeams,
   computeTeamCountForRSVPCount,
   generateTeamsWithReplacements,
   isGoalkeeper,
@@ -264,5 +265,83 @@ describe('generateTeamsWithReplacements', () => {
     const assignedIds = teams.flatMap(t => t.playerIds)
 
     expect(new Set(assignedIds)).toEqual(new Set(ids))
+  })
+})
+
+describe('assignUnassignedPlayersToTeams', () => {
+  it('preserves existing team assignments when placing new RSVPs', () => {
+    const { users, rsvps } = buildRoster(
+      ['p1', 'p2', 'p3', 'p4', 'p5', 'p6']
+    )
+
+    const existingTeams = [
+      { teamNumber: 1, playerIds: ['p2', 'p1', 'p4'] },
+      { teamNumber: 2, playerIds: ['p3', 'p5'] },
+    ]
+    const unassigned = rsvps.filter(r => r.userId === 'p6')
+
+    const result = assignUnassignedPlayersToTeams(
+      existingTeams,
+      unassigned,
+      rsvps,
+      users,
+      11,
+      2
+    )
+
+    expect(result[0]?.playerIds).toEqual(['p2', 'p1', 'p4', 'p6'])
+    expect(result[1]?.playerIds).toEqual(['p3', 'p5'])
+  })
+
+  it('places overflow players on a new team without reshuffling existing rosters', () => {
+    const team1Ids = Array.from({ length: 11 }, (_, i) => `p${i + 1}`)
+    const team2Ids = Array.from({ length: 11 }, (_, i) => `p${i + 12}`)
+    const allIds = [...team1Ids, ...team2Ids, 'p23']
+    const { users, rsvps } = buildRoster(allIds)
+
+    const existingTeams = [
+      { teamNumber: 1, playerIds: [...team1Ids] },
+      { teamNumber: 2, playerIds: [...team2Ids] },
+    ]
+    const unassigned = rsvps.filter(r => r.userId === 'p23')
+
+    const result = assignUnassignedPlayersToTeams(
+      existingTeams,
+      unassigned,
+      rsvps,
+      users,
+      11,
+      3
+    )
+
+    expect(result[0]?.playerIds).toEqual(team1Ids)
+    expect(result[1]?.playerIds).toEqual(team2Ids)
+    expect(result[2]?.playerIds).toEqual(['p23'])
+  })
+
+  it('respects GK limits on teams 1 and 2 for new players', () => {
+    const { users, rsvps } = buildRoster(['p1', 'gk1', 'gk2', 'p2', 'p3'], {
+      userPosition: id => (id.startsWith('gk') ? 'GK' : 'ST'),
+    })
+
+    const existingTeams = [
+      { teamNumber: 1, playerIds: ['gk1', 'p1'] },
+      { teamNumber: 2, playerIds: ['p2'] },
+    ]
+    const unassigned = rsvps.filter(r =>
+      ['gk2', 'p3'].includes(r.userId)
+    )
+
+    const result = assignUnassignedPlayersToTeams(
+      existingTeams,
+      unassigned,
+      rsvps,
+      users,
+      11,
+      2
+    )
+
+    expect(result[0]?.playerIds).toEqual(['gk1', 'p1', 'p3'])
+    expect(result[1]?.playerIds).toEqual(['p2', 'gk2'])
   })
 })

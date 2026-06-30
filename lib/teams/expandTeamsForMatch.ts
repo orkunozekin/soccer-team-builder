@@ -5,8 +5,9 @@
  */
 
 import { Timestamp } from 'firebase-admin/firestore'
-import type { Firestore } from 'firebase-admin/firestore'
+import type { Firestore, QuerySnapshot } from 'firebase-admin/firestore'
 import {
+  assignUnassignedPlayersToTeams,
   computeTeamCountForRSVPCount,
   generateTeamsWithReplacements,
 } from '@/lib/utils/teamGenerator'
@@ -27,6 +28,145 @@ function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
   if (!t) return null
   if (t instanceof Date) return t
   return (t as Timestamp).toDate()
+}
+
+interface ExistingTeamDoc {
+  id: string
+  teamNumber: number
+  name: string
+  color: string
+  playerIds: string[]
+}
+
+async function incrementallyAssignUnassignedPlayers(
+  adminDb: Firestore,
+  matchId: string,
+  existingTeams: ExistingTeamDoc[],
+  rsvpsToUse: RSVP[],
+  users: User[],
+  desiredTeamCount: number
+): Promise<void> {
+  const assignedUserIds = new Set(
+    existingTeams.flatMap(t => t.playerIds)
+  )
+  const unassignedRsvps = rsvpsToUse.filter(
+    r => !assignedUserIds.has(r.userId)
+  )
+  if (unassignedRsvps.length === 0 && existingTeams.length >= desiredTeamCount) {
+    return
+  }
+
+  const existingAssignments = existingTeams.map(t => ({
+    teamNumber: t.teamNumber,
+    playerIds: t.playerIds,
+  }))
+  const updatedAssignments = assignUnassignedPlayersToTeams(
+    existingAssignments,
+    unassignedRsvps,
+    rsvpsToUse,
+    users,
+    11,
+    desiredTeamCount
+  )
+
+  const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
+  const existingByNumber = new Map(
+    existingTeams.map(t => [t.teamNumber, t])
+  )
+  const now = Timestamp.now()
+  const writes: Promise<unknown>[] = []
+
+  for (let i = 0; i < updatedAssignments.length; i++) {
+    const assignment = updatedAssignments[i]
+    const existing = existingByNumber.get(assignment.teamNumber)
+    if (existing) {
+      const playerIdsChanged =
+        existing.playerIds.length !== assignment.playerIds.length ||
+        existing.playerIds.some((id, idx) => id !== assignment.playerIds[idx])
+      if (playerIdsChanged) {
+        writes.push(
+          teamsCol.doc(existing.id).update({
+            playerIds: assignment.playerIds,
+            updatedAt: now,
+          })
+        )
+      }
+      continue
+    }
+
+    const teamId = `team_${matchId}_${assignment.teamNumber}_${Date.now()}`
+    writes.push(
+      teamsCol.doc(teamId).set({
+        matchId,
+        teamNumber: assignment.teamNumber,
+        name:
+          TEAM_NAMES[i % TEAM_NAMES.length] ?? `Team ${assignment.teamNumber}`,
+        color: TEAM_COLORS[i % TEAM_COLORS.length] ?? '#3b82f6',
+        playerIds: assignment.playerIds,
+        maxSize: 11,
+        createdAt: now,
+        updatedAt: now,
+      })
+    )
+  }
+
+  await Promise.all(writes)
+}
+
+async function fullyRegenerateTeams(
+  adminDb: Firestore,
+  matchId: string,
+  existingTeamsSnap: QuerySnapshot,
+  rsvpsToUse: RSVP[],
+  users: User[],
+  desiredTeamCount: number
+): Promise<void> {
+  const { teams: teamAssignments, gkReplacements } =
+    generateTeamsWithReplacements(rsvpsToUse, users, 11, {
+      teamCount: desiredTeamCount,
+    })
+
+  const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
+
+  const batch = adminDb.batch()
+  existingTeamsSnap.docs.forEach(d => batch.delete(d.ref))
+  await batch.commit()
+
+  const now = Timestamp.now()
+  const gkReplacementsMap: Record<string, string> = {}
+  for (const r of gkReplacements) {
+    gkReplacementsMap[r.insertedGK] = r.removedPlayer
+  }
+  if (Object.keys(gkReplacementsMap).length > 0) {
+    await adminDb
+      .collection('matches')
+      .doc(matchId)
+      .set(
+        { gkReplacements: gkReplacementsMap, updatedAt: now },
+        { merge: true }
+      )
+  }
+
+  const writes: Promise<unknown>[] = []
+  for (let i = 0; i < teamAssignments.length; i++) {
+    const assignment = teamAssignments[i]
+    const teamId = `team_${matchId}_${assignment.teamNumber}_${Date.now()}`
+    writes.push(
+      teamsCol.doc(teamId).set({
+        matchId,
+        teamNumber: assignment.teamNumber,
+        name:
+          TEAM_NAMES[i % TEAM_NAMES.length] ?? `Team ${assignment.teamNumber}`,
+        color: TEAM_COLORS[i % TEAM_COLORS.length] ?? '#3b82f6',
+        playerIds: assignment.playerIds,
+        maxSize: 11,
+        createdAt: now,
+        updatedAt: now,
+      })
+    )
+  }
+
+  await Promise.all(writes)
 }
 
 export async function expandTeamsForMatch(
@@ -93,51 +233,38 @@ export async function expandTeamsForMatch(
     }
   })
 
-  const { teams: teamAssignments, gkReplacements } =
-    generateTeamsWithReplacements(rsvpsToUse, users, 11, {
-      teamCount: desiredTeamCount,
-    })
-
-  const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
-
-  const batch = adminDb.batch()
-  existingTeamsSnap.docs.forEach(d => batch.delete(d.ref))
-  await batch.commit()
-
-  const now = Timestamp.now()
-  const gkReplacementsMap: Record<string, string> = {}
-  for (const r of gkReplacements) {
-    gkReplacementsMap[r.insertedGK] = r.removedPlayer
-  }
-  if (Object.keys(gkReplacementsMap).length > 0) {
-    await adminDb
-      .collection('matches')
-      .doc(matchId)
-      .set(
-        { gkReplacements: gkReplacementsMap, updatedAt: now },
-        { merge: true }
-      )
-  }
-
-  const writes: Promise<unknown>[] = []
-  for (let i = 0; i < teamAssignments.length; i++) {
-    const assignment = teamAssignments[i]
-    const teamId = `team_${matchId}_${assignment.teamNumber}_${Date.now()}`
-    writes.push(
-      teamsCol.doc(teamId).set({
-        matchId,
-        teamNumber: assignment.teamNumber,
-        name:
-          TEAM_NAMES[i % TEAM_NAMES.length] ?? `Team ${assignment.teamNumber}`,
-        color: TEAM_COLORS[i % TEAM_COLORS.length] ?? '#3b82f6',
-        playerIds: assignment.playerIds,
-        maxSize: 11,
-        createdAt: now,
-        updatedAt: now,
-      })
+  if (forceRegenerate || currentTeamCount === 0) {
+    await fullyRegenerateTeams(
+      adminDb,
+      matchId,
+      existingTeamsSnap,
+      rsvpsToUse,
+      users,
+      desiredTeamCount
     )
+    return { regenerated: true }
   }
 
-  await Promise.all(writes)
+  const existingTeams: ExistingTeamDoc[] = existingTeamsSnap.docs
+    .map(d => {
+      const data = d.data()
+      return {
+        id: d.id,
+        teamNumber: (data.teamNumber as number) ?? 0,
+        name: (data.name as string) ?? '',
+        color: (data.color as string) ?? '#3b82f6',
+        playerIds: (data.playerIds as string[]) ?? [],
+      }
+    })
+    .sort((a, b) => a.teamNumber - b.teamNumber)
+
+  await incrementallyAssignUnassignedPlayers(
+    adminDb,
+    matchId,
+    existingTeams,
+    rsvpsToUse,
+    users,
+    desiredTeamCount
+  )
   return { regenerated: true }
 }
