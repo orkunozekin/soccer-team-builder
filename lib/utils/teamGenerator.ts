@@ -226,7 +226,7 @@ export function applyManualTeamTransfers(
     return team
   }
 
-  for (const [userId, targetTeamNumber] of manualTransfers) {
+  manualTransfers.forEach((targetTeamNumber, userId) => {
     for (const team of teams) {
       team.playerIds = team.playerIds.filter(id => id !== userId)
     }
@@ -234,7 +234,7 @@ export function applyManualTeamTransfers(
     if (!target.playerIds.includes(userId)) {
       target.playerIds.push(userId)
     }
-  }
+  })
 
   return teams
 }

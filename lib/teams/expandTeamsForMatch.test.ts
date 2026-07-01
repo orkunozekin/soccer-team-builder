@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Firestore } from 'firebase-admin/firestore'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { expandTeamsForMatch } from './expandTeamsForMatch'
 
 vi.mock('firebase-admin/firestore', () => ({
@@ -49,8 +49,6 @@ function createMockFirestore(initial: {
   const teamUpdates: Array<{ id: string; data: Record<string, unknown> }> = []
   const teamSets: Array<{ id: string; data: Record<string, unknown> }> = []
   const deletedTeamIds: string[] = []
-
-  const teamsPath = (matchId: string) => `matches/${matchId}/teams`
 
   const adminDb = {
     collection: (path: string) => {
