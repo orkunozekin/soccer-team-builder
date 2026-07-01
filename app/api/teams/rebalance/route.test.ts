@@ -1,0 +1,291 @@
+import { NextRequest } from 'next/server'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { POST } from './route'
+import { verifyAdmin } from '@/lib/api/auth'
+import { getAdminDb } from '@/lib/firebase/admin'
+
+vi.mock('@/lib/api/auth', () => ({
+  verifyAdmin: vi.fn(),
+}))
+
+vi.mock('@/lib/firebase/admin', () => ({
+  getAdminDb: vi.fn(),
+}))
+
+vi.mock('firebase-admin/firestore', () => ({
+  Timestamp: {
+    now: () => ({
+      toDate: () => new Date('2024-06-01T12:00:00.000Z'),
+    }),
+  },
+}))
+
+type StoredDoc = {
+  id: string
+  data: Record<string, unknown>
+}
+
+function makeQuerySnap(docs: StoredDoc[]) {
+  return {
+    size: docs.length,
+    empty: docs.length === 0,
+    docs: docs.map(doc => ({
+      id: doc.id,
+      ref: { id: doc.id, path: doc.id },
+      exists: true,
+      data: () => doc.data,
+    })),
+  }
+}
+
+function makeDocSnap(doc: StoredDoc | null) {
+  return {
+    exists: doc != null,
+    data: () => doc?.data,
+  }
+}
+
+function createRebalanceMockFirestore(initial: {
+  teams: StoredDoc[]
+  rsvps: StoredDoc[]
+  users: StoredDoc[]
+  match?: StoredDoc | null
+}) {
+  let teams = [...initial.teams]
+  const teamUpdates: Array<{ id: string; data: Record<string, unknown> }> = []
+
+  const adminDb = {
+    collection: (path: string) => {
+      if (path === 'rsvps') {
+        return {
+          where: () => ({
+            where: () => ({
+              get: async () => makeQuerySnap(initial.rsvps),
+            }),
+          }),
+        }
+      }
+
+      if (path === 'users') {
+        return {
+          get: async () => makeQuerySnap(initial.users),
+        }
+      }
+
+      if (path.startsWith('matches/') && path.endsWith('/teams')) {
+        return {
+          get: async () => makeQuerySnap(teams),
+          doc: (id: string) => ({
+            update: async (data: Record<string, unknown>) => {
+              teamUpdates.push({ id, data })
+              teams = teams.map(team =>
+                team.id === id
+                  ? { ...team, data: { ...team.data, ...data } }
+                  : team
+              )
+            },
+          }),
+        }
+      }
+
+      if (path === 'matches') {
+        return {
+          doc: (matchId: string) => ({
+            get: async () =>
+              makeDocSnap(
+                initial.match ?? { id: matchId, data: {} }
+              ),
+            set: async () => {},
+          }),
+        }
+      }
+
+      throw new Error(`Unexpected collection path: ${path}`)
+    },
+    batch: () => {
+      const pending: Array<{ id: string; data: Record<string, unknown> }> = []
+      return {
+        update: (ref: { id: string }, data: Record<string, unknown>) => {
+          pending.push({ id: ref.id, data })
+        },
+        commit: async () => {
+          for (const update of pending) {
+            teamUpdates.push(update)
+            teams = teams.map(team =>
+              team.id === update.id
+                ? { ...team, data: { ...team.data, ...update.data } }
+                : team
+            )
+          }
+        },
+      }
+    },
+  }
+
+  return {
+    adminDb,
+    getTeams: () => teams,
+    getTeamUpdates: () => teamUpdates,
+  }
+}
+
+function makeUserDoc(id: string, position = 'CM'): StoredDoc {
+  return {
+    id,
+    data: {
+      uid: id,
+      email: `${id}@example.com`,
+      displayName: id,
+      jerseyNumber: null,
+      position,
+      role: 'user',
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-01'),
+    },
+  }
+}
+
+function makeRsvpDoc(id: string, userId: string, rsvpAt: Date): StoredDoc {
+  return {
+    id,
+    data: {
+      matchId: 'match1',
+      userId,
+      status: 'confirmed',
+      position: 'CM',
+      rsvpAt,
+      updatedAt: rsvpAt,
+    },
+  }
+}
+
+function makeTeamDoc(
+  id: string,
+  teamNumber: number,
+  playerIds: string[]
+): StoredDoc {
+  return {
+    id,
+    data: {
+      matchId: 'match1',
+      teamNumber,
+      name: `Team ${teamNumber}`,
+      color: '#3b82f6',
+      playerIds,
+      maxSize: 11,
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-01'),
+    },
+  }
+}
+
+function makeRequest(matchId = 'match1') {
+  return new NextRequest('http://localhost/api/teams/rebalance', {
+    method: 'POST',
+    body: JSON.stringify({ matchId }),
+  })
+}
+
+describe('POST /api/teams/rebalance', () => {
+  beforeEach(() => {
+    vi.mocked(verifyAdmin).mockResolvedValue({
+      uid: 'admin1',
+      isAdmin: true,
+      error: null,
+    })
+  })
+
+  it('returns 401 when not authenticated', async () => {
+    vi.mocked(verifyAdmin).mockResolvedValue({
+      uid: null,
+      isAdmin: false,
+      error: 'Unauthorized',
+    })
+
+    const response = await POST(makeRequest())
+    expect(response.status).toBe(401)
+  })
+
+  it('preserves explicit transfers when rebalancing teams', async () => {
+    const { adminDb, getTeams } = createRebalanceMockFirestore({
+      rsvps: [
+        makeRsvpDoc('r1', 'p1', new Date('2024-01-01T10:00:00Z')),
+        makeRsvpDoc('r2', 'p2', new Date('2024-01-01T11:00:00Z')),
+        makeRsvpDoc('r3', 'p3', new Date('2024-01-01T12:00:00Z')),
+        makeRsvpDoc('r4', 'p4', new Date('2024-01-01T13:00:00Z')),
+      ],
+      users: [
+        makeUserDoc('p1'),
+        makeUserDoc('p2'),
+        makeUserDoc('p3'),
+        makeUserDoc('p4'),
+      ],
+      teams: [
+        makeTeamDoc('team1', 1, ['p2', 'p3']),
+        makeTeamDoc('team2', 2, ['p1', 'p4']),
+      ],
+      match: {
+        id: 'match1',
+        data: { manualTeamAssignments: { p1: 2 } },
+      },
+    })
+
+    vi.mocked(getAdminDb).mockReturnValue(adminDb as never)
+
+    const response = await POST(makeRequest())
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.success).toBe(true)
+
+    const team1 = getTeams().find(t => (t.data.teamNumber as number) === 1)
+    const team2 = getTeams().find(t => (t.data.teamNumber as number) === 2)
+    expect(team1?.data.playerIds).not.toContain('p1')
+    expect(team2?.data.playerIds).toContain('p1')
+  })
+
+  it('preserves a two-player swap between teams during rebalance', async () => {
+    const { adminDb, getTeams } = createRebalanceMockFirestore({
+      rsvps: [
+        makeRsvpDoc('r1', 'p1', new Date('2024-01-01T10:00:00Z')),
+        makeRsvpDoc('r2', 'p2', new Date('2024-01-01T11:00:00Z')),
+        makeRsvpDoc('r3', 'p3', new Date('2024-01-01T12:00:00Z')),
+        makeRsvpDoc('r4', 'p4', new Date('2024-01-01T13:00:00Z')),
+        makeRsvpDoc('r5', 'p5', new Date('2024-01-01T14:00:00Z')),
+        makeRsvpDoc('r6', 'p6', new Date('2024-01-01T15:00:00Z')),
+      ],
+      users: [
+        makeUserDoc('p1'),
+        makeUserDoc('p2'),
+        makeUserDoc('p3'),
+        makeUserDoc('p4'),
+        makeUserDoc('p5'),
+        makeUserDoc('p6'),
+      ],
+      teams: [
+        makeTeamDoc('team1', 1, ['p2', 'p3']),
+        makeTeamDoc('team2', 2, ['p1', 'p4']),
+        makeTeamDoc('team3', 3, ['p5', 'p6']),
+      ],
+      match: {
+        id: 'match1',
+        data: {
+          manualTeamAssignments: { p1: 2, p5: 3 },
+        },
+      },
+    })
+
+    vi.mocked(getAdminDb).mockReturnValue(adminDb as never)
+
+    const response = await POST(makeRequest())
+    expect(response.status).toBe(200)
+
+    const team1 = getTeams().find(t => (t.data.teamNumber as number) === 1)
+    const team2 = getTeams().find(t => (t.data.teamNumber as number) === 2)
+    const team3 = getTeams().find(t => (t.data.teamNumber as number) === 3)
+
+    expect(team1?.data.playerIds).not.toContain('p1')
+    expect(team2?.data.playerIds).toContain('p1')
+    expect(team3?.data.playerIds).toContain('p5')
+  })
+})

@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  applyManualTeamTransfers,
+  assignUnassignedPlayersToTeams,
   computeTeamCountForRSVPCount,
+  deriveManualTransfers,
   generateTeamsWithReplacements,
   isGoalkeeper,
+  mergeBaselineWithManualTransfers,
+  mergeManualTransfers,
 } from './teamGenerator'
 import { type RSVP } from '@/types/rsvp'
 import { type User } from '@/types/user'
@@ -264,5 +269,291 @@ describe('generateTeamsWithReplacements', () => {
     const assignedIds = teams.flatMap(t => t.playerIds)
 
     expect(new Set(assignedIds)).toEqual(new Set(ids))
+  })
+})
+
+describe('assignUnassignedPlayersToTeams', () => {
+  it('preserves existing team assignments when placing new RSVPs', () => {
+    const { users, rsvps } = buildRoster(
+      ['p1', 'p2', 'p3', 'p4', 'p5', 'p6']
+    )
+
+    const existingTeams = [
+      { teamNumber: 1, playerIds: ['p2', 'p1', 'p4'] },
+      { teamNumber: 2, playerIds: ['p3', 'p5'] },
+    ]
+    const unassigned = rsvps.filter(r => r.userId === 'p6')
+
+    const result = assignUnassignedPlayersToTeams(
+      existingTeams,
+      unassigned,
+      rsvps,
+      users,
+      11,
+      2
+    )
+
+    expect(result[0]?.playerIds).toEqual(['p2', 'p1', 'p4', 'p6'])
+    expect(result[1]?.playerIds).toEqual(['p3', 'p5'])
+  })
+
+  it('places overflow players on a new team without reshuffling existing rosters', () => {
+    const team1Ids = Array.from({ length: 11 }, (_, i) => `p${i + 1}`)
+    const team2Ids = Array.from({ length: 11 }, (_, i) => `p${i + 12}`)
+    const allIds = [...team1Ids, ...team2Ids, 'p23']
+    const { users, rsvps } = buildRoster(allIds)
+
+    const existingTeams = [
+      { teamNumber: 1, playerIds: [...team1Ids] },
+      { teamNumber: 2, playerIds: [...team2Ids] },
+    ]
+    const unassigned = rsvps.filter(r => r.userId === 'p23')
+
+    const result = assignUnassignedPlayersToTeams(
+      existingTeams,
+      unassigned,
+      rsvps,
+      users,
+      11,
+      3
+    )
+
+    expect(result[0]?.playerIds).toEqual(team1Ids)
+    expect(result[1]?.playerIds).toEqual(team2Ids)
+    expect(result[2]?.playerIds).toEqual(['p23'])
+  })
+
+  it('respects GK limits on teams 1 and 2 for new players', () => {
+    const { users, rsvps } = buildRoster(['p1', 'gk1', 'gk2', 'p2', 'p3'], {
+      userPosition: id => (id.startsWith('gk') ? 'GK' : 'ST'),
+    })
+
+    const existingTeams = [
+      { teamNumber: 1, playerIds: ['gk1', 'p1'] },
+      { teamNumber: 2, playerIds: ['p2'] },
+    ]
+    const unassigned = rsvps.filter(r =>
+      ['gk2', 'p3'].includes(r.userId)
+    )
+
+    const result = assignUnassignedPlayersToTeams(
+      existingTeams,
+      unassigned,
+      rsvps,
+      users,
+      11,
+      2
+    )
+
+    expect(result[0]?.playerIds).toEqual(['gk1', 'p1', 'p3'])
+    expect(result[1]?.playerIds).toEqual(['p2', 'gk2'])
+  })
+})
+
+describe('deriveManualTransfers and applyManualTeamTransfers', () => {
+  it('detects players on a different team than RSVP-order baseline', () => {
+    const { users, rsvps } = buildRoster(['p1', 'p2', 'p3', 'p4'])
+    const { teams: baseline } = generateTeamsWithReplacements(rsvps, users, 11, {
+      teamCount: 2,
+    })
+
+    const currentTeams = baseline.map(t => ({
+      teamNumber: t.teamNumber,
+      playerIds: [...t.playerIds],
+    }))
+    const movedPlayer = currentTeams[0]!.playerIds[0]!
+    currentTeams[0]!.playerIds = currentTeams[0]!.playerIds.filter(
+      id => id !== movedPlayer
+    )
+    currentTeams[1]!.playerIds.push(movedPlayer)
+
+    const manual = deriveManualTransfers(currentTeams, baseline)
+    expect(manual.get(movedPlayer)).toBe(2)
+
+    const restored = applyManualTeamTransfers(baseline, manual)
+    expect(restored[1]?.playerIds).toContain(movedPlayer)
+    expect(restored[0]?.playerIds).not.toContain(movedPlayer)
+  })
+
+  it('returns an empty map when current teams match the baseline', () => {
+    const { users, rsvps } = buildRoster(['p1', 'p2', 'p3', 'p4'])
+    const { teams: baseline } = generateTeamsWithReplacements(rsvps, users, 11, {
+      teamCount: 2,
+    })
+
+    const manual = deriveManualTransfers(baseline, baseline)
+    expect(manual.size).toBe(0)
+  })
+
+  it('preserves a two-player swap across regeneration', () => {
+    const baseline = [
+      { teamNumber: 1, playerIds: ['p1', 'p2'] },
+      { teamNumber: 2, playerIds: ['p3', 'p4'] },
+    ]
+    const currentTeams = [
+      { teamNumber: 1, playerIds: ['p3', 'p2'] },
+      { teamNumber: 2, playerIds: ['p1', 'p4'] },
+    ]
+
+    const manual = deriveManualTransfers(currentTeams, baseline)
+    const regenerated = applyManualTeamTransfers(baseline, manual)
+
+    expect(regenerated[0]?.playerIds).toEqual(
+      expect.arrayContaining(['p2', 'p3'])
+    )
+    expect(regenerated[0]?.playerIds).not.toContain('p1')
+    expect(regenerated[1]?.playerIds).toEqual(
+      expect.arrayContaining(['p1', 'p4'])
+    )
+    expect(regenerated[1]?.playerIds).not.toContain('p3')
+  })
+})
+
+describe('applyManualTeamTransfers', () => {
+  it('returns a shallow copy when there are no manual transfers', () => {
+    const baseline = [
+      { teamNumber: 1, playerIds: ['p1', 'p2'] },
+      { teamNumber: 2, playerIds: ['p3'] },
+    ]
+
+    const result = applyManualTeamTransfers(baseline, new Map())
+
+    expect(result).toEqual(baseline)
+    expect(result).not.toBe(baseline)
+    expect(result[0]?.playerIds).not.toBe(baseline[0]?.playerIds)
+  })
+
+  it('creates a target team when it does not exist in the baseline', () => {
+    const baseline = [
+      { teamNumber: 1, playerIds: ['p1', 'p2'] },
+      { teamNumber: 2, playerIds: ['p3'] },
+    ]
+
+    const result = applyManualTeamTransfers(
+      baseline,
+      new Map([['p1', 3]])
+    )
+
+    expect(result.find(t => t.teamNumber === 3)?.playerIds).toEqual(['p1'])
+    expect(result.find(t => t.teamNumber === 1)?.playerIds).toEqual(['p2'])
+  })
+})
+
+describe('mergeManualTransfers', () => {
+  it('merges persisted manual assignments with current-state diff', () => {
+    const manual = mergeManualTransfers(new Map([['p1', 2]]), { p2: 1 })
+    expect(manual.get('p1')).toBe(2)
+    expect(manual.get('p2')).toBe(1)
+  })
+
+  it('lets persisted assignments override diff entries for the same player', () => {
+    const manual = mergeManualTransfers(new Map([['p1', 2]]), { p1: 3 })
+    expect(manual.get('p1')).toBe(3)
+  })
+
+  it('ignores invalid persisted team numbers', () => {
+    const manual = mergeManualTransfers(new Map([['p1', 2]]), {
+      p2: NaN,
+      p3: 'bad' as unknown as number,
+    })
+    expect(manual.get('p1')).toBe(2)
+    expect(manual.has('p2')).toBe(false)
+    expect(manual.has('p3')).toBe(false)
+  })
+})
+
+describe('mergeBaselineWithManualTransfers', () => {
+  it('preserves a two-player swap onto a rebalance baseline', () => {
+    const baseline = [
+      { teamNumber: 1, playerIds: ['p1', 'p2'] },
+      { teamNumber: 2, playerIds: ['p3', 'p4'] },
+      { teamNumber: 3, playerIds: ['p5', 'p6'] },
+    ]
+    const currentTeams = [
+      { teamNumber: 1, playerIds: ['p2', 'p3'] },
+      { teamNumber: 2, playerIds: ['p1', 'p4'] },
+      { teamNumber: 3, playerIds: ['p5', 'p6'] },
+    ]
+
+    const result = mergeBaselineWithManualTransfers(currentTeams, baseline)
+
+    const team1 = result.find(t => t.teamNumber === 1)
+    const team2 = result.find(t => t.teamNumber === 2)
+    expect(team1?.playerIds).toEqual(expect.arrayContaining(['p2', 'p3']))
+    expect(team1?.playerIds).not.toContain('p1')
+    expect(team2?.playerIds).toEqual(expect.arrayContaining(['p1', 'p4']))
+    expect(team2?.playerIds).not.toContain('p3')
+  })
+
+  it('uses persisted manualTeamAssignments when current rosters already match baseline', () => {
+    const baseline = [
+      { teamNumber: 1, playerIds: ['p1', 'p2'] },
+      { teamNumber: 2, playerIds: ['p3', 'p4'] },
+    ]
+    const currentTeams = baseline.map(t => ({
+      teamNumber: t.teamNumber,
+      playerIds: [...t.playerIds],
+    }))
+
+    const result = mergeBaselineWithManualTransfers(currentTeams, baseline, {
+      p1: 2,
+    })
+
+    expect(result.find(t => t.teamNumber === 1)?.playerIds).not.toContain('p1')
+    expect(result.find(t => t.teamNumber === 2)?.playerIds).toContain('p1')
+  })
+
+  it('lets persisted assignments override the current-vs-baseline diff', () => {
+    const baseline = [
+      { teamNumber: 1, playerIds: ['p1', 'p2'] },
+      { teamNumber: 2, playerIds: ['p3'] },
+      { teamNumber: 3, playerIds: ['p4'] },
+    ]
+    const currentTeams = [
+      { teamNumber: 1, playerIds: ['p2'] },
+      { teamNumber: 2, playerIds: ['p1', 'p3'] },
+      { teamNumber: 3, playerIds: ['p4'] },
+    ]
+
+    const result = mergeBaselineWithManualTransfers(currentTeams, baseline, {
+      p1: 3,
+    })
+
+    expect(result.find(t => t.teamNumber === 2)?.playerIds).not.toContain('p1')
+    expect(result.find(t => t.teamNumber === 3)?.playerIds).toContain('p1')
+  })
+})
+
+describe('regeneration with manual transfers', () => {
+  it('re-applies explicit transfers onto a fresh RSVP-order baseline', () => {
+    const { users, rsvps } = buildRoster(
+      Array.from({ length: 6 }, (_, i) => `p${i + 1}`)
+    )
+    const { teams: baseline } = generateTeamsWithReplacements(rsvps, users, 11, {
+      teamCount: 2,
+    })
+
+    const transferredPlayer = baseline[0]!.playerIds[0]!
+    const currentTeams = baseline.map(t => ({
+      teamNumber: t.teamNumber,
+      playerIds: [...t.playerIds],
+    }))
+    currentTeams[0]!.playerIds = currentTeams[0]!.playerIds.filter(
+      id => id !== transferredPlayer
+    )
+    currentTeams[1]!.playerIds.push(transferredPlayer)
+
+    const manual = mergeManualTransfers(
+      deriveManualTransfers(currentTeams, baseline),
+      { [transferredPlayer]: 2 }
+    )
+    const regenerated = applyManualTeamTransfers(baseline, manual)
+
+    expect(regenerated[1]?.playerIds).toContain(transferredPlayer)
+    expect(regenerated[0]?.playerIds).not.toContain(transferredPlayer)
+
+    const allAssigned = regenerated.flatMap(t => t.playerIds)
+    expect(new Set(allAssigned).size).toBe(allAssigned.length)
+    expect(allAssigned).toHaveLength(6)
   })
 })

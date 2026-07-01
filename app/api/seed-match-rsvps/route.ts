@@ -2,32 +2,11 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { expandTeamsForMatch } from '@/lib/teams/expandTeamsForMatch'
 import { TEST_USERS } from '@/lib/testData/testUsers'
-import {
-  computeTeamCountForRSVPCount,
-  generateTeams,
-} from '@/lib/utils/teamGenerator'
-import type { RSVP } from '@/types/rsvp'
-import type { User } from '@/types/user'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-
-const TEAM_COLORS = [
-  '#f97316',
-  '#3b82f6',
-  '#eab308',
-  '#65a30d',
-  '#ef4444',
-  '#8b5cf6',
-]
-const TEAM_NAMES = ['Orange', 'Blue', 'Yellow', 'Lime', 'Red', 'Purple']
-
-function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
-  if (!t) return null
-  if (t instanceof Date) return t
-  return (t as Timestamp).toDate()
-}
 
 /** GET: health check for this route (no auth). */
 export async function GET() {
@@ -149,71 +128,7 @@ export async function POST(request: Request) {
 
     // Optional: regenerate teams so the match reflects the new RSVP count immediately
     if (regenerateTeamsAfter) {
-      const rsvpSnap = await adminDb
-        .collection('rsvps')
-        .where('matchId', '==', matchId)
-        .where('status', '==', 'confirmed')
-        .get()
-
-      const rsvpsToUse: RSVP[] = rsvpSnap.docs.map(d => {
-        const data = d.data()
-        return {
-          id: d.id,
-          matchId: data.matchId ?? matchId,
-          userId: data.userId,
-          status: data.status ?? 'confirmed',
-          position: data.position ?? null,
-          rsvpAt: timestampToDate(data.rsvpAt) || new Date(),
-          updatedAt: timestampToDate(data.updatedAt) || new Date(),
-        }
-      })
-
-      const usersSnapAll = await adminDb.collection('users').get()
-      const users: User[] = usersSnapAll.docs.map(d => {
-        const data = d.data()
-        return {
-          uid: data.uid ?? d.id,
-          email: data.email ?? '',
-          displayName: data.displayName ?? '',
-          jerseyNumber: data.jerseyNumber ?? null,
-          position: data.position ?? null,
-          role: data.role || 'user',
-          createdAt: timestampToDate(data.createdAt) || new Date(),
-          updatedAt: timestampToDate(data.updatedAt) || new Date(),
-        }
-      })
-
-      const teamCount = computeTeamCountForRSVPCount(rsvpsToUse.length, 11, 2)
-      const teamAssignments = generateTeams(rsvpsToUse, users, 11, {
-        teamCount,
-      })
-
-      const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
-
-      const existingTeams = await teamsCol.get()
-      const deleteBatch = adminDb.batch()
-      existingTeams.docs.forEach(d => deleteBatch.delete(d.ref))
-      await deleteBatch.commit()
-
-      const writes: Promise<unknown>[] = []
-      for (let i = 0; i < teamAssignments.length; i++) {
-        const assignment = teamAssignments[i]
-        const teamId = `team_${matchId}_${assignment.teamNumber}_${Date.now()}`
-        writes.push(
-          teamsCol.doc(teamId).set({
-            matchId,
-            teamNumber: assignment.teamNumber,
-            name: TEAM_NAMES[i] ?? `Team ${assignment.teamNumber}`,
-            color: TEAM_COLORS[i] ?? '#3b82f6',
-            playerIds: assignment.playerIds,
-            maxSize: 11,
-            createdAt: now,
-            updatedAt: now,
-          })
-        )
-      }
-
-      await Promise.all(writes)
+      await expandTeamsForMatch(adminDb, matchId, { forceRegenerate: true })
     }
 
     return NextResponse.json({

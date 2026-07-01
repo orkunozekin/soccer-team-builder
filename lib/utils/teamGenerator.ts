@@ -34,6 +34,55 @@ export function computeTeamCountForRSVPCount(
   return Math.max(baseTeams, baseTeams + extraTeams)
 }
 
+function effectivePositionForUser(
+  uid: string,
+  rsvpByUserId: Map<string, RSVP>,
+  userById: Map<string, User>
+): string | null {
+  const r = rsvpByUserId.get(uid)
+  const u = userById.get(uid)
+  return r?.position ?? u?.position ?? null
+}
+
+/**
+ * Add players from pool onto an existing roster (in RSVP order), respecting maxSize and GK cap.
+ * Mutates pool. Returns the updated player IDs.
+ */
+function addPlayersToTeam(
+  existingIds: string[],
+  pool: RSVP[],
+  rsvpByUserId: Map<string, RSVP>,
+  userById: Map<string, User>,
+  maxSize: number,
+  maxGk: number
+): string[] {
+  const assigned = [...existingIds]
+  let gkCount = assigned.filter(uid =>
+    isGoalkeeper(effectivePositionForUser(uid, rsvpByUserId, userById))
+  ).length
+  const deferred: RSVP[] = []
+
+  for (const rsvp of pool) {
+    if (assigned.length >= maxSize) {
+      deferred.push(rsvp)
+      continue
+    }
+    const isGk = isGoalkeeper(
+      effectivePositionForUser(rsvp.userId, rsvpByUserId, userById)
+    )
+    if (isGk && gkCount >= maxGk) {
+      deferred.push(rsvp)
+      continue
+    }
+    assigned.push(rsvp.userId)
+    if (isGk) gkCount += 1
+  }
+
+  pool.length = 0
+  pool.push(...deferred)
+  return assigned
+}
+
 /**
  * Fill one team with up to maxSize players from the pool (in order), with at most one GK.
  * Mutates pool (splice). Returns the player IDs assigned.
@@ -77,6 +126,144 @@ export function generateTeams(
   options?: { teamCount?: number }
 ): TeamAssignment[] {
   return generateTeamsWithReplacements(rsvps, users, maxTeamSize, options).teams
+}
+
+/**
+ * Place only unassigned RSVPs onto existing teams without moving anyone already assigned.
+ * Preserves manual transfers and other admin edits. Fills teams in teamNumber order using
+ * the same GK/size rules as generateTeams (1 GK max on teams 1–2).
+ */
+export function assignUnassignedPlayersToTeams(
+  existingTeams: TeamAssignment[],
+  unassignedRsvps: RSVP[],
+  allRsvps: RSVP[],
+  users: User[],
+  maxTeamSize: number = 11,
+  teamCount: number
+): TeamAssignment[] {
+  const userById = new Map(users.map(u => [u.uid, u]))
+  const rsvpByUserId = new Map(allRsvps.map(r => [r.userId, r]))
+
+  const teams = existingTeams
+    .map(t => ({ teamNumber: t.teamNumber, playerIds: [...t.playerIds] }))
+    .sort((a, b) => a.teamNumber - b.teamNumber)
+
+  while (teams.length < teamCount) {
+    teams.push({ teamNumber: teams.length + 1, playerIds: [] })
+  }
+
+  const pool = [...unassignedRsvps]
+    .filter(r => users.some(u => u.uid === r.userId))
+    .sort((a, b) => (a.rsvpAt?.getTime() ?? 0) - (b.rsvpAt?.getTime() ?? 0))
+
+  for (const team of teams) {
+    if (pool.length === 0) break
+    const maxGk = team.teamNumber <= 2 ? 1 : maxTeamSize
+    team.playerIds = addPlayersToTeam(
+      team.playerIds,
+      pool,
+      rsvpByUserId,
+      userById,
+      maxTeamSize,
+      maxGk
+    )
+  }
+
+  return teams
+}
+
+/**
+ * Players whose current team differs from a fresh RSVP-order baseline are treated as
+ * explicit admin transfers and should be preserved across regeneration.
+ */
+export function deriveManualTransfers(
+  currentTeams: TeamAssignment[],
+  baselineTeams: TeamAssignment[]
+): Map<string, number> {
+  const baselineTeamByUser = new Map<string, number>()
+  for (const team of baselineTeams) {
+    for (const userId of team.playerIds) {
+      baselineTeamByUser.set(userId, team.teamNumber)
+    }
+  }
+
+  const manual = new Map<string, number>()
+  for (const team of currentTeams) {
+    for (const userId of team.playerIds) {
+      const baselineTeam = baselineTeamByUser.get(userId)
+      if (baselineTeam !== undefined && baselineTeam !== team.teamNumber) {
+        manual.set(userId, team.teamNumber)
+      }
+    }
+  }
+  return manual
+}
+
+/** Re-apply explicit team overrides onto a freshly generated baseline roster. */
+export function applyManualTeamTransfers(
+  baselineTeams: TeamAssignment[],
+  manualTransfers: Map<string, number>
+): TeamAssignment[] {
+  if (manualTransfers.size === 0) {
+    return baselineTeams.map(t => ({
+      teamNumber: t.teamNumber,
+      playerIds: [...t.playerIds],
+    }))
+  }
+
+  const teams = baselineTeams.map(t => ({
+    teamNumber: t.teamNumber,
+    playerIds: [...t.playerIds],
+  }))
+
+  const ensureTeam = (teamNumber: number): TeamAssignment => {
+    let team = teams.find(t => t.teamNumber === teamNumber)
+    if (!team) {
+      team = { teamNumber, playerIds: [] }
+      teams.push(team)
+      teams.sort((a, b) => a.teamNumber - b.teamNumber)
+    }
+    return team
+  }
+
+  manualTransfers.forEach((targetTeamNumber, userId) => {
+    for (const team of teams) {
+      team.playerIds = team.playerIds.filter(id => id !== userId)
+    }
+    const target = ensureTeam(targetTeamNumber)
+    if (!target.playerIds.includes(userId)) {
+      target.playerIds.push(userId)
+    }
+  })
+
+  return teams
+}
+
+export function mergeManualTransfers(
+  fromDiff: Map<string, number>,
+  persisted?: Record<string, number>
+): Map<string, number> {
+  const merged = new Map(fromDiff)
+  if (!persisted) return merged
+  for (const [userId, teamNumber] of Object.entries(persisted)) {
+    if (typeof teamNumber === 'number' && Number.isFinite(teamNumber)) {
+      merged.set(userId, teamNumber)
+    }
+  }
+  return merged
+}
+
+/** Re-apply manual transfers onto a fresh baseline (rebalance or regenerate). */
+export function mergeBaselineWithManualTransfers(
+  currentTeams: TeamAssignment[],
+  baselineTeams: TeamAssignment[],
+  persistedManualAssignments?: Record<string, number>
+): TeamAssignment[] {
+  const manualTransfers = mergeManualTransfers(
+    deriveManualTransfers(currentTeams, baselineTeams),
+    persistedManualAssignments
+  )
+  return applyManualTeamTransfers(baselineTeams, manualTransfers)
 }
 
 /**
