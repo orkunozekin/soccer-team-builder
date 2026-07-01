@@ -6,6 +6,7 @@ import {
   deriveManualTransfers,
   generateTeamsWithReplacements,
   isGoalkeeper,
+  mergeBaselineWithManualTransfers,
   mergeManualTransfers,
 } from './teamGenerator'
 import { type RSVP } from '@/types/rsvp'
@@ -458,6 +459,68 @@ describe('mergeManualTransfers', () => {
     expect(manual.get('p1')).toBe(2)
     expect(manual.has('p2')).toBe(false)
     expect(manual.has('p3')).toBe(false)
+  })
+})
+
+describe('mergeBaselineWithManualTransfers', () => {
+  it('preserves a two-player swap onto a rebalance baseline', () => {
+    const baseline = [
+      { teamNumber: 1, playerIds: ['p1', 'p2'] },
+      { teamNumber: 2, playerIds: ['p3', 'p4'] },
+      { teamNumber: 3, playerIds: ['p5', 'p6'] },
+    ]
+    const currentTeams = [
+      { teamNumber: 1, playerIds: ['p2', 'p3'] },
+      { teamNumber: 2, playerIds: ['p1', 'p4'] },
+      { teamNumber: 3, playerIds: ['p5', 'p6'] },
+    ]
+
+    const result = mergeBaselineWithManualTransfers(currentTeams, baseline)
+
+    const team1 = result.find(t => t.teamNumber === 1)
+    const team2 = result.find(t => t.teamNumber === 2)
+    expect(team1?.playerIds).toEqual(expect.arrayContaining(['p2', 'p3']))
+    expect(team1?.playerIds).not.toContain('p1')
+    expect(team2?.playerIds).toEqual(expect.arrayContaining(['p1', 'p4']))
+    expect(team2?.playerIds).not.toContain('p3')
+  })
+
+  it('uses persisted manualTeamAssignments when current rosters already match baseline', () => {
+    const baseline = [
+      { teamNumber: 1, playerIds: ['p1', 'p2'] },
+      { teamNumber: 2, playerIds: ['p3', 'p4'] },
+    ]
+    const currentTeams = baseline.map(t => ({
+      teamNumber: t.teamNumber,
+      playerIds: [...t.playerIds],
+    }))
+
+    const result = mergeBaselineWithManualTransfers(currentTeams, baseline, {
+      p1: 2,
+    })
+
+    expect(result.find(t => t.teamNumber === 1)?.playerIds).not.toContain('p1')
+    expect(result.find(t => t.teamNumber === 2)?.playerIds).toContain('p1')
+  })
+
+  it('lets persisted assignments override the current-vs-baseline diff', () => {
+    const baseline = [
+      { teamNumber: 1, playerIds: ['p1', 'p2'] },
+      { teamNumber: 2, playerIds: ['p3'] },
+      { teamNumber: 3, playerIds: ['p4'] },
+    ]
+    const currentTeams = [
+      { teamNumber: 1, playerIds: ['p2'] },
+      { teamNumber: 2, playerIds: ['p1', 'p3'] },
+      { teamNumber: 3, playerIds: ['p4'] },
+    ]
+
+    const result = mergeBaselineWithManualTransfers(currentTeams, baseline, {
+      p1: 3,
+    })
+
+    expect(result.find(t => t.teamNumber === 2)?.playerIds).not.toContain('p1')
+    expect(result.find(t => t.teamNumber === 3)?.playerIds).toContain('p1')
   })
 })
 

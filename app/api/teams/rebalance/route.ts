@@ -2,7 +2,10 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
-import { isGoalkeeper } from '@/lib/utils/teamGenerator'
+import {
+  isGoalkeeper,
+  mergeBaselineWithManualTransfers,
+} from '@/lib/utils/teamGenerator'
 import type { User } from '@/types/user'
 
 type Bucket = 'GK' | 'DEF' | 'MID' | 'FWD' | 'UNK'
@@ -93,9 +96,15 @@ export async function POST(request: NextRequest) {
           id: d.id,
           teamNumber: Number(data.teamNumber ?? 0),
           maxSize: Number(data.maxSize ?? 11),
+          playerIds: (data.playerIds as string[]) ?? [],
         }
       })
       .sort((a, b) => a.teamNumber - b.teamNumber)
+
+    const currentAssignments = teams.map(t => ({
+      teamNumber: t.teamNumber,
+      playerIds: [...t.playerIds],
+    }))
 
     const capacities = teams.map(t => t.maxSize)
     const rosterLimit = capacities.reduce((sum, n) => sum + n, 0)
@@ -293,11 +302,36 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const baselineTeams = teams.map((t, idx) => ({
+      teamNumber: t.teamNumber,
+      playerIds: assigned[idx]!,
+    }))
+
+    const matchRef = adminDb.collection('matches').doc(matchId)
+    const matchSnap = await matchRef.get()
+    const persisted = matchSnap.exists
+      ? ((matchSnap.data()?.manualTeamAssignments as
+          | Record<string, number>
+          | undefined) ?? {})
+      : {}
+
+    const finalTeams = mergeBaselineWithManualTransfers(
+      currentAssignments,
+      baselineTeams,
+      persisted
+    )
+    const finalByNumber = new Map(
+      finalTeams.map(t => [t.teamNumber, t.playerIds])
+    )
+    const finalAssigned = teams.map(
+      t => finalByNumber.get(t.teamNumber) ?? []
+    )
+
     const now = Timestamp.now()
     const batch = adminDb.batch()
     teams.forEach((t, idx) => {
       batch.update(teamsCol.doc(t.id), {
-        playerIds: assigned[idx],
+        playerIds: finalAssigned[idx],
         updatedAt: now,
       })
     })
@@ -309,14 +343,13 @@ export async function POST(request: NextRequest) {
       gkReplacements[r.insertedGK] = r.removedPlayer
     }
     if (Object.keys(gkReplacements).length > 0) {
-      const matchRef = adminDb.collection('matches').doc(matchId)
       await matchRef.set({ gkReplacements, updatedAt: now }, { merge: true })
     }
 
     return NextResponse.json({
       success: true,
       teamsRebalanced: teams.length,
-      assignedCounts: assigned.map(a => a.length),
+      assignedCounts: finalAssigned.map(a => a.length),
       benchCount: 0,
       rosterLimit,
       replacements,

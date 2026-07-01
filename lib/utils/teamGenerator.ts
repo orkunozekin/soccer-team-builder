@@ -253,6 +253,19 @@ export function mergeManualTransfers(
   return merged
 }
 
+/** Re-apply manual transfers onto a fresh baseline (rebalance or regenerate). */
+export function mergeBaselineWithManualTransfers(
+  currentTeams: TeamAssignment[],
+  baselineTeams: TeamAssignment[],
+  persistedManualAssignments?: Record<string, number>
+): TeamAssignment[] {
+  const manualTransfers = mergeManualTransfers(
+    deriveManualTransfers(currentTeams, baselineTeams),
+    persistedManualAssignments
+  )
+  return applyManualTeamTransfers(baselineTeams, manualTransfers)
+}
+
 /**
  * Same as generateTeams but also returns gkReplacements.
  * For any team (1, 2, 3, …) that has no GK: the earliest RSVPing GK from a higher-indexed team is moved into that team, and that team's last non-GK (by RSVP) is bumped to the GK's former team.

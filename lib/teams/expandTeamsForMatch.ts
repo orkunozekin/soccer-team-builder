@@ -8,11 +8,9 @@ import { Timestamp } from 'firebase-admin/firestore'
 import type { Firestore, QuerySnapshot } from 'firebase-admin/firestore'
 import {
   assignUnassignedPlayersToTeams,
-  applyManualTeamTransfers,
   computeTeamCountForRSVPCount,
-  deriveManualTransfers,
   generateTeamsWithReplacements,
-  mergeManualTransfers,
+  mergeBaselineWithManualTransfers,
 } from '@/lib/utils/teamGenerator'
 import type { TeamAssignment } from '@/lib/utils/teamGenerator'
 import type { RSVP } from '@/types/rsvp'
@@ -147,13 +145,10 @@ async function fullyRegenerateTeams(
         | undefined) ?? {})
     : {}
 
-  const manualTransfers = mergeManualTransfers(
-    deriveManualTransfers(currentAssignments, baselineTeams),
-    persisted
-  )
-  const teamAssignments = applyManualTeamTransfers(
+  const teamAssignments = mergeBaselineWithManualTransfers(
+    currentAssignments,
     baselineTeams,
-    manualTransfers
+    persisted
   )
 
   const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
