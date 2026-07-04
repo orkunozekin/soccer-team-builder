@@ -15,7 +15,8 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { getMatch } from '@/lib/services/matchService'
 import { getMatchRSVPs } from '@/lib/services/rsvpService'
 import { getMatchTeams } from '@/lib/services/teamService'
-import { getAllUsers } from '@/lib/services/userService'
+import { getUsersByIds } from '@/lib/services/userService'
+import { collectMatchParticipantIds } from '@/lib/utils/matchParticipants'
 import { useMatchStore } from '@/store/matchStore'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
@@ -43,16 +44,22 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
   const userProfilePosition = userData?.position ?? null
   const [loadingMatch, setLoadingMatch] = useState(true)
   const [teams, setTeams] = useState<Team[]>([])
-  const [allUsers, setAllUsers] = useState<User[]>([])
+  const [rosterUsers, setRosterUsers] = useState<User[]>([])
   const [loadingTeams, setLoadingTeams] = useState(true)
-  const usersWithMatchPosition = useMemo(
-    () =>
-      allUsers.map(u => {
-        const rsvp = matchRSVPs.find(r => r.userId === u.uid)
-        return { ...u, position: rsvp?.position ?? u.position ?? null }
-      }),
-    [allUsers, matchRSVPs]
-  )
+  const usersWithMatchPosition = useMemo(() => {
+    const rsvpByUserId = new Map(matchRSVPs.map(r => [r.userId, r]))
+    return rosterUsers.map(u => {
+      const rsvp = rsvpByUserId.get(u.uid)
+      const jerseyFromRsvp = rsvp?.jerseyNumber ?? null
+      const jerseyFromProfile = u.jerseyNumber ?? null
+      return {
+        ...u,
+        position: rsvp?.position ?? u.position ?? null,
+        jerseyNumber:
+          jerseyFromRsvp != null ? jerseyFromRsvp : jerseyFromProfile,
+      }
+    })
+  }, [rosterUsers, matchRSVPs])
 
   useEffect(() => {
     const fetchMatchData = async () => {
@@ -69,19 +76,16 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
         setCurrentMatch(match)
 
         try {
-          const rsvps = await getMatchRSVPs(matchId)
-          setMatchRSVPs(rsvps)
-        } catch {
-          console.error('Failed to load RSVPs')
-        }
-
-        try {
-          const [matchTeams, users] = await Promise.all([
+          const [matchTeams, rsvps] = await Promise.all([
             getMatchTeams(matchId),
-            getAllUsers(),
+            getMatchRSVPs(matchId),
           ])
           setTeams(matchTeams)
-          setAllUsers(users)
+          setMatchRSVPs(rsvps)
+          const users = await getUsersByIds(
+            collectMatchParticipantIds(matchTeams, rsvps)
+          )
+          setRosterUsers(users)
         } catch {
           console.error('Failed to load teams or players')
         }
@@ -98,28 +102,24 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
     fetchMatchData()
   }, [matchId, user, router, backLink.href, setCurrentMatch, setMatchRSVPs])
 
-  const refetchAll = async () => {
+  const refetchMatchRoster = async () => {
     if (!matchId) return
     try {
-      const [matchData, rsvpsData, teamsData, usersData] = await Promise.all([
+      const [matchData, rsvpsData, teamsData] = await Promise.all([
         getMatch(matchId),
         getMatchRSVPs(matchId),
         getMatchTeams(matchId),
-        getAllUsers(),
       ])
       if (matchData) setCurrentMatch(matchData)
       setMatchRSVPs(rsvpsData)
       setTeams(teamsData)
-      setAllUsers(usersData)
+      const usersData = await getUsersByIds(
+        collectMatchParticipantIds(teamsData, rsvpsData)
+      )
+      setRosterUsers(usersData)
     } catch (e) {
-      console.error('refetchAll failed:', e)
+      console.error('refetchMatchRoster failed:', e)
     }
-  }
-
-  const refetchTeams = async () => {
-    if (!matchId) return
-    const newTeams = await getMatchTeams(matchId)
-    setTeams(newTeams)
   }
 
   if (loadingMatch) {
@@ -142,8 +142,8 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
               rsvpCount={matchRSVPs.length}
               userRsvp={userRsvp}
               userProfilePosition={userProfilePosition}
-              onTeamsRegenerated={refetchTeams}
-              onMatchRefetch={refetchAll}
+              onTeamsRegenerated={refetchMatchRoster}
+              onMatchRefetch={refetchMatchRoster}
             />
 
             {isAdmin && currentMatch && (
@@ -151,13 +151,13 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
                 <EditMatchCard
                   matchId={matchId}
                   match={currentMatch}
-                  onSaved={refetchAll}
+                  onSaved={refetchMatchRoster}
                   onDeleted={() => router.push(backLink.href)}
                 />
                 <ImpersonateRSVP
                   match={currentMatch}
                   matchRSVPs={matchRSVPs}
-                  onDone={refetchAll}
+                  onDone={refetchMatchRoster}
                 />
               </>
             )}
@@ -170,14 +170,14 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
                 teams={teams}
                 users={usersWithMatchPosition}
                 isAdmin={isAdmin ?? false}
-                onTeamsChanged={refetchAll}
+                onTeamsChanged={refetchMatchRoster}
                 currentUserId={user.uid}
                 matchRSVPs={matchRSVPs}
                 headerActions={
                   isAdmin && teams.length >= 2 ? (
                     <RebalanceTeamsButton
                       matchId={matchId}
-                      onDone={refetchAll}
+                      onDone={refetchMatchRoster}
                       size="sm"
                       showError="inline"
                     />
@@ -190,7 +190,7 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
                 matchId={matchId}
                 teams={teams}
                 users={usersWithMatchPosition}
-                onTransferComplete={refetchAll}
+                onTransferComplete={refetchMatchRoster}
               />
             )}
           </div>

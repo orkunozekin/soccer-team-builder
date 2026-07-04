@@ -4,6 +4,7 @@ import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { expandTeamsForMatch } from '@/lib/teams/expandTeamsForMatch'
 import { TEST_USERS } from '@/lib/testData/testUsers'
+import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -119,6 +120,7 @@ export async function POST(request: Request) {
         userId,
         status: 'confirmed',
         position: userPosition,
+        jerseyNumber: normalizeJerseyNumber(userData?.jerseyNumber),
         rsvpAt: now,
         createdAt: now,
         updatedAt: now,

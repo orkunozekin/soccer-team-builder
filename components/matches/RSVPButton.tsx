@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { RSVPSuccessCelebration } from '@/components/matches/RSVPSuccessCelebration'
 import { PositionSelector } from '@/components/profile/PositionSelector'
 import { ProfileCompleteModal } from '@/components/profile/ProfileCompleteModal'
 import {
@@ -27,12 +28,15 @@ interface RSVPButtonProps {
   onTeamsRegenerated?: () => void | Promise<void>
   /** Call when backend says RSVP is closed so the parent can refetch the match and update UI */
   onMatchRefetch?: () => void | Promise<void>
+  /** Called after a successful RSVP confirmation */
+  onRsvpSuccess?: () => void
 }
 
 export function RSVPButton({
   match,
   onTeamsRegenerated,
   onMatchRefetch,
+  onRsvpSuccess,
 }: RSVPButtonProps) {
   const { user, userData } = useAuth()
   const profileComplete = isProfileComplete(userData)
@@ -45,6 +49,10 @@ export function RSVPButton({
     useState(false)
   const [positionForRsvp, setPositionForRsvp] = useState<string | null>(null)
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
+  const [showCelebration, setShowCelebration] = useState(false)
+  const [justRsvped, setJustRsvped] = useState(false)
+
+  const dismissCelebration = useCallback(() => setShowCelebration(false), [])
 
   useEffect(() => {
     if (user && matchRSVPs.length > 0) {
@@ -67,21 +75,23 @@ export function RSVPButton({
     setError('')
     setShowPositionPickerForGkBlock(false)
     try {
-      const { rsvpId, regenerated, position } = await confirmRSVPAPI(
-        match.id,
-        positionOverride
-      )
+      const { rsvpId, regenerated, position, jerseyNumber } =
+        await confirmRSVPAPI(match.id, positionOverride)
       const newRSVP = {
         id: rsvpId,
         matchId: match.id,
         userId: user.uid,
         status: 'confirmed' as const,
         position: position ?? null,
+        jerseyNumber: jerseyNumber ?? userData?.jerseyNumber ?? null,
         rsvpAt: new Date(),
         updatedAt: new Date(),
       }
       addRSVP(newRSVP)
       setHasRSVPed(true)
+      setJustRsvped(true)
+      setShowCelebration(true)
+      onRsvpSuccess?.()
       setPositionForRsvp(null)
       if (regenerated && onTeamsRegenerated) {
         await onTeamsRegenerated()
@@ -147,6 +157,7 @@ export function RSVPButton({
       const { teamsUpdated } = await cancelRSVPAPI(rsvp.id)
       removeRSVP(rsvp.id)
       setHasRSVPed(false)
+      setJustRsvped(false)
       setCancelConfirmOpen(false)
       if (teamsUpdated && onTeamsRegenerated) {
         await onTeamsRegenerated()
@@ -164,6 +175,10 @@ export function RSVPButton({
 
   return (
     <div className="space-y-2">
+      <RSVPSuccessCelebration
+        show={showCelebration}
+        onDone={dismissCelebration}
+      />
       <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -234,7 +249,9 @@ export function RSVPButton({
           disabled={!user}
           loading={loading}
           variant={hasRSVPed ? 'outline' : 'default'}
-          className="h-11 w-full text-base sm:h-9 sm:text-sm"
+          className={`h-11 w-full text-base transition-all duration-300 sm:h-9 sm:text-sm ${
+            justRsvped ? 'animate-rsvp-glow' : ''
+          }`}
         >
           {hasRSVPed ? 'Cancel RSVP' : 'RSVP to Match'}
         </Button>

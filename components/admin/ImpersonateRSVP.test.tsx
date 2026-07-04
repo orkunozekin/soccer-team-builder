@@ -92,6 +92,7 @@ describe('ImpersonateRSVP', () => {
       userId: 'u1',
       status: 'confirmed',
       position: null,
+      jerseyNumber: null,
       rsvpAt: new Date(),
       updatedAt: new Date(),
     }

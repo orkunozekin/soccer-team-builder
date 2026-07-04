@@ -70,6 +70,7 @@ export async function confirmRSVPAPI(
   rsvpId: string
   regenerated: boolean
   position: string | null
+  jerseyNumber: number | null
 }> {
   const body: {
     matchId: string

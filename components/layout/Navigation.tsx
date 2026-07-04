@@ -9,6 +9,10 @@ import { logoutUser } from '@/lib/firebase/auth'
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 
+function BrandLogo({ className }: { className?: string }) {
+  return <span className={className}>Soccerville</span>
+}
+
 export function Navigation() {
   const { user, loading } = useAuth()
   const { isAdmin } = useAdmin()
@@ -31,20 +35,25 @@ export function Navigation() {
 
   if (!user) {
     return (
-      <header className="sticky top-0 z-20 mb-2 flex items-center justify-center bg-red-50 py-2 font-semibold text-white">
+      <header className="sticky top-0 z-20 mb-2 bg-red-50 py-3 font-semibold text-white shadow-md">
         <div className="container mx-auto px-4">
-          <div className="text-center">Soccerville</div>
+          <div className="flex justify-center">
+            <BrandLogo />
+          </div>
         </div>
       </header>
     )
   }
 
   return (
-    <header className="sticky top-0 z-20 mb-4 bg-red-50 py-2 font-semibold text-white shadow-sm">
+    <header className="sticky top-0 z-20 mb-4 bg-red-50 py-3 font-semibold text-white shadow-md">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
-          <Link href="/matches" className="text-lg font-bold hover:opacity-80">
-            Soccerville
+          <Link
+            href="/matches"
+            className="text-lg font-bold transition-opacity hover:opacity-80"
+          >
+            <BrandLogo />
           </Link>
 
           {/* Desktop Navigation */}
@@ -105,7 +114,7 @@ export function Navigation() {
 
         {/* Mobile Navigation Menu */}
         {isMenuOpen && (
-          <nav className="mt-4 flex flex-col gap-2 border-t border-white/20 pt-4 md:hidden">
+          <nav className="mt-4 flex animate-slide-up-fade flex-col gap-2 border-t border-white/20 pt-4 md:hidden">
             <Link
               href="/matches"
               onClick={() => setIsMenuOpen(false)}

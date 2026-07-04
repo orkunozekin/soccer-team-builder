@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={cn(inter.variable, 'antialiased')}>
+      <body className={cn(inter.variable, 'font-sans antialiased')}>
         <EmulatorAuthGate>
           <AuthProvider>
             <Navigation />

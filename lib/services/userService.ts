@@ -7,6 +7,7 @@ import {
   timestampToDate,
   updateDocument,
 } from '@/lib/firebase/firestore'
+import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import { User, UserFirestore } from '@/types/user'
 
 export const createUser = async (
@@ -33,16 +34,30 @@ export const getUser = async (uid: string): Promise<User | null> => {
   const userDoc = await getDocument('users', uid)
   if (!userDoc) return null
 
-  return {
-    uid: userDoc.uid,
-    email: userDoc.email,
-    displayName: userDoc.displayName,
-    jerseyNumber: userDoc.jerseyNumber ?? null,
-    position: userDoc.position ?? null,
-    role: userDoc.role || 'user',
-    createdAt: timestampToDate(userDoc.createdAt) || new Date(),
-    updatedAt: timestampToDate(userDoc.updatedAt) || new Date(),
-  }
+  return mapDocToUser({
+    ...userDoc,
+    id: uid,
+    uid: (userDoc.uid as string) ?? uid,
+  })
+}
+
+export const getUsersByIds = async (uids: string[]): Promise<User[]> => {
+  const uniqueIds = Array.from(new Set(uids.filter((id): id is string => Boolean(id))))
+  if (uniqueIds.length === 0) return []
+
+  const users = await Promise.all(
+    uniqueIds.map(async uid => {
+      const userDoc = await getDocument('users', uid)
+      if (!userDoc) return null
+      return mapDocToUser({
+        ...userDoc,
+        id: uid,
+        uid: (userDoc.uid as string) ?? uid,
+      })
+    })
+  )
+
+  return users.filter((user): user is User => user != null)
 }
 
 export const getAllUsers = async (): Promise<User[]> => {
@@ -51,10 +66,10 @@ export const getAllUsers = async (): Promise<User[]> => {
 }
 
 const mapDocToUser = (user: Record<string, unknown>): User => ({
-  uid: user.uid as string,
+  uid: (user.uid as string) || (user.id as string),
   email: user.email as string,
   displayName: user.displayName as string,
-  jerseyNumber: (user.jerseyNumber as number | null) ?? null,
+  jerseyNumber: normalizeJerseyNumber(user.jerseyNumber),
   position: (user.position as string | null) ?? null,
   role: (user.role as User['role']) || 'user',
   createdAt: timestampToDate(user.createdAt as never) || new Date(),

@@ -34,6 +34,7 @@ function makeRSVP(id: string, overrides: Partial<RSVP> = {}): RSVP {
     userId: id,
     status: 'confirmed',
     position: null,
+    jerseyNumber: null,
     rsvpAt: now,
     updatedAt: now,
     ...overrides,

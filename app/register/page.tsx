@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { RegisterForm } from '@/components/auth/RegisterForm'
+import { SoccerBallIcon } from '@/components/icons/SoccerBallIcon'
 import {
   Card,
   CardContent,
@@ -13,8 +14,20 @@ import {
 export default function RegisterPage() {
   return (
     <div className="flex flex-col items-center px-4 py-10 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md">
-        <Card>
+      <div className="w-full max-w-md space-y-6">
+        <div className="animate-slide-up-fade text-center">
+          <div className="mb-4 flex justify-center">
+            <SoccerBallIcon className="h-16 w-16 animate-float text-red-50" />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-red-50">
+            Join the Squad
+          </h1>
+          <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+            Create your account and start playing
+          </p>
+        </div>
+
+        <Card className="card-soccer-accent animate-slide-up-fade shadow-lg" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
           <CardHeader className="space-y-1">
             <CardTitle className="text-center text-2xl font-bold">
               Create Account

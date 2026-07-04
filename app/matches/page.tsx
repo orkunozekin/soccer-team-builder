@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
+import { SoccerBallIcon } from '@/components/icons/SoccerBallIcon'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { MatchCard } from '@/components/matches/MatchCard'
 import {
@@ -77,11 +78,16 @@ export default function MatchesPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Matches</h1>
-        <p className="text-zinc-600 dark:text-zinc-400">
-          View and RSVP to upcoming matches
-        </p>
+      <div className="mb-6 animate-slide-up-fade">
+        <div className="flex items-center gap-3">
+          <SoccerBallIcon className="h-10 w-10 animate-float text-red-50" />
+          <div>
+            <h1 className="text-3xl font-bold text-red-50">Matches</h1>
+            <p className="text-zinc-600 dark:text-zinc-400">
+              View and RSVP to upcoming matches
+            </p>
+          </div>
+        </div>
       </div>
 
       {isAdmin && (
@@ -108,12 +114,13 @@ export default function MatchesPage() {
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {matches.map(match => (
+          {matches.map((match, index) => (
             <MatchCard
               key={match.id}
               match={match}
               rsvpCount={rsvpCounts[match.id]}
               isAdmin={isAdmin ?? false}
+              index={index}
             />
           ))}
         </div>
