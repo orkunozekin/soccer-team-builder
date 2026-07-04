@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   (userDoc.displayName as string) ??
                   firebaseUser.displayName ??
                   '',
-                jerseyNumber: userDoc.jerseyNumber ?? null,
+                jerseyNumber: normalizeJerseyNumber(userData?.jerseyNumber),
                 position: userDoc.position ?? null,
                 role,
                 createdAt: timestampToDate(userDoc.createdAt) || new Date(),

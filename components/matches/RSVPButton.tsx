@@ -1,9 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { RSVPSuccessCelebration } from '@/components/matches/RSVPSuccessCelebration'
 import { PositionSelector } from '@/components/profile/PositionSelector'
 import { ProfileCompleteModal } from '@/components/profile/ProfileCompleteModal'
-import { RSVPSuccessCelebration } from '@/components/matches/RSVPSuccessCelebration'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,16 +75,15 @@ export function RSVPButton({
     setError('')
     setShowPositionPickerForGkBlock(false)
     try {
-      const { rsvpId, regenerated, position } = await confirmRSVPAPI(
-        match.id,
-        positionOverride
-      )
+      const { rsvpId, regenerated, position, jerseyNumber } =
+        await confirmRSVPAPI(match.id, positionOverride)
       const newRSVP = {
         id: rsvpId,
         matchId: match.id,
         userId: user.uid,
         status: 'confirmed' as const,
         position: position ?? null,
+        jerseyNumber: jerseyNumber ?? userData?.jerseyNumber ?? null,
         rsvpAt: new Date(),
         updatedAt: new Date(),
       }

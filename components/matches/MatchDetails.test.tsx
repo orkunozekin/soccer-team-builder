@@ -65,6 +65,7 @@ describe('MatchDetails', () => {
       userId: 'user1',
       status: 'confirmed',
       position: 'GK',
+      jerseyNumber: null,
       rsvpAt: new Date(),
       updatedAt: new Date(),
     }
@@ -92,6 +93,7 @@ describe('MatchDetails', () => {
       userId: 'user1',
       status: 'confirmed',
       position: 'GK',
+      jerseyNumber: null,
       rsvpAt: new Date(),
       updatedAt: new Date(),
     }

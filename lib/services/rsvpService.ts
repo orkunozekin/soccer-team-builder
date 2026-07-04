@@ -7,7 +7,21 @@ import {
   timestampToDate,
   updateDocument,
 } from '@/lib/firebase/firestore'
+import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import { RSVP, RSVPStatus } from '@/types/rsvp'
+
+function mapRsvpDoc(rsvp: Record<string, unknown>): RSVP {
+  return {
+    id: rsvp.id as string,
+    matchId: rsvp.matchId as string,
+    userId: rsvp.userId as string,
+    status: rsvp.status as RSVPStatus,
+    position: (rsvp.position as string | null) ?? null,
+    jerseyNumber: normalizeJerseyNumber(rsvp.jerseyNumber),
+    rsvpAt: timestampToDate(rsvp.rsvpAt as never) || new Date(),
+    updatedAt: timestampToDate(rsvp.updatedAt as never) || new Date(),
+  }
+}
 
 export const createRSVP = async (
   matchId: string,
@@ -34,6 +48,7 @@ export const getRSVP = async (rsvpId: string): Promise<RSVP | null> => {
     userId: rsvpDoc.userId,
     status: rsvpDoc.status,
     position: rsvpDoc.position ?? null,
+    jerseyNumber: normalizeJerseyNumber(rsvpDoc.jerseyNumber),
     rsvpAt: timestampToDate(rsvpDoc.rsvpAt) || new Date(),
     updatedAt: timestampToDate(rsvpDoc.updatedAt) || new Date(),
   }
@@ -51,16 +66,8 @@ export const getUserRSVP = async (
 
   if (rsvps.length === 0) return null
 
-  const rsvp = rsvps[0] as any
-  return {
-    id: rsvp.id,
-    matchId: rsvp.matchId,
-    userId: rsvp.userId,
-    status: rsvp.status,
-    position: rsvp.position ?? null,
-    rsvpAt: timestampToDate(rsvp.rsvpAt) || new Date(),
-    updatedAt: timestampToDate(rsvp.updatedAt) || new Date(),
-  }
+  const rsvp = rsvps[0] as Record<string, unknown>
+  return mapRsvpDoc(rsvp)
 }
 
 export const getMatchRSVPs = async (matchId: string): Promise<RSVP[]> => {
@@ -69,15 +76,7 @@ export const getMatchRSVPs = async (matchId: string): Promise<RSVP[]> => {
     where('status', '==', 'confirmed'),
   ])
 
-  return rsvps.map((rsvp: any) => ({
-    id: rsvp.id,
-    matchId: rsvp.matchId,
-    userId: rsvp.userId,
-    status: rsvp.status,
-    position: rsvp.position ?? null,
-    rsvpAt: timestampToDate(rsvp.rsvpAt) || new Date(),
-    updatedAt: timestampToDate(rsvp.updatedAt) || new Date(),
-  }))
+  return rsvps.map((rsvp: Record<string, unknown>) => mapRsvpDoc(rsvp))
 }
 
 /** Returns the number of confirmed RSVPs for a match. */

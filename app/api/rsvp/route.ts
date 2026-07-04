@@ -10,6 +10,7 @@ import {
   performGkSwap,
   swapGkWithLowerPriority,
 } from '@/lib/teams/swapGkWithLowerTeam'
+import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 
 /**
@@ -89,6 +90,7 @@ export async function POST(request: NextRequest) {
         : null
     const position =
       positionFromBody ?? (userData?.position as string | null) ?? null
+    const jerseyNumber = normalizeJerseyNumber(userData?.jerseyNumber)
 
     const hasPosition =
       typeof position === 'string' && position.trim().length > 0
@@ -129,6 +131,8 @@ export async function POST(request: NextRequest) {
           rsvpId,
           regenerated,
           position: existingPosition,
+          jerseyNumber: normalizeJerseyNumber(existingDoc.data()?.jerseyNumber) ??
+            jerseyNumber,
         })
       } finally {
         await lock.release()
@@ -156,6 +160,7 @@ export async function POST(request: NextRequest) {
         userId: effectiveUid,
         status: 'confirmed' as const,
         position: position ?? null,
+        jerseyNumber,
         rsvpAt: now,
         updatedAt: now,
       }
@@ -213,6 +218,7 @@ export async function POST(request: NextRequest) {
       rsvpId,
       regenerated,
       position: position ?? null,
+      jerseyNumber,
     })
   } catch (error: any) {
     console.error('Error creating RSVP:', error)

@@ -6,6 +6,7 @@
 
 import { Timestamp } from 'firebase-admin/firestore'
 import type { Firestore, QuerySnapshot } from 'firebase-admin/firestore'
+import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import {
   assignUnassignedPlayersToTeams,
   computeTeamCountForRSVPCount,
@@ -213,6 +214,7 @@ export async function expandTeamsForMatch(
       userId: data.userId,
       status: data.status ?? 'confirmed',
       position: data.position ?? null,
+      jerseyNumber: normalizeJerseyNumber(data.jerseyNumber),
       rsvpAt: timestampToDate(data.rsvpAt) || new Date(),
       updatedAt: timestampToDate(data.updatedAt) || new Date(),
     }
@@ -250,7 +252,7 @@ export async function expandTeamsForMatch(
       uid: data.uid ?? d.id,
       email: data.email ?? '',
       displayName: data.displayName ?? '',
-      jerseyNumber: data.jerseyNumber ?? null,
+      jerseyNumber: normalizeJerseyNumber(data.jerseyNumber),
       position: data.position ?? null,
       role: data.role || 'user',
       createdAt: timestampToDate(data.createdAt) || new Date(),

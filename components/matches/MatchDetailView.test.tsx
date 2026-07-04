@@ -39,7 +39,7 @@ vi.mock('@/store/matchStore', () => ({
 const getMatchMock = vi.fn()
 const getMatchRSVPsMock = vi.fn()
 const getMatchTeamsMock = vi.fn()
-const getAllUsersMock = vi.fn()
+const getUsersByIdsMock = vi.fn()
 
 vi.mock('@/lib/services/matchService', () => ({
   getMatch: (...args: unknown[]) => getMatchMock(...args),
@@ -51,7 +51,7 @@ vi.mock('@/lib/services/teamService', () => ({
   getMatchTeams: (...args: unknown[]) => getMatchTeamsMock(...args),
 }))
 vi.mock('@/lib/services/userService', () => ({
-  getAllUsers: (...args: unknown[]) => getAllUsersMock(...args),
+  getUsersByIds: (...args: unknown[]) => getUsersByIdsMock(...args),
 }))
 
 vi.mock('@/components/matches/MatchDetails', () => ({
@@ -113,7 +113,7 @@ describe('MatchDetailView', () => {
         updatedAt: new Date(),
       },
     ])
-    getAllUsersMock.mockResolvedValueOnce([])
+    getUsersByIdsMock.mockResolvedValueOnce([])
 
     render(<MatchDetailView backLink={backLink} />)
 
@@ -165,7 +165,7 @@ describe('MatchDetailView', () => {
         updatedAt: new Date(),
       },
     ])
-    getAllUsersMock.mockResolvedValueOnce([])
+    getUsersByIdsMock.mockResolvedValueOnce([])
 
     render(<MatchDetailView backLink={backLink} />)
 
