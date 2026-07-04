@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import { SoccerBallIcon } from '@/components/icons/SoccerBallIcon'
 import {
   DndContext,
   type DragEndEvent,
@@ -218,10 +217,7 @@ export function TeamsDisplay({
       </AlertDialog>
 
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-        <h2 className="flex min-w-0 items-center gap-2 truncate text-2xl font-bold">
-          <SoccerBallIcon className="h-6 w-6 shrink-0 text-red-50" />
-          Teams
-        </h2>
+        <h2 className="min-w-0 truncate text-2xl font-bold">Teams</h2>
         {headerActions ? <div className="shrink-0">{headerActions}</div> : null}
       </div>
 

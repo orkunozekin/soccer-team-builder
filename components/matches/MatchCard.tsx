@@ -1,9 +1,8 @@
 'use client'
 
 import { format } from 'date-fns'
-import Link from 'next/link'
 import { Calendar, MapPin, Users } from 'lucide-react'
-import { SoccerBallIcon } from '@/components/icons/SoccerBallIcon'
+import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import {
   Card,
@@ -62,25 +61,18 @@ export function MatchCard({
     >
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
-          <div className="flex flex-1 items-start gap-3">
-            <SoccerBallIcon
-              className={`mt-0.5 h-8 w-8 shrink-0 text-red-50 ${
-                match.rsvpOpen ? 'animate-float' : 'opacity-60'
-              }`}
-            />
-            <div className="min-w-0 flex-1">
-              <CardTitle className="mb-1 text-xl">{formattedDate}</CardTitle>
-              <CardDescription className="flex items-center gap-1.5 text-base">
-                <Calendar className="h-3.5 w-3.5 shrink-0 text-red-50" />
-                {formattedTime}
-              </CardDescription>
-              {match.location && (
-                <p className="mt-1 flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-                  <MapPin className="h-3.5 w-3.5 shrink-0 text-red-50" />
-                  <span className="truncate">{match.location}</span>
-                </p>
-              )}
-            </div>
+          <div className="min-w-0 flex-1">
+            <CardTitle className="mb-1 text-xl">{formattedDate}</CardTitle>
+            <CardDescription className="flex items-center gap-1.5 text-base">
+              <Calendar className="h-3.5 w-3.5 shrink-0 text-red-50" />
+              {formattedTime}
+            </CardDescription>
+            {match.location && (
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-red-50" />
+                <span className="truncate">{match.location}</span>
+              </p>
+            )}
           </div>
           <Badge
             variant={match.rsvpOpen ? 'default' : 'outline'}

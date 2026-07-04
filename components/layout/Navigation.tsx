@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { SoccerBallIcon } from '@/components/icons/SoccerBallIcon'
 import { NavLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { Button } from '@/components/ui/button'
 import { logoutUser } from '@/lib/firebase/auth'
@@ -11,12 +10,7 @@ import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 
 function BrandLogo({ className }: { className?: string }) {
-  return (
-    <span className={`inline-flex items-center gap-2 ${className ?? ''}`}>
-      <SoccerBallIcon className="h-7 w-7 animate-float text-white" />
-      <span>Soccerville</span>
-    </span>
-  )
+  return <span className={className}>Soccerville</span>
 }
 
 export function Navigation() {

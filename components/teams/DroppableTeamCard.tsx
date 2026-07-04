@@ -152,7 +152,7 @@ export function DroppableTeamCard({
     >
       <CardHeader>
         <div className="flex min-w-0 items-center justify-between gap-2">
-          <CardTitle className="min-w-0 truncate">
+          <CardTitle className="min-w-0">
             {team.name || `Team ${team.teamNumber}`}
           </CardTitle>
           <Badge

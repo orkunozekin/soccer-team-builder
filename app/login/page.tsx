@@ -38,7 +38,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-6">
         <div className="animate-slide-up-fade text-center">
           <div className="mb-4 flex justify-center">
-            <SoccerBallIcon className="h-20 w-20 animate-ball-bounce text-red-50" />
+            <SoccerBallIcon className="h-20 w-20 animate-ball-spin" />
           </div>
           <h1 className="text-4xl font-bold tracking-tight text-red-50 sm:text-5xl">
             Soccerville

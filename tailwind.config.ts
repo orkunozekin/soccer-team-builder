@@ -137,6 +137,10 @@ const config: Config = {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-4px)' },
         },
+        'ball-spin': {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -150,6 +154,7 @@ const config: Config = {
         'rsvp-glow': 'rsvp-glow 1s ease-out',
         'badge-pulse': 'badge-pulse 2s ease-in-out infinite',
         'float': 'float 3s ease-in-out infinite',
+        'ball-spin': 'ball-spin 4s linear infinite',
       },
     },
   },

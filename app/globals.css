@@ -8,24 +8,26 @@
   }
 
   .pitch-bg {
-    background-color: #fafafa;
-    background-image:
-      linear-gradient(
-        135deg,
-        rgba(204, 0, 0, 0.03) 25%,
-        transparent 25%,
-        transparent 50%,
-        rgba(204, 0, 0, 0.03) 50%,
-        rgba(204, 0, 0, 0.03) 75%,
-        transparent 75%,
-        transparent
-      ),
-      linear-gradient(
-        to bottom,
-        rgba(255, 243, 242, 0.5) 0%,
-        transparent 40%
-      );
-    background-size: 40px 40px, 100% 100%;
+    background-color: #fff3f2;
+    background-image: linear-gradient(
+      to bottom,
+      #ffffff 0%,
+      #fffbfb 45%,
+      #fff3f2 80%,
+      #ffe8e6 100%
+    );
+    background-attachment: fixed;
+  }
+
+  .dark .pitch-bg {
+    background-color: hsl(240 10% 10%);
+    background-image: linear-gradient(
+      to bottom,
+      hsl(240 10% 12%) 0%,
+      hsl(0 20% 12%) 60%,
+      hsl(0 25% 14%) 100%
+    );
+    background-attachment: fixed;
   }
 
   .card-soccer-accent {
@@ -94,7 +96,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground pitch-bg;
+    @apply pitch-bg bg-background text-foreground;
   }
 
   /* Date and time inputs: picker icon on the very right */
