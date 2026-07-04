@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase/config'
 import { getDocument } from '@/lib/firebase/firestore'
 import { timestampToDate } from '@/lib/firebase/firestore'
 import { createUser } from '@/lib/services/userService'
+import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import { useAuthStore } from '@/store/authStore'
 import { User } from '@/types/user'
 
@@ -87,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   (userDoc.displayName as string) ??
                   firebaseUser.displayName ??
                   '',
-                jerseyNumber: normalizeJerseyNumber(userData?.jerseyNumber),
+                jerseyNumber: normalizeJerseyNumber(userDoc.jerseyNumber),
                 position: userDoc.position ?? null,
                 role,
                 createdAt: timestampToDate(userDoc.createdAt) || new Date(),
