@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
+import { Calendar, MapPin, Users } from 'lucide-react'
 import { RSVPButton } from '@/components/matches/RSVPButton'
 import { PositionSelector } from '@/components/profile/PositionSelector'
 import { Badge } from '@/components/ui/badge'
@@ -55,6 +56,18 @@ export function MatchDetails({
   const [positionLoading, setPositionLoading] = useState(false)
   const [positionError, setPositionError] = useState('')
   const [swapMessage, setSwapMessage] = useState<string | null>(null)
+  const [highlightPosition, setHighlightPosition] = useState(false)
+  const [prevRsvpCount, setPrevRsvpCount] = useState(rsvpCount)
+  const [bumpHeadcount, setBumpHeadcount] = useState(false)
+
+  useEffect(() => {
+    if (rsvpCount !== prevRsvpCount) {
+      setBumpHeadcount(true)
+      setPrevRsvpCount(rsvpCount)
+      const timer = setTimeout(() => setBumpHeadcount(false), 500)
+      return () => clearTimeout(timer)
+    }
+  }, [rsvpCount, prevRsvpCount])
 
   useEffect(() => {
     setEditPosition(currentPosition)
@@ -91,42 +104,57 @@ export function MatchDetails({
 
   return (
     <div className="min-w-0 space-y-6">
-      <Card>
+      <Card className="card-soccer-accent overflow-hidden">
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <CardTitle className="mb-2 text-2xl sm:text-3xl">
                 {formattedDate}
               </CardTitle>
-              <CardDescription className="text-base sm:text-lg">
+              <CardDescription className="flex items-center gap-2 text-base sm:text-lg">
+                <Calendar className="h-4 w-4 shrink-0 text-red-50" />
                 {formattedTime}
               </CardDescription>
               {match.location && (
-                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                  @ {match.location}
+                <p className="mt-1 flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+                  <MapPin className="h-4 w-4 shrink-0 text-red-50" />
+                  {match.location}
                 </p>
               )}
             </div>
             <Badge
               variant={match.rsvpOpen ? 'default' : 'outline'}
-              className="shrink-0 py-1 text-xs"
+              className={`shrink-0 py-1 text-xs ${
+                match.rsvpOpen ? 'animate-badge-pulse' : ''
+              }`}
             >
               {match.rsvpOpen ? 'RSVP Open' : 'RSVP Closed'}
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <p className="mb-1 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          <div className="rounded-lg bg-red-95/60 px-4 py-3 dark:bg-red-20/20">
+            <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+              <Users className="h-4 w-4 text-red-50" />
               Current headcount
             </p>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p
+              className={`text-sm font-medium text-zinc-600 dark:text-zinc-400 ${
+                bumpHeadcount ? 'animate-headcount-bump' : ''
+              }`}
+            >
               {rsvpCount} {rsvpCount === 1 ? 'player' : 'players'} confirmed
             </p>
           </div>
 
           {showEditPosition && (
-            <div className="space-y-3 border-t border-zinc-200 pt-2 dark:border-zinc-800">
+            <div
+              className={`space-y-3 border-t border-zinc-200 pt-2 dark:border-zinc-800 ${
+                highlightPosition
+                  ? 'animate-slide-up-fade rounded-lg bg-red-95/40 p-3 dark:bg-red-20/10'
+                  : ''
+              }`}
+            >
               <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
                 Your position for this match
               </p>
@@ -186,6 +214,7 @@ export function MatchDetails({
                 match={match}
                 onTeamsRegenerated={onTeamsRegenerated}
                 onMatchRefetch={onMatchRefetch}
+                onRsvpSuccess={() => setHighlightPosition(true)}
               />
             </div>
           )}

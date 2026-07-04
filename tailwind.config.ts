@@ -98,10 +98,58 @@ const config: Config = {
             height: '0',
           },
         },
+        'ball-bounce': {
+          '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+          '25%': { transform: 'translateY(-12px) rotate(90deg)' },
+          '50%': { transform: 'translateY(0) rotate(180deg)' },
+          '75%': { transform: 'translateY(-6px) rotate(270deg)' },
+        },
+        'scale-in': {
+          '0%': { transform: 'scale(0.8)', opacity: '0' },
+          '60%': { transform: 'scale(1.05)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        'slide-up-fade': {
+          '0%': { transform: 'translateY(12px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        'headcount-bump': {
+          '0%, 100%': { transform: 'scale(1)' },
+          '40%': { transform: 'scale(1.15)' },
+        },
+        'confetti-fall': {
+          '0%': { transform: 'translateY(-10vh) rotate(0deg)', opacity: '1' },
+          '100%': { transform: 'translateY(110vh) rotate(720deg)', opacity: '0' },
+        },
+        'pulse-ring': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.6' },
+          '50%': { transform: 'scale(1.04)', opacity: '0.2' },
+        },
+        'rsvp-glow': {
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(204, 0, 0, 0)' },
+          '50%': { boxShadow: '0 0 0 6px rgba(204, 0, 0, 0.25)' },
+        },
+        'badge-pulse': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.75' },
+        },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-4px)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'ball-bounce': 'ball-bounce 1.2s ease-in-out infinite',
+        'scale-in': 'scale-in 0.4s ease-out forwards',
+        'slide-up-fade': 'slide-up-fade 0.5s ease-out forwards',
+        'headcount-bump': 'headcount-bump 0.5s ease-out',
+        'confetti-fall': 'confetti-fall 2.5s ease-in forwards',
+        'pulse-ring': 'pulse-ring 1.5s ease-in-out infinite',
+        'rsvp-glow': 'rsvp-glow 1s ease-out',
+        'badge-pulse': 'badge-pulse 2s ease-in-out infinite',
+        'float': 'float 3s ease-in-out infinite',
       },
     },
   },

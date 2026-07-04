@@ -2,6 +2,8 @@
 
 import { format } from 'date-fns'
 import Link from 'next/link'
+import { Calendar, MapPin, Users } from 'lucide-react'
+import { SoccerBallIcon } from '@/components/icons/SoccerBallIcon'
 import { Badge } from '@/components/ui/badge'
 import {
   Card,
@@ -21,9 +23,16 @@ interface MatchCardProps {
   rsvpCount?: number
   /** When true, card is always clickable and shows "Click to view details and RSVP" */
   isAdmin?: boolean
+  /** Index for staggered entrance animation */
+  index?: number
 }
 
-export function MatchCard({ match, rsvpCount, isAdmin }: MatchCardProps) {
+export function MatchCard({
+  match,
+  rsvpCount,
+  isAdmin,
+  index = 0,
+}: MatchCardProps) {
   const matchDate = new Date(match.date)
   const formattedDate = format(matchDate, 'EEEE, MMM d')
   const formattedTime = format(matchDate, 'h:mm a')
@@ -45,28 +54,39 @@ export function MatchCard({ match, rsvpCount, isAdmin }: MatchCardProps) {
 
   const cardContent = (
     <Card
-      className={
+      className={`card-soccer-accent h-full transition-all duration-300 ${
         isClickable
-          ? 'h-full cursor-pointer transition-all hover:shadow-md'
-          : 'h-full cursor-default opacity-95'
-      }
+          ? 'cursor-pointer hover:-translate-y-1 hover:shadow-lg hover:shadow-red-50/10'
+          : 'cursor-default opacity-95'
+      }`}
     >
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
-          <div className="flex-1">
-            <CardTitle className="mb-2 text-xl">{formattedDate}</CardTitle>
-            <CardDescription className="text-base">
-              {formattedTime}
-            </CardDescription>
-            {match.location && (
-              <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-                @ {match.location}
-              </p>
-            )}
+          <div className="flex flex-1 items-start gap-3">
+            <SoccerBallIcon
+              className={`mt-0.5 h-8 w-8 shrink-0 text-red-50 ${
+                match.rsvpOpen ? 'animate-float' : 'opacity-60'
+              }`}
+            />
+            <div className="min-w-0 flex-1">
+              <CardTitle className="mb-1 text-xl">{formattedDate}</CardTitle>
+              <CardDescription className="flex items-center gap-1.5 text-base">
+                <Calendar className="h-3.5 w-3.5 shrink-0 text-red-50" />
+                {formattedTime}
+              </CardDescription>
+              {match.location && (
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-red-50" />
+                  <span className="truncate">{match.location}</span>
+                </p>
+              )}
+            </div>
           </div>
           <Badge
             variant={match.rsvpOpen ? 'default' : 'outline'}
-            className="shrink-0 py-1 text-xs"
+            className={`shrink-0 py-1 text-xs ${
+              match.rsvpOpen ? 'animate-badge-pulse' : ''
+            }`}
           >
             {match.rsvpOpen ? 'RSVP Open' : 'RSVP Closed'}
           </Badge>
@@ -74,20 +94,41 @@ export function MatchCard({ match, rsvpCount, isAdmin }: MatchCardProps) {
       </CardHeader>
       <CardContent className="space-y-2">
         {rsvpCount !== undefined && (
-          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <p className="flex items-center gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <Users className="h-3.5 w-3.5 text-red-50" />
             {rsvpCount} {rsvpCount === 1 ? 'player' : 'players'} confirmed
           </p>
         )}
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {statusLabel}
-        </p>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">{statusLabel}</p>
       </CardContent>
     </Card>
   )
 
   if (isClickable) {
-    return <Link href={`/matches/${match.id}`}>{cardContent}</Link>
+    return (
+      <div
+        className="animate-slide-up-fade h-full"
+        style={{
+          animationDelay: `${index * 80}ms`,
+          animationFillMode: 'backwards',
+        }}
+      >
+        <Link href={`/matches/${match.id}`} className="block h-full">
+          {cardContent}
+        </Link>
+      </div>
+    )
   }
 
-  return cardContent
+  return (
+    <div
+      className="animate-slide-up-fade h-full"
+      style={{
+        animationDelay: `${index * 80}ms`,
+        animationFillMode: 'backwards',
+      }}
+    >
+      {cardContent}
+    </div>
+  )
 }

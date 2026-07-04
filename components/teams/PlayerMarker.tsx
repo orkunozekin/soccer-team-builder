@@ -16,6 +16,7 @@ interface PlayerMarkerProps {
   /** Counter-flip the icon/label so text reads correctly on a flipped pitch */
   counterFlipX?: boolean
   counterFlipY?: boolean
+  isCurrentUser?: boolean
 }
 
 export function PlayerMarker({
@@ -27,6 +28,7 @@ export function PlayerMarker({
   onPlayerClick,
   counterFlipX = false,
   counterFlipY = false,
+  isCurrentUser = false,
 }: PlayerMarkerProps) {
   const isGK = isGoalkeeper(user.position)
   const clickable = isAdmin && onPlayerClick
@@ -34,7 +36,11 @@ export function PlayerMarker({
   const content = (
     <>
       <div
-        className="flex flex-col items-center justify-center rounded-full border-2 border-white shadow-md"
+        className={`flex flex-col items-center justify-center rounded-full border-2 shadow-md ${
+          isCurrentUser
+            ? 'animate-headcount-bump border-red-50 ring-2 ring-red-50/60'
+            : 'border-white'
+        }`}
         style={{
           width: isMobile ? 28 : 44,
           height: isMobile ? 28 : 44,
