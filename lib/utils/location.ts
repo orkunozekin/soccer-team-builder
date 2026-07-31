@@ -1,5 +1,5 @@
-import type { MatchLocation } from '@/types/match'
 import { hasValidCoords } from '@/lib/utils/geo'
+import type { MatchLocation } from '@/types/match'
 
 /**
  * Normalize Firestore location (legacy string or structured object) to MatchLocation.

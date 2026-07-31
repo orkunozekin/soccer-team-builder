@@ -1,10 +1,10 @@
 'use client'
 
 import { MapPin } from 'lucide-react'
-import { getMapsUrl } from '@/lib/utils/mapsLink'
-import { locationDisplayName } from '@/lib/utils/location'
-import type { MatchLocation } from '@/types/match'
 import { cn } from '@/lib/utils'
+import { locationDisplayName } from '@/lib/utils/location'
+import { getMapsUrl } from '@/lib/utils/mapsLink'
+import type { MatchLocation } from '@/types/match'
 
 interface LocationLinkProps {
   location: MatchLocation

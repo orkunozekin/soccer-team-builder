@@ -1,8 +1,10 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { AttendanceStatsCard } from '@/components/profile/AttendanceStatsCard'
 import { ProfileForm } from '@/components/profile/ProfileForm'
-import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import {
   Card,
   CardContent,
@@ -11,8 +13,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { useAuth } from '@/lib/hooks/useAuth'
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 
 export default function ProfilePage() {
   const router = useRouter()
