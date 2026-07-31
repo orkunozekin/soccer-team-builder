@@ -14,6 +14,7 @@
     "test:run": "vitest run",
     "test:rsvp-concurrency": "node scripts/concurrency-test.mjs",
     "setup:qstash-rsvp": "node scripts/setup-qstash-rsvp-schedule.mjs",
+    "backfill:match-locations": "npx tsx scripts/backfill-match-locations.ts",
     "rsvp-order": "node scripts/rsvp-order.mjs",
     "regenerate-teams": "npx tsx scripts/regenerate-teams.ts"
   },
