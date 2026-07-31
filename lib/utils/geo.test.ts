@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   CHECK_IN_RADIUS_METERS,
-  haversineDistanceMeters,
   hasValidCoords,
+  haversineDistanceMeters,
   isWithinCheckInRadius,
 } from './geo'
 

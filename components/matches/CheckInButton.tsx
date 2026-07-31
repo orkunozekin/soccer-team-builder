@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { format } from 'date-fns'
 import { MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { checkInAPI } from '@/lib/api/client'
@@ -9,7 +10,6 @@ import {
   isWithinCheckInWindow,
   venueHasCheckInCoords,
 } from '@/lib/utils/checkIn'
-import { format } from 'date-fns'
 import type { Match } from '@/types/match'
 import type { RSVP } from '@/types/rsvp'
 

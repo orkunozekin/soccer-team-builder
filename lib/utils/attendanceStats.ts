@@ -1,6 +1,6 @@
+import { isCheckInWindowEnded } from '@/lib/utils/checkIn'
 import type { Match } from '@/types/match'
 import type { RSVP } from '@/types/rsvp'
-import { isCheckInWindowEnded } from '@/lib/utils/checkIn'
 
 export interface AttendanceStats {
   confirmedCount: number

@@ -1,5 +1,5 @@
-import type { MatchLocation } from '@/types/match'
 import { getMatchStart } from '@/lib/utils/rsvpScheduler'
+import type { MatchLocation } from '@/types/match'
 
 export const CHECK_IN_WINDOW_BEFORE_MS = 40 * 60 * 1000
 export const CHECK_IN_WINDOW_AFTER_MS = 2 * 60 * 60 * 1000

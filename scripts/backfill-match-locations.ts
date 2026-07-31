@@ -176,6 +176,11 @@ async function main() {
 
   for (const doc of docs) {
     const data = doc.data()
+    if (!data) {
+      noLocation += 1
+      console.log(`[skip] ${doc.id}: empty document`)
+      continue
+    }
     const existing = normalizeExisting(data.location)
 
     if (!existing) {
