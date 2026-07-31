@@ -215,6 +215,11 @@ export async function expandTeamsForMatch(
       status: data.status ?? 'confirmed',
       position: data.position ?? null,
       jerseyNumber: normalizeJerseyNumber(data.jerseyNumber),
+      attended: typeof data.attended === 'boolean' ? data.attended : null,
+      checkedInAt: data.checkedInAt
+        ? timestampToDate(data.checkedInAt) || null
+        : null,
+      checkInMethod: data.checkInMethod ?? null,
       rsvpAt: timestampToDate(data.rsvpAt) || new Date(),
       updatedAt: timestampToDate(data.updatedAt) || new Date(),
     }

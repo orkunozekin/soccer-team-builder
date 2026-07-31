@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { deleteMatchAPI } from '@/lib/api/client'
+import { locationDisplayName } from '@/lib/utils/location'
 import { Match } from '@/types/match'
 
 interface AdminMatchCardProps {
@@ -68,9 +69,9 @@ export function AdminMatchCard({
                 <CardDescription className="text-base">
                   {formattedTime}
                 </CardDescription>
-                {match.location && (
+                {match.location && locationDisplayName(match.location) && (
                   <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-                    @ {match.location}
+                    @ {locationDisplayName(match.location)}
                   </p>
                 )}
               </div>

@@ -161,6 +161,9 @@ export async function POST(request: NextRequest) {
         status: 'confirmed' as const,
         position: position ?? null,
         jerseyNumber,
+        attended: null,
+        checkedInAt: null,
+        checkInMethod: null,
         rsvpAt: now,
         updatedAt: now,
       }

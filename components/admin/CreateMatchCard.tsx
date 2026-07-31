@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { AddressAutocomplete } from '@/components/admin/AddressAutocomplete'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -10,8 +11,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { DatePickerTime } from '@/components/ui/date-picker-time'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { createMatchAPI } from '@/lib/api/client'
 import { getMatch } from '@/lib/services/matchService'
 import { useMatchStore } from '@/store/matchStore'
@@ -25,7 +24,10 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('09:00')
-  const [location, setLocation] = useState('')
+  const [locationName, setLocationName] = useState('')
+  const [address, setAddress] = useState('')
+  const [lat, setLat] = useState<number | null>(null)
+  const [lng, setLng] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -47,11 +49,19 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
       const [hours, minutes] = time.split(':').map(Number)
       const matchDate = new Date(y, m - 1, d, hours, minutes, 0, 0)
 
-      const { matchId } = await createMatchAPI(
-        matchDate,
-        time,
-        location.trim() || null
-      )
+      const name = locationName.trim()
+      const addr = address.trim()
+      const location =
+        name || addr
+          ? {
+              name: name || addr,
+              address: addr || name,
+              lat: lat,
+              lng: lng,
+            }
+          : null
+
+      const { matchId } = await createMatchAPI(matchDate, time, location)
       const newMatch = await getMatch(matchId)
 
       if (newMatch) {
@@ -61,7 +71,10 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
       setSuccess(true)
       setDate('')
       setTime('09:00')
-      setLocation('')
+      setLocationName('')
+      setAddress('')
+      setLat(null)
+      setLng(null)
       setTimeout(() => setSuccess(false), 3000)
       onMatchCreated?.()
     } catch {
@@ -106,17 +119,24 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
               timeStep={300}
             />
 
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
-                type="text"
-                value={location}
-                onChange={e => setLocation(e.target.value)}
-                disabled={loading}
-                className="h-11"
-              />
-            </div>
+            <AddressAutocomplete
+              locationName={locationName}
+              address={address}
+              lat={lat}
+              lng={lng}
+              onLocationNameChange={setLocationName}
+              onAddressTextChange={value => {
+                setAddress(value)
+                setLat(null)
+                setLng(null)
+              }}
+              onAddressSelect={loc => {
+                setAddress(loc.address)
+                setLat(loc.lat)
+                setLng(loc.lng)
+              }}
+              disabled={loading}
+            />
 
             {error && (
               <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">

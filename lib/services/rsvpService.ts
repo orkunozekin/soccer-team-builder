@@ -8,9 +8,12 @@ import {
   updateDocument,
 } from '@/lib/firebase/firestore'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
-import { RSVP, RSVPStatus } from '@/types/rsvp'
+import { CheckInMethod, RSVP, RSVPStatus } from '@/types/rsvp'
 
 function mapRsvpDoc(rsvp: Record<string, unknown>): RSVP {
+  const checkedInAt = rsvp.checkedInAt
+    ? timestampToDate(rsvp.checkedInAt as never)
+    : null
   return {
     id: rsvp.id as string,
     matchId: rsvp.matchId as string,
@@ -18,6 +21,9 @@ function mapRsvpDoc(rsvp: Record<string, unknown>): RSVP {
     status: rsvp.status as RSVPStatus,
     position: (rsvp.position as string | null) ?? null,
     jerseyNumber: normalizeJerseyNumber(rsvp.jerseyNumber),
+    attended: typeof rsvp.attended === 'boolean' ? rsvp.attended : null,
+    checkedInAt,
+    checkInMethod: (rsvp.checkInMethod as CheckInMethod | null) ?? null,
     rsvpAt: timestampToDate(rsvp.rsvpAt as never) || new Date(),
     updatedAt: timestampToDate(rsvp.updatedAt as never) || new Date(),
   }
@@ -32,6 +38,9 @@ export const createRSVP = async (
     matchId,
     userId,
     status: 'confirmed' as RSVPStatus,
+    attended: null,
+    checkedInAt: null,
+    checkInMethod: null,
   }
 
   await createDocument('rsvps', rsvpId, rsvpData)
@@ -41,17 +50,7 @@ export const createRSVP = async (
 export const getRSVP = async (rsvpId: string): Promise<RSVP | null> => {
   const rsvpDoc = await getDocument('rsvps', rsvpId)
   if (!rsvpDoc) return null
-
-  return {
-    id: rsvpId,
-    matchId: rsvpDoc.matchId,
-    userId: rsvpDoc.userId,
-    status: rsvpDoc.status,
-    position: rsvpDoc.position ?? null,
-    jerseyNumber: normalizeJerseyNumber(rsvpDoc.jerseyNumber),
-    rsvpAt: timestampToDate(rsvpDoc.rsvpAt) || new Date(),
-    updatedAt: timestampToDate(rsvpDoc.updatedAt) || new Date(),
-  }
+  return mapRsvpDoc({ ...rsvpDoc, id: rsvpId })
 }
 
 export const getUserRSVP = async (
@@ -76,6 +75,12 @@ export const getMatchRSVPs = async (matchId: string): Promise<RSVP[]> => {
     where('status', '==', 'confirmed'),
   ])
 
+  return rsvps.map((rsvp: Record<string, unknown>) => mapRsvpDoc(rsvp))
+}
+
+/** All RSVPs for a user (any match), for attendance stats. */
+export const getUserRSVPs = async (userId: string): Promise<RSVP[]> => {
+  const rsvps = await queryDocuments('rsvps', [where('userId', '==', userId)])
   return rsvps.map((rsvp: Record<string, unknown>) => mapRsvpDoc(rsvp))
 }
 

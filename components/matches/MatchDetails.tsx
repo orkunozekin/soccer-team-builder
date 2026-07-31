@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
-import { Calendar, MapPin, Users } from 'lucide-react'
+import { Calendar, Users } from 'lucide-react'
+import { LocationLink } from '@/components/matches/LocationLink'
+import { CheckInButton } from '@/components/matches/CheckInButton'
 import { RSVPButton } from '@/components/matches/RSVPButton'
 import { PositionSelector } from '@/components/profile/PositionSelector'
 import { Badge } from '@/components/ui/badge'
@@ -116,10 +118,11 @@ export function MatchDetails({
                 {formattedTime}
               </CardDescription>
               {match.location && (
-                <p className="mt-1 flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-                  <MapPin className="h-4 w-4 shrink-0 text-red-50" />
-                  {match.location}
-                </p>
+                <LocationLink
+                  location={match.location}
+                  className="mt-1 text-sm text-zinc-600 dark:text-zinc-400"
+                  showIcon
+                />
               )}
             </div>
             <Badge
@@ -218,6 +221,12 @@ export function MatchDetails({
               />
             </div>
           )}
+
+          <CheckInButton
+            match={match}
+            userRsvp={userRsvp}
+            onCheckedIn={onMatchRefetch}
+          />
         </CardContent>
       </Card>
     </div>

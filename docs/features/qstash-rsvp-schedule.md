@@ -1,6 +1,10 @@
-# QStash RSVP schedule (9am / 10pm CT)
+# QStash RSVP schedule (hourly)
 
-RSVP open/close is triggered by **Upstash QStash** at 9am CT (open) and 10pm CT (close) for minute-level precision. The handler is `POST /api/cron/rsvp-schedule`.
+RSVP open/close is triggered by **Upstash QStash** every hour. The handler is `POST /api/cron/rsvp-schedule`.
+
+- **Open:** 9:00 AM CT on match day (`rsvpOpen: true`)
+- **Close:** match start + 4 hours (`rsvpOpen: false` — matches are **not** deleted)
+- Hourly runs keep kickoff-based closes within about one hour of the real close time.
 
 ## 1. Upstash setup
 
@@ -16,7 +20,7 @@ RSVP open/close is triggered by **Upstash QStash** at 9am CT (open) and 10pm CT 
 
 The route accepts either **QStash signature verification** (when the signing keys are set) or **CRON_SECRET** (`Authorization: Bearer <CRON_SECRET>`). For QStash-triggered calls you only need the signing keys.
 
-## 2. Create the two schedules
+## 2. Create the hourly schedule
 
 The setup script uses **US East 1** (`https://qstash-us-east-1.upstash.io`) by default. For EU, set `QSTASH_API_URL=https://qstash.upstash.io` in `.env.local`.
 
@@ -34,10 +38,9 @@ node scripts/setup-qstash-rsvp-schedule.mjs
 
 This creates:
 
-- **rsvp-schedule-open**: runs at **9:00 CT** (open RSVP window)
-- **rsvp-schedule-close**: runs at **22:00 CT** (close RSVP window)
+- **rsvp-schedule-hourly**: runs at **minute 0 of every hour** (`CRON_TZ=America/Chicago`)
 
-Times use `CRON_TZ=America/Chicago` so DST is handled.
+If you previously created **rsvp-schedule-open** / **rsvp-schedule-close**, delete those in the QStash dashboard so only the hourly job remains.
 
 ## 3. Optional: CRON_SECRET fallback
 

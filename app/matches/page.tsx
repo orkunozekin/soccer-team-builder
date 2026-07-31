@@ -17,6 +17,7 @@ import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getAllMatches } from '@/lib/services/matchService'
 import { getMatchRsvpCount } from '@/lib/services/rsvpService'
+import { isMatchPast } from '@/lib/utils/rsvpScheduler'
 import { useMatchStore } from '@/store/matchStore'
 
 export default function MatchesPage() {
@@ -37,10 +38,11 @@ export default function MatchesPage() {
         setLoading(true)
         try {
           const allMatches = await getAllMatches()
-          setMatches(allMatches)
+          const upcoming = allMatches.filter(m => !isMatchPast(m.date, m.time))
+          setMatches(upcoming)
           const counts: Record<string, number> = {}
           await Promise.all(
-            allMatches.map(async m => {
+            upcoming.map(async m => {
               counts[m.id] = await getMatchRsvpCount(m.id)
             })
           )
@@ -58,10 +60,11 @@ export default function MatchesPage() {
 
   const refetchMatchesAndCounts = async () => {
     const allMatches = await getAllMatches()
-    setMatches(allMatches)
+    const upcoming = allMatches.filter(m => !isMatchPast(m.date, m.time))
+    setMatches(upcoming)
     const counts: Record<string, number> = {}
     await Promise.all(
-      allMatches.map(async m => {
+      upcoming.map(async m => {
         counts[m.id] = await getMatchRsvpCount(m.id)
       })
     )

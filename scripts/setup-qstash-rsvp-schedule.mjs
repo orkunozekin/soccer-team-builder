@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 /**
- * Create QStash schedules for RSVP open (9am CT) and close (10pm CT).
+ * Create QStash hourly schedule for RSVP open/close.
  * Run once after deploying. Requires QSTASH_TOKEN and BASE_URL in env or .env.local.
  *
  *   BASE_URL=https://your-app.vercel.app QSTASH_TOKEN=... node scripts/setup-qstash-rsvp-schedule.mjs
+ *
+ * Delete any legacy rsvp-schedule-open / rsvp-schedule-close schedules in the
+ * QStash dashboard after switching to hourly.
  */
 
 import { existsSync, readFileSync } from 'fs'
@@ -81,9 +84,8 @@ const QSTASH_API = (
   process.env.QSTASH_API_URL || 'https://qstash-us-east-1.upstash.io'
 ).replace(/\/$/, '')
 
-// 9am CT and 10pm CT in America/Chicago (handles DST)
-const CRON_OPEN = 'CRON_TZ=America/Chicago 0 9 * * *'
-const CRON_CLOSE = 'CRON_TZ=America/Chicago 0 22 * * *'
+// Hourly so kickoff-based closes land within ~1h (CRON_TZ for consistency with prior schedules)
+const CRON_HOURLY = 'CRON_TZ=America/Chicago 0 * * * *'
 
 async function createSchedule(scheduleId, cron) {
   // Destination in path unencoded, per Upstash docs: .../v2/schedules/https://example.com
@@ -106,23 +108,20 @@ async function createSchedule(scheduleId, cron) {
 }
 
 async function main() {
-  console.log('Creating QStash schedules for RSVP open/close...')
+  console.log('Creating QStash hourly schedule for RSVP open/close...')
   console.log('Destination:', DESTINATION)
 
-  const openResult = await createSchedule('rsvp-schedule-open', CRON_OPEN)
+  const result = await createSchedule('rsvp-schedule-hourly', CRON_HOURLY)
   console.log(
-    'Created schedule rsvp-schedule-open (9am CT):',
-    openResult.scheduleId
-  )
-
-  const closeResult = await createSchedule('rsvp-schedule-close', CRON_CLOSE)
-  console.log(
-    'Created schedule rsvp-schedule-close (10pm CT):',
-    closeResult.scheduleId
+    'Created schedule rsvp-schedule-hourly (every hour CT):',
+    result.scheduleId
   )
 
   console.log(
-    'Done. Ensure QSTASH_CURRENT_SIGNING_KEY and QSTASH_NEXT_SIGNING_KEY are set in Vercel env for signature verification.'
+    'Done. Delete legacy rsvp-schedule-open / rsvp-schedule-close in the QStash dashboard if present.'
+  )
+  console.log(
+    'Ensure QSTASH_CURRENT_SIGNING_KEY and QSTASH_NEXT_SIGNING_KEY are set in Vercel env for signature verification.'
   )
 }
 

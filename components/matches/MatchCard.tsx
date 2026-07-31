@@ -1,8 +1,9 @@
 'use client'
 
 import { format } from 'date-fns'
-import { Calendar, MapPin, Users } from 'lucide-react'
+import { Calendar, Users } from 'lucide-react'
 import Link from 'next/link'
+import { LocationLink } from '@/components/matches/LocationLink'
 import { Badge } from '@/components/ui/badge'
 import {
   Card,
@@ -35,8 +36,8 @@ export function MatchCard({
   const matchDate = new Date(match.date)
   const formattedDate = format(matchDate, 'EEEE, MMM d')
   const formattedTime = format(matchDate, 'h:mm a')
-  const rsvpOpenAt = getNextRSVPOpenTime(matchDate)
-  const rsvpCloseAt = getNextRSVPCloseTime(matchDate)
+  const rsvpOpenAt = getNextRSVPOpenTime(matchDate, match.time)
+  const rsvpCloseAt = getNextRSVPCloseTime(matchDate, match.time)
   const now = new Date()
 
   const statusLabel = isAdmin
@@ -68,10 +69,7 @@ export function MatchCard({
               {formattedTime}
             </CardDescription>
             {match.location && (
-              <p className="mt-1 flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-red-50" />
-                <span className="truncate">{match.location}</span>
-              </p>
+              <LocationLink location={match.location} className="mt-1" />
             )}
           </div>
           <Badge

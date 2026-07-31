@@ -2,7 +2,9 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { serializeMatchLocation } from '@/lib/utils/location'
 import { getRSVPSchedule } from '@/lib/utils/rsvpScheduler'
+import type { MatchLocation } from '@/types/match'
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,18 +50,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { openAt, closeAt } = getRSVPSchedule(matchDate)
+    const { openAt, closeAt } = getRSVPSchedule(matchDate, time)
     const matchId = `match_${Date.now()}`
     const now = Timestamp.now()
-    const locationStr =
-      typeof location === 'string' ? location.trim() || null : null
+    const locationValue =
+        typeof location === 'string'
+          ? serializeMatchLocation({
+              name: location,
+              address: location,
+              lat: null,
+              lng: null,
+            })
+          : serializeMatchLocation(location as MatchLocation | null)
     await adminDb
       .collection('matches')
       .doc(matchId)
       .set({
         date: Timestamp.fromDate(matchDate),
         time,
-        location: locationStr ?? null,
+        location: locationValue,
         rsvpOpen: false,
         rsvpOpenAt: openAt ? Timestamp.fromDate(openAt) : null,
         rsvpCloseAt: closeAt ? Timestamp.fromDate(closeAt) : null,
