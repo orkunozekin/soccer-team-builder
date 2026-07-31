@@ -28,7 +28,7 @@ export function RSVPPollControls({ match, onUpdated }: RSVPPollControlsProps) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  const schedule = getRSVPSchedule(match.date)
+  const schedule = getRSVPSchedule(match.date, match.time)
 
   const handleToggleRSVP = async (open: boolean) => {
     setLoading(true)
@@ -37,7 +37,7 @@ export function RSVPPollControls({ match, onUpdated }: RSVPPollControlsProps) {
 
     try {
       if (open) {
-        // Open RSVP - always use schedule: 9am–10pm CT on match day
+        // Open RSVP - always use schedule: 9am CT → start + 4h
         const openAt = schedule.openAt!
         const closeAt = schedule.closeAt!
 
@@ -93,7 +93,7 @@ export function RSVPPollControls({ match, onUpdated }: RSVPPollControlsProps) {
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             <span className="font-medium">Default window:</span>{' '}
             {format(schedule.openAt, 'MMM d, h:mm a')} –{' '}
-            {format(schedule.closeAt, 'h:mm a')} CT (match day)
+            {format(schedule.closeAt, 'MMM d, h:mm a')} CT
           </p>
         )}
 

@@ -2,7 +2,6 @@ import { Receiver } from '@upstash/qstash'
 import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminDb } from '@/lib/firebase/admin'
-import { deleteMatch } from '@/lib/matches/deleteMatch'
 import { getRSVPSchedule } from '@/lib/utils/rsvpScheduler'
 
 export const dynamic = 'force-dynamic'
@@ -68,14 +67,15 @@ async function authorizeCronRequest(
 }
 
 /**
- * Apply RSVP open for matches with rsvpOpenAt/rsvpCloseAt; at close time delete the match instead of closing.
- * Triggered by Upstash QStash (9am + 10pm CT) or manually with CRON_SECRET.
+ * Apply RSVP open/close from schedule (9am CT → match start + 4h).
+ * At close time sets rsvpOpen false — never auto-deletes matches.
+ * Triggered hourly by Upstash QStash or manually with CRON_SECRET.
  */
 async function runRsvpSchedule(): Promise<{
   ok: boolean
   checked: number
   opened: number
-  deleted: number
+  closed: number
 }> {
   const adminDb = getAdminDb()
   if (!adminDb) {
@@ -86,17 +86,17 @@ async function runRsvpSchedule(): Promise<{
   const matchesSnap = await adminDb.collection('matches').get()
 
   let opened = 0
-  const matchIdsToDelete: string[] = []
+  let closed = 0
   const batch = adminDb.batch()
+  let batchOps = 0
 
   for (const doc of matchesSnap.docs) {
     const data = doc.data()
     const matchDate = timestampToDate(data.date)
     if (!matchDate) continue
 
-    // Compute the canonical RSVP window from the match date so DST and
-    // scheduling rules are always respected, even if stored fields are wrong.
-    const { openAt, closeAt } = getRSVPSchedule(matchDate)
+    const time = typeof data.time === 'string' ? data.time : null
+    const { openAt, closeAt } = getRSVPSchedule(matchDate, time)
     if (!openAt || !closeAt) continue
 
     const shouldBeOpen = now >= openAt && now <= closeAt
@@ -109,25 +109,26 @@ async function runRsvpSchedule(): Promise<{
         updatedAt: Timestamp.now(),
       })
       opened += 1
+      batchOps += 1
     } else if (pastClose && currentlyOpen) {
-      // At close time: delete the match instead of setting rsvpOpen false
-      matchIdsToDelete.push(doc.id)
+      batch.update(doc.ref, {
+        rsvpOpen: false,
+        updatedAt: Timestamp.now(),
+      })
+      closed += 1
+      batchOps += 1
     }
   }
 
-  if (opened > 0) {
+  if (batchOps > 0) {
     await batch.commit()
-  }
-
-  for (const matchId of matchIdsToDelete) {
-    await deleteMatch(adminDb, matchId)
   }
 
   return {
     ok: true,
     checked: matchesSnap.size,
     opened,
-    deleted: matchIdsToDelete.length,
+    closed,
   }
 }
 
@@ -156,7 +157,7 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/cron/rsvp-schedule
  * Auth: QStash signature (when QSTASH_*_SIGNING_KEY set) or CRON_SECRET.
- * Used by Upstash QStash schedules (9am CT open, 10pm CT close).
+ * Used by Upstash QStash hourly schedule.
  */
 export async function POST(request: NextRequest) {
   const body = await request.text()

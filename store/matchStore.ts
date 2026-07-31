@@ -18,6 +18,10 @@ interface MatchState {
   removeMatch: (matchId: string) => void
   addRSVP: (rsvp: RSVP) => void
   updateRSVPPosition: (rsvpId: string, position: string | null) => void
+  updateRSVPAttendance: (
+    rsvpId: string,
+    updates: Pick<RSVP, 'attended' | 'checkedInAt' | 'checkInMethod'>
+  ) => void
   removeRSVP: (rsvpId: string) => void
 }
 
@@ -52,6 +56,12 @@ export const useMatchStore = create<MatchState>(set => ({
     set(state => ({
       matchRSVPs: state.matchRSVPs.map(r =>
         r.id === rsvpId ? { ...r, position, updatedAt: new Date() } : r
+      ),
+    })),
+  updateRSVPAttendance: (rsvpId, updates) =>
+    set(state => ({
+      matchRSVPs: state.matchRSVPs.map(r =>
+        r.id === rsvpId ? { ...r, ...updates, updatedAt: new Date() } : r
       ),
     })),
   removeRSVP: rsvpId =>

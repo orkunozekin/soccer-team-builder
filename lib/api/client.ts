@@ -164,7 +164,12 @@ export async function transferPlayerAPI(
 export async function createMatchAPI(
   date: Date,
   time: string,
-  location?: string | null
+  location?: {
+    name: string
+    address: string
+    lat: number | null
+    lng: number | null
+  } | null
 ): Promise<{ success: boolean; matchId: string }> {
   const response = await apiRequest('/matches', {
     method: 'POST',
@@ -186,7 +191,12 @@ export async function createMatchAPI(
 export type UpdateMatchPayload = {
   date?: string
   time?: string
-  location?: string | null
+  location?: {
+    name: string
+    address: string
+    lat: number | null
+    lng: number | null
+  } | null
   rsvpOpen?: boolean
   rsvpOpenAt?: string | null
   rsvpCloseAt?: string | null
@@ -284,6 +294,50 @@ export async function rebalanceTeamsAPI(matchId: string): Promise<{
   if (!response.ok) {
     const error = await response.json()
     throw new Error(error.error || 'Failed to rebalance teams')
+  }
+
+  return response.json()
+}
+
+export async function checkInAPI(
+  matchId: string,
+  coords: { lat: number; lng: number; accuracy?: number | null }
+): Promise<{
+  success: boolean
+  alreadyCheckedIn?: boolean
+  rsvpId: string
+}> {
+  const response = await apiRequest('/check-in', {
+    method: 'POST',
+    body: JSON.stringify({
+      matchId,
+      lat: coords.lat,
+      lng: coords.lng,
+      accuracy: coords.accuracy ?? null,
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to check in')
+  }
+
+  return response.json()
+}
+
+export async function hostCheckInAPI(
+  matchId: string,
+  userId: string,
+  attended: boolean
+): Promise<{ success: boolean; rsvpId: string; attended: boolean }> {
+  const response = await apiRequest('/check-in/host', {
+    method: 'POST',
+    body: JSON.stringify({ matchId, userId, attended }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to update attendance')
   }
 
   return response.json()

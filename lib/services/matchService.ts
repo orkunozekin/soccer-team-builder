@@ -7,7 +7,11 @@ import {
   timestampToDate,
   updateDocument,
 } from '@/lib/firebase/firestore'
-import { Match } from '@/types/match'
+import {
+  parseMatchLocation,
+  serializeMatchLocation,
+} from '@/lib/utils/location'
+import { Match, MatchLocation } from '@/types/match'
 
 export const getMatch = async (matchId: string): Promise<Match | null> => {
   const matchDoc = await getDocument('matches', matchId)
@@ -21,14 +25,13 @@ export const getMatch = async (matchId: string): Promise<Match | null> => {
     ? timestampToDate(matchDoc.rsvpCloseAt)
     : null
 
-  // UI reflects admin intent: show Open when they've opened the poll (schedule is 9am–10pm CT for reference only)
   const rsvpOpen = matchDoc.rsvpOpen === true
 
   return {
     id: matchId,
     date: matchDate,
     time: matchDoc.time,
-    location: matchDoc.location ?? null,
+    location: parseMatchLocation(matchDoc.location),
     rsvpOpen,
     rsvpOpenAt,
     rsvpCloseAt,
@@ -38,7 +41,6 @@ export const getMatch = async (matchId: string): Promise<Match | null> => {
 }
 
 export const getAllMatches = async (): Promise<Match[]> => {
-  // Single orderBy to avoid requiring a composite index; sort by time in memory
   const matches = await queryDocuments('matches', [orderBy('date', 'asc')])
 
   const mapped = matches.map((match: any) => {
@@ -56,7 +58,7 @@ export const getAllMatches = async (): Promise<Match[]> => {
       id: match.id,
       date: matchDate,
       time: match.time ?? '',
-      location: match.location ?? null,
+      location: parseMatchLocation(match.location),
       rsvpOpen,
       rsvpOpenAt,
       rsvpCloseAt,
@@ -92,10 +94,9 @@ export const updateMatch = async (
     firestoreUpdates.time = updates.time
   }
   if (updates.location !== undefined) {
-    firestoreUpdates.location =
-      typeof updates.location === 'string'
-        ? updates.location.trim() || null
-        : null
+    firestoreUpdates.location = serializeMatchLocation(
+      updates.location as MatchLocation | null
+    )
   }
   if (updates.rsvpOpen !== undefined) {
     firestoreUpdates.rsvpOpen = updates.rsvpOpen

@@ -44,7 +44,7 @@ const baseMatch: Match = {
   id: 'match1',
   date: new Date('2024-01-01T00:00:00Z'),
   time: '19:00',
-  location: 'Test field',
+  location: { name: 'Test field', address: 'Test field', lat: 30.0, lng: -97.0 },
   rsvpOpen: true,
   rsvpOpenAt: null,
   rsvpCloseAt: null,

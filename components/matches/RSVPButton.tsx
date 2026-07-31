@@ -84,6 +84,9 @@ export function RSVPButton({
         status: 'confirmed' as const,
         position: position ?? null,
         jerseyNumber: jerseyNumber ?? userData?.jerseyNumber ?? null,
+        attended: null,
+        checkedInAt: null,
+        checkInMethod: null,
         rsvpAt: new Date(),
         updatedAt: new Date(),
       }

@@ -53,6 +53,9 @@ describe('rsvpService', () => {
       matchId: 'match1',
       userId: 'user1',
       status: 'confirmed',
+      attended: null,
+      checkedInAt: null,
+      checkInMethod: null,
     })
   })
 

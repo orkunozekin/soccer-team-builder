@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { AddressAutocomplete } from '@/components/admin/AddressAutocomplete'
 import { RSVPPollControls } from '@/components/admin/RSVPPollControls'
 import {
   AlertDialog,
@@ -22,9 +23,8 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { DatePickerTime } from '@/components/ui/date-picker-time'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { deleteMatchAPI, updateMatchAPI } from '@/lib/api/client'
+import { hasValidCoords } from '@/lib/utils/geo'
 import type { Match } from '@/types/match'
 
 interface EditMatchCardProps {
@@ -43,7 +43,10 @@ export function EditMatchCard({
   const [expanded, setExpanded] = useState(false)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
-  const [location, setLocation] = useState('')
+  const [locationName, setLocationName] = useState('')
+  const [address, setAddress] = useState('')
+  const [lat, setLat] = useState<number | null>(null)
+  const [lng, setLng] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(
     null
@@ -56,23 +59,33 @@ export function EditMatchCard({
     const y = d.getFullYear()
     const m = String(d.getMonth() + 1).padStart(2, '0')
     const day = String(d.getDate()).padStart(2, '0')
+    const loc = match.location
     return {
       date: `${y}-${m}-${day}`,
       time: match.time || '',
-      location: (match.location || '').trim(),
+      locationName: (loc?.name || '').trim(),
+      address: (loc?.address || '').trim(),
+      lat: loc && hasValidCoords(loc) ? loc.lat : null,
+      lng: loc && hasValidCoords(loc) ? loc.lng : null,
     }
   }, [match])
 
   useEffect(() => {
     setDate(initialValues.date)
     setTime(initialValues.time)
-    setLocation(match.location || '')
-  }, [match, initialValues.date, initialValues.time, initialValues.location])
+    setLocationName(initialValues.locationName)
+    setAddress(initialValues.address)
+    setLat(initialValues.lat)
+    setLng(initialValues.lng)
+  }, [initialValues])
 
   const hasChanges =
     date !== initialValues.date ||
     time !== initialValues.time ||
-    (location || '').trim() !== initialValues.location
+    locationName.trim() !== initialValues.locationName ||
+    address.trim() !== initialValues.address ||
+    lat !== initialValues.lat ||
+    lng !== initialValues.lng
 
   const handleSaveDateTime = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,16 +96,34 @@ export function EditMatchCard({
       const [y, m, d] = date.split('-').map(Number)
       const [h, min] = time.split(':').map(Number)
       const matchDateTime = new Date(y, m - 1, d, h, min, 0, 0)
+      const name = locationName.trim()
+      const addr = address.trim()
+      const location =
+        name || addr
+          ? {
+              name: name || addr,
+              address: addr || name,
+              lat: lat,
+              lng: lng,
+            }
+          : null
+
       await updateMatchAPI(matchId, {
         date: matchDateTime.toISOString(),
         time,
-        location: location.trim() || null,
+        location,
       })
       const updated: string[] = []
       if (date !== initialValues.date) updated.push('Date')
       if (time !== initialValues.time) updated.push('Time')
-      if ((location || '').trim() !== initialValues.location)
+      if (
+        locationName.trim() !== initialValues.locationName ||
+        address.trim() !== initialValues.address ||
+        lat !== initialValues.lat ||
+        lng !== initialValues.lng
+      ) {
         updated.push('Location')
+      }
       const message =
         updated.length > 0 ? `${updated.join(', ')} saved.` : 'Saved.'
       setSaveSuccessMessage(message)
@@ -151,17 +182,26 @@ export function EditMatchCard({
                   disabled={saving}
                   timeStep={300}
                 />
-                <div className="space-y-2">
-                  <Label htmlFor="match-location">Location</Label>
-                  <Input
-                    id="match-location"
-                    type="text"
-                    value={location}
-                    onChange={e => setLocation(e.target.value)}
-                    disabled={saving}
-                    className="h-11"
-                  />
-                </div>
+                <AddressAutocomplete
+                  locationName={locationName}
+                  address={address}
+                  lat={lat}
+                  lng={lng}
+                  onLocationNameChange={setLocationName}
+                  onAddressTextChange={value => {
+                    setAddress(value)
+                    setLat(null)
+                    setLng(null)
+                  }}
+                  onAddressSelect={loc => {
+                    setAddress(loc.address)
+                    setLat(loc.lat)
+                    setLng(loc.lng)
+                  }}
+                  disabled={saving}
+                  nameId="match-location-name"
+                  addressId="match-location-address"
+                />
                 {saveSuccessMessage && (
                   <p className="text-sm text-green-600 dark:text-green-400">
                     {saveSuccessMessage}

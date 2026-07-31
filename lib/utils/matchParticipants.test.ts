@@ -26,6 +26,9 @@ function makeRsvp(userId: string, status: RSVP['status'] = 'confirmed'): RSVP {
     status,
     position: null,
     jerseyNumber: null,
+    attended: null,
+    checkedInAt: null,
+    checkInMethod: null,
     rsvpAt: now,
     updatedAt: now,
   }

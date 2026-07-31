@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
+import { AttendanceStatsCard } from '@/components/profile/AttendanceStatsCard'
 import { ProfileForm } from '@/components/profile/ProfileForm'
+import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import {
   Card,
   CardContent,
@@ -12,6 +11,8 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -42,7 +43,9 @@ export default function ProfilePage() {
         </p>
       </div>
 
-      <div className="mx-auto max-w-xl">
+      <div className="mx-auto max-w-xl space-y-6">
+        <AttendanceStatsCard userId={user.uid} />
+
         <Card className="overflow-hidden rounded-xl border-zinc-200 shadow-sm dark:border-zinc-800">
           <CardHeader className="pb-4 sm:px-8 sm:pt-8">
             <CardTitle className="text-xl font-semibold tracking-tight sm:text-2xl">
