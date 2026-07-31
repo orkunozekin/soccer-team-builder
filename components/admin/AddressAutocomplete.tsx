@@ -1,9 +1,23 @@
 'use client'
 
 import { useEffect, useId, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { MatchLocation } from '@/types/match'
+
+const LocationMapPicker = dynamic(
+  () =>
+    import('@/components/admin/LocationMapPicker').then(m => m.LocationMapPicker),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-56 items-center justify-center rounded-md border border-dashed border-zinc-300 text-xs text-zinc-500 sm:h-64">
+        Loading map…
+      </div>
+    ),
+  }
+)
 
 interface AddressSuggestion {
   mapbox_id: string
@@ -20,6 +34,7 @@ interface AddressAutocompleteProps {
   onLocationNameChange: (name: string) => void
   onAddressSelect: (loc: Omit<MatchLocation, 'name'> & { name?: string }) => void
   onAddressTextChange: (address: string) => void
+  onPinChange: (coords: { lat: number; lng: number } | null) => void
   disabled?: boolean
   nameId?: string
   addressId?: string
@@ -37,6 +52,7 @@ export function AddressAutocomplete({
   onLocationNameChange,
   onAddressSelect,
   onAddressTextChange,
+  onPinChange,
   disabled,
   nameId = 'location-name',
   addressId = 'location-address',
@@ -45,9 +61,12 @@ export function AddressAutocomplete({
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [reverseLoading, setReverseLoading] = useState(false)
   const [error, setError] = useState('')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const reverseReqRef = useRef(0)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const token = getMapboxToken()
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
@@ -66,7 +85,6 @@ export function AddressAutocomplete({
   }, [])
 
   const fetchSuggestions = async (query: string) => {
-    const token = getMapboxToken()
     if (!token || query.trim().length < 3) {
       setSuggestions([])
       setOpen(false)
@@ -109,7 +127,6 @@ export function AddressAutocomplete({
   }
 
   const handleSelect = async (suggestion: AddressSuggestion) => {
-    const token = getMapboxToken()
     if (!token) return
 
     setOpen(false)
@@ -138,8 +155,8 @@ export function AddressAutocomplete({
 
       onAddressSelect({
         address: fullAddress,
-        lat: retrievedLat,
-        lng: retrievedLng,
+        lat: Number.isFinite(retrievedLat) ? retrievedLat : null,
+        lng: Number.isFinite(retrievedLng) ? retrievedLng : null,
       })
       setSuggestions([])
     } catch {
@@ -149,15 +166,61 @@ export function AddressAutocomplete({
     }
   }
 
-  const coordsHint =
-    lat != null &&
-    lng != null &&
-    Number.isFinite(lat) &&
-    Number.isFinite(lng)
-      ? `Pinned: ${lat.toFixed(5)}, ${lng.toFixed(5)}`
+  const reverseGeocode = async (nextLat: number, nextLng: number) => {
+    if (!token) return
+
+    const reqId = ++reverseReqRef.current
+    setReverseLoading(true)
+    setError('')
+    try {
+      const params = new URLSearchParams({
+        access_token: token,
+        limit: '1',
+        types: 'address,poi,place',
+      })
+      const res = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${nextLng},${nextLat}.json?${params}`
+      )
+      if (!res.ok) throw new Error('Reverse geocode failed')
+      const data = (await res.json()) as {
+        features?: Array<{ place_name?: string }>
+      }
+      const placeName = data.features?.[0]?.place_name
+      if (reqId !== reverseReqRef.current) return
+      if (placeName) {
+        onAddressTextChange(placeName)
+      }
+    } catch {
+      if (reqId !== reverseReqRef.current) return
+      // Pin is still saved; address fill is best-effort.
+      setError('Could not look up an address for that pin.')
+    } finally {
+      if (reqId === reverseReqRef.current) {
+        setReverseLoading(false)
+      }
+    }
+  }
+
+  const handlePinChange = (coords: { lat: number; lng: number } | null) => {
+    onPinChange(coords)
+    if (!coords) {
+      reverseReqRef.current += 1
+      setReverseLoading(false)
+      return
+    }
+    void reverseGeocode(coords.lat, coords.lng)
+  }
+
+  const hasPin =
+    lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)
+
+  const coordsHint = reverseLoading
+    ? 'Looking up address for pin…'
+    : hasPin
+      ? `Pinned: ${lat!.toFixed(5)}, ${lng!.toFixed(5)} (used for maps + check-in)`
       : address.trim()
-        ? 'Select a suggestion to pin coordinates for check-in'
-        : null
+        ? 'No pin yet — select a suggestion or click the map'
+        : 'Optional address search, or pin the field on the map'
 
   return (
     <div className="space-y-4" ref={wrapRef}>
@@ -169,20 +232,20 @@ export function AddressAutocomplete({
           value={locationName}
           onChange={e => onLocationNameChange(e.target.value)}
           disabled={disabled}
-          placeholder="e.g. Memorial Park Field 3"
+          placeholder="e.g. Rec Sports Field 4"
           className="h-11"
         />
       </div>
 
       <div className="relative space-y-2">
-        <Label htmlFor={addressId}>Address</Label>
+        <Label htmlFor={addressId}>Address (optional)</Label>
         <Input
           id={addressId}
           type="text"
           value={address}
           onChange={e => handleAddressChange(e.target.value)}
           disabled={disabled}
-          placeholder="Start typing an address…"
+          placeholder="Search an address, or skip and pin on the map…"
           className="h-11"
           autoComplete="off"
         />
@@ -217,12 +280,21 @@ export function AddressAutocomplete({
         {error && (
           <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
         )}
-        {!getMapboxToken() && (
-          <p className="text-xs text-amber-700 dark:text-amber-400">
-            Set NEXT_PUBLIC_MAPBOX_TOKEN for address autocomplete.
-          </p>
-        )}
       </div>
+
+      {token ? (
+        <LocationMapPicker
+          token={token}
+          lat={lat}
+          lng={lng}
+          disabled={disabled}
+          onPinChange={handlePinChange}
+        />
+      ) : (
+        <p className="text-xs text-amber-700 dark:text-amber-400">
+          Set NEXT_PUBLIC_MAPBOX_TOKEN for address search and map pinning.
+        </p>
+      )}
     </div>
   )
 }

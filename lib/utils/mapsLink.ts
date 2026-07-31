@@ -24,19 +24,21 @@ export function getMapsUrl(
     const isAndroid = /Android/i.test(ua)
 
     if (isIOS) {
+      // Prefer lat,lng as the query so Apple Maps drops a pin at exact coords
+      // (campus fields often have no reliable street address).
       return hasCoords
-        ? `https://maps.apple.com/?ll=${location.lat},${location.lng}&q=${encodeURIComponent(location.name || location.address)}`
+        ? `https://maps.apple.com/?ll=${location.lat},${location.lng}&q=${location.lat},${location.lng}`
         : `https://maps.apple.com/?q=${encodeURIComponent(query)}`
     }
     if (isAndroid) {
       return hasCoords
-        ? `geo:${location.lat},${location.lng}?q=${location.lat},${location.lng}(${encodeURIComponent(location.name || location.address)})`
+        ? `geo:${location.lat},${location.lng}?q=${location.lat},${location.lng}(${encodeURIComponent(location.name || location.address || 'Field')})`
         : `geo:0,0?q=${encodeURIComponent(query)}`
     }
   }
 
-  // Desktop / unknown: Google Maps search
+  // Desktop / unknown: Google Maps search — coords first for pin accuracy
   return hasCoords
-    ? `https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}`
+    ? `https://www.google.com/maps/search/?api=1&query=${location.lat}%2C${location.lng}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
 }

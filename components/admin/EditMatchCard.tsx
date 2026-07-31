@@ -188,15 +188,20 @@ export function EditMatchCard({
                   lat={lat}
                   lng={lng}
                   onLocationNameChange={setLocationName}
-                  onAddressTextChange={value => {
-                    setAddress(value)
-                    setLat(null)
-                    setLng(null)
-                  }}
+                  onAddressTextChange={setAddress}
                   onAddressSelect={loc => {
                     setAddress(loc.address)
                     setLat(loc.lat)
                     setLng(loc.lng)
+                  }}
+                  onPinChange={coords => {
+                    if (!coords) {
+                      setLat(null)
+                      setLng(null)
+                      return
+                    }
+                    setLat(coords.lat)
+                    setLng(coords.lng)
                   }}
                   disabled={saving}
                   nameId="match-location-name"
