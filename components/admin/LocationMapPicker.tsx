@@ -5,7 +5,7 @@ import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { Button } from '@/components/ui/button'
 
-const DEFAULT_CENTER: [number, number] = [-97.7341, 30.2849] // near UT Austin
+const DEFAULT_CENTER: [number, number] = [-85.7614, 33.8137] // Jacksonville, AL
 const DEFAULT_ZOOM = 14
 const PINNED_ZOOM = 17
 
