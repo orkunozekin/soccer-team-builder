@@ -17,6 +17,11 @@ vi.mock('@/lib/hooks/useAuth', () => ({
   useAuth: () => useAuthMock(),
 }))
 
+const useAdminMock = vi.fn()
+vi.mock('@/lib/hooks/useAdmin', () => ({
+  useAdmin: () => useAdminMock(),
+}))
+
 const useMatchStoreMock = vi.fn()
 vi.mock('@/store/matchStore', () => ({
   useMatchStore: () => useMatchStoreMock(),
@@ -58,6 +63,7 @@ describe('RSVPButton', () => {
       user: null,
       userData: null,
     })
+    useAdminMock.mockReturnValue({ isAdmin: false })
     useMatchStoreMock.mockReturnValue({
       matchRSVPs: [],
       addRSVP: vi.fn(),
@@ -79,6 +85,7 @@ describe('RSVPButton', () => {
       user: { uid: 'user1' } as any,
       userData: { uid: 'user1' } as any,
     })
+    useAdminMock.mockReturnValue({ isAdmin: false })
     useMatchStoreMock.mockReturnValue({
       matchRSVPs: [],
       addRSVP: vi.fn(),
@@ -100,6 +107,7 @@ describe('RSVPButton', () => {
       user: { uid: 'user1' } as any,
       userData: { uid: 'user1', displayName: 'Player', position: 'ST' } as any,
     })
+    useAdminMock.mockReturnValue({ isAdmin: false })
     useMatchStoreMock.mockReturnValue({
       matchRSVPs: [],
       addRSVP: vi.fn(),

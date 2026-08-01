@@ -13,7 +13,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cancelRSVPAPI, confirmRSVPAPI, searchUsersAPI } from '@/lib/api/client'
-import { hasMatchStarted } from '@/lib/utils/rsvpScheduler'
 import { Match } from '@/types/match'
 import { RSVP } from '@/types/rsvp'
 
@@ -93,10 +92,6 @@ export function ImpersonateRSVP({
 
   const handleCancelRSVP = async () => {
     if (!selectedRsvp) return
-    if (hasMatchStarted(match.date, match.time)) {
-      setError('Cannot cancel RSVP after the match has started')
-      return
-    }
     setLoading(true)
     setError('')
     try {
@@ -112,8 +107,6 @@ export function ImpersonateRSVP({
   }
 
   if (!match.rsvpOpen) return null
-
-  const matchStarted = hasMatchStarted(match.date, match.time)
 
   return (
     <Card>
@@ -173,40 +166,24 @@ export function ImpersonateRSVP({
               </span>
             </p>
             {hasRsvp ? (
-              matchStarted ? (
-                <div className="space-y-2">
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Match has started. RSVP can no longer be cancelled.
-                  </p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelected(null)}
-                    disabled={loading}
-                  >
-                    Clear
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleCancelRSVP}
-                    loading={loading}
-                  >
-                    Cancel RSVP
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelected(null)}
-                    disabled={loading}
-                  >
-                    Clear
-                  </Button>
-                </div>
-              )
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleCancelRSVP}
+                  loading={loading}
+                >
+                  Cancel RSVP
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelected(null)}
+                  disabled={loading}
+                >
+                  Clear
+                </Button>
+              </div>
             ) : (
               <div className="space-y-2">
                 <div className="flex flex-wrap items-end gap-2">

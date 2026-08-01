@@ -278,8 +278,10 @@ export async function PATCH(request: NextRequest) {
 
     const data = rsvpSnap.data()!
     const isOwner = data.userId === uid
+    let requesterIsAdmin = false
     if (!isOwner) {
       const { isAdmin } = await verifyAdmin(request)
+      requesterIsAdmin = isAdmin
       if (!isAdmin) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
@@ -457,10 +459,16 @@ export async function PATCH(request: NextRequest) {
         ? matchDataForCancel.time
         : null
     if (hasMatchStarted(matchDateForCancel, matchTimeForCancel)) {
-      return NextResponse.json(
-        { error: 'Cannot cancel RSVP after the match has started' },
-        { status: 403 }
-      )
+      if (!requesterIsAdmin) {
+        const { isAdmin } = await verifyAdmin(request)
+        requesterIsAdmin = isAdmin
+      }
+      if (!requesterIsAdmin) {
+        return NextResponse.json(
+          { error: 'Cannot cancel RSVP after the match has started' },
+          { status: 403 }
+        )
+      }
     }
 
     const stateRefForCancel = adminDb
