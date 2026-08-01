@@ -18,6 +18,7 @@ import { getMatchRSVPs } from '@/lib/services/rsvpService'
 import { getMatchTeams } from '@/lib/services/teamService'
 import { getUsersByIds } from '@/lib/services/userService'
 import { collectMatchParticipantIds } from '@/lib/utils/matchParticipants'
+import { hasMatchStarted } from '@/lib/utils/rsvpScheduler'
 import { useMatchStore } from '@/store/matchStore'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
@@ -190,6 +191,9 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
                 onTeamsChanged={refetchMatchRoster}
                 currentUserId={user.uid}
                 matchRSVPs={matchRSVPs}
+                allowCancelRsvp={
+                  !hasMatchStarted(currentMatch.date, currentMatch.time)
+                }
                 headerActions={
                   isAdmin && teams.length >= 2 ? (
                     <RebalanceTeamsButton

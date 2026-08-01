@@ -39,6 +39,17 @@ export function getRSVPSchedule(
 }
 
 /**
+ * True when kickoff has been reached (match has started).
+ */
+export function hasMatchStarted(
+  date: Date,
+  time?: string | null,
+  now: Date = new Date()
+): boolean {
+  return now.getTime() >= getMatchStart(date, time).getTime()
+}
+
+/**
  * True when the RSVP/close window has ended (match start + 4h passed).
  */
 export function isMatchPast(date: Date, time?: string | null): boolean {

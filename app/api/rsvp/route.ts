@@ -11,6 +11,7 @@ import {
   swapGkWithLowerPriority,
 } from '@/lib/teams/swapGkWithLowerTeam'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
+import { hasMatchStarted } from '@/lib/utils/rsvpScheduler'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 
 /**
@@ -441,6 +442,27 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Cancel RSVP flow (no position in body). Keep _state/rsvp in sync when present (new matches).
+    const matchSnapForCancel = await adminDb
+      .collection('matches')
+      .doc(matchId)
+      .get()
+    if (!matchSnapForCancel.exists) {
+      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+    }
+    const matchDataForCancel = matchSnapForCancel.data()!
+    const matchDateForCancel =
+      matchDataForCancel.date?.toDate?.() ?? new Date(matchDataForCancel.date)
+    const matchTimeForCancel =
+      typeof matchDataForCancel.time === 'string'
+        ? matchDataForCancel.time
+        : null
+    if (hasMatchStarted(matchDateForCancel, matchTimeForCancel)) {
+      return NextResponse.json(
+        { error: 'Cannot cancel RSVP after the match has started' },
+        { status: 403 }
+      )
+    }
+
     const stateRefForCancel = adminDb
       .collection('matches')
       .doc(matchId)
