@@ -66,9 +66,7 @@ describe('UserRoleManager', () => {
 
     render(<UserRoleManager />)
 
-    await screen.findByText(/user management/i)
-
-    expect(screen.getByText(/user two/i)).toBeInTheDocument()
+    expect(await screen.findByText(/user two/i)).toBeInTheDocument()
     expect(screen.queryByText(/user one/i)).not.toBeInTheDocument()
   })
 
