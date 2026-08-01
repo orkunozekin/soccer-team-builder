@@ -39,6 +39,8 @@ interface TeamsDisplayProps {
   currentUserId?: string | null
   /** When set (and isAdmin), admins can cancel a player's RSVP from the team card menu */
   matchRSVPs?: RSVP[]
+  /** When false, hide admin cancel-RSVP actions (e.g. after kickoff) */
+  allowCancelRsvp?: boolean
 }
 
 export function TeamsDisplay({
@@ -50,6 +52,7 @@ export function TeamsDisplay({
   headerActions,
   currentUserId,
   matchRSVPs = [],
+  allowCancelRsvp = true,
 }: TeamsDisplayProps) {
   const dndEnabled = Boolean(isAdmin && matchId && onTeamsChanged)
   const [pageIndex, setPageIndex] = useState(0)
@@ -166,7 +169,7 @@ export function TeamsDisplay({
               currentUserId={currentUserId}
               isAdmin={isAdmin}
               onCancelRSVP={
-                isAdmin && matchRSVPs.length > 0
+                isAdmin && allowCancelRsvp && matchRSVPs.length > 0
                   ? onRequestCancelRSVP
                   : undefined
               }

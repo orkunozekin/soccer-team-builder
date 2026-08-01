@@ -19,6 +19,7 @@ import { cancelRSVPAPI, confirmRSVPAPI } from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getUserRSVP } from '@/lib/services/rsvpService'
 import { isProfileComplete } from '@/lib/utils/profile'
+import { hasMatchStarted } from '@/lib/utils/rsvpScheduler'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { useMatchStore } from '@/store/matchStore'
 import { Match } from '@/types/match'
@@ -131,6 +132,10 @@ export function RSVPButton({
     }
 
     if (hasRSVPed) {
+      if (hasMatchStarted(match.date, match.time)) {
+        setError('Cannot cancel RSVP after the match has started')
+        return
+      }
       setCancelConfirmOpen(true)
       return
     }
@@ -165,8 +170,10 @@ export function RSVPButton({
       if (teamsUpdated && onTeamsRegenerated) {
         await onTeamsRegenerated()
       }
-    } catch {
-      setError('Failed to update RSVP')
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to update RSVP'
+      )
     } finally {
       setLoading(false)
     }
@@ -174,6 +181,15 @@ export function RSVPButton({
 
   if (!match.rsvpOpen) {
     return null
+  }
+
+  const matchStarted = hasMatchStarted(match.date, match.time)
+  if (hasRSVPed && matchStarted) {
+    return (
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        Match has started. RSVP can no longer be cancelled.
+      </p>
+    )
   }
 
   return (

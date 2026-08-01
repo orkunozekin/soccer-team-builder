@@ -4,6 +4,7 @@ import {
   getNextRSVPCloseTime,
   getNextRSVPOpenTime,
   getRSVPSchedule,
+  hasMatchStarted,
   isMatchPast,
   shouldRSVPBeOpen,
 } from './rsvpScheduler'
@@ -67,6 +68,26 @@ describe('rsvpScheduler', () => {
 
       vi.setSystemTime(new Date(closeAt!.getTime() + 1000))
       expect(isMatchPast(matchDate, time)).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('hasMatchStarted is true at and after kickoff', () => {
+    const matchDate = new Date('2024-03-01T12:00:00Z')
+    const time = '19:00'
+    const start = getMatchStart(matchDate, time)
+
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date(start.getTime() - 1000))
+      expect(hasMatchStarted(matchDate, time)).toBe(false)
+
+      vi.setSystemTime(start)
+      expect(hasMatchStarted(matchDate, time)).toBe(true)
+
+      vi.setSystemTime(new Date(start.getTime() + 60_000))
+      expect(hasMatchStarted(matchDate, time)).toBe(true)
     } finally {
       vi.useRealTimers()
     }
