@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { AdminRouteGuard } from '@/components/admin/AdminRouteGuard'
 import { PlayerProfileDetails } from '@/components/admin/PlayerProfileDetails'
 import { PlayerRsvpHistory } from '@/components/admin/PlayerRsvpHistory'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
@@ -11,7 +10,7 @@ import { BackLink } from '@/components/ui/back-link'
 import { getUser } from '@/lib/services/userService'
 import type { User } from '@/types/user'
 
-function AdminPlayerProfileContent() {
+export default function AdminPlayerProfilePage() {
   const params = useParams()
   const userId = params?.userId as string
   const [player, setPlayer] = useState<User | null>(null)
@@ -55,7 +54,7 @@ function AdminPlayerProfileContent() {
   if (notFound || !player) {
     return (
       <div className="container mx-auto max-w-xl px-4 py-8">
-        <BackLink href="/admin" label="Back to Admin Dashboard" />
+        <BackLink href="/admin/users" label="Back to Users" />
         <div className="mt-8 text-center">
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
             Player not found
@@ -70,7 +69,7 @@ function AdminPlayerProfileContent() {
 
   return (
     <div className="container mx-auto max-w-xl px-4 py-8 sm:py-10">
-      <BackLink href="/admin" label="Back to Admin Dashboard" />
+      <BackLink href="/admin/users" label="Back to Users" />
 
       <div className="mb-8 mt-4">
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-3xl">
@@ -87,13 +86,5 @@ function AdminPlayerProfileContent() {
         <PlayerRsvpHistory userId={player.uid} />
       </div>
     </div>
-  )
-}
-
-export default function AdminPlayerProfilePage() {
-  return (
-    <AdminRouteGuard>
-      <AdminPlayerProfileContent />
-    </AdminRouteGuard>
   )
 }

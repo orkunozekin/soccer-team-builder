@@ -1,102 +1,54 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { AdminMatchCard } from '@/components/admin/AdminMatchCard'
-import { AdminRouteGuard } from '@/components/admin/AdminRouteGuard'
-import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
-import { UserRoleManager } from '@/components/admin/UserRoleManager'
-import { Card, CardContent } from '@/components/ui/card'
-import { getAllMatches } from '@/lib/services/matchService'
-import { getMatchRsvpCount } from '@/lib/services/rsvpService'
-import { useMatchStore } from '@/store/matchStore'
+import Link from 'next/link'
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 
-function AdminDashboardContent() {
-  const { matches, setMatches, setLoading } = useMatchStore()
-  const [rsvpCounts, setRsvpCounts] = useState<Record<string, number>>({})
-
-  useEffect(() => {
-    const fetchMatches = async () => {
-      setLoading(true)
-      try {
-        const allMatches = await getAllMatches()
-        setMatches(allMatches)
-        const counts: Record<string, number> = {}
-        await Promise.all(
-          allMatches.map(async m => {
-            counts[m.id] = await getMatchRsvpCount(m.id)
-          })
-        )
-        setRsvpCounts(counts)
-      } catch (error) {
-        console.error('Error fetching matches:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchMatches()
-  }, [setMatches, setLoading])
-
-  const refetchMatches = async () => {
-    const allMatches = await getAllMatches()
-    setMatches(allMatches)
-    const counts: Record<string, number> = {}
-    await Promise.all(
-      allMatches.map(async m => {
-        counts[m.id] = await getMatchRsvpCount(m.id)
-      })
-    )
-    setRsvpCounts(counts)
-  }
-
-  return (
-    <div className="container mx-auto max-w-5xl px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <p className="text-zinc-600 dark:text-zinc-400">
-          Manage matches, teams, and RSVP polls
-        </p>
-      </div>
-
-      <div className="space-y-6">
-        <CreateMatchCard onMatchCreated={refetchMatches} />
-
-        <div>
-          <h2 className="mb-4 text-2xl font-bold">All Matches</h2>
-          {matches.length === 0 ? (
-            <Card>
-              <CardContent className="py-6">
-                <p className="text-center text-zinc-600 dark:text-zinc-400">
-                  No matches created yet. Create one above!
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {matches.map(match => (
-                <AdminMatchCard
-                  key={match.id}
-                  match={match}
-                  rsvpCount={rsvpCounts[match.id]}
-                  onDeleted={refetchMatches}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-6">
-        <UserRoleManager />
-      </div>
-    </div>
-  )
-}
+const SECTIONS = [
+  {
+    href: '/admin/matches',
+    title: 'Matches',
+    description: 'Create matches, manage RSVPs, teams, and attendance',
+  },
+  {
+    href: '/admin/users',
+    title: 'Users',
+    description: 'View player profiles, change roles, and remove users',
+  },
+] as const
 
 export default function AdminPage() {
   return (
-    <AdminRouteGuard>
-      <AdminDashboardContent />
-    </AdminRouteGuard>
+    <div className="container mx-auto max-w-3xl px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+          Admin
+        </h1>
+        <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+          Choose a section to manage
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        {SECTIONS.map(section => (
+          <Link key={section.href} href={section.href} className="group block">
+            <Card className="h-full transition-shadow group-hover:shadow-md">
+              <CardHeader>
+                <CardTitle className="text-xl group-hover:underline group-hover:underline-offset-4">
+                  {section.title}
+                </CardTitle>
+                <CardDescription className="text-sm leading-relaxed">
+                  {section.description}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+        ))}
+      </div>
+    </div>
   )
 }

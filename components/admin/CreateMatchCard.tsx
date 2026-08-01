@@ -89,7 +89,7 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
   return (
     <Card className="w-full max-w-xl">
       <CardHeader>
-        <CardTitle>Create New Match</CardTitle>
+        <CardTitle>Create new match</CardTitle>
         <CardDescription>
           Create a new soccer match with date and time
         </CardDescription>

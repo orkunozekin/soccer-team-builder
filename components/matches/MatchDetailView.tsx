@@ -131,12 +131,22 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
     return null
   }
 
+  const hasTeamsPanel = !loadingTeams && teams.length > 0
+
   return (
     <div className="flex w-full min-w-0 flex-col items-center overflow-x-hidden">
-      <div className="container mx-auto w-full min-w-0 max-w-full px-4 py-2">
+      <div
+        className={`mx-auto w-full min-w-0 px-4 py-2 ${
+          hasTeamsPanel ? 'max-w-6xl' : 'max-w-xl'
+        }`}
+      >
         <BackLink href={backLink.href} label={backLink.label} />
 
-        <div className="mt-2 grid min-w-0 gap-10 lg:grid-cols-2 lg:gap-12">
+        <div
+          className={`mt-2 grid min-w-0 gap-10 ${
+            hasTeamsPanel ? 'lg:grid-cols-2 lg:gap-12' : ''
+          }`}
+        >
           <div className="min-w-0 space-y-6">
             <MatchDetails
               match={currentMatch}
@@ -170,8 +180,8 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
             )}
           </div>
 
-          <div className="min-w-0 space-y-6">
-            {!loadingTeams && teams.length > 0 && (
+          {hasTeamsPanel && (
+            <div className="min-w-0 space-y-6">
               <TeamsDisplay
                 matchId={matchId}
                 teams={teams}
@@ -191,16 +201,16 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
                   ) : null
                 }
               />
-            )}
-            {isAdmin && teams.length > 0 && (
-              <PlayerTransfer
-                matchId={matchId}
-                teams={teams}
-                users={usersWithMatchPosition}
-                onTransferComplete={refetchMatchRoster}
-              />
-            )}
-          </div>
+              {isAdmin && (
+                <PlayerTransfer
+                  matchId={matchId}
+                  teams={teams}
+                  users={usersWithMatchPosition}
+                  onTransferComplete={refetchMatchRoster}
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
