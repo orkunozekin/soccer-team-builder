@@ -151,7 +151,7 @@ export function EditMatchCard({
 
   return (
     <>
-      <Card>
+      <Card className="w-full max-w-xl">
         <CardHeader>
           <CardTitle className="text-lg">Manage match</CardTitle>
           <CardDescription>
@@ -163,7 +163,7 @@ export function EditMatchCard({
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="w-full sm:w-auto"
               onClick={() => setExpanded(true)}
             >
               Manage match
