@@ -60,7 +60,8 @@ export function AttendanceStatsCard({ userId }: AttendanceStatsCardProps) {
           <p className="text-sm text-zinc-500">Loading stats…</p>
         ) : !stats || stats.confirmedCount === 0 ? (
           <p className="text-sm text-zinc-500">
-            No confirmed RSVPs yet. Stats appear after you RSVP to matches.
+            No confirmed RSVPs yet. Stats appear after confirmed RSVPs to
+            matches.
           </p>
         ) : (
           <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">

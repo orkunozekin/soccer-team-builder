@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -111,18 +112,21 @@ export function HostAttendancePanel({
                 className="flex flex-wrap items-center justify-between gap-2 py-2"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                  <Link
+                    href={`/admin/players/${rsvp.userId}`}
+                    className="block truncate text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
+                  >
                     {name}
-                  </p>
+                  </Link>
                   <Badge
-                    variant={
+                    variant="outline"
+                    className={
                       label === 'Present'
-                        ? 'default'
+                        ? 'mt-1 border-transparent bg-emerald-600 text-white hover:bg-emerald-600'
                         : label === 'No-show'
-                          ? 'destructive'
-                          : 'outline'
+                          ? 'mt-1 border-transparent bg-red-600 text-white hover:bg-red-600'
+                          : 'mt-1'
                     }
-                    className="mt-1"
                   >
                     {label}
                   </Badge>
