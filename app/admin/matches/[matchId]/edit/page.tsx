@@ -2,9 +2,8 @@
 
 import { useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { AdminRouteGuard } from '@/components/admin/AdminRouteGuard'
 
-function EditMatchRedirect() {
+export default function EditMatchPage() {
   const router = useRouter()
   const params = useParams()
   const matchId = params?.matchId as string
@@ -16,12 +15,4 @@ function EditMatchRedirect() {
   }, [matchId, router])
 
   return null
-}
-
-export default function EditMatchPage() {
-  return (
-    <AdminRouteGuard>
-      <EditMatchRedirect />
-    </AdminRouteGuard>
-  )
 }
