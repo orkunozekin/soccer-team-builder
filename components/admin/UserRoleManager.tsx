@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import CloseIcon from '@/components/icons/CloseIcon'
 import { CardLoadingSkeleton } from '@/components/LoadingSkeleton'
 import {
@@ -207,7 +208,7 @@ export function UserRoleManager() {
       <CardHeader>
         <CardTitle>User Management</CardTitle>
         <CardDescription>
-          Manage users. Change roles or remove users.
+          View profiles, change roles, or remove users.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -246,7 +247,12 @@ export function UserRoleManager() {
                 className="flex items-center justify-between gap-4 rounded-lg border p-3"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{user.displayName}</p>
+                  <Link
+                    href={`/admin/players/${user.uid}`}
+                    className="block truncate font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
+                  >
+                    {user.displayName}
+                  </Link>
                   <p className="truncate text-sm text-zinc-600 dark:text-zinc-400">
                     {user.email}
                   </p>
