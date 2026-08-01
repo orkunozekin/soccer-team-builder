@@ -80,7 +80,7 @@ export default function MatchesPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto max-w-5xl px-4 py-8">
       <div className="mb-6 animate-slide-up-fade">
         <div className="flex items-center gap-3">
           <SoccerBallIcon className="h-10 w-10 animate-float text-red-50" />

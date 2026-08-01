@@ -87,7 +87,7 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
   const today = new Date().toISOString().split('T')[0]
 
   return (
-    <Card>
+    <Card className="w-full max-w-xl">
       <CardHeader>
         <CardTitle>Create New Match</CardTitle>
         <CardDescription>
@@ -99,7 +99,7 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
           <Button
             type="button"
             variant="outline"
-            className="w-full"
+            className="w-full sm:w-auto"
             onClick={() => setExpanded(true)}
           >
             Add match
@@ -155,7 +155,7 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
               </div>
             )}
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -167,7 +167,7 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
               <Button
                 type="submit"
                 loading={loading}
-                className="h-11 flex-1 text-base sm:h-9 sm:text-sm"
+                className="h-11 text-base sm:h-9 sm:text-sm"
               >
                 Create Match
               </Button>
