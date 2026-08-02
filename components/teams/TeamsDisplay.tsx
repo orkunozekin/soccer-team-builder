@@ -11,7 +11,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { DroppableTeamCard, PlayerTile } from './DroppableTeamCard'
+import { DroppableTeamCard, PlayerTile, CheckInStatusLegend } from './DroppableTeamCard'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -360,6 +360,8 @@ export function TeamsDisplay({
         <h2 className="min-w-0 truncate text-2xl font-bold">Teams</h2>
         {headerActions ? <div className="shrink-0">{headerActions}</div> : null}
       </div>
+
+      {attendanceByUserId.size > 0 ? <CheckInStatusLegend /> : null}
 
       {pages.length > 1 && (
         <div className="flex flex-wrap gap-2">
