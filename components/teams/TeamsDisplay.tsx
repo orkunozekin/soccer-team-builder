@@ -1,15 +1,17 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   DndContext,
+  DragOverlay,
   type DragEndEvent,
+  type DragStartEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { DroppableTeamCard } from './DroppableTeamCard'
+import { DroppableTeamCard, PlayerTile } from './DroppableTeamCard'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +46,30 @@ interface TeamsDisplayProps {
   allowCancelRsvp?: boolean
 }
 
+function movePlayerBetweenTeams(
+  teams: Team[],
+  playerId: string,
+  fromTeamId: string,
+  toTeamId: string
+): Team[] {
+  return teams.map(team => {
+    if (team.id === fromTeamId) {
+      return {
+        ...team,
+        playerIds: team.playerIds.filter(id => id !== playerId),
+      }
+    }
+    if (team.id === toTeamId) {
+      if (team.playerIds.includes(playerId)) return team
+      return {
+        ...team,
+        playerIds: [...team.playerIds, playerId],
+      }
+    }
+    return team
+  })
+}
+
 export function TeamsDisplay({
   matchId,
   teams,
@@ -59,11 +85,20 @@ export function TeamsDisplay({
   const [pageIndex, setPageIndex] = useState(0)
   const [transferError, setTransferError] = useState('')
   const [transferring, setTransferring] = useState<string | null>(null)
+  const [activeDrag, setActiveDrag] = useState<{
+    user: User
+    teamColor: string | null
+  } | null>(null)
+  const [localTeams, setLocalTeams] = useState(teams)
   const [pendingCancel, setPendingCancel] = useState<{
     userId: string
     displayName: string
   } | null>(null)
   const [cancelling, setCancelling] = useState(false)
+
+  useEffect(() => {
+    setLocalTeams(teams)
+  }, [teams])
 
   const onRequestCancelRSVP = useCallback(
     (userId: string, displayName: string) => {
@@ -94,8 +129,10 @@ export function TeamsDisplay({
   }, [pendingCancel, matchRSVPs, onTeamsChanged])
 
   const teamsSorted = useMemo(() => {
-    return [...teams].sort((a, b) => (a.teamNumber ?? 0) - (b.teamNumber ?? 0))
-  }, [teams])
+    return [...localTeams].sort(
+      (a, b) => (a.teamNumber ?? 0) - (b.teamNumber ?? 0)
+    )
+  }, [localTeams])
 
   const pages = useMemo(() => {
     const out: { start: number; end: number; label: string }[] = []
@@ -118,6 +155,11 @@ export function TeamsDisplay({
     ? teamsSorted.slice(page.start, page.end)
     : teamsSorted.slice(0, 2)
 
+  const usersById = useMemo(() => {
+    const map = new Map(users.map(u => [u.uid, u]))
+    return map
+  }, [users])
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -125,7 +167,30 @@ export function TeamsDisplay({
     useSensor(KeyboardSensor)
   )
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const data = event.active.data.current as DragData | undefined
+    if (!data?.playerId) {
+      setActiveDrag(null)
+      return
+    }
+    const user = usersById.get(data.playerId)
+    const fromTeam = localTeams.find(t => t.id === data.fromTeamId)
+    if (!user) {
+      setActiveDrag(null)
+      return
+    }
+    setActiveDrag({
+      user,
+      teamColor: fromTeam?.color ?? null,
+    })
+  }
+
+  const handleDragCancel = () => {
+    setActiveDrag(null)
+  }
+
   const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveDrag(null)
     const { active, over } = event
     if (!dndEnabled || !matchId || !over || over.id === active.id) return
 
@@ -135,6 +200,14 @@ export function TeamsDisplay({
     const targetTeamId = String(over.id)
     if (data.fromTeamId === targetTeamId) return
 
+    const previousTeams = localTeams
+    const nextTeams = movePlayerBetweenTeams(
+      localTeams,
+      data.playerId,
+      data.fromTeamId,
+      targetTeamId
+    )
+    setLocalTeams(nextTeams)
     setTransferError('')
     setTransferring(data.playerId)
     try {
@@ -147,6 +220,7 @@ export function TeamsDisplay({
       )
       onTeamsChanged?.()
     } catch {
+      setLocalTeams(previousTeams)
       setTransferError('Failed to transfer player')
     } finally {
       setTransferring(null)
@@ -162,7 +236,7 @@ export function TeamsDisplay({
     >
       {visibleTeams.map(team => {
         const teamUsers = team.playerIds
-          .map(userId => users.find(u => u.uid === userId))
+          .map(userId => usersById.get(userId))
           .filter((u): u is User => !!u)
 
         return (
@@ -252,8 +326,25 @@ export function TeamsDisplay({
         </div>
       )}
 
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragCancel={handleDragCancel}
+        onDragEnd={handleDragEnd}
+      >
         {content}
+        <DragOverlay dropAnimation={null}>
+          {activeDrag ? (
+            <div className="min-w-[220px] rounded-md border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-950">
+              <PlayerTile
+                user={activeDrag.user}
+                teamColor={activeDrag.teamColor}
+                showGrip
+                className="cursor-grabbing"
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </div>
   )
