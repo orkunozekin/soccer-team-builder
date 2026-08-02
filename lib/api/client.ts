@@ -140,8 +140,9 @@ export async function transferPlayerAPI(
   playerId: string,
   targetTeamId: string | 'bench',
   currentTeamId?: string,
-  isOnBench?: boolean
-): Promise<{ success: boolean }> {
+  isOnBench?: boolean,
+  swapWithPlayerId?: string
+): Promise<{ success: boolean; swapped?: boolean }> {
   const response = await apiRequest('/teams/transfer', {
     method: 'POST',
     body: JSON.stringify({
@@ -150,6 +151,7 @@ export async function transferPlayerAPI(
       targetTeamId,
       currentTeamId,
       isOnBench,
+      ...(swapWithPlayerId ? { swapWithPlayerId } : {}),
     }),
   })
 
