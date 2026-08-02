@@ -2,6 +2,7 @@
 
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { GripVertical, MoreVertical } from 'lucide-react'
+import type { HTMLAttributes } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,47 +19,40 @@ import { User } from '@/types/user'
 
 type DragData = { playerId: string; fromTeamId: string }
 
-function DraggablePlayerRow({
+/** Presentational player row used in team lists and the drag overlay. */
+export function PlayerTile({
   user,
-  team,
-  dndEnabled,
-  transferring,
-  isCurrentUser,
-  isAdmin,
+  teamColor,
+  showGrip = false,
+  gripProps,
+  isCurrentUser = false,
+  isAdmin = false,
   onCancelRSVP,
+  className,
 }: {
   user: User
-  team: Team
-  dndEnabled: boolean
-  transferring: string | null
-  isCurrentUser: boolean
-  isAdmin: boolean
+  teamColor?: string | null
+  showGrip?: boolean
+  gripProps?: HTMLAttributes<HTMLSpanElement>
+  isCurrentUser?: boolean
+  isAdmin?: boolean
   onCancelRSVP?: (userId: string, displayName: string) => void
+  className?: string
 }) {
-  const id = `player:${user.uid}:${team.id}`
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id,
-    data: { playerId: user.uid, fromTeamId: team.id } satisfies DragData,
-    disabled: !dndEnabled,
-  })
   const displayName = user.displayName || user.email || ''
 
   return (
     <div
-      ref={setNodeRef}
       className={cn(
         '-mx-1 flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-sm',
-        dndEnabled && 'hover:bg-zinc-50 dark:hover:bg-zinc-900',
-        isDragging && 'opacity-50',
-        transferring === user.uid && 'opacity-50',
         isCurrentUser &&
-          'bg-primary/10 font-medium ring-1 ring-primary/40 dark:bg-primary/20 dark:ring-primary/50'
+          'bg-primary/10 font-medium ring-1 ring-primary/40 dark:bg-primary/20 dark:ring-primary/50',
+        className
       )}
     >
-      {dndEnabled && (
+      {showGrip && (
         <span
-          {...listeners}
-          {...attributes}
+          {...gripProps}
           className="flex shrink-0 cursor-grab touch-none rounded p-0.5 text-zinc-400 hover:text-zinc-600 active:cursor-grabbing dark:text-zinc-500 dark:hover:text-zinc-300"
           title="Drag to move to another team"
           aria-label="Drag to move player to another team"
@@ -68,7 +62,7 @@ function DraggablePlayerRow({
       )}
       <span
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-        style={{ backgroundColor: team.color || '#3b82f6' }}
+        style={{ backgroundColor: teamColor || '#3b82f6' }}
       >
         {user.jerseyNumber != null ? user.jerseyNumber : ''}
       </span>
@@ -110,6 +104,51 @@ function DraggablePlayerRow({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+    </div>
+  )
+}
+
+function DraggablePlayerRow({
+  user,
+  team,
+  dndEnabled,
+  transferring,
+  isCurrentUser,
+  isAdmin,
+  onCancelRSVP,
+}: {
+  user: User
+  team: Team
+  dndEnabled: boolean
+  transferring: string | null
+  isCurrentUser: boolean
+  isAdmin: boolean
+  onCancelRSVP?: (userId: string, displayName: string) => void
+}) {
+  const id = `player:${user.uid}:${team.id}`
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id,
+    data: { playerId: user.uid, fromTeamId: team.id } satisfies DragData,
+    disabled: !dndEnabled,
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        dndEnabled && 'hover:bg-zinc-50 dark:hover:bg-zinc-900',
+        (isDragging || transferring === user.uid) && 'opacity-40'
+      )}
+    >
+      <PlayerTile
+        user={user}
+        teamColor={team.color}
+        showGrip={dndEnabled}
+        gripProps={{ ...listeners, ...attributes }}
+        isCurrentUser={isCurrentUser}
+        isAdmin={isAdmin}
+        onCancelRSVP={onCancelRSVP}
+      />
     </div>
   )
 }
