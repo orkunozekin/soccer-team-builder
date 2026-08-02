@@ -62,21 +62,9 @@ export function MatchCard({
     >
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <CardTitle className="mb-1 text-xl">{formattedDate}</CardTitle>
-            <CardDescription className="flex items-center gap-1.5 text-base">
-              <Calendar className="h-3.5 w-3.5 shrink-0 text-red-50" />
-              {formattedTime}
-            </CardDescription>
-            {match.location && locationDisplayName(match.location) && (
-              <p className="mt-1 flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-red-50" />
-                <span className="truncate">
-                  {locationDisplayName(match.location)}
-                </span>
-              </p>
-            )}
-          </div>
+          <CardTitle className="min-w-0 flex-1 text-xl">
+            {formattedDate}
+          </CardTitle>
           <Badge
             variant={match.rsvpOpen ? 'default' : 'outline'}
             className={`shrink-0 py-1 text-xs ${
@@ -86,6 +74,18 @@ export function MatchCard({
             {match.rsvpOpen ? 'RSVP Open' : 'RSVP Closed'}
           </Badge>
         </div>
+        <CardDescription className="mt-1 flex items-center gap-1.5 text-base">
+          <Calendar className="h-3.5 w-3.5 shrink-0 text-red-50" />
+          {formattedTime}
+        </CardDescription>
+        {match.location && locationDisplayName(match.location) && (
+          <p className="mt-1 flex items-start gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-50" />
+            <span className="min-w-0 break-words">
+              {locationDisplayName(match.location)}
+            </span>
+          </p>
+        )}
       </CardHeader>
       <CardContent className="space-y-2">
         {rsvpCount !== undefined && (
