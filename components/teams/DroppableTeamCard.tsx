@@ -82,7 +82,7 @@ export function PlayerTile({
   isCurrentUser?: boolean
   isAdmin?: boolean
   onCancelRSVP?: (userId: string, displayName: string) => void
-  /** When set, shows a colored check-in status icon on the jersey. */
+  /** When set, shows a colored check-in status icon at the trailing edge. */
   attendanceLabel?: AttendanceLabel | null
   /** Admin host override: mark present / clear check-in */
   onHostCheckIn?: (userId: string, attended: boolean) => void
@@ -113,18 +113,11 @@ export function PlayerTile({
           <GripVertical className="h-4 w-4" />
         </span>
       )}
-      <span className="relative shrink-0">
-        <span
-          className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white"
-          style={{ backgroundColor: teamColor || '#3b82f6' }}
-        >
-          {user.jerseyNumber != null ? user.jerseyNumber : ''}
-        </span>
-        {attendanceLabel ? (
-          <span className="absolute -bottom-0.5 -right-0.5 rounded-full bg-white p-px shadow-sm ring-1 ring-black/5 dark:bg-zinc-950 dark:ring-white/10">
-            <CheckInStatusIcon label={attendanceLabel} />
-          </span>
-        ) : null}
+      <span
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+        style={{ backgroundColor: teamColor || '#3b82f6' }}
+      >
+        {user.jerseyNumber != null ? user.jerseyNumber : ''}
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate leading-tight" title={displayName}>
@@ -142,37 +135,46 @@ export function PlayerTile({
           </p>
         ) : null}
       </div>
-      {showMenu && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              aria-label="Player actions"
-              onClick={e => e.stopPropagation()}
-            >
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {onHostCheckIn && attendanceLabel ? (
-              <DropdownMenuItem
-                onClick={() => onHostCheckIn(user.uid, !isPresent)}
-              >
-                {isPresent ? 'Clear check-in' : 'Mark present'}
-              </DropdownMenuItem>
-            ) : null}
-            {onCancelRSVP ? (
-              <DropdownMenuItem
-                className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
-                onClick={() => onCancelRSVP(user.uid, displayName)}
-              >
-                Cancel RSVP
-              </DropdownMenuItem>
-            ) : null}
-          </DropdownMenuContent>
-        </DropdownMenu>
+      {(attendanceLabel || showMenu) && (
+        <div className="flex shrink-0 items-center gap-0.5">
+          {attendanceLabel ? (
+            <span className="inline-flex h-8 w-8 items-center justify-center">
+              <CheckInStatusIcon label={attendanceLabel} />
+            </span>
+          ) : null}
+          {showMenu ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  aria-label="Player actions"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {onHostCheckIn && attendanceLabel ? (
+                  <DropdownMenuItem
+                    onClick={() => onHostCheckIn(user.uid, !isPresent)}
+                  >
+                    {isPresent ? 'Clear check-in' : 'Mark present'}
+                  </DropdownMenuItem>
+                ) : null}
+                {onCancelRSVP ? (
+                  <DropdownMenuItem
+                    className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
+                    onClick={() => onCancelRSVP(user.uid, displayName)}
+                  >
+                    Cancel RSVP
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+        </div>
       )}
     </div>
   )
