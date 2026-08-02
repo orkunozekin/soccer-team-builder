@@ -66,8 +66,8 @@ vi.mock('@/components/admin/EditMatchCard', () => ({
   EditMatchCard: () => <div>EditMatchCardMock</div>,
 }))
 
-vi.mock('@/components/admin/HostAttendancePanel', () => ({
-  HostAttendancePanel: () => null,
+vi.mock('@/components/matches/MatchAttendanceList', () => ({
+  MatchAttendanceList: () => null,
 }))
 
 vi.mock('@/components/admin/ImpersonateRSVP', () => ({

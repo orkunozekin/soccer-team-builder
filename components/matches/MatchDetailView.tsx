@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { EditMatchCard } from '@/components/admin/EditMatchCard'
-import { HostAttendancePanel } from '@/components/admin/HostAttendancePanel'
 import { ImpersonateRSVP } from '@/components/admin/ImpersonateRSVP'
 import { PlayerTransfer } from '@/components/admin/PlayerTransfer'
 import { RebalanceTeamsButton } from '@/components/admin/RebalanceTeamsButton'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
+import { MatchAttendanceList } from '@/components/matches/MatchAttendanceList'
 import { MatchDetails } from '@/components/matches/MatchDetails'
 import { TeamsDisplay } from '@/components/teams/TeamsDisplay'
 import { BackLink } from '@/components/ui/back-link'
@@ -157,6 +157,14 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
               onMatchRefetch={refetchMatchRoster}
             />
 
+            <MatchAttendanceList
+              match={currentMatch}
+              rsvps={matchRSVPs}
+              users={rosterUsers}
+              canHostOverride={!!isAdmin}
+              onUpdated={refetchMatchRoster}
+            />
+
             {isAdmin && currentMatch && (
               <>
                 <EditMatchCard
@@ -164,12 +172,6 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
                   match={currentMatch}
                   onSaved={refetchMatchRoster}
                   onDeleted={() => router.push(backLink.href)}
-                />
-                <HostAttendancePanel
-                  match={currentMatch}
-                  rsvps={matchRSVPs}
-                  users={rosterUsers}
-                  onUpdated={refetchMatchRoster}
                 />
                 <ImpersonateRSVP
                   match={currentMatch}
