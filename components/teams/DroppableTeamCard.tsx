@@ -36,17 +36,17 @@ export function CheckInStatusIcon({
   const icon =
     label === 'Present' ? (
       <CheckCircle2
-        className={cn('h-4 w-4 shrink-0 text-emerald-600', className)}
+        className={cn('h-3.5 w-3.5 shrink-0 text-emerald-600', className)}
         aria-hidden
       />
     ) : label === 'No-show' ? (
       <XCircle
-        className={cn('h-4 w-4 shrink-0 text-red-600', className)}
+        className={cn('h-3.5 w-3.5 shrink-0 text-red-600', className)}
         aria-hidden
       />
     ) : (
       <CircleDashed
-        className={cn('h-4 w-4 shrink-0 text-amber-500', className)}
+        className={cn('h-3.5 w-3.5 shrink-0 text-amber-500', className)}
         aria-hidden
       />
     )
@@ -81,7 +81,7 @@ export function PlayerTile({
   isCurrentUser?: boolean
   isAdmin?: boolean
   onCancelRSVP?: (userId: string, displayName: string) => void
-  /** When set, shows a colored check-in status icon on the tile. */
+  /** When set, shows a colored check-in status icon on the jersey. */
   attendanceLabel?: AttendanceLabel | null
   className?: string
 }) {
@@ -90,7 +90,7 @@ export function PlayerTile({
   return (
     <div
       className={cn(
-        '-mx-1 flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-sm',
+        '-mx-1 flex min-w-0 items-center gap-1.5 rounded-md px-1.5 py-1.5 text-sm sm:gap-2 sm:px-2',
         isCurrentUser &&
           'bg-primary/10 font-medium ring-1 ring-primary/40 dark:bg-primary/20 dark:ring-primary/50',
         className
@@ -106,28 +106,35 @@ export function PlayerTile({
           <GripVertical className="h-4 w-4" />
         </span>
       )}
-      <span
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-        style={{ backgroundColor: teamColor || '#3b82f6' }}
-      >
-        {user.jerseyNumber != null ? user.jerseyNumber : ''}
-      </span>
-      <span className="min-w-0 flex-1 truncate" title={displayName}>
-        {displayName}
-      </span>
-      {attendanceLabel ? <CheckInStatusIcon label={attendanceLabel} /> : null}
-      {user.position && (
-        <Badge
-          variant="outline"
-          className={cn(
-            'shrink-0 text-xs',
-            isGoalkeeper(user.position) &&
-              'border-amber-400 bg-amber-200/90 text-amber-900 dark:border-amber-600 dark:bg-amber-700/50 dark:text-amber-100'
-          )}
+      <span className="relative shrink-0">
+        <span
+          className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white"
+          style={{ backgroundColor: teamColor || '#3b82f6' }}
         >
-          {user.position}
-        </Badge>
-      )}
+          {user.jerseyNumber != null ? user.jerseyNumber : ''}
+        </span>
+        {attendanceLabel ? (
+          <span className="absolute -bottom-0.5 -right-0.5 rounded-full bg-white p-px shadow-sm ring-1 ring-black/5 dark:bg-zinc-950 dark:ring-white/10">
+            <CheckInStatusIcon label={attendanceLabel} />
+          </span>
+        ) : null}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate leading-tight" title={displayName}>
+          {displayName}
+        </p>
+        {user.position ? (
+          <p
+            className={cn(
+              'truncate text-xs leading-tight text-zinc-500 dark:text-zinc-400',
+              isGoalkeeper(user.position) &&
+                'font-medium text-amber-700 dark:text-amber-400'
+            )}
+          >
+            {user.position}
+          </p>
+        ) : null}
+      </div>
       {isAdmin && onCancelRSVP && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
