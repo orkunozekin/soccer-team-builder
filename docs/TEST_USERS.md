@@ -56,6 +56,47 @@ curl -X POST http://localhost:3001/api/seed-match-rsvps \
 
 ---
 
+## Seeding a check-in status demo
+
+To eyeball the player-facing **Check-in status** list (Present / Pending):
+
+**Request:** `POST /api/seed-check-in-demo`  
+Optional JSON body:
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `matchId` | _(creates new)_ | Update an existing match instead of creating one |
+| `kickoffOffsetMinutes` | `10` | Kickoff this many minutes from now (puts you inside the check-in window) |
+| `presentCount` | half of test users | How many RSVPs to mark Present |
+| `regenerateTeams` | `true` | Regenerate teams after seeding |
+
+```bash
+# 1) Ensure test users exist
+curl -X POST http://localhost:3001/api/seed-test-users \
+  -H "X-Seed-Secret: your-secret-here"
+
+# 2) Create a match in the check-in window with mixed attendance
+curl -X POST http://localhost:3001/api/seed-check-in-demo \
+  -H "Content-Type: application/json" \
+  -H "X-Seed-Secret: your-secret-here" \
+  -d '{}'
+```
+
+Response includes `matchId`, `path` (e.g. `/matches/match_checkin_demo_…`), and a Present/Pending summary. Open that path while logged in as a normal player.
+
+To force No-show labels instead, create the demo then set kickoff further in the past so the window has ended:
+
+```bash
+curl -X POST http://localhost:3001/api/seed-check-in-demo \
+  -H "Content-Type: application/json" \
+  -H "X-Seed-Secret: your-secret-here" \
+  -d '{"matchId":"YOUR_MATCH_ID","kickoffOffsetMinutes":-150,"presentCount":8}'
+```
+
+(`-150` ≈ kickoff 2.5h ago → check-in window ended; unmarked confirmed RSVPs show as No-show.)
+
+---
+
 ## Deleting test users and their RSVP records
 
 To remove all test users (from the table above) and their data in one go:
