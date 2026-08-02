@@ -18,11 +18,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import type { AttendanceLabel } from '@/lib/utils/checkIn'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
@@ -58,26 +53,38 @@ export function CheckInStatusIcon({
     )
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-zinc-700 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-200 dark:hover:bg-zinc-800"
-          aria-label={statusText}
-          onClick={e => e.stopPropagation()}
-          onPointerDown={e => e.stopPropagation()}
-        >
-          {icon}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        side="top"
-        align="end"
-        className="w-auto px-3 py-1.5 text-sm font-medium"
-      >
-        {statusText}
-      </PopoverContent>
-    </Popover>
+    <span
+      className="inline-flex h-8 w-8 shrink-0 items-center justify-center"
+      title={statusText}
+      aria-label={statusText}
+    >
+      {icon}
+    </span>
+  )
+}
+
+export function CheckInStatusLegend({ className }: { className?: string }) {
+  return (
+    <ul
+      className={cn(
+        'flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-600 dark:text-zinc-400',
+        className
+      )}
+      aria-label="Check-in status legend"
+    >
+      <li className="inline-flex items-center gap-1.5">
+        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" aria-hidden />
+        Present
+      </li>
+      <li className="inline-flex items-center gap-1.5">
+        <CircleDashed className="h-3.5 w-3.5 text-amber-500" aria-hidden />
+        Pending
+      </li>
+      <li className="inline-flex items-center gap-1.5">
+        <XCircle className="h-3.5 w-3.5 text-red-600" aria-hidden />
+        No-show
+      </li>
+    </ul>
   )
 }
 
