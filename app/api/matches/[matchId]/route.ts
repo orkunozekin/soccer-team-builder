@@ -51,6 +51,9 @@ export async function PATCH(
     if (!matchDoc.exists) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 })
     }
+    if (matchDoc.data()?.deletedAt != null) {
+      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+    }
 
     const updates: Record<string, unknown> = { updatedAt: Timestamp.now() }
     const existing = matchDoc.data() ?? {}

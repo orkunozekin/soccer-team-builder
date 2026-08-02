@@ -62,6 +62,9 @@ export async function POST(request: NextRequest) {
     if (!matchSnap.exists) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 })
     }
+    if (matchSnap.data()?.deletedAt != null) {
+      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+    }
     const rsvpOpen = matchSnap.data()?.rsvpOpen === true
     if (!rsvpOpen) {
       return NextResponse.json(

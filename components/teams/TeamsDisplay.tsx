@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { cancelRSVPAPI, transferPlayerAPI } from '@/lib/api/client'
+import { cn } from '@/lib/utils'
 import { RSVP } from '@/types/rsvp'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
@@ -153,7 +154,12 @@ export function TeamsDisplay({
   }
 
   const content = (
-    <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+    <div
+      className={cn(
+        'grid min-w-0 gap-4',
+        visibleTeams.length > 1 && 'sm:grid-cols-2'
+      )}
+    >
       {visibleTeams.map(team => {
         const teamUsers = team.playerIds
           .map(userId => users.find(u => u.uid === userId))

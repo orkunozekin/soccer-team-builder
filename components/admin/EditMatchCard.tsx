@@ -246,8 +246,8 @@ export function EditMatchCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete match?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the match, its teams, and RSVPs. This cannot be
-              undone.
+              This will hide the match from listings and close RSVPs. Match
+              history is kept.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

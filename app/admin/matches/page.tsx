@@ -1,17 +1,37 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AdminMatchCard } from '@/components/admin/AdminMatchCard'
 import { AdminNav } from '@/components/admin/AdminNav'
 import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
 import { Card, CardContent } from '@/components/ui/card'
 import { getAllMatches } from '@/lib/services/matchService'
 import { getMatchRsvpCount } from '@/lib/services/rsvpService'
+import { cn } from '@/lib/utils'
+import { isMatchPast } from '@/lib/utils/rsvpScheduler'
 import { useMatchStore } from '@/store/matchStore'
+import type { Match } from '@/types/match'
+
+type MatchFilter = 'all' | 'upcoming' | 'past'
+
+const FILTERS: { value: MatchFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'upcoming', label: 'Upcoming' },
+  { value: 'past', label: 'Past' },
+]
+
+function filterMatches(matches: Match[], filter: MatchFilter): Match[] {
+  if (filter === 'all') return matches
+  if (filter === 'past') {
+    return matches.filter(m => isMatchPast(m.date, m.time))
+  }
+  return matches.filter(m => !isMatchPast(m.date, m.time))
+}
 
 export default function AdminMatchesPage() {
   const { matches, setMatches, setLoading } = useMatchStore()
   const [rsvpCounts, setRsvpCounts] = useState<Record<string, number>>({})
+  const [filter, setFilter] = useState<MatchFilter>('all')
 
   useEffect(() => {
     const fetchMatches = async () => {
@@ -48,6 +68,20 @@ export default function AdminMatchesPage() {
     setRsvpCounts(counts)
   }
 
+  const visibleMatches = useMemo(
+    () => filterMatches(matches, filter),
+    [matches, filter]
+  )
+
+  const emptyMessage =
+    matches.length === 0
+      ? 'No matches created yet. Create one above.'
+      : filter === 'upcoming'
+        ? 'No upcoming matches.'
+        : filter === 'past'
+          ? 'No past matches.'
+          : 'No matches created yet. Create one above.'
+
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8">
       <AdminNav />
@@ -65,20 +99,55 @@ export default function AdminMatchesPage() {
         <CreateMatchCard onMatchCreated={refetchMatches} />
 
         <div>
-          <h2 className="mb-4 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-            All matches
-          </h2>
-          {matches.length === 0 ? (
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+              Matches
+            </h2>
+            <div
+              role="tablist"
+              aria-label="Filter matches"
+              className="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900/50"
+            >
+              {FILTERS.map(option => {
+                const active = filter === option.value
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setFilter(option.value)}
+                    className={cn(
+                      'rounded-md px-3 py-1.5 text-sm font-semibold transition-colors',
+                      active
+                        ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100'
+                        : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {visibleMatches.length === 0 ? (
             <Card>
               <CardContent className="py-6">
                 <p className="text-center text-zinc-600 dark:text-zinc-400">
-                  No matches created yet. Create one above.
+                  {emptyMessage}
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {matches.map(match => (
+            <div
+              className={cn(
+                'grid gap-4',
+                visibleMatches.length > 1 && 'sm:grid-cols-2',
+                visibleMatches.length > 2 && 'lg:grid-cols-3'
+              )}
+            >
+              {visibleMatches.map(match => (
                 <AdminMatchCard
                   key={match.id}
                   match={match}

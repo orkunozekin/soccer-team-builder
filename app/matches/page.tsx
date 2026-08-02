@@ -17,6 +17,7 @@ import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getAllMatches } from '@/lib/services/matchService'
 import { getMatchRsvpCount } from '@/lib/services/rsvpService'
+import { cn } from '@/lib/utils'
 import { isMatchPast } from '@/lib/utils/rsvpScheduler'
 import { useMatchStore } from '@/store/matchStore'
 
@@ -116,7 +117,13 @@ export default function MatchesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          className={cn(
+            'grid gap-4',
+            matches.length > 1 && 'sm:grid-cols-2',
+            matches.length > 2 && 'lg:grid-cols-3'
+          )}
+        >
           {matches.map((match, index) => (
             <MatchCard
               key={match.id}

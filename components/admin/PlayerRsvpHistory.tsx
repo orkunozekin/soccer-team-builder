@@ -66,7 +66,7 @@ export function PlayerRsvpHistory({ userId }: PlayerRsvpHistoryProps) {
       try {
         const [rsvps, matches] = await Promise.all([
           getUserRSVPs(userId),
-          getAllMatches(),
+          getAllMatches({ includeDeleted: true }),
         ])
         if (cancelled) return
         const matchesById = new Map(matches.map(m => [m.id, m]))
