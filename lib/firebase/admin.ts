@@ -1,4 +1,3 @@
-import { existsSync } from 'fs'
 import { App, cert, getApps, initializeApp } from 'firebase-admin/app'
 import { Auth, getAuth } from 'firebase-admin/auth'
 import { Firestore, getFirestore } from 'firebase-admin/firestore'
@@ -64,14 +63,8 @@ export function initializeAdmin(): App | null {
       return adminApp
     }
 
-    // Option 2: Application default credentials file (must exist)
-    const adcPath = process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim()
-    if (adcPath && existsSync(adcPath)) {
-      adminApp = initializeApp(projectId ? { projectId } : undefined)
-      return adminApp
-    }
-
-    // Option 3: Try default initialization (GCP / Cloud Run metadata, etc.)
+    // Option 2: Application default credentials / GCP metadata
+    // (GOOGLE_APPLICATION_CREDENTIALS is picked up by the Admin SDK itself)
     try {
       adminApp = initializeApp(projectId ? { projectId } : undefined)
       return adminApp
