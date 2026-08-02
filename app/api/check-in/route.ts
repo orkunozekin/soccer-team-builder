@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            'You appear to be too far from the field. Move closer or ask a host to mark you present.',
+            'You appear to be too far from the field. Head to the location to check in.',
           code: 'DISTANCE',
         },
         { status: 400 }
