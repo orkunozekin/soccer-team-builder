@@ -1,7 +1,13 @@
 'use client'
 
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { GripVertical, MoreVertical } from 'lucide-react'
+import {
+  CheckCircle2,
+  CircleDashed,
+  GripVertical,
+  MoreVertical,
+  XCircle,
+} from 'lucide-react'
 import type { HTMLAttributes } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,11 +19,48 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import type { AttendanceLabel } from '@/lib/utils/checkIn'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
 
 type DragData = { playerId: string; fromTeamId: string }
+
+export function CheckInStatusIcon({
+  label,
+  className,
+}: {
+  label: AttendanceLabel
+  className?: string
+}) {
+  const icon =
+    label === 'Present' ? (
+      <CheckCircle2
+        className={cn('h-4 w-4 shrink-0 text-emerald-600', className)}
+        aria-hidden
+      />
+    ) : label === 'No-show' ? (
+      <XCircle
+        className={cn('h-4 w-4 shrink-0 text-red-600', className)}
+        aria-hidden
+      />
+    ) : (
+      <CircleDashed
+        className={cn('h-4 w-4 shrink-0 text-amber-500', className)}
+        aria-hidden
+      />
+    )
+
+  return (
+    <span
+      className="inline-flex shrink-0"
+      title={label}
+      aria-label={label === 'Pending' ? 'Pending check-in' : label}
+    >
+      {icon}
+    </span>
+  )
+}
 
 /** Presentational player row used in team lists and the drag overlay. */
 export function PlayerTile({
@@ -28,6 +71,7 @@ export function PlayerTile({
   isCurrentUser = false,
   isAdmin = false,
   onCancelRSVP,
+  attendanceLabel,
   className,
 }: {
   user: User
@@ -37,6 +81,8 @@ export function PlayerTile({
   isCurrentUser?: boolean
   isAdmin?: boolean
   onCancelRSVP?: (userId: string, displayName: string) => void
+  /** When set, shows a colored check-in status icon on the tile. */
+  attendanceLabel?: AttendanceLabel | null
   className?: string
 }) {
   const displayName = user.displayName || user.email || ''
@@ -69,6 +115,7 @@ export function PlayerTile({
       <span className="min-w-0 flex-1 truncate" title={displayName}>
         {displayName}
       </span>
+      {attendanceLabel ? <CheckInStatusIcon label={attendanceLabel} /> : null}
       {user.position && (
         <Badge
           variant="outline"
@@ -116,6 +163,7 @@ function DraggablePlayerRow({
   isCurrentUser,
   isAdmin,
   onCancelRSVP,
+  attendanceLabel,
 }: {
   user: User
   team: Team
@@ -124,6 +172,7 @@ function DraggablePlayerRow({
   isCurrentUser: boolean
   isAdmin: boolean
   onCancelRSVP?: (userId: string, displayName: string) => void
+  attendanceLabel?: AttendanceLabel | null
 }) {
   const id = `player:${user.uid}:${team.id}`
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -148,6 +197,7 @@ function DraggablePlayerRow({
         isCurrentUser={isCurrentUser}
         isAdmin={isAdmin}
         onCancelRSVP={onCancelRSVP}
+        attendanceLabel={attendanceLabel}
       />
     </div>
   )
@@ -161,6 +211,8 @@ export interface DroppableTeamCardProps {
   currentUserId?: string | null
   isAdmin?: boolean
   onCancelRSVP?: (userId: string, displayName: string) => void
+  /** userId → check-in status; omit/empty to hide icons */
+  attendanceByUserId?: Map<string, AttendanceLabel>
 }
 
 export function DroppableTeamCard({
@@ -171,6 +223,7 @@ export function DroppableTeamCard({
   currentUserId,
   isAdmin = false,
   onCancelRSVP,
+  attendanceByUserId,
 }: DroppableTeamCardProps) {
   const { isOver, setNodeRef } = useDroppable({
     id: team.id,
@@ -226,6 +279,7 @@ export function DroppableTeamCard({
                 }
                 isAdmin={isAdmin}
                 onCancelRSVP={onCancelRSVP}
+                attendanceLabel={attendanceByUserId?.get(user.uid) ?? null}
               />
             ))
           )}

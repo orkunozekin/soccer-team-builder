@@ -192,6 +192,8 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
                 onTeamsChanged={refetchMatchRoster}
                 currentUserId={user.uid}
                 matchRSVPs={matchRSVPs}
+                matchDate={currentMatch.date}
+                matchTime={currentMatch.time}
                 headerActions={
                   isAdmin && teams.length >= 2 ? (
                     <RebalanceTeamsButton

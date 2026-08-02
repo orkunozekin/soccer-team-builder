@@ -25,6 +25,12 @@ import {
 import { Button } from '@/components/ui/button'
 import { cancelRSVPAPI, transferPlayerAPI } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
+import {
+  getAttendanceLabel,
+  hasCheckInWindowStarted,
+  isCheckInWindowEnded,
+  type AttendanceLabel,
+} from '@/lib/utils/checkIn'
 import { RSVP } from '@/types/rsvp'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
@@ -42,6 +48,9 @@ interface TeamsDisplayProps {
   currentUserId?: string | null
   /** When set (and isAdmin), admins can cancel a player's RSVP from the team card menu */
   matchRSVPs?: RSVP[]
+  /** Match kickoff date/time — used to show check-in icons once the window starts */
+  matchDate?: Date | null
+  matchTime?: string | null
   /** When false, hide admin cancel-RSVP actions (e.g. after kickoff) */
   allowCancelRsvp?: boolean
 }
@@ -79,6 +88,8 @@ export function TeamsDisplay({
   headerActions,
   currentUserId,
   matchRSVPs = [],
+  matchDate = null,
+  matchTime = null,
   allowCancelRsvp = true,
 }: TeamsDisplayProps) {
   const dndEnabled = Boolean(isAdmin && matchId && onTeamsChanged)
@@ -88,6 +99,7 @@ export function TeamsDisplay({
   const [activeDrag, setActiveDrag] = useState<{
     user: User
     teamColor: string | null
+    attendanceLabel: AttendanceLabel | null
   } | null>(null)
   const [localTeams, setLocalTeams] = useState(teams)
   const [pendingCancel, setPendingCancel] = useState<{
@@ -99,6 +111,19 @@ export function TeamsDisplay({
   useEffect(() => {
     setLocalTeams(teams)
   }, [teams])
+
+  const attendanceByUserId = useMemo(() => {
+    const map = new Map<string, AttendanceLabel>()
+    if (!matchDate || !hasCheckInWindowStarted(matchDate, matchTime)) {
+      return map
+    }
+    const windowEnded = isCheckInWindowEnded(matchDate, matchTime)
+    for (const rsvp of matchRSVPs) {
+      if (rsvp.status !== 'confirmed') continue
+      map.set(rsvp.userId, getAttendanceLabel(rsvp, windowEnded))
+    }
+    return map
+  }, [matchDate, matchTime, matchRSVPs])
 
   const onRequestCancelRSVP = useCallback(
     (userId: string, displayName: string) => {
@@ -182,6 +207,7 @@ export function TeamsDisplay({
     setActiveDrag({
       user,
       teamColor: fromTeam?.color ?? null,
+      attendanceLabel: attendanceByUserId.get(data.playerId) ?? null,
     })
   }
 
@@ -248,6 +274,7 @@ export function TeamsDisplay({
               transferring={transferring}
               currentUserId={currentUserId}
               isAdmin={isAdmin}
+              attendanceByUserId={attendanceByUserId}
               onCancelRSVP={
                 isAdmin && allowCancelRsvp && matchRSVPs.length > 0
                   ? onRequestCancelRSVP
@@ -340,6 +367,7 @@ export function TeamsDisplay({
                 user={activeDrag.user}
                 teamColor={activeDrag.teamColor}
                 showGrip
+                attendanceLabel={activeDrag.attendanceLabel}
                 className="cursor-grabbing"
               />
             </div>
