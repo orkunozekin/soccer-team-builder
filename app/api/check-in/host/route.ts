@@ -46,6 +46,9 @@ export async function POST(request: NextRequest) {
     }
 
     const matchData = matchSnap.data()!
+    if (matchData.deletedAt != null) {
+      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+    }
     const matchDate = matchData.date?.toDate?.() ?? new Date(matchData.date)
     const time = typeof matchData.time === 'string' ? matchData.time : null
 

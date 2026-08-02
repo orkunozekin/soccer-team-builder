@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
         rsvpOpen: false,
         rsvpOpenAt: openAt ? Timestamp.fromDate(openAt) : null,
         rsvpCloseAt: closeAt ? Timestamp.fromDate(closeAt) : null,
+        deletedAt: null,
         createdAt: now,
         updatedAt: now,
       })

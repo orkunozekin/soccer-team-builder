@@ -102,7 +102,7 @@ export function MatchCard({
   if (isClickable) {
     return (
       <div
-        className="animate-slide-up-fade h-full"
+        className="animate-slide-up-fade h-full w-full max-w-[27rem]"
         style={{
           animationDelay: `${index * 80}ms`,
           animationFillMode: 'backwards',
@@ -117,7 +117,7 @@ export function MatchCard({
 
   return (
     <div
-      className="animate-slide-up-fade h-full"
+      className="animate-slide-up-fade h-full w-full max-w-[27rem]"
       style={{
         animationDelay: `${index * 80}ms`,
         animationFillMode: 'backwards',

@@ -72,7 +72,7 @@ export function Navigation() {
             </Link>
             {isAdmin && (
               <Link
-                href="/admin"
+                href="/admin/matches"
                 className="transition-opacity hover:opacity-80"
               >
                 Admin
@@ -131,7 +131,7 @@ export function Navigation() {
             </Link>
             {isAdmin && (
               <Link
-                href="/admin"
+                href="/admin/matches"
                 onClick={() => setIsMenuOpen(false)}
                 className="py-2 transition-opacity hover:opacity-80"
               >

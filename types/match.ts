@@ -16,6 +16,8 @@ export interface Match {
   rsvpOpen: boolean
   rsvpOpenAt: Date | null
   rsvpCloseAt: Date | null
+  /** When set, match is soft-deleted and hidden from normal listings. */
+  deletedAt?: Date | null
   createdAt: Date
   updatedAt: Date
 }

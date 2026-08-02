@@ -1,7 +1,6 @@
 import { orderBy } from 'firebase/firestore'
 import {
   dateToTimestamp,
-  deleteDocument,
   getDocument,
   queryDocuments,
   timestampToDate,
@@ -13,67 +12,61 @@ import {
 } from '@/lib/utils/location'
 import { Match, MatchLocation } from '@/types/match'
 
+function mapDocToMatch(match: Record<string, unknown>, id: string): Match {
+  const matchDate = timestampToDate(match.date as never) || new Date()
+  const rsvpOpenAt = match.rsvpOpenAt
+    ? timestampToDate(match.rsvpOpenAt as never)
+    : null
+  const rsvpCloseAt = match.rsvpCloseAt
+    ? timestampToDate(match.rsvpCloseAt as never)
+    : null
+  const deletedAt = match.deletedAt
+    ? timestampToDate(match.deletedAt as never)
+    : null
+
+  return {
+    id,
+    date: matchDate,
+    time: (match.time as string) ?? '',
+    location: parseMatchLocation(match.location),
+    rsvpOpen: match.rsvpOpen === true,
+    rsvpOpenAt,
+    rsvpCloseAt,
+    deletedAt,
+    createdAt: timestampToDate(match.createdAt as never) || new Date(),
+    updatedAt: timestampToDate(match.updatedAt as never) || new Date(),
+  }
+}
+
 export const getMatch = async (matchId: string): Promise<Match | null> => {
   const matchDoc = await getDocument('matches', matchId)
   if (!matchDoc) return null
 
-  const matchDate = timestampToDate(matchDoc.date) || new Date()
-  const rsvpOpenAt = matchDoc.rsvpOpenAt
-    ? timestampToDate(matchDoc.rsvpOpenAt)
-    : null
-  const rsvpCloseAt = matchDoc.rsvpCloseAt
-    ? timestampToDate(matchDoc.rsvpCloseAt)
-    : null
-
-  const rsvpOpen = matchDoc.rsvpOpen === true
-
-  return {
-    id: matchId,
-    date: matchDate,
-    time: matchDoc.time,
-    location: parseMatchLocation(matchDoc.location),
-    rsvpOpen,
-    rsvpOpenAt,
-    rsvpCloseAt,
-    createdAt: timestampToDate(matchDoc.createdAt) || new Date(),
-    updatedAt: timestampToDate(matchDoc.updatedAt) || new Date(),
-  }
+  const match = mapDocToMatch(matchDoc, matchId)
+  if (match.deletedAt) return null
+  return match
 }
 
-export const getAllMatches = async (): Promise<Match[]> => {
+export const getAllMatches = async (options?: {
+  includeDeleted?: boolean
+}): Promise<Match[]> => {
   const matches = await queryDocuments('matches', [orderBy('date', 'asc')])
 
-  const mapped = matches.map((match: any) => {
-    const matchDate = timestampToDate(match.date) || new Date()
-    const rsvpOpenAt = match.rsvpOpenAt
-      ? timestampToDate(match.rsvpOpenAt)
-      : null
-    const rsvpCloseAt = match.rsvpCloseAt
-      ? timestampToDate(match.rsvpCloseAt)
-      : null
+  const mapped = matches.map((match: Record<string, unknown>) =>
+    mapDocToMatch(match, (match.id as string) || '')
+  )
 
-    const rsvpOpen = match.rsvpOpen === true
+  const filtered = options?.includeDeleted
+    ? mapped
+    : mapped.filter(m => m.deletedAt == null)
 
-    return {
-      id: match.id,
-      date: matchDate,
-      time: match.time ?? '',
-      location: parseMatchLocation(match.location),
-      rsvpOpen,
-      rsvpOpenAt,
-      rsvpCloseAt,
-      createdAt: timestampToDate(match.createdAt) || new Date(),
-      updatedAt: timestampToDate(match.updatedAt) || new Date(),
-    }
-  })
-
-  mapped.sort((a, b) => {
+  filtered.sort((a, b) => {
     const dateCompare = a.date.getTime() - b.date.getTime()
     if (dateCompare !== 0) return dateCompare
     return (a.time || '').localeCompare(b.time || '')
   })
 
-  return mapped
+  return filtered
 }
 
 export const updateMatch = async (
@@ -85,7 +78,7 @@ export const updateMatch = async (
     >
   >
 ): Promise<void> => {
-  const firestoreUpdates: any = {}
+  const firestoreUpdates: Record<string, unknown> = {}
 
   if (updates.date !== undefined) {
     firestoreUpdates.date = dateToTimestamp(updates.date)
@@ -115,6 +108,10 @@ export const updateMatch = async (
   await updateDocument('matches', matchId, firestoreUpdates)
 }
 
+/** Soft-delete a match from the client (sets deletedAt). Prefer the API in admin UI. */
 export const deleteMatch = async (matchId: string): Promise<void> => {
-  await deleteDocument('matches', matchId)
+  await updateDocument('matches', matchId, {
+    deletedAt: dateToTimestamp(new Date()),
+    rsvpOpen: false,
+  })
 }
