@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  getAttendanceLabel,
   getCheckInWindow,
+  hasCheckInWindowStarted,
   isCheckInWindowEnded,
   isWithinCheckInWindow,
 } from './checkIn'
@@ -33,5 +35,48 @@ describe('checkIn window', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('hasCheckInWindowStarted is true during and after the window', () => {
+    const { start, end } = getCheckInWindow(matchDate, time)
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date(start.getTime() - 1000))
+      expect(hasCheckInWindowStarted(matchDate, time)).toBe(false)
+
+      vi.setSystemTime(start)
+      expect(hasCheckInWindowStarted(matchDate, time)).toBe(true)
+
+      vi.setSystemTime(new Date(end.getTime() + 1000))
+      expect(hasCheckInWindowStarted(matchDate, time)).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+describe('getAttendanceLabel', () => {
+  it('returns Present when attended is true', () => {
+    expect(
+      getAttendanceLabel({ attended: true, status: 'confirmed' }, false)
+    ).toBe('Present')
+    expect(
+      getAttendanceLabel({ attended: true, status: 'confirmed' }, true)
+    ).toBe('Present')
+  })
+
+  it('returns No-show after the window when confirmed and not present', () => {
+    expect(
+      getAttendanceLabel({ attended: null, status: 'confirmed' }, true)
+    ).toBe('No-show')
+    expect(
+      getAttendanceLabel({ attended: false, status: 'confirmed' }, true)
+    ).toBe('No-show')
+  })
+
+  it('returns Pending before the window ends when not present', () => {
+    expect(
+      getAttendanceLabel({ attended: null, status: 'confirmed' }, false)
+    ).toBe('Pending')
   })
 })
