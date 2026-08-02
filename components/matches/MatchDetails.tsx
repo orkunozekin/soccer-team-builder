@@ -26,6 +26,10 @@ import { RSVP } from '@/types/rsvp'
 interface MatchDetailsProps {
   match: Match
   rsvpCount: number
+  /** Confirmed RSVPs who have checked in; used when showCheckInHeadcount is true */
+  checkedInCount?: number
+  /** When true, headcount reads as "X of Y checked in" */
+  showCheckInHeadcount?: boolean
   userRsvp: RSVP | null
   userProfilePosition: string | null
   onTeamsRegenerated?: () => void | Promise<void>
@@ -41,6 +45,8 @@ function positionLabel(value: string | null): string {
 export function MatchDetails({
   match,
   rsvpCount,
+  checkedInCount = 0,
+  showCheckInHeadcount = false,
   userRsvp,
   userProfilePosition,
   onTeamsRegenerated,
@@ -59,17 +65,21 @@ export function MatchDetails({
   const [positionError, setPositionError] = useState('')
   const [swapMessage, setSwapMessage] = useState<string | null>(null)
   const [highlightPosition, setHighlightPosition] = useState(false)
-  const [prevRsvpCount, setPrevRsvpCount] = useState(rsvpCount)
+  const [prevHeadcountKey, setPrevHeadcountKey] = useState(
+    `${rsvpCount}:${checkedInCount}:${showCheckInHeadcount}`
+  )
   const [bumpHeadcount, setBumpHeadcount] = useState(false)
 
+  const headcountKey = `${rsvpCount}:${checkedInCount}:${showCheckInHeadcount}`
+
   useEffect(() => {
-    if (rsvpCount !== prevRsvpCount) {
+    if (headcountKey !== prevHeadcountKey) {
       setBumpHeadcount(true)
-      setPrevRsvpCount(rsvpCount)
+      setPrevHeadcountKey(headcountKey)
       const timer = setTimeout(() => setBumpHeadcount(false), 500)
       return () => clearTimeout(timer)
     }
-  }, [rsvpCount, prevRsvpCount])
+  }, [headcountKey, prevHeadcountKey])
 
   useEffect(() => {
     setEditPosition(currentPosition)
@@ -146,7 +156,9 @@ export function MatchDetails({
                 bumpHeadcount ? 'animate-headcount-bump' : ''
               }`}
             >
-              {rsvpCount} {rsvpCount === 1 ? 'player' : 'players'} confirmed
+              {showCheckInHeadcount
+                ? `${checkedInCount} of ${rsvpCount} checked in`
+                : `${rsvpCount} ${rsvpCount === 1 ? 'player' : 'players'} confirmed`}
             </p>
           </div>
 

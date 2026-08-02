@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { cancelRSVPAPI, transferPlayerAPI } from '@/lib/api/client'
+import { cancelRSVPAPI, hostCheckInAPI, transferPlayerAPI } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 import {
   getAttendanceLabel,
@@ -34,6 +34,7 @@ import {
 import { RSVP } from '@/types/rsvp'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
+import { useMatchStore } from '@/store/matchStore'
 
 type DragData = { playerId: string; fromTeamId: string }
 
@@ -93,9 +94,11 @@ export function TeamsDisplay({
   allowCancelRsvp = true,
 }: TeamsDisplayProps) {
   const dndEnabled = Boolean(isAdmin && matchId && onTeamsChanged)
+  const { updateRSVPAttendance } = useMatchStore()
   const [pageIndex, setPageIndex] = useState(0)
   const [transferError, setTransferError] = useState('')
   const [transferring, setTransferring] = useState<string | null>(null)
+  const [hostCheckInBusy, setHostCheckInBusy] = useState<string | null>(null)
   const [activeDrag, setActiveDrag] = useState<{
     user: User
     teamColor: string | null
@@ -124,6 +127,28 @@ export function TeamsDisplay({
     }
     return map
   }, [matchDate, matchTime, matchRSVPs])
+
+  const handleHostCheckIn = useCallback(
+    async (userId: string, attended: boolean) => {
+      if (!matchId || hostCheckInBusy) return
+      setHostCheckInBusy(userId)
+      setTransferError('')
+      try {
+        const res = await hostCheckInAPI(matchId, userId, attended)
+        updateRSVPAttendance(res.rsvpId, {
+          attended: attended ? true : null,
+          checkedInAt: attended ? new Date() : null,
+          checkInMethod: attended ? 'host' : null,
+        })
+        onTeamsChanged?.()
+      } catch {
+        setTransferError('Failed to update check-in')
+      } finally {
+        setHostCheckInBusy(null)
+      }
+    },
+    [matchId, hostCheckInBusy, updateRSVPAttendance, onTeamsChanged]
+  )
 
   const onRequestCancelRSVP = useCallback(
     (userId: string, displayName: string) => {
@@ -275,6 +300,11 @@ export function TeamsDisplay({
               currentUserId={currentUserId}
               isAdmin={isAdmin}
               attendanceByUserId={attendanceByUserId}
+              onHostCheckIn={
+                isAdmin && attendanceByUserId.size > 0
+                  ? handleHostCheckIn
+                  : undefined
+              }
               onCancelRSVP={
                 isAdmin && allowCancelRsvp && matchRSVPs.length > 0
                   ? onRequestCancelRSVP

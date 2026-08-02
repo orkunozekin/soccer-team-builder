@@ -72,6 +72,7 @@ export function PlayerTile({
   isAdmin = false,
   onCancelRSVP,
   attendanceLabel,
+  onHostCheckIn,
   className,
 }: {
   user: User
@@ -83,9 +84,15 @@ export function PlayerTile({
   onCancelRSVP?: (userId: string, displayName: string) => void
   /** When set, shows a colored check-in status icon on the jersey. */
   attendanceLabel?: AttendanceLabel | null
+  /** Admin host override: mark present / clear check-in */
+  onHostCheckIn?: (userId: string, attended: boolean) => void
   className?: string
 }) {
   const displayName = user.displayName || user.email || ''
+  const showMenu = Boolean(
+    isAdmin && (onCancelRSVP || (onHostCheckIn && attendanceLabel))
+  )
+  const isPresent = attendanceLabel === 'Present'
 
   return (
     <div
@@ -135,7 +142,7 @@ export function PlayerTile({
           </p>
         ) : null}
       </div>
-      {isAdmin && onCancelRSVP && (
+      {showMenu && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -149,12 +156,21 @@ export function PlayerTile({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
-              onClick={() => onCancelRSVP(user.uid, displayName)}
-            >
-              Cancel RSVP
-            </DropdownMenuItem>
+            {onHostCheckIn && attendanceLabel ? (
+              <DropdownMenuItem
+                onClick={() => onHostCheckIn(user.uid, !isPresent)}
+              >
+                {isPresent ? 'Clear check-in' : 'Mark present'}
+              </DropdownMenuItem>
+            ) : null}
+            {onCancelRSVP ? (
+              <DropdownMenuItem
+                className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
+                onClick={() => onCancelRSVP(user.uid, displayName)}
+              >
+                Cancel RSVP
+              </DropdownMenuItem>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
       )}
@@ -171,6 +187,7 @@ function DraggablePlayerRow({
   isAdmin,
   onCancelRSVP,
   attendanceLabel,
+  onHostCheckIn,
 }: {
   user: User
   team: Team
@@ -180,6 +197,7 @@ function DraggablePlayerRow({
   isAdmin: boolean
   onCancelRSVP?: (userId: string, displayName: string) => void
   attendanceLabel?: AttendanceLabel | null
+  onHostCheckIn?: (userId: string, attended: boolean) => void
 }) {
   const id = `player:${user.uid}:${team.id}`
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -205,6 +223,7 @@ function DraggablePlayerRow({
         isAdmin={isAdmin}
         onCancelRSVP={onCancelRSVP}
         attendanceLabel={attendanceLabel}
+        onHostCheckIn={onHostCheckIn}
       />
     </div>
   )
@@ -218,6 +237,7 @@ export interface DroppableTeamCardProps {
   currentUserId?: string | null
   isAdmin?: boolean
   onCancelRSVP?: (userId: string, displayName: string) => void
+  onHostCheckIn?: (userId: string, attended: boolean) => void
   /** userId → check-in status; omit/empty to hide icons */
   attendanceByUserId?: Map<string, AttendanceLabel>
 }
@@ -230,6 +250,7 @@ export function DroppableTeamCard({
   currentUserId,
   isAdmin = false,
   onCancelRSVP,
+  onHostCheckIn,
   attendanceByUserId,
 }: DroppableTeamCardProps) {
   const { isOver, setNodeRef } = useDroppable({
@@ -286,6 +307,7 @@ export function DroppableTeamCard({
                 }
                 isAdmin={isAdmin}
                 onCancelRSVP={onCancelRSVP}
+                onHostCheckIn={onHostCheckIn}
                 attendanceLabel={attendanceByUserId?.get(user.uid) ?? null}
               />
             ))

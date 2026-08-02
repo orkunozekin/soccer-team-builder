@@ -62,6 +62,21 @@ describe('MatchDetails', () => {
     expect(screen.getByText('RSVPButtonMock')).toBeInTheDocument()
   })
 
+  it('shows checked-in headcount when check-in window is open', () => {
+    render(
+      <MatchDetails
+        match={baseMatch}
+        rsvpCount={23}
+        checkedInCount={11}
+        showCheckInHeadcount
+        userRsvp={null}
+        userProfilePosition={null}
+      />
+    )
+
+    expect(screen.getByText(/11 of 23 checked in/i)).toBeInTheDocument()
+  })
+
   it('shows position edit section when user has RSVP and match RSVP is open', () => {
     const userRsvp: RSVP = {
       id: 'r1',
