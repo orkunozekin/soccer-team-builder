@@ -3,6 +3,7 @@
 import { format } from 'date-fns'
 import { Calendar, MapPin, Users } from 'lucide-react'
 import Link from 'next/link'
+import { LocationLink } from '@/components/matches/LocationLink'
 import { Badge } from '@/components/ui/badge'
 import {
   Card,
@@ -51,6 +52,9 @@ export function MatchCard({
         : 'RSVP closed'
 
   const isClickable = isAdmin || match.rsvpOpen
+  const locationName = match.location
+    ? locationDisplayName(match.location)
+    : null
 
   const cardContent = (
     <Card
@@ -78,14 +82,21 @@ export function MatchCard({
           <Calendar className="h-3.5 w-3.5 shrink-0 text-red-50" />
           {formattedTime}
         </CardDescription>
-        {match.location && locationDisplayName(match.location) && (
-          <p className="mt-1 flex items-start gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-50" />
-            <span className="min-w-0 break-words">
-              {locationDisplayName(match.location)}
-            </span>
-          </p>
-        )}
+        {match.location && locationName ? (
+          isClickable ? (
+            <p className="mt-1 flex items-start gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-50" />
+              <span className="min-w-0 break-words">{locationName}</span>
+            </p>
+          ) : (
+            <LocationLink
+              location={match.location}
+              className="mt-1 items-start"
+              linkClassName="min-w-0 break-words whitespace-normal"
+              showIcon
+            />
+          )
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-2">
         {rsvpCount !== undefined && (
