@@ -66,10 +66,6 @@ vi.mock('@/components/admin/EditMatchCard', () => ({
   EditMatchCard: () => <div>EditMatchCardMock</div>,
 }))
 
-vi.mock('@/components/matches/MatchAttendanceList', () => ({
-  MatchAttendanceList: () => null,
-}))
-
 vi.mock('@/components/admin/ImpersonateRSVP', () => ({
   ImpersonateRSVP: () => <div>ImpersonateRSVPMock</div>,
 }))

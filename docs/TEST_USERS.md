@@ -58,7 +58,7 @@ curl -X POST http://localhost:3001/api/seed-match-rsvps \
 
 ## Seeding a check-in status demo
 
-To eyeball the player-facing **Check-in status** list (Present / Pending):
+To eyeball check-in icons on team tiles and the “X of Y checked in” headcount:
 
 **Request:** `POST /api/seed-check-in-demo`  
 Optional JSON body:
@@ -82,7 +82,7 @@ curl -X POST http://localhost:3001/api/seed-check-in-demo \
   -d '{}'
 ```
 
-Response includes `matchId`, `path` (e.g. `/matches/match_checkin_demo_…`), and a Present/Pending summary. Open that path while logged in as a normal player.
+Response includes `matchId`, `path` (e.g. `/matches/match_checkin_demo_…`), and a Present/Pending summary. Open that path while logged in.
 
 To force No-show labels instead, create the demo then set kickoff further in the past so the window has ended:
 

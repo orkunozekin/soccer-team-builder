@@ -7,7 +7,6 @@ import { ImpersonateRSVP } from '@/components/admin/ImpersonateRSVP'
 import { PlayerTransfer } from '@/components/admin/PlayerTransfer'
 import { RebalanceTeamsButton } from '@/components/admin/RebalanceTeamsButton'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
-import { MatchAttendanceList } from '@/components/matches/MatchAttendanceList'
 import { MatchDetails } from '@/components/matches/MatchDetails'
 import { TeamsDisplay } from '@/components/teams/TeamsDisplay'
 import { BackLink } from '@/components/ui/back-link'
@@ -17,6 +16,7 @@ import { getMatch } from '@/lib/services/matchService'
 import { getMatchRSVPs } from '@/lib/services/rsvpService'
 import { getMatchTeams } from '@/lib/services/teamService'
 import { getUsersByIds } from '@/lib/services/userService'
+import { hasCheckInWindowStarted } from '@/lib/utils/checkIn'
 import { collectMatchParticipantIds } from '@/lib/utils/matchParticipants'
 import { useMatchStore } from '@/store/matchStore'
 import { Team } from '@/types/team'
@@ -132,6 +132,12 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
   }
 
   const hasTeamsPanel = !loadingTeams && teams.length > 0
+  const confirmedRsvps = matchRSVPs.filter(r => r.status === 'confirmed')
+  const checkedInCount = confirmedRsvps.filter(r => r.attended === true).length
+  const showCheckInHeadcount = hasCheckInWindowStarted(
+    currentMatch.date,
+    currentMatch.time
+  )
 
   return (
     <div className="flex w-full min-w-0 flex-col items-center overflow-x-hidden">
@@ -150,19 +156,13 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
           <div className="min-w-0 space-y-6">
             <MatchDetails
               match={currentMatch}
-              rsvpCount={matchRSVPs.length}
+              rsvpCount={confirmedRsvps.length}
+              checkedInCount={checkedInCount}
+              showCheckInHeadcount={showCheckInHeadcount}
               userRsvp={userRsvp}
               userProfilePosition={userProfilePosition}
               onTeamsRegenerated={refetchMatchRoster}
               onMatchRefetch={refetchMatchRoster}
-            />
-
-            <MatchAttendanceList
-              match={currentMatch}
-              rsvps={matchRSVPs}
-              users={rosterUsers}
-              canHostOverride={!!isAdmin}
-              onUpdated={refetchMatchRoster}
             />
 
             {isAdmin && currentMatch && (
