@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 import { EmulatorAuthGate } from '@/components/auth/EmulatorAuthGate'
+import { AdminUiToggle } from '@/components/dev/AdminUiToggle'
 import { Navigation } from '@/components/layout/Navigation'
 import { cn } from '@/lib/utils'
 
@@ -29,6 +30,7 @@ export default function RootLayout({
           <AuthProvider>
             <Navigation />
             {children}
+            <AdminUiToggle />
           </AuthProvider>
         </EmulatorAuthGate>
       </body>
