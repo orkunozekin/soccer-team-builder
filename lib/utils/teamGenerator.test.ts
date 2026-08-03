@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyManualTeamTransfers,
+  applyPersistedTransfersKeepingBalance,
   assignUnassignedPlayersToTeams,
   computeTeamCountForRSVPCount,
   deriveManualTransfers,
@@ -525,6 +526,75 @@ describe('mergeBaselineWithManualTransfers', () => {
 
     expect(result.find(t => t.teamNumber === 2)?.playerIds).not.toContain('p1')
     expect(result.find(t => t.teamNumber === 3)?.playerIds).toContain('p1')
+  })
+})
+
+describe('applyPersistedTransfersKeepingBalance', () => {
+  it('does not treat current roster skew as implied transfers', () => {
+    const baseline = [
+      { teamNumber: 1, playerIds: ['p1', 'p2', 'p3', 'p4'] },
+      { teamNumber: 2, playerIds: ['p5', 'p6', 'p7', 'p8'] },
+    ]
+    // Current was 7 vs 1 — must not be re-derived onto the balanced baseline
+    const result = applyPersistedTransfersKeepingBalance(
+      baseline,
+      {},
+      new Map([
+        [1, 11],
+        [2, 11],
+      ])
+    )
+
+    expect(result.find(t => t.teamNumber === 1)?.playerIds).toHaveLength(4)
+    expect(result.find(t => t.teamNumber === 2)?.playerIds).toHaveLength(4)
+  })
+
+  it('keeps a persisted one-way pin and restores sizes with an unpinned mover', () => {
+    const baseline = [
+      { teamNumber: 1, playerIds: ['p1', 'p2', 'p3'] },
+      { teamNumber: 2, playerIds: ['p4', 'p5', 'p6'] },
+    ]
+
+    const result = applyPersistedTransfersKeepingBalance(
+      baseline,
+      { p4: 1 },
+      new Map([
+        [1, 11],
+        [2, 11],
+      ])
+    )
+
+    const team1 = result.find(t => t.teamNumber === 1)
+    const team2 = result.find(t => t.teamNumber === 2)
+    expect(team1?.playerIds).toContain('p4')
+    expect(team1?.playerIds).toHaveLength(3)
+    expect(team2?.playerIds).toHaveLength(3)
+    expect(team2?.playerIds).not.toContain('p4')
+  })
+
+  it('preserves a size-neutral two-player swap from persisted pins', () => {
+    const baseline = [
+      { teamNumber: 1, playerIds: ['p1', 'p2'] },
+      { teamNumber: 2, playerIds: ['p3', 'p4'] },
+    ]
+
+    const result = applyPersistedTransfersKeepingBalance(
+      baseline,
+      { p1: 2, p3: 1 },
+      new Map([
+        [1, 11],
+        [2, 11],
+      ])
+    )
+
+    expect(result.find(t => t.teamNumber === 1)?.playerIds).toEqual(
+      expect.arrayContaining(['p3', 'p2'])
+    )
+    expect(result.find(t => t.teamNumber === 1)?.playerIds).not.toContain('p1')
+    expect(result.find(t => t.teamNumber === 2)?.playerIds).toEqual(
+      expect.arrayContaining(['p1', 'p4'])
+    )
+    expect(result.find(t => t.teamNumber === 2)?.playerIds).not.toContain('p3')
   })
 })
 

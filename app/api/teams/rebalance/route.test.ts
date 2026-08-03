@@ -45,13 +45,16 @@ function makeDocSnap(doc: StoredDoc | null) {
   }
 }
 
-function createRebalanceMockFirestore(initial: {
+function createRebalanceMockRepos(initial: {
   teams: StoredDoc[]
   rsvps: StoredDoc[]
   users: StoredDoc[]
   match?: StoredDoc | null
 }) {
   let teams = [...initial.teams]
+  let matchData: Record<string, unknown> = {
+    ...(initial.match?.data ?? {}),
+  }
   const teamUpdates: Array<{ id: string; data: Record<string, unknown> }> = []
 
   const adminDb = {
@@ -76,6 +79,7 @@ function createRebalanceMockFirestore(initial: {
         return {
           get: async () => makeQuerySnap(teams),
           doc: (id: string) => ({
+            id,
             update: async (data: Record<string, unknown>) => {
               teamUpdates.push({ id, data })
               teams = teams.map(team =>
@@ -91,11 +95,13 @@ function createRebalanceMockFirestore(initial: {
       if (path === 'matches') {
         return {
           doc: (matchId: string) => ({
-            get: async () =>
-              makeDocSnap(
-                initial.match ?? { id: matchId, data: {} }
-              ),
-            set: async () => {},
+            get: async () => makeDocSnap({ id: matchId, data: matchData }),
+            set: async (
+              data: Record<string, unknown>,
+              opts?: { merge?: boolean }
+            ) => {
+              matchData = opts?.merge ? { ...matchData, ...data } : data
+            },
           }),
         }
       }
@@ -126,6 +132,7 @@ function createRebalanceMockFirestore(initial: {
     adminDb,
     getTeams: () => teams,
     getTeamUpdates: () => teamUpdates,
+    getMatchData: () => matchData,
   }
 }
 
@@ -206,8 +213,49 @@ describe('POST /api/teams/rebalance', () => {
     expect(response.status).toBe(401)
   })
 
+  it('evens out an 11 vs 3 imbalance without treating skew as manual transfers', async () => {
+    const playerIds = Array.from({ length: 14 }, (_, i) => `p${i + 1}`)
+    const rsvps = playerIds.map((id, i) =>
+      makeRsvpDoc(
+        `r${i + 1}`,
+        id,
+        new Date(`2024-01-01T${String(10 + i).padStart(2, '0')}:00:00Z`)
+      )
+    )
+    const users = playerIds.map(id => makeUserDoc(id))
+
+    const { adminDb, getTeams, getMatchData } = createRebalanceMockRepos({
+      rsvps,
+      users,
+      teams: [
+        makeTeamDoc('team1', 1, playerIds.slice(0, 11)),
+        makeTeamDoc('team2', 2, playerIds.slice(11)),
+      ],
+      match: {
+        id: 'match1',
+        // No persisted pins — skew came from fill order / non-persisted state
+        data: { manualTeamAssignments: {} },
+      },
+    })
+
+    vi.mocked(getAdminDb).mockReturnValue(adminDb as never)
+
+    const response = await POST(makeRequest())
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.success).toBe(true)
+    expect(body.assignedCounts).toEqual([7, 7])
+
+    const team1 = getTeams().find(t => (t.data.teamNumber as number) === 1)
+    const team2 = getTeams().find(t => (t.data.teamNumber as number) === 2)
+    expect((team1?.data.playerIds as string[]).length).toBe(7)
+    expect((team2?.data.playerIds as string[]).length).toBe(7)
+    expect(getMatchData().manualTeamAssignments).toEqual({})
+  })
+
   it('preserves explicit transfers when rebalancing teams', async () => {
-    const { adminDb, getTeams } = createRebalanceMockFirestore({
+    const { adminDb, getTeams, getMatchData } = createRebalanceMockRepos({
       rsvps: [
         makeRsvpDoc('r1', 'p1', new Date('2024-01-01T10:00:00Z')),
         makeRsvpDoc('r2', 'p2', new Date('2024-01-01T11:00:00Z')),
@@ -237,15 +285,18 @@ describe('POST /api/teams/rebalance', () => {
 
     expect(response.status).toBe(200)
     expect(body.success).toBe(true)
+    expect(body.assignedCounts).toEqual([2, 2])
 
     const team1 = getTeams().find(t => (t.data.teamNumber as number) === 1)
     const team2 = getTeams().find(t => (t.data.teamNumber as number) === 2)
     expect(team1?.data.playerIds).not.toContain('p1')
     expect(team2?.data.playerIds).toContain('p1')
+    // Persisted pins are kept for later regenerate/expand
+    expect(getMatchData().manualTeamAssignments).toEqual({ p1: 2 })
   })
 
   it('preserves a two-player swap between teams during rebalance', async () => {
-    const { adminDb, getTeams } = createRebalanceMockFirestore({
+    const { adminDb, getTeams, getMatchData } = createRebalanceMockRepos({
       rsvps: [
         makeRsvpDoc('r1', 'p1', new Date('2024-01-01T10:00:00Z')),
         makeRsvpDoc('r2', 'p2', new Date('2024-01-01T11:00:00Z')),
@@ -287,5 +338,53 @@ describe('POST /api/teams/rebalance', () => {
     expect(team1?.data.playerIds).not.toContain('p1')
     expect(team2?.data.playerIds).toContain('p1')
     expect(team3?.data.playerIds).toContain('p5')
+    expect(getMatchData().manualTeamAssignments).toEqual({ p1: 2, p5: 3 })
+  })
+
+  it('keeps one-way pins but still restores even sizes by moving unpinned players', async () => {
+    const playerIds = Array.from({ length: 14 }, (_, i) => `p${i + 1}`)
+    const rsvps = playerIds.map((id, i) =>
+      makeRsvpDoc(
+        `r${i + 1}`,
+        id,
+        new Date(`2024-01-01T${String(10 + i).padStart(2, '0')}:00:00Z`)
+      )
+    )
+    const users = playerIds.map(id => makeUserDoc(id))
+
+    // Later RSVPs were dragged onto team 1 (persisted pins)
+    const pinnedToTeam1 = playerIds.slice(10) // p11..p14
+    const persistedManual: Record<string, number> = {}
+    for (const id of pinnedToTeam1) {
+      persistedManual[id] = 1
+    }
+
+    const { adminDb, getTeams, getMatchData } = createRebalanceMockRepos({
+      rsvps,
+      users,
+      teams: [
+        makeTeamDoc('team1', 1, playerIds.slice(0, 11)),
+        makeTeamDoc('team2', 2, playerIds.slice(11)),
+      ],
+      match: {
+        id: 'match1',
+        data: { manualTeamAssignments: persistedManual },
+      },
+    })
+
+    vi.mocked(getAdminDb).mockReturnValue(adminDb as never)
+
+    const response = await POST(makeRequest())
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.assignedCounts).toEqual([7, 7])
+
+    const team1 = getTeams().find(t => (t.data.teamNumber as number) === 1)
+    const team1Ids = (team1?.data.playerIds as string[]) ?? []
+    for (const id of pinnedToTeam1) {
+      expect(team1Ids).toContain(id)
+    }
+    expect(getMatchData().manualTeamAssignments).toEqual(persistedManual)
   })
 })
