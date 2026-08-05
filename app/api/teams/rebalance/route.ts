@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import {
+  applyPersistedTransfersKeepingBalance,
   isGoalkeeper,
-  mergeBaselineWithManualTransfers,
 } from '@/lib/utils/teamGenerator'
 import type { User } from '@/types/user'
 
@@ -96,15 +96,9 @@ export async function POST(request: NextRequest) {
           id: d.id,
           teamNumber: Number(data.teamNumber ?? 0),
           maxSize: Number(data.maxSize ?? 11),
-          playerIds: (data.playerIds as string[]) ?? [],
         }
       })
       .sort((a, b) => a.teamNumber - b.teamNumber)
-
-    const currentAssignments = teams.map(t => ({
-      teamNumber: t.teamNumber,
-      playerIds: [...t.playerIds],
-    }))
 
     const capacities = teams.map(t => t.maxSize)
     const rosterLimit = capacities.reduce((sum, n) => sum + n, 0)
@@ -315,10 +309,15 @@ export async function POST(request: NextRequest) {
           | undefined) ?? {})
       : {}
 
-    const finalTeams = mergeBaselineWithManualTransfers(
-      currentAssignments,
+    // Apply persisted admin pins only (not current-vs-baseline diffs — those
+    // re-create size skew). Then move unpinned players to restore pair balance.
+    const maxSizeByTeamNumber = new Map(
+      teams.map(t => [t.teamNumber, t.maxSize] as const)
+    )
+    const finalTeams = applyPersistedTransfersKeepingBalance(
       baselineTeams,
-      persisted
+      persisted,
+      maxSizeByTeamNumber
     )
     const finalByNumber = new Map(
       finalTeams.map(t => [t.teamNumber, t.playerIds])

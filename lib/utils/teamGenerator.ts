@@ -266,6 +266,84 @@ export function mergeBaselineWithManualTransfers(
   return applyManualTeamTransfers(baselineTeams, manualTransfers)
 }
 
+function computePairTargetSizes(
+  totalPlayers: number,
+  capacities: [number, number]
+): [number, number] {
+  const targets: [number, number] = [0, 0]
+  let remaining = totalPlayers
+  let i = 0
+  while (remaining > 0) {
+    const idx = (i % 2) as 0 | 1
+    if (targets[idx] < capacities[idx]) {
+      targets[idx] += 1
+      remaining -= 1
+    }
+    i += 1
+    if (i > totalPlayers + 4) break
+  }
+  return targets
+}
+
+/**
+ * Rebalance path: apply only persisted admin pins onto a fresh balanced baseline,
+ * then restore pair sizes by moving players who are not pinned to their current team.
+ *
+ * Unlike mergeBaselineWithManualTransfers, this does NOT treat the current skewed
+ * roster as implied transfers (that undoes rebalance). Size-neutral swaps stay;
+ * one-way pins stay on their preferred team while unpinned players fill the gap.
+ */
+export function applyPersistedTransfersKeepingBalance(
+  baselineTeams: TeamAssignment[],
+  persistedManualAssignments: Record<string, number> | undefined,
+  maxSizeByTeamNumber: Map<number, number>
+): TeamAssignment[] {
+  const manualPins = mergeManualTransfers(new Map(), persistedManualAssignments)
+  const teams = applyManualTeamTransfers(baselineTeams, manualPins).sort(
+    (a, b) => a.teamNumber - b.teamNumber
+  )
+
+  for (let p = 0; p < teams.length; p += 2) {
+    const t0 = teams[p]
+    const t1 = teams[p + 1]
+    if (!t0 || !t1) break
+
+    const cap0 = maxSizeByTeamNumber.get(t0.teamNumber) ?? 11
+    const cap1 = maxSizeByTeamNumber.get(t1.teamNumber) ?? 11
+    const total = t0.playerIds.length + t1.playerIds.length
+    const [target0, target1] = computePairTargetSizes(total, [cap0, cap1])
+
+    const moveUnpinned = (
+      from: TeamAssignment,
+      to: TeamAssignment
+    ): boolean => {
+      const idx = from.playerIds.findIndex(
+        id => manualPins.get(id) !== from.teamNumber
+      )
+      if (idx < 0) return false
+      const [playerId] = from.playerIds.splice(idx, 1)
+      if (!playerId) return false
+      to.playerIds.push(playerId)
+      return true
+    }
+
+    while (
+      t0.playerIds.length > target0 &&
+      t1.playerIds.length < target1
+    ) {
+      if (!moveUnpinned(t0, t1)) break
+    }
+    while (
+      t1.playerIds.length > target1 &&
+      t0.playerIds.length < target0
+    ) {
+      if (!moveUnpinned(t1, t0)) break
+    }
+  }
+
+  return teams
+}
+
 /**
  * Same as generateTeams but also returns gkReplacements.
  * For any team (1, 2, 3, …) that has no GK: the earliest RSVPing GK from a higher-indexed team is moved into that team, and that team's last non-GK (by RSVP) is bumped to the GK's former team.
