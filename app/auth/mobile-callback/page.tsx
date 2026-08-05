@@ -4,17 +4,20 @@ import { useEffect, useState } from 'react'
 
 /**
  * OAuth redirect target for the Soccerville native app.
- * Google redirects here with ?code=...&state=...; we forward to the
- * Expo return URL embedded in `state` so openAuthSessionAsync can complete.
+ * Google may return params in the query (?code=) or hash (#id_token=);
+ * we forward them to the Expo return URL embedded in `state`.
  */
 export default function MobileAuthCallbackPage() {
   const [message, setMessage] = useState('Completing sign-in…')
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const error = params.get('error')
-    const code = params.get('code')
-    const state = params.get('state')
+    const query = new URLSearchParams(window.location.search)
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+
+    const error = query.get('error') ?? hash.get('error')
+    const code = query.get('code') ?? hash.get('code')
+    const idToken = query.get('id_token') ?? hash.get('id_token')
+    const state = query.get('state') ?? hash.get('state')
 
     if (!state) {
       setMessage('Sign-in failed: missing state. You can close this window.')
@@ -43,13 +46,17 @@ export default function MobileAuthCallbackPage() {
     const target = new URL(returnUrl)
     if (error) {
       target.searchParams.set('error', error)
-      const description = params.get('error_description')
+      const description =
+        query.get('error_description') ?? hash.get('error_description')
       if (description) {
         target.searchParams.set('error_description', description)
       }
     }
     if (code) {
       target.searchParams.set('code', code)
+    }
+    if (idToken) {
+      target.searchParams.set('id_token', idToken)
     }
     // Forward the full state so the app can verify CSRF.
     target.searchParams.set('state', state)
