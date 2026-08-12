@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { FormError } from '@/components/auth/FormError'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
@@ -76,7 +77,15 @@ export function LoginForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor="password">Password</Label>
+          <Link
+            href="/forgot-password"
+            className="text-sm font-medium text-red-50 hover:underline dark:text-red-400"
+          >
+            Forgot password?
+          </Link>
+        </div>
         <PasswordInput
           id="password"
           placeholder="Enter your password"

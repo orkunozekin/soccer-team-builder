@@ -23,6 +23,25 @@ export const loginUser = async (
   return signInWithEmailAndPassword(auth, email, password)
 }
 
+export const resetPassword = async (email: string): Promise<void> => {
+  const response = await fetch('/api/auth/password-reset', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email: email.trim() }),
+  })
+
+  if (!response.ok) {
+    const data = (await response.json().catch(() => null)) as {
+      error?: string
+    } | null
+    throw new Error(
+      data?.error || 'Could not send a reset email. Please try again.'
+    )
+  }
+}
+
 export const loginWithGoogle = async (): Promise<UserCredential> => {
   const provider = new GoogleAuthProvider()
   return signInWithPopup(auth, provider)
