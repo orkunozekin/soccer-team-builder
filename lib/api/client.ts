@@ -344,3 +344,58 @@ export async function hostCheckInAPI(
 
   return response.json()
 }
+
+export type SavedLocationPayload = {
+  name: string
+  address: string
+  lat: number | null
+  lng: number | null
+}
+
+export async function createSavedLocationAPI(
+  location: SavedLocationPayload
+): Promise<{ success: boolean; locationId: string }> {
+  const response = await apiRequest('/locations', {
+    method: 'POST',
+    body: JSON.stringify(location),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to create saved location')
+  }
+
+  return response.json()
+}
+
+export async function updateSavedLocationAPI(
+  locationId: string,
+  location: SavedLocationPayload
+): Promise<{ success: boolean }> {
+  const response = await apiRequest(`/locations/${locationId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(location),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to update saved location')
+  }
+
+  return response.json()
+}
+
+export async function deleteSavedLocationAPI(
+  locationId: string
+): Promise<{ success: boolean }> {
+  const response = await apiRequest(`/locations/${locationId}`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to delete saved location')
+  }
+
+  return response.json()
+}
