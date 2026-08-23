@@ -23,8 +23,8 @@ export function haversineDistanceMeters(
   return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(h)))
 }
 
-export const CHECK_IN_RADIUS_METERS = 150
-export const CHECK_IN_MAX_ACCURACY_METERS = 150
+export const CHECK_IN_RADIUS_METERS = 500
+export const CHECK_IN_MAX_ACCURACY_METERS = 300
 
 export function isWithinCheckInRadius(
   user: { lat: number; lng: number },
