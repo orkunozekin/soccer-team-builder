@@ -289,7 +289,7 @@ describe('assignUnassignedPlayersToTeams', () => {
     ]
     const unassigned = rsvps.filter(r => r.userId === 'p6')
 
-    const result = assignUnassignedPlayersToTeams(
+    const { teams: result } = assignUnassignedPlayersToTeams(
       existingTeams,
       unassigned,
       rsvps,
@@ -314,7 +314,7 @@ describe('assignUnassignedPlayersToTeams', () => {
     ]
     const unassigned = rsvps.filter(r => r.userId === 'p23')
 
-    const result = assignUnassignedPlayersToTeams(
+    const { teams: result } = assignUnassignedPlayersToTeams(
       existingTeams,
       unassigned,
       rsvps,
@@ -341,7 +341,7 @@ describe('assignUnassignedPlayersToTeams', () => {
       ['gk2', 'p3'].includes(r.userId)
     )
 
-    const result = assignUnassignedPlayersToTeams(
+    const { teams: result } = assignUnassignedPlayersToTeams(
       existingTeams,
       unassigned,
       rsvps,
@@ -352,6 +352,67 @@ describe('assignUnassignedPlayersToTeams', () => {
 
     expect(result[0]?.playerIds).toEqual(['gk1', 'p1', 'p3'])
     expect(result[1]?.playerIds).toEqual(['p2', 'gk2'])
+  })
+
+  it('promotes a late GK onto team 1 when teams 1 and 2 are full without a GK', () => {
+    const team1Ids = Array.from({ length: 11 }, (_, i) => `p${i + 1}`)
+    const team2Ids = Array.from({ length: 11 }, (_, i) => `p${i + 12}`)
+    const allIds = [...team1Ids, ...team2Ids, 'gk_late']
+    const { users, rsvps } = buildRoster(allIds)
+
+    const existingTeams = [
+      { teamNumber: 1, playerIds: [...team1Ids] },
+      { teamNumber: 2, playerIds: [...team2Ids] },
+    ]
+    const unassigned = rsvps.filter(r => r.userId === 'gk_late')
+
+    const { teams: result, gkReplacements } = assignUnassignedPlayersToTeams(
+      existingTeams,
+      unassigned,
+      rsvps,
+      users,
+      11,
+      3
+    )
+
+    expect(result[0]?.playerIds).toContain('gk_late')
+    expect(teamHasGoalkeeper(result[0]!, users, rsvps)).toBe(true)
+    expect(result[0]?.playerIds).not.toContain('p11')
+    expect(result[1]?.playerIds).toContain('p11')
+    expect(result[1]?.playerIds).not.toContain('p22')
+    expect(result[2]?.playerIds).toContain('p22')
+    expect(gkReplacements).toEqual([
+      { insertedGK: 'gk_late', removedPlayer: 'p11' },
+    ])
+  })
+
+  it('promotes a second late GK onto team 2 when only team 1 already has a GK', () => {
+    const team1Ids = ['gk1', ...Array.from({ length: 10 }, (_, i) => `p${i + 1}`)]
+    const team2Ids = Array.from({ length: 11 }, (_, i) => `p${i + 11}`)
+    const allIds = [...team1Ids, ...team2Ids, 'gk_late']
+    const { users, rsvps } = buildRoster(allIds)
+
+    const existingTeams = [
+      { teamNumber: 1, playerIds: [...team1Ids] },
+      { teamNumber: 2, playerIds: [...team2Ids] },
+    ]
+    const unassigned = rsvps.filter(r => r.userId === 'gk_late')
+
+    const { teams: result, gkReplacements } = assignUnassignedPlayersToTeams(
+      existingTeams,
+      unassigned,
+      rsvps,
+      users,
+      11,
+      3
+    )
+
+    expect(result[0]?.playerIds).toContain('gk1')
+    expect(result[1]?.playerIds).toContain('gk_late')
+    expect(teamHasGoalkeeper(result[1]!, users, rsvps)).toBe(true)
+    expect(gkReplacements).toEqual([
+      { insertedGK: 'gk_late', removedPlayer: 'p21' },
+    ])
   })
 })
 

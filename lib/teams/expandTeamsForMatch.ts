@@ -63,14 +63,15 @@ async function incrementallyAssignUnassignedPlayers(
     teamNumber: t.teamNumber,
     playerIds: t.playerIds,
   }))
-  const updatedAssignments = assignUnassignedPlayersToTeams(
-    existingAssignments,
-    unassignedRsvps,
-    rsvpsToUse,
-    users,
-    11,
-    desiredTeamCount
-  )
+  const { teams: updatedAssignments, gkReplacements } =
+    assignUnassignedPlayersToTeams(
+      existingAssignments,
+      unassignedRsvps,
+      rsvpsToUse,
+      users,
+      11,
+      desiredTeamCount
+    )
 
   const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
   const existingByNumber = new Map(
@@ -78,6 +79,26 @@ async function incrementallyAssignUnassignedPlayers(
   )
   const now = Timestamp.now()
   const writes: Promise<unknown>[] = []
+
+  if (gkReplacements.length > 0) {
+    const matchRef = adminDb.collection('matches').doc(matchId)
+    const matchSnap = await matchRef.get()
+    const existing = matchSnap.exists
+      ? ((matchSnap.data()?.gkReplacements as
+          | Record<string, string>
+          | undefined) ?? {})
+      : {}
+    const gkReplacementsMap: Record<string, string> = { ...existing }
+    for (const r of gkReplacements) {
+      gkReplacementsMap[r.insertedGK] = r.removedPlayer
+    }
+    writes.push(
+      matchRef.set(
+        { gkReplacements: gkReplacementsMap, updatedAt: now },
+        { merge: true }
+      )
+    )
+  }
 
   for (let i = 0; i < updatedAssignments.length; i++) {
     const assignment = updatedAssignments[i]
