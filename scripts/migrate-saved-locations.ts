@@ -119,7 +119,7 @@ async function main() {
   let created = 0
   let skipped = 0
 
-  for (const [key, loc] of unique) {
+  for (const [key, loc] of Array.from(unique.entries())) {
     if (existingKeys.has(key)) {
       skipped += 1
       console.log(`[skip] already saved: ${loc.name}`)
