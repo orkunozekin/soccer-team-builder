@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { AddressAutocomplete } from '@/components/admin/AddressAutocomplete'
+import { LocationPicker } from '@/components/admin/LocationPicker'
 import { RSVPPollControls } from '@/components/admin/RSVPPollControls'
 import {
   AlertDialog,
@@ -182,7 +182,7 @@ export function EditMatchCard({
                   disabled={saving}
                   timeStep={300}
                 />
-                <AddressAutocomplete
+                <LocationPicker
                   locationName={locationName}
                   address={address}
                   lat={lat}

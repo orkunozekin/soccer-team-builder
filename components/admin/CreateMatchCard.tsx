@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { AddressAutocomplete } from '@/components/admin/AddressAutocomplete'
+import { LocationPicker } from '@/components/admin/LocationPicker'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -119,7 +119,7 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
               timeStep={300}
             />
 
-            <AddressAutocomplete
+            <LocationPicker
               locationName={locationName}
               address={address}
               lat={lat}
