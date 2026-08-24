@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     console.error('audit GET error:', error)
     return NextResponse.json(
-      { error: sanitizeErrorForClient(error, 'Failed to list audit logs') },
+      { error: sanitizeErrorForClient(error, 'Failed to load analytics') },
       { status: 500 }
     )
   }
