@@ -1,16 +1,22 @@
 export type AuditAction =
   | 'auth.login'
   | 'auth.register'
+  | 'auth.login_failed'
+  | 'auth.register_failed'
   | 'auth.password_reset_requested'
   | 'user.created'
   | 'user.profile_updated'
+  | 'user.profile_update_failed'
   | 'user.role_changed'
+  | 'user.role_change_failed'
   | 'user.deleted'
   | 'rsvp.confirmed'
+  | 'rsvp.failed'
   | 'rsvp.cancelled'
   | 'rsvp.position_changed'
   | 'rsvp.impersonated'
   | 'check_in.geo'
+  | 'check_in.failed'
   | 'check_in.host'
   | 'check_in.cleared'
   | 'match.created'
@@ -77,16 +83,22 @@ export interface AuditLogFilters {
 export const ALL_AUDIT_ACTIONS: readonly AuditAction[] = [
   'auth.login',
   'auth.register',
+  'auth.login_failed',
+  'auth.register_failed',
   'auth.password_reset_requested',
   'user.created',
   'user.profile_updated',
+  'user.profile_update_failed',
   'user.role_changed',
+  'user.role_change_failed',
   'user.deleted',
   'rsvp.confirmed',
+  'rsvp.failed',
   'rsvp.cancelled',
   'rsvp.position_changed',
   'rsvp.impersonated',
   'check_in.geo',
+  'check_in.failed',
   'check_in.host',
   'check_in.cleared',
   'match.created',
@@ -101,6 +113,7 @@ export const ALL_AUDIT_ACTIONS: readonly AuditAction[] = [
   'location.deleted',
   'cron.rsvp_auto_opened',
   'cron.rsvp_auto_closed',
+  'cron.audit_retention',
 ] as const
 
 export const ALL_AUDIT_SOURCES: readonly AuditSource[] = [
@@ -113,5 +126,7 @@ export const ALL_AUDIT_SOURCES: readonly AuditSource[] = [
 export const CLIENT_AUDIT_ACTIONS: readonly AuditAction[] = [
   'auth.login',
   'auth.register',
+  'auth.login_failed',
+  'auth.register_failed',
   'user.created',
 ] as const

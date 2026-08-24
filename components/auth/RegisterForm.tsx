@@ -51,6 +51,10 @@ export function RegisterForm() {
       router.push('/matches')
     } catch {
       setError('Failed to create account')
+      recordAuditEventAPI({
+        action: 'auth.register_failed',
+        metadata: { message: 'Failed to create account' },
+      })
     } finally {
       setLoading(false)
     }
@@ -75,6 +79,10 @@ export function RegisterForm() {
       router.push('/matches')
     } catch {
       setError('Failed to sign in with Google')
+      recordAuditEventAPI({
+        action: 'auth.register_failed',
+        metadata: { message: 'Failed to sign in with Google', provider: 'google' },
+      })
     } finally {
       setGoogleLoading(false)
     }
