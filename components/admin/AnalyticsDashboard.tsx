@@ -74,7 +74,7 @@ function UserLink({ uid, label }: { uid: string; label?: string }) {
   )
 }
 
-function AuditLogRow({ log }: { log: AuditLog }) {
+function AnalyticsEventRow({ log }: { log: AuditLog }) {
   const hasMetadata =
     log.metadata != null && Object.keys(log.metadata).length > 0
 
@@ -154,7 +154,7 @@ function AuditLogRow({ log }: { log: AuditLog }) {
   )
 }
 
-export function AuditLogBrowser() {
+export function AnalyticsDashboard() {
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS)
   const [appliedFilters, setAppliedFilters] = useState<FilterState>(EMPTY_FILTERS)
   const [logs, setLogs] = useState<AuditLog[]>([])
@@ -194,7 +194,7 @@ export function AuditLogBrowser() {
       } catch (err: unknown) {
         setLogs([])
         setError(
-          err instanceof Error ? err.message : 'Failed to load audit logs'
+          err instanceof Error ? err.message : 'Failed to load analytics'
         )
       } finally {
         setLoading(false)
@@ -241,7 +241,7 @@ export function AuditLogBrowser() {
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-2">
-            <Label htmlFor="audit-action">Action</Label>
+            <Label htmlFor="analytics-action">Action</Label>
             <Select
               value={filters.action || 'all'}
               onValueChange={value =>
@@ -251,7 +251,7 @@ export function AuditLogBrowser() {
                 }))
               }
             >
-              <SelectTrigger id="audit-action">
+              <SelectTrigger id="analytics-action">
                 <SelectValue placeholder="All actions" />
               </SelectTrigger>
               <SelectContent>
@@ -266,7 +266,7 @@ export function AuditLogBrowser() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="audit-source">Source</Label>
+            <Label htmlFor="analytics-source">Source</Label>
             <Select
               value={filters.source || 'all'}
               onValueChange={value =>
@@ -276,7 +276,7 @@ export function AuditLogBrowser() {
                 }))
               }
             >
-              <SelectTrigger id="audit-source">
+              <SelectTrigger id="analytics-source">
                 <SelectValue placeholder="All sources" />
               </SelectTrigger>
               <SelectContent>
@@ -291,9 +291,9 @@ export function AuditLogBrowser() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="audit-actor">Actor UID</Label>
+            <Label htmlFor="analytics-actor">Actor UID</Label>
             <Input
-              id="audit-actor"
+              id="analytics-actor"
               value={filters.actorUid}
               onChange={e =>
                 setFilters(prev => ({ ...prev, actorUid: e.target.value }))
@@ -303,9 +303,9 @@ export function AuditLogBrowser() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="audit-target">Target UID</Label>
+            <Label htmlFor="analytics-target">Target UID</Label>
             <Input
-              id="audit-target"
+              id="analytics-target"
               value={filters.targetUid}
               onChange={e =>
                 setFilters(prev => ({ ...prev, targetUid: e.target.value }))
@@ -315,9 +315,9 @@ export function AuditLogBrowser() {
           </div>
 
           <div className="space-y-2 sm:col-span-2 lg:col-span-1">
-            <Label htmlFor="audit-match">Match ID</Label>
+            <Label htmlFor="analytics-match">Match ID</Label>
             <Input
-              id="audit-match"
+              id="analytics-match"
               value={filters.matchId}
               onChange={e =>
                 setFilters(prev => ({ ...prev, matchId: e.target.value }))
@@ -341,15 +341,15 @@ export function AuditLogBrowser() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-zinc-500">Loading audit logs…</p>
+          <p className="text-sm text-zinc-500">Loading analytics…</p>
         ) : logs.length === 0 ? (
           <p className="rounded-lg border border-dashed p-6 text-center text-sm text-zinc-500">
-            No audit logs match your filters.
+            No events match your filters.
           </p>
         ) : (
           <div className="max-h-[32rem] space-y-3 overflow-y-auto pr-1">
             {logs.map(log => (
-              <AuditLogRow key={log.id} log={log} />
+              <AnalyticsEventRow key={log.id} log={log} />
             ))}
           </div>
         )}

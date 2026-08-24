@@ -23,9 +23,9 @@ const LINKS = [
       pathname.startsWith('/admin/players'),
   },
   {
-    href: '/admin/audit',
-    label: 'Audit',
-    isActive: (pathname: string) => pathname.startsWith('/admin/audit'),
+    href: '/admin/analytics',
+    label: 'Analytics',
+    isActive: (pathname: string) => pathname.startsWith('/admin/analytics'),
   },
 ] as const
 

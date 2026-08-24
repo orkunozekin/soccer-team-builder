@@ -436,7 +436,7 @@ export async function listAuditLogsAPI(params: {
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.error || 'Failed to list audit logs')
+    throw new Error(error.error || 'Failed to load analytics')
   }
 
   return response.json()
