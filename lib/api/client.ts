@@ -386,6 +386,26 @@ export async function hostCheckInAPI(
   return response.json()
 }
 
+export async function hostCheckInAllAPI(
+  matchId: string
+): Promise<{
+  success: boolean
+  updated: Array<{ rsvpId: string; userId: string }>
+  message?: string
+}> {
+  const response = await apiRequest('/check-in/host-all', {
+    method: 'POST',
+    body: JSON.stringify({ matchId }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to mark everyone present')
+  }
+
+  return response.json()
+}
+
 export type SavedLocationPayload = {
   name: string
   address: string

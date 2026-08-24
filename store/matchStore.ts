@@ -22,6 +22,14 @@ interface MatchState {
     rsvpId: string,
     updates: Pick<RSVP, 'attended' | 'checkedInAt' | 'checkInMethod'>
   ) => void
+  bulkUpdateRSVPAttendance: (
+    updates: Array<{
+      rsvpId: string
+      attended: RSVP['attended']
+      checkedInAt: RSVP['checkedInAt']
+      checkInMethod: RSVP['checkInMethod']
+    }>
+  ) => void
   removeRSVP: (rsvpId: string) => void
 }
 
@@ -64,6 +72,24 @@ export const useMatchStore = create<MatchState>(set => ({
         r.id === rsvpId ? { ...r, ...updates, updatedAt: new Date() } : r
       ),
     })),
+  bulkUpdateRSVPAttendance: updates =>
+    set(state => {
+      const byId = new Map(updates.map(u => [u.rsvpId, u]))
+      const now = new Date()
+      return {
+        matchRSVPs: state.matchRSVPs.map(r => {
+          const patch = byId.get(r.id)
+          if (!patch) return r
+          return {
+            ...r,
+            attended: patch.attended,
+            checkedInAt: patch.checkedInAt,
+            checkInMethod: patch.checkInMethod,
+            updatedAt: now,
+          }
+        }),
+      }
+    }),
   removeRSVP: rsvpId =>
     set(state => ({
       matchRSVPs: state.matchRSVPs.filter(r => r.id !== rsvpId),
