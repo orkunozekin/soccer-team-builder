@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase/config'
 import { getDocument } from '@/lib/firebase/firestore'
 import { timestampToDate } from '@/lib/firebase/firestore'
 import { createUser } from '@/lib/services/userService'
+import { recordAuditEventAPI } from '@/lib/api/client'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import { useAuthStore } from '@/store/authStore'
 import { User } from '@/types/user'
@@ -60,6 +61,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   firebaseUser.email ?? '',
                   displayName
                 )
+                recordAuditEventAPI({
+                  action: 'user.created',
+                  entityType: 'user',
+                  entityId: firebaseUser.uid,
+                  metadata: { source: 'auth_provider_backfill' },
+                })
                 if (process.env.NODE_ENV === 'development') {
                   console.log(
                     '[Auth] User document created in Firestore at users/%s',

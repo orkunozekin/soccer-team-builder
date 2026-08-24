@@ -30,6 +30,10 @@ vi.mock('@/lib/utils/rsvpScheduler', () => ({
     mocks.getRSVPScheduleMock(...(args as [])),
 }))
 
+vi.mock('@/lib/api/client', () => ({
+  recordAuditEventAPI: vi.fn(),
+}))
+
 const baseMatch: Match = {
   id: 'match1',
   date: new Date('2024-01-01T19:00:00Z'),

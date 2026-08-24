@@ -2,6 +2,7 @@ import { Receiver } from '@upstash/qstash'
 import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { auditLog } from '@/lib/services/auditService'
 import { getRSVPSchedule } from '@/lib/utils/rsvpScheduler'
 
 export const dynamic = 'force-dynamic'
@@ -110,6 +111,14 @@ async function runRsvpSchedule(): Promise<{
       })
       opened += 1
       batchOps += 1
+      auditLog({
+        action: 'cron.rsvp_auto_opened',
+        actorUid: 'system',
+        matchId: doc.id,
+        entityType: 'match',
+        entityId: doc.id,
+        source: 'cron',
+      })
     } else if (pastClose && currentlyOpen) {
       batch.update(doc.ref, {
         rsvpOpen: false,
@@ -117,6 +126,14 @@ async function runRsvpSchedule(): Promise<{
       })
       closed += 1
       batchOps += 1
+      auditLog({
+        action: 'cron.rsvp_auto_closed',
+        actorUid: 'system',
+        matchId: doc.id,
+        entityType: 'match',
+        entityId: doc.id,
+        source: 'cron',
+      })
     }
   }
 

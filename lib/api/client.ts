@@ -5,6 +5,7 @@
 
 import { auth } from '@/lib/firebase/config'
 import { useAuthStore } from '@/store/authStore'
+import type { AuditAction, AuditEntityType } from '@/types/auditLog'
 
 const API_BASE = '/api'
 
@@ -398,4 +399,25 @@ export async function deleteSavedLocationAPI(
   }
 
   return response.json()
+}
+
+/**
+ * Record a client-side audit event. Fire-and-forget; failures are logged but not thrown.
+ */
+export function recordAuditEventAPI(input: {
+  action: AuditAction
+  targetUid?: string
+  matchId?: string
+  entityType?: AuditEntityType
+  entityId?: string
+  metadata?: Record<string, unknown>
+}): void {
+  void apiRequest('/audit', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  }).catch(err => {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[audit] Failed to record client event:', err)
+    }
+  })
 }

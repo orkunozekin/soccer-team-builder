@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { deleteUserAPI, searchUsersAPI } from '@/lib/api/client'
+import { deleteUserAPI, recordAuditEventAPI, searchUsersAPI } from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import {
   getUsersCount,
@@ -149,6 +149,14 @@ export function UserRoleManager() {
 
     try {
       await updateUser(userId, { role: newRole })
+
+      recordAuditEventAPI({
+        action: 'user.role_changed',
+        targetUid: userId,
+        entityType: 'user',
+        entityId: userId,
+        metadata: { newRole },
+      })
 
       // Update local state
       setUsers(prevUsers =>

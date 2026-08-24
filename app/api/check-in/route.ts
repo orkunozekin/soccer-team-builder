@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { auditLog } from '@/lib/services/auditService'
 import { isWithinCheckInWindow, venueHasCheckInCoords } from '@/lib/utils/checkIn'
 import {
   CHECK_IN_MAX_ACCURACY_METERS,
@@ -151,6 +152,16 @@ export async function POST(request: NextRequest) {
       checkedInAt: now,
       checkInMethod: 'geo',
       updatedAt: now,
+    })
+
+    auditLog({
+      action: 'check_in.geo',
+      actorUid: uid,
+      targetUid: uid,
+      matchId,
+      entityType: 'rsvp',
+      entityId: rsvpDoc.id,
+      source: 'api',
     })
 
     return NextResponse.json({

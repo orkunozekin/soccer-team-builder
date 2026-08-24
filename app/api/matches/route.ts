@@ -2,6 +2,7 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { auditLog } from '@/lib/services/auditService'
 import { serializeMatchLocation } from '@/lib/utils/location'
 import { getRSVPSchedule } from '@/lib/utils/rsvpScheduler'
 import type { MatchLocation } from '@/types/match'
@@ -76,6 +77,16 @@ export async function POST(request: NextRequest) {
         createdAt: now,
         updatedAt: now,
       })
+
+    auditLog({
+      action: 'match.created',
+      actorUid: uid,
+      matchId,
+      entityType: 'match',
+      entityId: matchId,
+      source: 'api',
+      metadata: { date, time, location: locationValue },
+    })
 
     return NextResponse.json({ success: true, matchId })
   } catch (error: any) {

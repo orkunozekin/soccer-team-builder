@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
 import { loginUser, loginWithGoogle } from '@/lib/firebase/auth'
+import { recordAuditEventAPI } from '@/lib/api/client'
 import { createUser, getUser } from '@/lib/services/userService'
 import { useAuthStore } from '@/store/authStore'
 
@@ -30,6 +31,7 @@ export function LoginForm() {
     try {
       const userCredential = await loginUser(email, password)
       setUser(userCredential.user)
+      recordAuditEventAPI({ action: 'auth.login' })
       router.push('/matches')
     } catch {
       setError('Failed to sign in')
@@ -49,6 +51,9 @@ export function LoginForm() {
         const displayName =
           user.displayName ?? user.email?.split('@')[0] ?? 'User'
         await createUser(user.uid, user.email ?? '', displayName)
+        recordAuditEventAPI({ action: 'auth.register' })
+      } else {
+        recordAuditEventAPI({ action: 'auth.login' })
       }
       setUser(user)
       router.push('/matches')

@@ -2,6 +2,7 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { auditLog } from '@/lib/services/auditService'
 
 function uniq(ids: string[]): string[] {
   return Array.from(new Set(ids))
@@ -167,6 +168,21 @@ export async function POST(request: NextRequest) {
         { merge: true }
       )
 
+      auditLog({
+        action: 'team.transferred',
+        actorUid: uid,
+        targetUid: playerId,
+        matchId,
+        entityType: 'team',
+        entityId: targetTeamId,
+        source: 'api',
+        metadata: {
+          swapped: true,
+          swapWithPlayerId,
+          sourceTeamId: sourceTeam.id,
+        },
+      })
+
       return NextResponse.json({ success: true, swapped: true })
     }
 
@@ -200,6 +216,17 @@ export async function POST(request: NextRequest) {
       },
       { merge: true }
     )
+
+    auditLog({
+      action: 'team.transferred',
+      actorUid: uid,
+      targetUid: playerId,
+      matchId,
+      entityType: 'team',
+      entityId: targetTeamId,
+      source: 'api',
+      metadata: { swapped: false, currentTeamId },
+    })
 
     return NextResponse.json({ success: true })
   } catch (error: unknown) {

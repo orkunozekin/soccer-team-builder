@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin'
 import { removeUserFromMatchTeams } from '@/lib/teams/removeUserFromMatchTeams'
+import { auditLog } from '@/lib/services/auditService'
 
 function chunk<T>(arr: T[], size: number): T[][] {
   if (size <= 0) return [arr]
@@ -75,6 +76,15 @@ export async function DELETE(
 
     // 4) Delete Firebase Auth user (if present)
     await adminAuth.deleteUser(userId).catch(() => {})
+
+    auditLog({
+      action: 'user.deleted',
+      actorUid: uid,
+      targetUid: userId,
+      entityType: 'user',
+      entityId: userId,
+      source: 'api',
+    })
 
     return NextResponse.json({ success: true })
   } catch (err: unknown) {
