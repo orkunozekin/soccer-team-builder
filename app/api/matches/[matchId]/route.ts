@@ -113,6 +113,7 @@ export async function PATCH(
 
     await matchRef.update(updates)
 
+    const updatedFields = Object.keys(updates).filter(k => k !== 'updatedAt')
     auditLog({
       action: 'match.updated',
       actorUid: uid ?? 'unknown',
@@ -120,8 +121,20 @@ export async function PATCH(
       entityType: 'match',
       entityId: matchId,
       source: 'api',
-      metadata: { updates: Object.keys(updates).filter(k => k !== 'updatedAt') },
+      metadata: { updates: updatedFields },
     })
+
+    if (body.rsvpOpen !== undefined) {
+      auditLog({
+        action: 'match.rsvp_poll_toggled',
+        actorUid: uid ?? 'unknown',
+        matchId,
+        entityType: 'match',
+        entityId: matchId,
+        source: 'api',
+        metadata: { rsvpOpen: body.rsvpOpen === true },
+      })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
