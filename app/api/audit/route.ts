@@ -1,15 +1,96 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin, verifyAuth } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
+import { countAuditLogs, queryAuditLogs } from '@/lib/audit/queryAuditLogs'
+import { getAdminDb } from '@/lib/firebase/admin'
 import { recordAuditLog } from '@/lib/services/auditService'
 import {
+  ALL_AUDIT_ACTIONS,
+  ALL_AUDIT_SOURCES,
   CLIENT_AUDIT_ACTIONS,
   type AuditAction,
   type AuditLogInput,
+  type AuditSource,
 } from '@/types/auditLog'
 
 function isClientAuditAction(action: string): action is AuditAction {
   return (CLIENT_AUDIT_ACTIONS as readonly string[]).includes(action)
+}
+
+function parseAuditAction(value: string | null): AuditAction | undefined {
+  if (!value) return undefined
+  return (ALL_AUDIT_ACTIONS as readonly string[]).includes(value)
+    ? (value as AuditAction)
+    : undefined
+}
+
+function parseAuditSource(value: string | null): AuditSource | undefined {
+  if (!value) return undefined
+  return (ALL_AUDIT_SOURCES as readonly string[]).includes(value as AuditSource)
+    ? (value as AuditSource)
+    : undefined
+}
+
+/**
+ * GET /api/audit
+ * List audit logs (admin only).
+ * Query: limit, cursor, action, source, actorUid, targetUid, matchId
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
+    if (authError || !uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: 'Admin privileges required' },
+        { status: 403 }
+      )
+    }
+
+    const adminDb = getAdminDb()
+    if (!adminDb) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
+    }
+
+    const { searchParams } = new URL(request.url)
+    const limitRaw = Number(searchParams.get('limit') ?? '25')
+    const limit = Number.isFinite(limitRaw)
+      ? Math.min(50, Math.max(1, limitRaw))
+      : 25
+    const cursor = searchParams.get('cursor')
+    const includeCount = searchParams.get('includeCount') === 'true'
+
+    const filters = {
+      action: parseAuditAction(searchParams.get('action')),
+      source: parseAuditSource(searchParams.get('source')),
+      actorUid: searchParams.get('actorUid')?.trim() || undefined,
+      targetUid: searchParams.get('targetUid')?.trim() || undefined,
+      matchId: searchParams.get('matchId')?.trim() || undefined,
+    }
+
+    const [{ logs, nextCursor }, totalCount] = await Promise.all([
+      queryAuditLogs(adminDb, { limit, cursor, filters }),
+      includeCount ? countAuditLogs(adminDb, filters) : Promise.resolve(undefined),
+    ])
+
+    return NextResponse.json({
+      success: true,
+      logs,
+      nextCursor,
+      ...(totalCount != null ? { totalCount } : {}),
+    })
+  } catch (error: unknown) {
+    console.error('audit GET error:', error)
+    return NextResponse.json(
+      { error: sanitizeErrorForClient(error, 'Failed to list audit logs') },
+      { status: 500 }
+    )
+  }
 }
 
 /**

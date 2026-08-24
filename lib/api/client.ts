@@ -5,7 +5,12 @@
 
 import { auth } from '@/lib/firebase/config'
 import { useAuthStore } from '@/store/authStore'
-import type { AuditAction, AuditEntityType } from '@/types/auditLog'
+import type {
+  AuditAction,
+  AuditEntityType,
+  AuditLog,
+  AuditSource,
+} from '@/types/auditLog'
 
 const API_BASE = '/api'
 
@@ -396,6 +401,42 @@ export async function deleteSavedLocationAPI(
   if (!response.ok) {
     const error = await response.json()
     throw new Error(error.error || 'Failed to delete saved location')
+  }
+
+  return response.json()
+}
+
+export async function listAuditLogsAPI(params: {
+  limit?: number
+  cursor?: string | null
+  includeCount?: boolean
+  action?: AuditAction | ''
+  source?: AuditSource | ''
+  actorUid?: string
+  targetUid?: string
+  matchId?: string
+}): Promise<{
+  success: boolean
+  logs: AuditLog[]
+  nextCursor: string | null
+  totalCount?: number
+}> {
+  const search = new URLSearchParams()
+  if (params.limit != null) search.set('limit', String(params.limit))
+  if (params.cursor) search.set('cursor', params.cursor)
+  if (params.includeCount) search.set('includeCount', 'true')
+  if (params.action) search.set('action', params.action)
+  if (params.source) search.set('source', params.source)
+  if (params.actorUid?.trim()) search.set('actorUid', params.actorUid.trim())
+  if (params.targetUid?.trim()) search.set('targetUid', params.targetUid.trim())
+  if (params.matchId?.trim()) search.set('matchId', params.matchId.trim())
+
+  const qs = search.toString()
+  const response = await apiRequest(`/audit${qs ? `?${qs}` : ''}`)
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to list audit logs')
   }
 
   return response.json()
