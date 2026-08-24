@@ -25,6 +25,7 @@ export type AuditAction =
   | 'location.deleted'
   | 'cron.rsvp_auto_opened'
   | 'cron.rsvp_auto_closed'
+  | 'cron.audit_retention'
 
 export type AuditSource = 'api' | 'client' | 'cron'
 
