@@ -4,6 +4,7 @@ import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin'
 import { removeUserFromMatchTeams } from '@/lib/teams/removeUserFromMatchTeams'
 import { auditLog } from '@/lib/services/auditService'
+import { logUserError, userErrorResponse } from '@/lib/audit/logUserError'
 import type { UserRole } from '@/types/user'
 
 function chunk<T>(arr: T[], size: number): T[][] {
@@ -32,7 +33,15 @@ export async function PATCH(
 
   const { userId } = await params
   if (!userId) {
-    return NextResponse.json({ error: 'User ID required' }, { status: 400 })
+    return userErrorResponse(
+      {
+        action: 'user.role_change_failed',
+        actorUid: uid,
+        status: 400,
+        message: 'User ID required',
+      },
+      { error: 'User ID required' }
+    )
   }
 
   const body = await request.json().catch(() => null)
@@ -40,21 +49,51 @@ export async function PATCH(
   const role: UserRole | null =
     roleRaw === 'admin' || roleRaw === 'user' ? roleRaw : null
   if (!role) {
-    return NextResponse.json({ error: 'Valid role is required' }, { status: 400 })
+    return userErrorResponse(
+      {
+        action: 'user.role_change_failed',
+        actorUid: uid,
+        status: 400,
+        message: 'Valid role is required',
+        targetUid: userId,
+        entityType: 'user',
+        entityId: userId,
+      },
+      { error: 'Valid role is required' }
+    )
   }
 
   const adminDb = getAdminDb()
   if (!adminDb) {
-    return NextResponse.json(
-      { error: 'Firebase Admin not configured' },
-      { status: 500 }
+    return userErrorResponse(
+      {
+        action: 'user.role_change_failed',
+        actorUid: uid,
+        status: 500,
+        message: 'Firebase Admin not configured',
+        targetUid: userId,
+        entityType: 'user',
+        entityId: userId,
+      },
+      { error: 'Firebase Admin not configured' }
     )
   }
 
   const userRef = adminDb.collection('users').doc(userId)
   const userSnap = await userRef.get()
   if (!userSnap.exists) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    return userErrorResponse(
+      {
+        action: 'user.role_change_failed',
+        actorUid: uid,
+        status: 404,
+        message: 'User not found',
+        targetUid: userId,
+        entityType: 'user',
+        entityId: userId,
+      },
+      { error: 'User not found' }
+    )
   }
 
   await userRef.update({

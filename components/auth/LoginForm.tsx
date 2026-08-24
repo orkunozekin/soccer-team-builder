@@ -35,6 +35,10 @@ export function LoginForm() {
       router.push('/matches')
     } catch {
       setError('Failed to sign in')
+      recordAuditEventAPI({
+        action: 'auth.login_failed',
+        metadata: { message: 'Failed to sign in' },
+      })
     } finally {
       setLoading(false)
     }
@@ -59,6 +63,10 @@ export function LoginForm() {
       router.push('/matches')
     } catch {
       setError('Failed to sign in with Google')
+      recordAuditEventAPI({
+        action: 'auth.login_failed',
+        metadata: { message: 'Failed to sign in with Google', provider: 'google' },
+      })
     } finally {
       setGoogleLoading(false)
     }

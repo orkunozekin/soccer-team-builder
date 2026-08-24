@@ -51,7 +51,12 @@ function formatAction(action: string): string {
 function actionBadgeVariant(
   action: string
 ): 'default' | 'secondary' | 'outline' | 'destructive' {
-  if (action.startsWith('user.deleted') || action.startsWith('match.deleted')) {
+  if (
+    action.includes('_failed') ||
+    action.endsWith('.failed') ||
+    action.startsWith('user.deleted') ||
+    action.startsWith('match.deleted')
+  ) {
     return 'destructive'
   }
   if (action.startsWith('auth.') || action.startsWith('cron.')) {
@@ -77,6 +82,14 @@ function UserLink({ uid, label }: { uid: string; label?: string }) {
 function AnalyticsEventRow({ log }: { log: AuditLog }) {
   const hasMetadata =
     log.metadata != null && Object.keys(log.metadata).length > 0
+  const isFailed =
+    log.action.includes('_failed') ||
+    log.action.endsWith('.failed') ||
+    log.metadata?.outcome === 'failed'
+  const failureMessage =
+    isFailed && typeof log.metadata?.message === 'string'
+      ? log.metadata.message
+      : null
 
   return (
     <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
@@ -91,6 +104,9 @@ function AnalyticsEventRow({ log }: { log: AuditLog }) {
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
             {format(new Date(log.createdAt), 'MMM d, yyyy · h:mm:ss a')}
           </p>
+          {failureMessage ? (
+            <p className="text-xs text-red-700 dark:text-red-400">{failureMessage}</p>
+          ) : null}
         </div>
       </div>
 

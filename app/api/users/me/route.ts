@@ -2,20 +2,44 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
+import { logUserError, userErrorResponse } from '@/lib/audit/logUserError'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { auditLog } from '@/lib/services/auditService'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
+
+function profileUpdateFailed(
+  uid: string,
+  status: number,
+  error: string,
+  code?: string
+) {
+  return userErrorResponse(
+    {
+      action: 'user.profile_update_failed',
+      actorUid: uid,
+      status,
+      message: error,
+      code,
+      targetUid: uid,
+      entityType: 'user',
+      entityId: uid,
+    },
+    { error, ...(code ? { code } : {}) }
+  )
+}
 
 /**
  * PATCH /api/users/me
  * Update the authenticated user's profile.
  */
 export async function PATCH(request: NextRequest) {
+  let uid: string | null = null
   try {
-    const { uid, error: authError } = await verifyAuth(request)
-    if (authError || !uid || uid === 'fallback') {
+    const auth = await verifyAuth(request)
+    uid = auth.uid
+    if (auth.error || !uid || uid === 'fallback') {
       return NextResponse.json(
-        { error: authError || 'Unauthorized' },
+        { error: auth.error || 'Unauthorized' },
         { status: 401 }
       )
     }
@@ -28,10 +52,7 @@ export async function PATCH(request: NextRequest) {
       const displayName =
         typeof body.displayName === 'string' ? body.displayName.trim() : ''
       if (!displayName) {
-        return NextResponse.json(
-          { error: 'Display name is required' },
-          { status: 400 }
-        )
+        return profileUpdateFailed(uid, 400, 'Display name is required')
       }
       updates.displayName = displayName
       updates.displayNameLower = displayName.toLowerCase()
@@ -51,24 +72,18 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (changedFields.length === 0) {
-      return NextResponse.json(
-        { error: 'No profile fields to update' },
-        { status: 400 }
-      )
+      return profileUpdateFailed(uid, 400, 'No profile fields to update')
     }
 
     const adminDb = getAdminDb()
     if (!adminDb) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      )
+      return profileUpdateFailed(uid, 500, 'Server configuration error')
     }
 
     const userRef = adminDb.collection('users').doc(uid)
     const userSnap = await userRef.get()
     if (!userSnap.exists) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      return profileUpdateFailed(uid, 404, 'User not found')
     }
 
     await userRef.update({
@@ -89,9 +104,18 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     console.error('Error updating profile:', error)
-    return NextResponse.json(
-      { error: sanitizeErrorForClient(error, 'Failed to update profile') },
-      { status: 500 }
-    )
+    const message = sanitizeErrorForClient(error, 'Failed to update profile')
+    if (uid) {
+      logUserError({
+        action: 'user.profile_update_failed',
+        actorUid: uid,
+        status: 500,
+        message,
+        targetUid: uid,
+        entityType: 'user',
+        entityId: uid,
+      })
+    }
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
