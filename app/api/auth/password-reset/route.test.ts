@@ -12,6 +12,10 @@ vi.mock('@/lib/email/plunk', () => ({
   sendPlunkEmail: vi.fn(),
 }))
 
+vi.mock('@/lib/services/auditService', () => ({
+  auditLog: vi.fn(),
+}))
+
 describe('POST /api/auth/password-reset', () => {
   beforeEach(() => {
     vi.clearAllMocks()

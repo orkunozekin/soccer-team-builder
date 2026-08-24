@@ -33,6 +33,7 @@ vi.mock('@/lib/services/userService', () => ({
 vi.mock('@/lib/api/client', () => ({
   searchUsersAPI: (...args: unknown[]) => mocks.searchUsersAPIMock(...args),
   deleteUserAPI: (...args: unknown[]) => mocks.deleteUserAPIMock(...args),
+  recordAuditEventAPI: vi.fn(),
 }))
 
 describe('UserRoleManager', () => {
