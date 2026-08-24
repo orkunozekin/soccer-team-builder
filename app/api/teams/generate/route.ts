@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { expandTeamsForMatch } from '@/lib/teams/expandTeamsForMatch'
+import { auditLog } from '@/lib/services/auditService'
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,6 +52,18 @@ export async function POST(request: NextRequest) {
     const teamsSnap = await adminDb
       .collection(`matches/${matchId}/teams`)
       .get()
+
+    auditLog({
+      action: 'team.generated',
+      actorUid: uid,
+      matchId,
+      entityType: 'team',
+      source: 'api',
+      metadata: {
+        teamsGenerated: teamsSnap.size,
+        regenerated: result.regenerated,
+      },
+    })
 
     return NextResponse.json({
       success: true,

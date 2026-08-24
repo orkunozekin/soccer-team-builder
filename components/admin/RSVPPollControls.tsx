@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { updateMatch } from '@/lib/services/matchService'
+import { recordAuditEventAPI } from '@/lib/api/client'
 import { getRSVPSchedule } from '@/lib/utils/rsvpScheduler'
 import { useMatchStore } from '@/store/matchStore'
 import { Match } from '@/types/match'
@@ -62,6 +63,14 @@ export function RSVPPollControls({ match, onUpdated }: RSVPPollControlsProps) {
           rsvpOpen: false,
         })
       }
+
+      recordAuditEventAPI({
+        action: 'match.rsvp_poll_toggled',
+        matchId: match.id,
+        entityType: 'match',
+        entityId: match.id,
+        metadata: { rsvpOpen: open },
+      })
 
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)

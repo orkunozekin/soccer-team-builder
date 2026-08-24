@@ -2,6 +2,7 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin, verifyAuth } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { auditLog } from '@/lib/services/auditService'
 import { serializeMatchLocation } from '@/lib/utils/location'
 import type { SavedLocationInput } from '@/types/savedLocation'
 
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { isAdmin, error: authError } = await verifyAdmin(request)
+    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
     if (authError || !isAdmin) {
       return NextResponse.json(
         { error: 'Admin privileges required' },
@@ -95,6 +96,15 @@ export async function POST(request: NextRequest) {
         createdAt: now,
         updatedAt: now,
       })
+
+    auditLog({
+      action: 'location.created',
+      actorUid: uid ?? 'unknown',
+      entityType: 'location',
+      entityId: locationId,
+      source: 'api',
+      metadata: { name: location.name },
+    })
 
     return NextResponse.json({
       success: true,

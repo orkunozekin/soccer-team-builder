@@ -3,6 +3,7 @@ import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { buildPasswordResetEmailHtml } from '@/lib/email/passwordResetTemplate'
 import { sendPlunkEmail } from '@/lib/email/plunk'
 import { getAdminAuth } from '@/lib/firebase/admin'
+import { auditLog } from '@/lib/services/auditService'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -55,6 +56,13 @@ export async function POST(request: NextRequest) {
           email,
           resetLink,
         }),
+      })
+
+      auditLog({
+        action: 'auth.password_reset_requested',
+        actorUid: 'anonymous',
+        source: 'api',
+        metadata: { emailDomain: email.split('@')[1] ?? 'unknown' },
       })
     } catch (error: unknown) {
       const code =

@@ -4,6 +4,7 @@ import { verifyAdmin, verifyAuth } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { acquireMatchLock } from '@/lib/locks/matchLock'
+import { auditLog } from '@/lib/services/auditService'
 import { expandTeamsForMatch } from '@/lib/teams/expandTeamsForMatch'
 import { placeGkOnTeamWithoutGk } from '@/lib/teams/placeGkOnTeamWithoutGk'
 import { removeUserFromMatchTeams } from '@/lib/teams/removeUserFromMatchTeams'
@@ -221,6 +222,22 @@ export async function POST(request: NextRequest) {
     } finally {
       await lock.release()
     }
+
+    auditLog({
+      action: impersonateUserId ? 'rsvp.impersonated' : 'rsvp.confirmed',
+      actorUid: uid,
+      targetUid: effectiveUid,
+      matchId,
+      entityType: 'rsvp',
+      entityId: rsvpId,
+      source: 'api',
+      metadata: {
+        position: position ?? null,
+        jerseyNumber,
+        regenerated,
+        impersonated: Boolean(impersonateUserId),
+      },
+    })
 
     return NextResponse.json({
       rsvpId,
@@ -480,6 +497,21 @@ export async function PATCH(request: NextRequest) {
         }
       }
 
+      auditLog({
+        action: 'rsvp.position_changed',
+        actorUid: uid,
+        targetUid: userId,
+        matchId,
+        entityType: 'rsvp',
+        entityId: rsvpId,
+        source: 'api',
+        metadata: {
+          oldPosition: oldPosition,
+          newPosition,
+          swapOccurred,
+        },
+      })
+
       return NextResponse.json({
         updated: true,
         swapOccurred,
@@ -568,6 +600,20 @@ export async function PATCH(request: NextRequest) {
         await batch.commit()
       }
     }
+
+    auditLog({
+      action: 'rsvp.cancelled',
+      actorUid: uid,
+      targetUid: userId,
+      matchId,
+      entityType: 'rsvp',
+      entityId: rsvpId,
+      source: 'api',
+      metadata: {
+        cancelledByAdmin: !isOwner,
+        teamsUpdated: removed,
+      },
+    })
 
     return NextResponse.json({
       cancelled: true,

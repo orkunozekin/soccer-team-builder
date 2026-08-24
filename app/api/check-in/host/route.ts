@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { auditLog } from '@/lib/services/auditService'
 import { isWithinCheckInWindow } from '@/lib/utils/checkIn'
 
 /**
@@ -103,6 +104,17 @@ export async function POST(request: NextRequest) {
         updatedAt: now,
       })
     }
+
+    auditLog({
+      action: attended ? 'check_in.host' : 'check_in.cleared',
+      actorUid: uid,
+      targetUid: userId,
+      matchId,
+      entityType: 'rsvp',
+      entityId: rsvpDoc.id,
+      source: 'api',
+      metadata: { attended },
+    })
 
     return NextResponse.json({ success: true, rsvpId: rsvpDoc.id, attended })
   } catch (error: unknown) {

@@ -2,6 +2,7 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { auditLog } from '@/lib/services/auditService'
 import {
   applyPersistedTransfersKeepingBalance,
   isGoalkeeper,
@@ -344,6 +345,19 @@ export async function POST(request: NextRequest) {
     if (Object.keys(gkReplacements).length > 0) {
       await matchRef.set({ gkReplacements, updatedAt: now }, { merge: true })
     }
+
+    auditLog({
+      action: 'team.rebalanced',
+      actorUid: uid,
+      matchId,
+      entityType: 'team',
+      source: 'api',
+      metadata: {
+        teamsRebalanced: teams.length,
+        assignedCounts: finalAssigned.map(a => a.length),
+        replacementCount: replacements.length,
+      },
+    })
 
     return NextResponse.json({
       success: true,
