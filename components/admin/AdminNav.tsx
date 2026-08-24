@@ -22,6 +22,11 @@ const LINKS = [
       pathname.startsWith('/admin/users') ||
       pathname.startsWith('/admin/players'),
   },
+  {
+    href: '/admin/analytics',
+    label: 'Analytics',
+    isActive: (pathname: string) => pathname.startsWith('/admin/analytics'),
+  },
 ] as const
 
 export function AdminNav() {
