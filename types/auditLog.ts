@@ -65,7 +65,4 @@ export const CLIENT_AUDIT_ACTIONS: readonly AuditAction[] = [
   'auth.login',
   'auth.register',
   'user.created',
-  'user.profile_updated',
-  'user.role_changed',
-  'match.rsvp_poll_toggled',
 ] as const

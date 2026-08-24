@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/lib/hooks/useAuth'
-import { recordAuditEventAPI } from '@/lib/api/client'
-import { updateUser } from '@/lib/services/userService'
+import { updateProfileAPI } from '@/lib/api/client'
 import { useAuthStore } from '@/store/authStore'
 import { User } from '@/types/user'
 
@@ -109,14 +108,7 @@ function ProfileFormInner({
         position,
       }
 
-      await updateUser(user.uid, updates)
-
-      recordAuditEventAPI({
-        action: 'user.profile_updated',
-        entityType: 'user',
-        entityId: user.uid,
-        metadata: { fields: Object.keys(updates) },
-      })
+      await updateProfileAPI(updates)
 
       // Update local state
       const updatedUserData: User = {

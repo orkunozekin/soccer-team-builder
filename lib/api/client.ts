@@ -252,6 +252,41 @@ export async function deleteUserAPI(
   return response.json()
 }
 
+export async function updateProfileAPI(updates: {
+  displayName?: string
+  jerseyNumber?: number | null
+  position?: string | null
+}): Promise<{ success: boolean }> {
+  const response = await apiRequest('/users/me', {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to update profile')
+  }
+
+  return response.json()
+}
+
+export async function updateUserRoleAPI(
+  userId: string,
+  role: 'user' | 'admin'
+): Promise<{ success: boolean; role: 'user' | 'admin' }> {
+  const response = await apiRequest(`/users/${userId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to update user role')
+  }
+
+  return response.json()
+}
+
 export async function searchUsersAPI(
   q: string,
   limit: number = 25

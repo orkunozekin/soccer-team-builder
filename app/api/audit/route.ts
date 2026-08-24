@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdmin, verifyAuth } from '@/lib/api/auth'
+import { verifyAuth } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { recordAuditLog } from '@/lib/services/auditService'
 import {
@@ -48,16 +48,6 @@ export async function POST(request: NextRequest) {
       !Array.isArray(body.metadata)
         ? (body.metadata as Record<string, unknown>)
         : undefined
-
-    if (action === 'user.role_changed' || action === 'match.rsvp_poll_toggled') {
-      const { isAdmin } = await verifyAdmin(request)
-      if (!isAdmin) {
-        return NextResponse.json(
-          { error: 'Admin privileges required' },
-          { status: 403 }
-        )
-      }
-    }
 
     const input: AuditLogInput = {
       action,
