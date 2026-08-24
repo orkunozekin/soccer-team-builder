@@ -1,14 +1,16 @@
-import { Timestamp } from 'firebase-admin/firestore'
+import { Timestamp, WriteBatch } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { auditLog } from '@/lib/services/auditService'
 
+const FIRESTORE_BATCH_LIMIT = 500
+
 /**
- * POST /api/check-in/host
- * Admin marks a player present (or clears attendance).
- * Body: { matchId, userId, attended: boolean }
+ * POST /api/check-in/host-all
+ * Admin marks all confirmed RSVPs present for a match.
+ * Body: { matchId }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -22,14 +24,9 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const matchId = typeof body?.matchId === 'string' ? body.matchId : null
-    const userId = typeof body?.userId === 'string' ? body.userId : null
-    const attended = body?.attended === true
 
-    if (!matchId || !userId) {
-      return NextResponse.json(
-        { error: 'matchId and userId are required' },
-        { status: 400 }
-      )
+    if (!matchId) {
+      return NextResponse.json({ error: 'matchId is required' }, { status: 400 })
     }
 
     const adminDb = getAdminDb()
@@ -49,54 +46,57 @@ export async function POST(request: NextRequest) {
     if (matchData.deletedAt != null) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 })
     }
+
     const rsvpSnap = await adminDb
       .collection('rsvps')
       .where('matchId', '==', matchId)
-      .where('userId', '==', userId)
       .where('status', '==', 'confirmed')
-      .limit(1)
       .get()
 
-    if (rsvpSnap.empty) {
-      return NextResponse.json(
-        { error: 'Confirmed RSVP not found for this player' },
-        { status: 404 }
-      )
+    const toUpdate = rsvpSnap.docs.filter(doc => doc.data().attended !== true)
+    if (toUpdate.length === 0) {
+      return NextResponse.json({
+        success: true,
+        updated: [],
+        message: 'All confirmed players are already marked present',
+      })
     }
 
-    const rsvpDoc = rsvpSnap.docs[0]
     const now = Timestamp.now()
-
-    if (attended) {
-      await rsvpDoc.ref.update({
-        attended: true,
-        checkedInAt: now,
-        checkInMethod: 'host',
-        updatedAt: now,
-      })
-    } else {
-      await rsvpDoc.ref.update({
-        attended: null,
-        checkedInAt: null,
-        checkInMethod: null,
-        updatedAt: now,
-      })
+    const attendanceUpdate = {
+      attended: true,
+      checkedInAt: now,
+      checkInMethod: 'host' as const,
+      updatedAt: now,
     }
+
+    for (let i = 0; i < toUpdate.length; i += FIRESTORE_BATCH_LIMIT) {
+      const chunk = toUpdate.slice(i, i + FIRESTORE_BATCH_LIMIT)
+      const batch: WriteBatch = adminDb.batch()
+      for (const doc of chunk) {
+        batch.update(doc.ref, attendanceUpdate)
+      }
+      await batch.commit()
+    }
+
+    const updated = toUpdate.map(doc => ({
+      rsvpId: doc.id,
+      userId: doc.data().userId as string,
+    }))
 
     auditLog({
-      action: attended ? 'check_in.host' : 'check_in.cleared',
+      action: 'check_in.host',
       actorUid: uid,
-      targetUid: userId,
       matchId,
-      entityType: 'rsvp',
-      entityId: rsvpDoc.id,
+      entityType: 'match',
+      entityId: matchId,
       source: 'api',
-      metadata: { attended },
+      metadata: { bulk: true, count: updated.length },
     })
 
-    return NextResponse.json({ success: true, rsvpId: rsvpDoc.id, attended })
+    return NextResponse.json({ success: true, updated })
   } catch (error: unknown) {
-    console.error('check-in/host error:', error)
+    console.error('check-in/host-all error:', error)
     return NextResponse.json(
       { error: sanitizeErrorForClient(error, 'Failed to update attendance') },
       { status: 500 }

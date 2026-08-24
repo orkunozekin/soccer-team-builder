@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/api/auth'
+import { verifyAuth, verifyAdmin } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { countAuditLogs, queryAuditLogs } from '@/lib/audit/queryAuditLogs'
 import { getAdminDb } from '@/lib/firebase/admin'
