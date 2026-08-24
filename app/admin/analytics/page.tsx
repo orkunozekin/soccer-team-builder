@@ -5,7 +5,7 @@ import { AnalyticsDashboard } from '@/components/admin/AnalyticsDashboard'
 
 export default function AdminAnalyticsPage() {
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8">
+    <div className="container mx-auto max-w-5xl min-w-0 px-4 py-8">
       <AdminNav />
 
       <div className="mb-6">

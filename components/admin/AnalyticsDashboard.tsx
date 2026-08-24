@@ -67,12 +67,14 @@ function actionBadgeVariant(
 
 function UserLink({ uid, label }: { uid: string; label?: string }) {
   if (uid === 'system' || uid === 'anonymous') {
-    return <span className="font-mono text-xs text-zinc-500">{uid}</span>
+    return (
+      <span className="break-all font-mono text-xs text-zinc-500">{uid}</span>
+    )
   }
   return (
     <Link
       href={`/admin/players/${uid}`}
-      className="font-mono text-xs text-red-700 hover:underline dark:text-red-400"
+      className="break-all font-mono text-xs text-red-700 hover:underline dark:text-red-400"
     >
       {label ?? uid.slice(0, 8)}
     </Link>
@@ -92,11 +94,14 @@ function AnalyticsEventRow({ log }: { log: AuditLog }) {
       : null
 
   return (
-    <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="space-y-1">
+    <div className="min-w-0 overflow-hidden rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={actionBadgeVariant(log.action)}>
+            <Badge
+              variant={actionBadgeVariant(log.action)}
+              className="max-w-full whitespace-normal break-all"
+            >
               {formatAction(log.action)}
             </Badge>
             <Badge variant="secondary">{log.source}</Badge>
@@ -105,15 +110,17 @@ function AnalyticsEventRow({ log }: { log: AuditLog }) {
             {format(new Date(log.createdAt), 'MMM d, yyyy · h:mm:ss a')}
           </p>
           {failureMessage ? (
-            <p className="text-xs text-red-700 dark:text-red-400">{failureMessage}</p>
+            <p className="break-words text-xs text-red-700 dark:text-red-400">
+              {failureMessage}
+            </p>
           ) : null}
         </div>
       </div>
 
-      <dl className="mt-3 grid gap-1 text-sm sm:grid-cols-2">
-        <div>
+      <dl className="mt-3 grid min-w-0 gap-1 text-sm sm:grid-cols-2">
+        <div className="min-w-0">
           <dt className="text-xs uppercase tracking-wide text-zinc-500">Actor</dt>
-          <dd>
+          <dd className="min-w-0">
             <UserLink uid={log.actorUid} />
             {log.actorRole ? (
               <span className="ml-2 text-xs text-zinc-500">({log.actorRole})</span>
@@ -121,22 +128,22 @@ function AnalyticsEventRow({ log }: { log: AuditLog }) {
           </dd>
         </div>
         {log.targetUid ? (
-          <div>
+          <div className="min-w-0">
             <dt className="text-xs uppercase tracking-wide text-zinc-500">
               Target user
             </dt>
-            <dd>
+            <dd className="min-w-0">
               <UserLink uid={log.targetUid} />
             </dd>
           </div>
         ) : null}
         {log.matchId ? (
-          <div>
+          <div className="min-w-0">
             <dt className="text-xs uppercase tracking-wide text-zinc-500">Match</dt>
-            <dd>
+            <dd className="min-w-0">
               <Link
                 href={`/admin/matches/${log.matchId}`}
-                className="font-mono text-xs text-red-700 hover:underline dark:text-red-400"
+                className="break-all font-mono text-xs text-red-700 hover:underline dark:text-red-400"
               >
                 {log.matchId}
               </Link>
@@ -144,11 +151,11 @@ function AnalyticsEventRow({ log }: { log: AuditLog }) {
           </div>
         ) : null}
         {log.entityType ? (
-          <div>
+          <div className="min-w-0">
             <dt className="text-xs uppercase tracking-wide text-zinc-500">
               Entity
             </dt>
-            <dd className="font-mono text-xs">
+            <dd className="break-all font-mono text-xs">
               {log.entityType}
               {log.entityId ? ` · ${log.entityId}` : ''}
             </dd>
@@ -157,11 +164,11 @@ function AnalyticsEventRow({ log }: { log: AuditLog }) {
       </dl>
 
       {hasMetadata ? (
-        <details className="mt-3">
+        <details className="mt-3 min-w-0">
           <summary className="cursor-pointer text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Metadata
           </summary>
-          <pre className="mt-2 overflow-x-auto rounded-md bg-zinc-50 p-2 text-xs dark:bg-zinc-900/50">
+          <pre className="mt-2 max-w-full overflow-x-auto rounded-md bg-zinc-50 p-2 text-xs dark:bg-zinc-900/50">
             {JSON.stringify(log.metadata, null, 2)}
           </pre>
         </details>
@@ -247,8 +254,8 @@ export function AnalyticsDashboard() {
   }
 
   return (
-    <Card>
-      <CardContent className="space-y-4 pt-6">
+    <Card className="min-w-0 overflow-hidden">
+      <CardContent className="min-w-0 space-y-4 pt-6">
         {error ? (
           <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
             {error}
@@ -363,7 +370,7 @@ export function AnalyticsDashboard() {
             No events match your filters.
           </p>
         ) : (
-          <div className="max-h-[32rem] space-y-3 overflow-y-auto pr-1">
+          <div className="max-h-[32rem] min-w-0 space-y-3 overflow-y-auto overflow-x-hidden pr-1">
             {logs.map(log => (
               <AnalyticsEventRow key={log.id} log={log} />
             ))}
