@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { listAuditLogsAPI } from '@/lib/api/client'
+import { cn } from '@/lib/utils'
 import {
   ALL_AUDIT_ACTIONS,
   ALL_AUDIT_SOURCES,
@@ -71,12 +72,18 @@ function UserLink({ uid, label }: { uid: string; label?: string }) {
       <span className="break-all font-mono text-xs text-zinc-500">{uid}</span>
     )
   }
+  const display = label?.trim() || uid.slice(0, 8)
+  const showingName = Boolean(label?.trim())
   return (
     <Link
       href={`/admin/players/${uid}`}
-      className="break-all font-mono text-xs text-red-700 hover:underline dark:text-red-400"
+      title={uid}
+      className={cn(
+        'break-all text-xs text-red-700 hover:underline dark:text-red-400',
+        !showingName && 'font-mono'
+      )}
     >
-      {label ?? uid.slice(0, 8)}
+      {display}
     </Link>
   )
 }
@@ -121,7 +128,7 @@ function AnalyticsEventRow({ log }: { log: AuditLog }) {
         <div className="min-w-0">
           <dt className="text-xs uppercase tracking-wide text-zinc-500">Actor</dt>
           <dd className="min-w-0">
-            <UserLink uid={log.actorUid} />
+            <UserLink uid={log.actorUid} label={log.actorDisplayName} />
             {log.actorRole ? (
               <span className="ml-2 text-xs text-zinc-500">({log.actorRole})</span>
             ) : null}
@@ -133,7 +140,7 @@ function AnalyticsEventRow({ log }: { log: AuditLog }) {
               Target user
             </dt>
             <dd className="min-w-0">
-              <UserLink uid={log.targetUid} />
+              <UserLink uid={log.targetUid} label={log.targetDisplayName} />
             </dd>
           </div>
         ) : null}

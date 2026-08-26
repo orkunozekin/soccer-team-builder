@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth, verifyAdmin } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
+import { enrichAuditLogsWithDisplayNames } from '@/lib/audit/enrichAuditLogNames'
 import { countAuditLogs, queryAuditLogs } from '@/lib/audit/queryAuditLogs'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { recordAuditLog } from '@/lib/services/auditService'
@@ -78,9 +79,11 @@ export async function GET(request: NextRequest) {
       includeCount ? countAuditLogs(adminDb, filters) : Promise.resolve(undefined),
     ])
 
+    const enrichedLogs = await enrichAuditLogsWithDisplayNames(adminDb, logs)
+
     return NextResponse.json({
       success: true,
-      logs,
+      logs: enrichedLogs,
       nextCursor,
       ...(totalCount != null ? { totalCount } : {}),
     })

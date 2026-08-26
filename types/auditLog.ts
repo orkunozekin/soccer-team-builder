@@ -70,6 +70,10 @@ export interface AuditLogFirestore {
 export interface AuditLog extends Omit<AuditLogFirestore, 'createdAt'> {
   id: string
   createdAt: string
+  /** Resolved at read time from the users collection; not stored on the log. */
+  actorDisplayName?: string
+  /** Resolved at read time from the users collection; not stored on the log. */
+  targetDisplayName?: string
 }
 
 export interface AuditLogFilters {
