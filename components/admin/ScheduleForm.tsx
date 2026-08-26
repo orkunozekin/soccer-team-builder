@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { AddressAutocomplete } from '@/components/admin/AddressAutocomplete'
+import { LocationPicker } from '@/components/admin/LocationPicker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -312,7 +312,8 @@ export function ScheduleForm({
               </div>
             </div>
 
-            <AddressAutocomplete
+            <LocationPicker
+              key={slot.key}
               locationName={slot.locationName}
               address={slot.address}
               lat={slot.lat}
