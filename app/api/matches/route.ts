@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { createMatchDoc } from '@/lib/matches/createMatch'
+import { auditLog } from '@/lib/services/auditService'
 import type { MatchLocation } from '@/types/match'
 
 export async function POST(request: NextRequest) {
@@ -39,10 +40,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const locationValue = (location as MatchLocation | null) ?? null
     const { matchId } = await createMatchDoc({
       date: matchDate,
       time,
-      location: (location as MatchLocation | null) ?? null,
+      location: locationValue,
+    })
+
+    auditLog({
+      action: 'match.created',
+      actorUid: uid,
+      matchId,
+      entityType: 'match',
+      entityId: matchId,
+      source: 'api',
+      metadata: { date, time, location: locationValue },
     })
 
     return NextResponse.json({ success: true, matchId })

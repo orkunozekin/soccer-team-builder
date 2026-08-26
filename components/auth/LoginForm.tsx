@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { FormError } from '@/components/auth/FormError'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
@@ -9,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
 import { loginUser, loginWithGoogle } from '@/lib/firebase/auth'
+import { recordAuditEventAPI } from '@/lib/api/client'
 import { createUser, getUser } from '@/lib/services/userService'
 import { useAuthStore } from '@/store/authStore'
 
@@ -29,9 +31,14 @@ export function LoginForm() {
     try {
       const userCredential = await loginUser(email, password)
       setUser(userCredential.user)
+      recordAuditEventAPI({ action: 'auth.login' })
       router.push('/matches')
     } catch {
       setError('Failed to sign in')
+      recordAuditEventAPI({
+        action: 'auth.login_failed',
+        metadata: { message: 'Failed to sign in' },
+      })
     } finally {
       setLoading(false)
     }
@@ -48,11 +55,18 @@ export function LoginForm() {
         const displayName =
           user.displayName ?? user.email?.split('@')[0] ?? 'User'
         await createUser(user.uid, user.email ?? '', displayName)
+        recordAuditEventAPI({ action: 'auth.register' })
+      } else {
+        recordAuditEventAPI({ action: 'auth.login' })
       }
       setUser(user)
       router.push('/matches')
     } catch {
       setError('Failed to sign in with Google')
+      recordAuditEventAPI({
+        action: 'auth.login_failed',
+        metadata: { message: 'Failed to sign in with Google', provider: 'google' },
+      })
     } finally {
       setGoogleLoading(false)
     }
@@ -76,7 +90,15 @@ export function LoginForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor="password">Password</Label>
+          <Link
+            href="/forgot-password"
+            className="text-sm font-medium text-red-50 hover:underline dark:text-red-400"
+          >
+            Forgot password?
+          </Link>
+        </div>
         <PasswordInput
           id="password"
           placeholder="Enter your password"

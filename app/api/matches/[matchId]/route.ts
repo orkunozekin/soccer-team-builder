@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { deleteMatch } from '@/lib/matches/deleteMatch'
+import { auditLog } from '@/lib/services/auditService'
 import { serializeMatchLocation } from '@/lib/utils/location'
 import { getRSVPSchedule } from '@/lib/utils/rsvpScheduler'
 import type { MatchLocation } from '@/types/match'
@@ -24,7 +25,7 @@ export async function PATCH(
   { params }: { params: Promise<{ matchId: string }> }
 ) {
   try {
-    const { isAdmin, error: authError } = await verifyAdmin(request)
+    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
     if (authError || !isAdmin) {
       return NextResponse.json(
         { error: 'Admin privileges required' },
@@ -111,6 +112,30 @@ export async function PATCH(
     }
 
     await matchRef.update(updates)
+
+    const updatedFields = Object.keys(updates).filter(k => k !== 'updatedAt')
+    auditLog({
+      action: 'match.updated',
+      actorUid: uid ?? 'unknown',
+      matchId,
+      entityType: 'match',
+      entityId: matchId,
+      source: 'api',
+      metadata: { updates: updatedFields },
+    })
+
+    if (body.rsvpOpen !== undefined) {
+      auditLog({
+        action: 'match.rsvp_poll_toggled',
+        actorUid: uid ?? 'unknown',
+        matchId,
+        entityType: 'match',
+        entityId: matchId,
+        source: 'api',
+        metadata: { rsvpOpen: body.rsvpOpen === true },
+      })
+    }
+
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     console.error('Error updating match:', error)
@@ -127,7 +152,7 @@ export async function DELETE(
   { params }: { params: Promise<{ matchId: string }> }
 ) {
   try {
-    const { isAdmin, error: authError } = await verifyAdmin(request)
+    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
     if (authError || !isAdmin) {
       return NextResponse.json(
         { error: 'Admin privileges required' },
@@ -154,6 +179,16 @@ export async function DELETE(
     }
 
     await deleteMatch(adminDb, matchId)
+
+    auditLog({
+      action: 'match.deleted',
+      actorUid: uid ?? 'unknown',
+      matchId,
+      entityType: 'match',
+      entityId: matchId,
+      source: 'api',
+    })
+
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     console.error('Error deleting match:', error)

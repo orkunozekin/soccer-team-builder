@@ -21,13 +21,13 @@ describe('geo', () => {
     expect(d).toBeLessThan(120)
   })
 
-  it('isWithinCheckInRadius uses default 150m', () => {
+  it('isWithinCheckInRadius uses default 500m', () => {
     const venue = { lat: 30.2672, lng: -97.7431 }
     const near = { lat: 30.2675, lng: -97.7431 } // ~33m
-    const far = { lat: 30.27, lng: -97.7431 } // ~311m
+    const far = { lat: 30.2732, lng: -97.7431 } // ~667m
     expect(isWithinCheckInRadius(near, venue)).toBe(true)
     expect(isWithinCheckInRadius(far, venue)).toBe(false)
-    expect(CHECK_IN_RADIUS_METERS).toBe(150)
+    expect(CHECK_IN_RADIUS_METERS).toBe(500)
   })
 
   it('hasValidCoords rejects NaN and out-of-range', () => {

@@ -2,7 +2,9 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
+import { logUserError, userErrorResponse } from '@/lib/audit/logUserError'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { auditLog } from '@/lib/services/auditService'
 import { isWithinCheckInWindow, venueHasCheckInCoords } from '@/lib/utils/checkIn'
 import {
   CHECK_IN_MAX_ACCURACY_METERS,
@@ -11,17 +13,39 @@ import {
 } from '@/lib/utils/geo'
 import { parseMatchLocation } from '@/lib/utils/location'
 
+function checkInFailed(
+  uid: string,
+  status: number,
+  error: string,
+  opts?: { code?: string; matchId?: string | null }
+) {
+  return userErrorResponse(
+    {
+      action: 'check_in.failed',
+      actorUid: uid,
+      status,
+      message: error,
+      code: opts?.code,
+      matchId: opts?.matchId ?? undefined,
+      entityType: 'rsvp',
+    },
+    { error, ...(opts?.code ? { code: opts.code } : {}) }
+  )
+}
+
 /**
  * POST /api/check-in
  * Geo check-in for the authenticated user against their confirmed RSVP.
  * Body: { matchId, lat, lng, accuracy? }
  */
 export async function POST(request: NextRequest) {
+  let uid: string | null = null
   try {
-    const { uid, error: authError } = await verifyAuth(request)
-    if (authError || !uid || uid === 'fallback') {
+    const auth = await verifyAuth(request)
+    uid = auth.uid
+    if (auth.error || !uid || uid === 'fallback') {
       return NextResponse.json(
-        { error: authError || 'Unauthorized' },
+        { error: auth.error || 'Unauthorized' },
         { status: 401 }
       )
     }
@@ -38,68 +62,52 @@ export async function POST(request: NextRequest) {
           : Number(body.accuracy)
 
     if (!matchId) {
-      return NextResponse.json({ error: 'Match ID required' }, { status: 400 })
+      return checkInFailed(uid, 400, 'Match ID required')
     }
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      return NextResponse.json(
-        { error: 'Valid lat and lng are required' },
-        { status: 400 }
-      )
+      return checkInFailed(uid, 400, 'Valid lat and lng are required', {
+        matchId,
+      })
     }
     if (
       accuracy != null &&
       Number.isFinite(accuracy) &&
       accuracy > CHECK_IN_MAX_ACCURACY_METERS
     ) {
-      return NextResponse.json(
-        {
-          error: `GPS accuracy too low (${Math.round(accuracy)}m). Move outdoors or ask a host to mark you present.`,
-          code: 'ACCURACY',
-        },
-        { status: 400 }
-      )
+      const error = `GPS accuracy too low (${Math.round(accuracy)}m). Move outdoors or ask a host to mark you present.`
+      return checkInFailed(uid, 400, error, { code: 'ACCURACY', matchId })
     }
 
     const adminDb = getAdminDb()
     if (!adminDb) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      )
+      return checkInFailed(uid, 500, 'Server configuration error', { matchId })
     }
 
     const matchSnap = await adminDb.collection('matches').doc(matchId).get()
-    if (!matchSnap.exists) {
-      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+    if (!matchSnap.exists || matchSnap.data()?.deletedAt != null) {
+      return checkInFailed(uid, 404, 'Match not found', { matchId })
     }
 
     const matchData = matchSnap.data()!
-    if (matchData.deletedAt != null) {
-      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
-    }
     const matchDate = matchData.date?.toDate?.() ?? new Date(matchData.date)
     const time = typeof matchData.time === 'string' ? matchData.time : null
 
     if (!isWithinCheckInWindow(matchDate, time)) {
-      return NextResponse.json(
-        {
-          error:
-            'Check-in is only available from 40 minutes before kickoff until 2 hours after.',
-          code: 'WINDOW',
-        },
-        { status: 403 }
+      return checkInFailed(
+        uid,
+        403,
+        'Check-in is only available from 40 minutes before kickoff until 2 hours after.',
+        { code: 'WINDOW', matchId }
       )
     }
 
     const location = parseMatchLocation(matchData.location)
     if (!venueHasCheckInCoords(location)) {
-      return NextResponse.json(
-        {
-          error:
-            'This field has no pinned location. Ask a host to mark you present.',
-          code: 'NO_VENUE',
-        },
-        { status: 400 }
+      return checkInFailed(
+        uid,
+        400,
+        'This field has no pinned location. Ask a host to mark you present.',
+        { code: 'NO_VENUE', matchId }
       )
     }
 
@@ -110,13 +118,11 @@ export async function POST(request: NextRequest) {
         CHECK_IN_RADIUS_METERS
       )
     ) {
-      return NextResponse.json(
-        {
-          error:
-            'You appear to be too far from the field. Head to the location to check in.',
-          code: 'DISTANCE',
-        },
-        { status: 400 }
+      return checkInFailed(
+        uid,
+        400,
+        'You appear to be too far from the field. Head to the location to check in.',
+        { code: 'DISTANCE', matchId }
       )
     }
 
@@ -129,9 +135,11 @@ export async function POST(request: NextRequest) {
       .get()
 
     if (rsvpSnap.empty) {
-      return NextResponse.json(
-        { error: 'Confirmed RSVP required to check in', code: 'NO_RSVP' },
-        { status: 403 }
+      return checkInFailed(
+        uid,
+        403,
+        'Confirmed RSVP required to check in',
+        { code: 'NO_RSVP', matchId }
       )
     }
 
@@ -153,6 +161,16 @@ export async function POST(request: NextRequest) {
       updatedAt: now,
     })
 
+    auditLog({
+      action: 'check_in.geo',
+      actorUid: uid,
+      targetUid: uid,
+      matchId,
+      entityType: 'rsvp',
+      entityId: rsvpDoc.id,
+      source: 'api',
+    })
+
     return NextResponse.json({
       success: true,
       alreadyCheckedIn: false,
@@ -160,9 +178,16 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: unknown) {
     console.error('check-in error:', error)
-    return NextResponse.json(
-      { error: sanitizeErrorForClient(error, 'Failed to check in') },
-      { status: 500 }
-    )
+    const message = sanitizeErrorForClient(error, 'Failed to check in')
+    if (uid) {
+      logUserError({
+        action: 'check_in.failed',
+        actorUid: uid,
+        status: 500,
+        message,
+        entityType: 'rsvp',
+      })
+    }
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

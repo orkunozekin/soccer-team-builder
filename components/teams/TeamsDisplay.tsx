@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { cancelRSVPAPI, hostCheckInAPI, transferPlayerAPI } from '@/lib/api/client'
+import { cancelRSVPAPI, hostCheckInAllAPI, hostCheckInAPI, transferPlayerAPI } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 import {
   getAttendanceLabel,
@@ -94,11 +94,12 @@ export function TeamsDisplay({
   allowCancelRsvp = true,
 }: TeamsDisplayProps) {
   const dndEnabled = Boolean(isAdmin && matchId && onTeamsChanged)
-  const { updateRSVPAttendance } = useMatchStore()
+  const { updateRSVPAttendance, bulkUpdateRSVPAttendance } = useMatchStore()
   const [pageIndex, setPageIndex] = useState(0)
   const [transferError, setTransferError] = useState('')
   const [transferring, setTransferring] = useState<string | null>(null)
   const [hostCheckInBusy, setHostCheckInBusy] = useState<string | null>(null)
+  const [markAllPresentBusy, setMarkAllPresentBusy] = useState(false)
   const [activeDrag, setActiveDrag] = useState<{
     user: User
     teamColor: string | null
@@ -128,6 +129,16 @@ export function TeamsDisplay({
     return map
   }, [matchDate, matchTime, matchRSVPs])
 
+  const unmarkedConfirmedCount = useMemo(
+    () =>
+      matchRSVPs.filter(r => r.status === 'confirmed' && r.attended !== true)
+        .length,
+    [matchRSVPs]
+  )
+
+  const showMarkAllPresent =
+    isAdmin && Boolean(matchId) && unmarkedConfirmedCount > 0
+
   const handleHostCheckIn = useCallback(
     async (userId: string, attended: boolean) => {
       if (!matchId || hostCheckInBusy) return
@@ -141,14 +152,41 @@ export function TeamsDisplay({
           checkInMethod: attended ? 'host' : null,
         })
         onTeamsChanged?.()
-      } catch {
-        setTransferError('Failed to update check-in')
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to update check-in'
+        setTransferError(message)
       } finally {
         setHostCheckInBusy(null)
       }
     },
     [matchId, hostCheckInBusy, updateRSVPAttendance, onTeamsChanged]
   )
+
+  const handleMarkAllPresent = useCallback(async () => {
+    if (!matchId || markAllPresentBusy) return
+    setMarkAllPresentBusy(true)
+    setTransferError('')
+    try {
+      const res = await hostCheckInAllAPI(matchId)
+      const now = new Date()
+      bulkUpdateRSVPAttendance(
+        res.updated.map(item => ({
+          rsvpId: item.rsvpId,
+          attended: true,
+          checkedInAt: now,
+          checkInMethod: 'host',
+        }))
+      )
+      onTeamsChanged?.()
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to mark everyone present'
+      setTransferError(message)
+    } finally {
+      setMarkAllPresentBusy(false)
+    }
+  }, [matchId, markAllPresentBusy, bulkUpdateRSVPAttendance, onTeamsChanged])
 
   const onRequestCancelRSVP = useCallback(
     (userId: string, displayName: string) => {
@@ -358,7 +396,21 @@ export function TeamsDisplay({
 
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
         <h2 className="min-w-0 truncate text-2xl font-bold">Teams</h2>
-        {headerActions ? <div className="shrink-0">{headerActions}</div> : null}
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {showMarkAllPresent ? (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={markAllPresentBusy || hostCheckInBusy != null}
+              onClick={handleMarkAllPresent}
+            >
+              {markAllPresentBusy
+                ? 'Marking present…'
+                : `Mark all present (${unmarkedConfirmedCount})`}
+            </Button>
+          ) : null}
+          {headerActions ? headerActions : null}
+        </div>
       </div>
 
       {attendanceByUserId.size > 0 ? <CheckInStatusLegend /> : null}

@@ -73,7 +73,7 @@ location: {
 
 Existing string-only locations: admins re-enter name + address for upcoming matches; missing coords → host check-in only until fixed.
 
-Distance check (check-in phase): Haversine on the **server**; radius **~150m**; reject if `accuracy > ~150m`.
+Distance check (check-in phase): Haversine on the **server**; radius **~500m**; reject if `accuracy > ~300m`.
 
 ## Check-in data model
 

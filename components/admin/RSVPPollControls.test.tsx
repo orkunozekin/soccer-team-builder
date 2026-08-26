@@ -13,16 +13,16 @@ vi.mock('@/store/matchStore', () => ({
 }))
 
 const mocks = vi.hoisted(() => {
-  const updateMatchMock = vi.fn()
+  const updateMatchAPIMock = vi.fn()
   const getRSVPScheduleMock = vi.fn(() => ({
     openAt: new Date('2024-01-01T09:00:00-06:00'),
     closeAt: new Date('2024-01-01T22:00:00-06:00'),
   }))
-  return { updateMatchMock, getRSVPScheduleMock }
+  return { updateMatchAPIMock, getRSVPScheduleMock }
 })
 
-vi.mock('@/lib/services/matchService', () => ({
-  updateMatch: (...args: unknown[]) => mocks.updateMatchMock(...args),
+vi.mock('@/lib/api/client', () => ({
+  updateMatchAPI: (...args: unknown[]) => mocks.updateMatchAPIMock(...args),
 }))
 
 vi.mock('@/lib/utils/rsvpScheduler', () => ({
@@ -66,7 +66,7 @@ describe('RSVPPollControls', () => {
     const openButton = screen.getByRole('button', { name: /open rsvp/i })
     await user.click(openButton)
 
-    expect(mocks.updateMatchMock).toHaveBeenCalledWith(
+    expect(mocks.updateMatchAPIMock).toHaveBeenCalledWith(
       'match1',
       expect.objectContaining({ rsvpOpen: true })
     )
@@ -89,7 +89,7 @@ describe('RSVPPollControls', () => {
     const closeButton = screen.getByRole('button', { name: /close rsvp/i })
     await user.click(closeButton)
 
-    expect(mocks.updateMatchMock).toHaveBeenCalledWith('match1', {
+    expect(mocks.updateMatchAPIMock).toHaveBeenCalledWith('match1', {
       rsvpOpen: false,
     })
     expect(storeState.updateMatch).toHaveBeenCalledWith('match1', {

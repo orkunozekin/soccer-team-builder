@@ -29,12 +29,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { deleteUserAPI, searchUsersAPI } from '@/lib/api/client'
+import {
+  deleteUserAPI,
+  searchUsersAPI,
+  updateUserRoleAPI,
+} from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import {
   getUsersCount,
   getUsersPaginated,
-  updateUser,
 } from '@/lib/services/userService'
 import { User, UserRole } from '@/types/user'
 
@@ -148,7 +151,7 @@ export function UserRoleManager() {
     setSuccess(false)
 
     try {
-      await updateUser(userId, { role: newRole })
+      await updateUserRoleAPI(userId, newRole)
 
       // Update local state
       setUsers(prevUsers =>

@@ -20,6 +20,13 @@ service cloud.firestore {
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
     }
 
+    // Saved locations: all authenticated users can read, only admins can write
+    match /savedLocations/{locationId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
     // Matches: all authenticated users can read, only admins can write
     match /matches/{matchId} {
       allow read: if request.auth != null;
@@ -54,6 +61,13 @@ service cloud.firestore {
     match /schedules/{scheduleId} {
       allow read, write: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Audit logs: admin read-only; writes via Firebase Admin SDK only
+    match /auditLogs/{logId} {
+      allow read: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow write: if false;
     }
   }
 }

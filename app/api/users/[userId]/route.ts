@@ -1,7 +1,11 @@
+import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin'
 import { removeUserFromMatchTeams } from '@/lib/teams/removeUserFromMatchTeams'
+import { auditLog } from '@/lib/services/auditService'
+import { logUserError, userErrorResponse } from '@/lib/audit/logUserError'
+import type { UserRole } from '@/types/user'
 
 function chunk<T>(arr: T[], size: number): T[][] {
   if (size <= 0) return [arr]
@@ -10,6 +14,104 @@ function chunk<T>(arr: T[], size: number): T[][] {
     chunks.push(arr.slice(i, i + size))
   }
   return chunks
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ userId: string }> }
+) {
+  const { uid, isAdmin, error: authError } = await verifyAdmin(request)
+  if (authError || !uid) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (!isAdmin) {
+    return NextResponse.json(
+      { error: 'Admin privileges required' },
+      { status: 403 }
+    )
+  }
+
+  const { userId } = await params
+  if (!userId) {
+    return userErrorResponse(
+      {
+        action: 'user.role_change_failed',
+        actorUid: uid,
+        status: 400,
+        message: 'User ID required',
+      },
+      { error: 'User ID required' }
+    )
+  }
+
+  const body = await request.json().catch(() => null)
+  const roleRaw = body?.role
+  const role: UserRole | null =
+    roleRaw === 'admin' || roleRaw === 'user' ? roleRaw : null
+  if (!role) {
+    return userErrorResponse(
+      {
+        action: 'user.role_change_failed',
+        actorUid: uid,
+        status: 400,
+        message: 'Valid role is required',
+        targetUid: userId,
+        entityType: 'user',
+        entityId: userId,
+      },
+      { error: 'Valid role is required' }
+    )
+  }
+
+  const adminDb = getAdminDb()
+  if (!adminDb) {
+    return userErrorResponse(
+      {
+        action: 'user.role_change_failed',
+        actorUid: uid,
+        status: 500,
+        message: 'Firebase Admin not configured',
+        targetUid: userId,
+        entityType: 'user',
+        entityId: userId,
+      },
+      { error: 'Firebase Admin not configured' }
+    )
+  }
+
+  const userRef = adminDb.collection('users').doc(userId)
+  const userSnap = await userRef.get()
+  if (!userSnap.exists) {
+    return userErrorResponse(
+      {
+        action: 'user.role_change_failed',
+        actorUid: uid,
+        status: 404,
+        message: 'User not found',
+        targetUid: userId,
+        entityType: 'user',
+        entityId: userId,
+      },
+      { error: 'User not found' }
+    )
+  }
+
+  await userRef.update({
+    role,
+    updatedAt: Timestamp.now(),
+  })
+
+  auditLog({
+    action: 'user.role_changed',
+    actorUid: uid,
+    targetUid: userId,
+    entityType: 'user',
+    entityId: userId,
+    source: 'api',
+    metadata: { newRole: role },
+  })
+
+  return NextResponse.json({ success: true, role })
 }
 
 export async function DELETE(
@@ -75,6 +177,15 @@ export async function DELETE(
 
     // 4) Delete Firebase Auth user (if present)
     await adminAuth.deleteUser(userId).catch(() => {})
+
+    auditLog({
+      action: 'user.deleted',
+      actorUid: uid,
+      targetUid: userId,
+      entityType: 'user',
+      entityId: userId,
+      source: 'api',
+    })
 
     return NextResponse.json({ success: true })
   } catch (err: unknown) {

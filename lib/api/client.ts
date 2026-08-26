@@ -5,6 +5,12 @@
 
 import { auth } from '@/lib/firebase/config'
 import { useAuthStore } from '@/store/authStore'
+import type {
+  AuditAction,
+  AuditEntityType,
+  AuditLog,
+  AuditSource,
+} from '@/types/auditLog'
 
 const API_BASE = '/api'
 
@@ -251,6 +257,41 @@ export async function deleteUserAPI(
   return response.json()
 }
 
+export async function updateProfileAPI(updates: {
+  displayName?: string
+  jerseyNumber?: number | null
+  position?: string | null
+}): Promise<{ success: boolean }> {
+  const response = await apiRequest('/users/me', {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to update profile')
+  }
+
+  return response.json()
+}
+
+export async function updateUserRoleAPI(
+  userId: string,
+  role: 'user' | 'admin'
+): Promise<{ success: boolean; role: 'user' | 'admin' }> {
+  const response = await apiRequest(`/users/${userId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to update user role')
+  }
+
+  return response.json()
+}
+
 export async function searchUsersAPI(
   q: string,
   limit: number = 25
@@ -420,4 +461,136 @@ export async function deleteScheduleAPI(
     throw new Error(error.error || 'Failed to delete schedule')
   }
   return response.json()
+}
+
+export async function hostCheckInAllAPI(
+  matchId: string
+): Promise<{
+  success: boolean
+  updated: Array<{ rsvpId: string; userId: string }>
+  message?: string
+}> {
+  const response = await apiRequest('/check-in/host-all', {
+    method: 'POST',
+    body: JSON.stringify({ matchId }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to mark everyone present')
+  }
+
+  return response.json()
+}
+
+export type SavedLocationPayload = {
+  name: string
+  address: string
+  lat: number | null
+  lng: number | null
+}
+
+export async function createSavedLocationAPI(
+  location: SavedLocationPayload
+): Promise<{ success: boolean; locationId: string }> {
+  const response = await apiRequest('/locations', {
+    method: 'POST',
+    body: JSON.stringify(location),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to create saved location')
+  }
+
+  return response.json()
+}
+
+export async function updateSavedLocationAPI(
+  locationId: string,
+  location: SavedLocationPayload
+): Promise<{ success: boolean }> {
+  const response = await apiRequest(`/locations/${locationId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(location),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to update saved location')
+  }
+
+  return response.json()
+}
+
+export async function deleteSavedLocationAPI(
+  locationId: string
+): Promise<{ success: boolean }> {
+  const response = await apiRequest(`/locations/${locationId}`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to delete saved location')
+  }
+
+  return response.json()
+}
+
+export async function listAuditLogsAPI(params: {
+  limit?: number
+  cursor?: string | null
+  includeCount?: boolean
+  action?: AuditAction | ''
+  source?: AuditSource | ''
+  actorUid?: string
+  targetUid?: string
+  matchId?: string
+}): Promise<{
+  success: boolean
+  logs: AuditLog[]
+  nextCursor: string | null
+  totalCount?: number
+}> {
+  const search = new URLSearchParams()
+  if (params.limit != null) search.set('limit', String(params.limit))
+  if (params.cursor) search.set('cursor', params.cursor)
+  if (params.includeCount) search.set('includeCount', 'true')
+  if (params.action) search.set('action', params.action)
+  if (params.source) search.set('source', params.source)
+  if (params.actorUid?.trim()) search.set('actorUid', params.actorUid.trim())
+  if (params.targetUid?.trim()) search.set('targetUid', params.targetUid.trim())
+  if (params.matchId?.trim()) search.set('matchId', params.matchId.trim())
+
+  const qs = search.toString()
+  const response = await apiRequest(`/audit${qs ? `?${qs}` : ''}`)
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to load analytics')
+  }
+
+  return response.json()
+}
+
+/**
+ * Record a client-side audit event. Fire-and-forget; failures are logged but not thrown.
+ */
+export function recordAuditEventAPI(input: {
+  action: AuditAction
+  targetUid?: string
+  matchId?: string
+  entityType?: AuditEntityType
+  entityId?: string
+  metadata?: Record<string, unknown>
+}): void {
+  void apiRequest('/audit', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  }).catch(err => {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[audit] Failed to record client event:', err)
+    }
+  })
 }

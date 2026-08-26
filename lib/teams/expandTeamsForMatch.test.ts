@@ -152,7 +152,8 @@ function makeRsvpDoc(
   id: string,
   userId: string,
   rsvpAt: Date,
-  matchId = 'match1'
+  matchId = 'match1',
+  position = 'ST'
 ): StoredDoc {
   return {
     id,
@@ -160,7 +161,7 @@ function makeRsvpDoc(
       matchId,
       userId,
       status: 'confirmed',
-      position: 'ST',
+      position,
       rsvpAt,
       updatedAt: rsvpAt,
     },
@@ -264,6 +265,47 @@ describe('expandTeamsForMatch', () => {
       'p3',
     ])
     expect(getTeams().find(t => t.id === 'team2')?.data.playerIds).toEqual([])
+  })
+
+  it('promotes a late GK onto team 1 when teams 1 and 2 are full without a GK', async () => {
+    const team1Ids = Array.from({ length: 11 }, (_, i) => `p${i + 1}`)
+    const team2Ids = Array.from({ length: 11 }, (_, i) => `p${i + 12}`)
+    const allIds = [...team1Ids, ...team2Ids, 'gk_late']
+
+    const { adminDb, getTeams, getMatch } = createMockFirestore({
+      rsvps: allIds.map((id, index) =>
+        makeRsvpDoc(
+          `r${index + 1}`,
+          id,
+          new Date(2024, 0, 1, 0, index),
+          'match1',
+          id === 'gk_late' ? 'GK' : 'ST'
+        )
+      ),
+      users: allIds.map(id =>
+        makeUserDoc(id, id === 'gk_late' ? 'GK' : 'ST')
+      ),
+      teams: [
+        makeTeamDoc('team1', 1, team1Ids),
+        makeTeamDoc('team2', 2, team2Ids),
+      ],
+      match: { id: 'match1', data: {} },
+    })
+
+    const result = await expandTeamsForMatch(adminDb, 'match1')
+
+    expect(result).toEqual({ regenerated: true })
+    const team1 = getTeams().find(t => (t.data.teamNumber as number) === 1)
+    const team3 = getTeams().find(t => (t.data.teamNumber as number) === 3)
+    expect(team1?.data.playerIds).toContain('gk_late')
+    expect(team1?.data.playerIds).not.toContain('p11')
+    const team2 = getTeams().find(t => (t.data.teamNumber as number) === 2)
+    expect(team2?.data.playerIds).toContain('p11')
+    expect(team2?.data.playerIds).not.toContain('p22')
+    expect(team3?.data.playerIds).toContain('p22')
+    expect(getMatch()?.data.gkReplacements).toEqual({
+      gk_late: 'p11',
+    })
   })
 
   it('preserves explicit transfers during force regeneration', async () => {

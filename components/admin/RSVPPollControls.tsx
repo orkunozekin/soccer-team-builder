@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { updateMatch } from '@/lib/services/matchService'
+import { updateMatchAPI } from '@/lib/api/client'
 import { getRSVPSchedule } from '@/lib/utils/rsvpScheduler'
 import { useMatchStore } from '@/store/matchStore'
 import { Match } from '@/types/match'
@@ -41,10 +41,10 @@ export function RSVPPollControls({ match, onUpdated }: RSVPPollControlsProps) {
         const openAt = schedule.openAt!
         const closeAt = schedule.closeAt!
 
-        await updateMatch(match.id, {
+        await updateMatchAPI(match.id, {
           rsvpOpen: true,
-          rsvpOpenAt: openAt,
-          rsvpCloseAt: closeAt,
+          rsvpOpenAt: openAt.toISOString(),
+          rsvpCloseAt: closeAt.toISOString(),
         })
 
         updateMatchStore(match.id, {
@@ -54,7 +54,7 @@ export function RSVPPollControls({ match, onUpdated }: RSVPPollControlsProps) {
         })
       } else {
         // Close RSVP
-        await updateMatch(match.id, {
+        await updateMatchAPI(match.id, {
           rsvpOpen: false,
         })
 

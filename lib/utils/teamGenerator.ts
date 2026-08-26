@@ -129,9 +129,9 @@ export function generateTeams(
 }
 
 /**
- * Place only unassigned RSVPs onto existing teams without moving anyone already assigned.
- * Preserves manual transfers and other admin edits. Fills teams in teamNumber order using
- * the same GK/size rules as generateTeams (1 GK max on teams 1–2).
+ * Place only unassigned RSVPs onto existing teams without reshuffling outfield players
+ * among already-full teams. Then shift GKs from later teams onto any earlier team that
+ * still has no goalkeeper (same priority rule as full regeneration).
  */
 export function assignUnassignedPlayersToTeams(
   existingTeams: TeamAssignment[],
@@ -140,7 +140,7 @@ export function assignUnassignedPlayersToTeams(
   users: User[],
   maxTeamSize: number = 11,
   teamCount: number
-): TeamAssignment[] {
+): { teams: TeamAssignment[]; gkReplacements: GkReplacement[] } {
   const userById = new Map(users.map(u => [u.uid, u]))
   const rsvpByUserId = new Map(allRsvps.map(r => [r.userId, r]))
 
@@ -169,7 +169,111 @@ export function assignUnassignedPlayersToTeams(
     )
   }
 
-  return teams
+  return shiftGoalkeepersOntoTeamsWithoutGk(teams, allRsvps, users)
+}
+
+/**
+ * For each team that has no GK, move the earliest-RSVP GK from a later team onto it
+ * via shift-down (bumped players cascade toward the GK's former team).
+ */
+export function shiftGoalkeepersOntoTeamsWithoutGk(
+  existingTeams: TeamAssignment[],
+  rsvps: RSVP[],
+  users: User[]
+): { teams: TeamAssignment[]; gkReplacements: GkReplacement[] } {
+  const teams = existingTeams
+    .map(t => ({ teamNumber: t.teamNumber, playerIds: [...t.playerIds] }))
+    .sort((a, b) => a.teamNumber - b.teamNumber)
+
+  const userById = new Map(users.map(u => [u.uid, u]))
+  const rsvpByUserId = new Map(rsvps.map(r => [r.userId, r]))
+  const rsvpAtByUserId = new Map(
+    rsvps.map(r => [r.userId, r.rsvpAt?.getTime() ?? 0])
+  )
+  const effectivePosition = (uid: string): string | null => {
+    const r = rsvpByUserId.get(uid)
+    const u = userById.get(uid)
+    return r?.position ?? u?.position ?? null
+  }
+
+  const gkReplacements: GkReplacement[] = []
+  const teamHasGk = (t: TeamAssignment) =>
+    t.playerIds.some(uid => isGoalkeeper(effectivePosition(uid)))
+  const insertedGkIds = new Set<string>()
+
+  const lastByRsvp = (
+    playerIds: string[],
+    nonGkOnly: boolean
+  ): string | null => {
+    const withRsvp = playerIds
+      .filter(uid => !nonGkOnly || !isGoalkeeper(effectivePosition(uid)))
+      .map(uid => ({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 }))
+      .sort((a, b) => b.rsvpAt - a.rsvpAt)
+    return withRsvp[0]?.uid ?? null
+  }
+
+  const teamSortedByRsvp = (playerIds: string[]): string[] =>
+    [...playerIds].sort(
+      (a, b) => (rsvpAtByUserId.get(a) ?? 0) - (rsvpAtByUserId.get(b) ?? 0)
+    )
+
+  const lastNonGkByRsvp = (playerIds: string[]): string | null => {
+    const nonGks = playerIds.filter(
+      uid => !isGoalkeeper(effectivePosition(uid))
+    )
+    if (nonGks.length === 0) return null
+    return lastByRsvp(nonGks, false)
+  }
+
+  for (let targetTi = 0; targetTi < teams.length; targetTi++) {
+    if (teamHasGk(teams[targetTi])) continue
+
+    const laterTeams = teams.slice(targetTi + 1)
+    const gksLater: { uid: string; rsvpAt: number }[] = []
+    for (const t of laterTeams) {
+      for (const uid of t.playerIds) {
+        if (!isGoalkeeper(effectivePosition(uid))) continue
+        if (insertedGkIds.has(uid)) continue
+        gksLater.push({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 })
+      }
+    }
+    if (gksLater.length === 0) continue
+    gksLater.sort((a, b) => a.rsvpAt - b.rsvpAt)
+    const gkId = gksLater[0].uid
+
+    const gkTeamIndex = teams.findIndex(t => t.playerIds.includes(gkId))
+    if (gkTeamIndex < 0 || gkTeamIndex <= targetTi) continue
+
+    const p0 = lastByRsvp(teams[targetTi].playerIds, false)
+    if (!p0) continue
+
+    teams[targetTi].playerIds = teams[targetTi].playerIds.map(id =>
+      id === p0 ? gkId : id
+    )
+
+    let bumped: string = p0
+
+    for (let i = targetTi + 1; i < gkTeamIndex; i++) {
+      const sorted = teamSortedByRsvp(teams[i].playerIds)
+      const pushOff = lastNonGkByRsvp(teams[i].playerIds)
+      if (!pushOff) break
+      teams[i].playerIds = [bumped, ...sorted.filter(uid => uid !== pushOff)]
+      bumped = pushOff
+    }
+
+    const gkTeamWithoutGk = teams[gkTeamIndex].playerIds.filter(
+      id => id !== gkId
+    )
+    teams[gkTeamIndex].playerIds = [
+      bumped,
+      ...teamSortedByRsvp(gkTeamWithoutGk),
+    ]
+
+    gkReplacements.push({ insertedGK: gkId, removedPlayer: p0 })
+    insertedGkIds.add(gkId)
+  }
+
+  return { teams, gkReplacements }
 }
 
 /**
@@ -381,109 +485,10 @@ export function generateTeamsWithReplacements(
     teamNumber += 1
   }
 
-  const userById = new Map(users.map(u => [u.uid, u]))
-  const rsvpByUserId = new Map(sorted.map(r => [r.userId, r]))
-  const rsvpAtByUserId = new Map(
-    sorted.map(r => [r.userId, r.rsvpAt?.getTime() ?? 0])
-  )
-  const effectivePosition = (uid: string): string | null => {
-    const r = rsvpByUserId.get(uid)
-    const u = userById.get(uid)
-    return r?.position ?? u?.position ?? null ?? null
-  }
-
-  // For each team that has no GK, take the earliest GK by RSVP from a later team.
-  // Process from team 1 upward (low to high).
-  // SHIFT-DOWN: When moving a GK from team G to team T (G > T), the bumped person (T's last by RSVP)
-  // goes to the FIRST spot (earliest RSVP slot) on the next team; that team shifts down (insert at front,
-  // push off last non-GK to preserve GK spot); repeat until the last bumped fills the GK's vacated spot on G.
-  const gkReplacements: GkReplacement[] = []
-  const teamHasGk = (t: TeamAssignment) =>
-    t.playerIds.some(uid => isGoalkeeper(effectivePosition(uid)))
-  const insertedGkIds = new Set<string>()
-
-  const lastByRsvp = (
-    playerIds: string[],
-    nonGkOnly: boolean
-  ): string | null => {
-    const withRsvp = playerIds
-      .filter(uid => !nonGkOnly || !isGoalkeeper(effectivePosition(uid)))
-      .map(uid => ({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 }))
-      .sort((a, b) => b.rsvpAt - a.rsvpAt)
-    return withRsvp[0]?.uid ?? null
-  }
-
-  /** Team's player IDs in RSVP order (earliest first). */
-  const teamSortedByRsvp = (playerIds: string[]): string[] =>
-    [...playerIds].sort(
-      (a, b) => (rsvpAtByUserId.get(a) ?? 0) - (rsvpAtByUserId.get(b) ?? 0)
-    )
-
-  /** Last non-GK by RSVP (latest RSVP among non-GKs) so we keep GK on the team when pushing someone off. */
-  const lastNonGkByRsvp = (playerIds: string[]): string | null => {
-    const nonGks = playerIds.filter(
-      uid => !isGoalkeeper(effectivePosition(uid))
-    )
-    if (nonGks.length === 0) return null
-    return lastByRsvp(nonGks, false)
-  }
-
-  for (let targetTi = 0; targetTi < teams.length; targetTi++) {
-    if (teamHasGk(teams[targetTi])) continue
-
-    const laterTeams = teams.slice(targetTi + 1)
-    const gksLater: { uid: string; rsvpAt: number }[] = []
-    for (const t of laterTeams) {
-      for (const uid of t.playerIds) {
-        if (!isGoalkeeper(effectivePosition(uid))) continue
-        if (insertedGkIds.has(uid)) continue
-        gksLater.push({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 })
-      }
-    }
-    if (gksLater.length === 0) continue
-    gksLater.sort((a, b) => a.rsvpAt - b.rsvpAt)
-    const gkId = gksLater[0].uid
-
-    const gkTeamIndex = teams.findIndex(t => t.playerIds.includes(gkId))
-    if (gkTeamIndex < 0 || gkTeamIndex <= targetTi) continue
-
-    // Shift-down: target team gets GK (bump its last by RSVP); bumped goes to first spot on next team, etc.
-    const p0 = lastByRsvp(teams[targetTi].playerIds, false)
-    if (!p0) continue
-
-    // 1. Target team: replace p0 with GK
-    teams[targetTi].playerIds = teams[targetTi].playerIds.map(id =>
-      id === p0 ? gkId : id
-    )
-
-    let bumped: string = p0
-
-    // 2. Middle teams (targetTi+1 .. gkTeamIndex-1): insert bumped at first spot, push off last non-GK
-    for (let i = targetTi + 1; i < gkTeamIndex; i++) {
-      const sorted = teamSortedByRsvp(teams[i].playerIds)
-      const pushOff = lastNonGkByRsvp(teams[i].playerIds)
-      if (!pushOff) break
-      teams[i].playerIds = [bumped, ...sorted.filter(uid => uid !== pushOff)]
-      bumped = pushOff
-    }
-
-    // 3. GK's team: same shift-down rule — insert bumped at first spot, remove GK (no in-place replacement)
-    const gkTeamWithoutGk = teams[gkTeamIndex].playerIds.filter(
-      id => id !== gkId
-    )
-    teams[gkTeamIndex].playerIds = [
-      bumped,
-      ...teamSortedByRsvp(gkTeamWithoutGk),
-    ]
-
-    gkReplacements.push({ insertedGK: gkId, removedPlayer: p0 })
-    insertedGkIds.add(gkId)
-  }
-
   // If we needed more teams by count but had no overflow, add empty slots
   while (teams.length < teamCount) {
     teams.push({ teamNumber: teams.length + 1, playerIds: [] })
   }
 
-  return { teams, gkReplacements }
+  return shiftGoalkeepersOntoTeamsWithoutGk(teams, sorted, users)
 }

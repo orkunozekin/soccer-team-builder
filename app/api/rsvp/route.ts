@@ -4,7 +4,10 @@ import { verifyAdmin, verifyAuth } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { acquireMatchLock } from '@/lib/locks/matchLock'
+import { logUserError, userErrorResponse } from '@/lib/audit/logUserError'
+import { auditLog } from '@/lib/services/auditService'
 import { expandTeamsForMatch } from '@/lib/teams/expandTeamsForMatch'
+import { placeGkOnTeamWithoutGk } from '@/lib/teams/placeGkOnTeamWithoutGk'
 import { removeUserFromMatchTeams } from '@/lib/teams/removeUserFromMatchTeams'
 import {
   performGkSwap,
@@ -14,16 +17,45 @@ import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import { hasMatchStarted } from '@/lib/utils/rsvpScheduler'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 
+function rsvpFailed(
+  actorUid: string,
+  status: number,
+  error: string,
+  opts?: {
+    code?: string
+    matchId?: string
+    targetUid?: string
+    entityId?: string
+  }
+) {
+  return userErrorResponse(
+    {
+      action: 'rsvp.failed',
+      actorUid,
+      status,
+      message: error,
+      code: opts?.code,
+      matchId: opts?.matchId,
+      targetUid: opts?.targetUid,
+      entityType: 'rsvp',
+      entityId: opts?.entityId,
+    },
+    { error, ...(opts?.code ? { code: opts.code } : {}) }
+  )
+}
+
 /**
  * POST: Confirm RSVP for the authenticated user (or for impersonateUserId when requester is admin).
  * Creates the RSVP document, then expands teams if needed (e.g. 3rd team when 23+ RSVPs).
  */
 export async function POST(request: NextRequest) {
+  let uid: string | null = null
   try {
-    const { uid, error: authError } = await verifyAuth(request)
-    if (authError || !uid) {
+    const auth = await verifyAuth(request)
+    uid = auth.uid
+    if (auth.error || !uid) {
       return NextResponse.json(
-        { error: authError || 'Unauthorized' },
+        { error: auth.error || 'Unauthorized' },
         { status: 401 }
       )
     }
@@ -31,7 +63,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const matchId = body?.matchId
     if (!matchId || typeof matchId !== 'string') {
-      return NextResponse.json({ error: 'Match ID required' }, { status: 400 })
+      return rsvpFailed(uid, 400, 'Match ID required')
     }
 
     const impersonateUserId =
@@ -42,35 +74,25 @@ export async function POST(request: NextRequest) {
     if (impersonateUserId) {
       const { isAdmin } = await verifyAdmin(request)
       if (!isAdmin) {
-        return NextResponse.json(
-          { error: 'Admin required to RSVP on behalf of another user' },
-          { status: 403 }
-        )
+        return rsvpFailed(uid, 403, 'Admin required to RSVP on behalf of another user', {
+          matchId,
+        })
       }
       effectiveUid = impersonateUserId
     }
 
     const adminDb = getAdminDb()
     if (!adminDb) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      )
+      return rsvpFailed(uid, 500, 'Server configuration error', { matchId })
     }
 
     const matchSnap = await adminDb.collection('matches').doc(matchId).get()
-    if (!matchSnap.exists) {
-      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
-    }
-    if (matchSnap.data()?.deletedAt != null) {
-      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+    if (!matchSnap.exists || matchSnap.data()?.deletedAt != null) {
+      return rsvpFailed(uid, 404, 'Match not found', { matchId })
     }
     const rsvpOpen = matchSnap.data()?.rsvpOpen === true
     if (!rsvpOpen) {
-      return NextResponse.json(
-        { error: 'RSVP is closed for this match' },
-        { status: 403 }
-      )
+      return rsvpFailed(uid, 403, 'RSVP is closed for this match', { matchId })
     }
 
     const userSnap = await adminDb.collection('users').doc(effectiveUid).get()
@@ -79,10 +101,10 @@ export async function POST(request: NextRequest) {
     const hasName =
       typeof displayName === 'string' && displayName.trim().length > 0
     if (!hasName) {
-      return NextResponse.json(
-        { error: 'Set your display name to RSVP' },
-        { status: 400 }
-      )
+      return rsvpFailed(uid, 400, 'Set your display name to RSVP', {
+        matchId,
+        targetUid: effectiveUid,
+      })
     }
 
     // Use provided position or fall back to profile position (per-RSVP position is stored and not changed by later profile updates)
@@ -99,10 +121,10 @@ export async function POST(request: NextRequest) {
     const hasPosition =
       typeof position === 'string' && position.trim().length > 0
     if (!hasPosition) {
-      return NextResponse.json(
-        { error: 'Set your position in your profile to RSVP' },
-        { status: 400 }
-      )
+      return rsvpFailed(uid, 400, 'Set your position in your profile to RSVP', {
+        matchId,
+        targetUid: effectiveUid,
+      })
     }
 
     const existing = await adminDb
@@ -121,12 +143,11 @@ export async function POST(request: NextRequest) {
         (existingDoc.data()?.position as string | null) ?? null
       const lock = await acquireMatchLock(adminDb, matchId)
       if (!lock) {
-        return NextResponse.json(
-          {
-            error: 'Team update is busy. Please try again in a moment.',
-            code: 'LOCK_BUSY',
-          },
-          { status: 503 }
+        return rsvpFailed(
+          uid,
+          503,
+          'Team update is busy. Please try again in a moment.',
+          { code: 'LOCK_BUSY', matchId, targetUid: effectiveUid }
         )
       }
       try {
@@ -205,12 +226,11 @@ export async function POST(request: NextRequest) {
 
     const lock = await acquireMatchLock(adminDb, matchId)
     if (!lock) {
-      return NextResponse.json(
-        {
-          error: 'Team update is busy. Please try again in a moment.',
-          code: 'LOCK_BUSY',
-        },
-        { status: 503 }
+      return rsvpFailed(
+        uid,
+        503,
+        'Team update is busy. Please try again in a moment.',
+        { code: 'LOCK_BUSY', matchId, targetUid: effectiveUid }
       )
     }
     let regenerated = false
@@ -220,6 +240,22 @@ export async function POST(request: NextRequest) {
     } finally {
       await lock.release()
     }
+
+    auditLog({
+      action: impersonateUserId ? 'rsvp.impersonated' : 'rsvp.confirmed',
+      actorUid: uid,
+      targetUid: effectiveUid,
+      matchId,
+      entityType: 'rsvp',
+      entityId: rsvpId,
+      source: 'api',
+      metadata: {
+        position: position ?? null,
+        jerseyNumber,
+        regenerated,
+        impersonated: Boolean(impersonateUserId),
+      },
+    })
 
     return NextResponse.json({
       rsvpId,
@@ -237,6 +273,16 @@ export async function POST(request: NextRequest) {
     const userMessage = isTransactionAbort
       ? 'Too many people RSVPing at once. Please try again in a moment.'
       : sanitizeErrorForClient(error, 'Failed to create RSVP')
+    if (uid) {
+      logUserError({
+        action: 'rsvp.failed',
+        actorUid: uid,
+        status: 500,
+        message: userMessage,
+        code: isTransactionAbort ? 'RETRY' : undefined,
+        entityType: 'rsvp',
+      })
+    }
     return NextResponse.json(
       { error: userMessage, code: isTransactionAbort ? 'RETRY' : undefined },
       { status: 500 }
@@ -249,11 +295,13 @@ export async function POST(request: NextRequest) {
  * Marks RSVP as cancelled and removes the user from their team; removes the team if they were the last player.
  */
 export async function PATCH(request: NextRequest) {
+  let uid: string | null = null
   try {
-    const { uid, error: authError } = await verifyAuth(request)
-    if (authError || !uid) {
+    const auth = await verifyAuth(request)
+    uid = auth.uid
+    if (auth.error || !uid) {
       return NextResponse.json(
-        { error: authError || 'Unauthorized' },
+        { error: auth.error || 'Unauthorized' },
         { status: 401 }
       )
     }
@@ -262,21 +310,20 @@ export async function PATCH(request: NextRequest) {
     const rsvpId = body?.rsvpId
     const positionFromBody = body?.position
     if (!rsvpId || typeof rsvpId !== 'string') {
-      return NextResponse.json({ error: 'rsvpId required' }, { status: 400 })
+      return rsvpFailed(uid, 400, 'rsvpId required')
     }
 
     const adminDb = getAdminDb()
     if (!adminDb) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      )
+      return rsvpFailed(uid, 500, 'Server configuration error', {
+        entityId: rsvpId,
+      })
     }
 
     const rsvpRef = adminDb.collection('rsvps').doc(rsvpId)
     const rsvpSnap = await rsvpRef.get()
     if (!rsvpSnap.exists) {
-      return NextResponse.json({ error: 'RSVP not found' }, { status: 404 })
+      return rsvpFailed(uid, 404, 'RSVP not found', { entityId: rsvpId })
     }
 
     const data = rsvpSnap.data()!
@@ -286,7 +333,11 @@ export async function PATCH(request: NextRequest) {
       const { isAdmin } = await verifyAdmin(request)
       requesterIsAdmin = isAdmin
       if (!isAdmin) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        return rsvpFailed(uid, 403, 'Forbidden', {
+          entityId: rsvpId,
+          targetUid: data.userId as string,
+          matchId: data.matchId as string,
+        })
       }
     }
     if (data.status === 'cancelled') {
@@ -433,6 +484,67 @@ export async function PATCH(request: NextRequest) {
         tx.update(rsvpRef, { position: newPosition, updatedAt: now })
       })
 
+      if (!oldIsGk && newIsGk && !swapOccurred) {
+        const rsvpsSnap = await adminDb
+          .collection('rsvps')
+          .where('matchId', '==', matchId)
+          .where('status', '==', 'confirmed')
+          .get()
+        const rsvpPositionsByUserId = new Map<string, string | null>()
+        rsvpsSnap.docs.forEach(d => {
+          const ddata = d.data()
+          const u = ddata.userId as string
+          // Use the just-updated position for this user
+          rsvpPositionsByUserId.set(
+            u,
+            u === userId
+              ? newPosition
+              : ((ddata.position as string | null) ?? null)
+          )
+        })
+        const usersSnap = await adminDb.collection('users').get()
+        const userPositionsByUserId = new Map<string, string | null>()
+        usersSnap.docs.forEach(d => {
+          const u = d.id === d.data()?.uid ? d.id : (d.data()?.uid as string)
+          userPositionsByUserId.set(
+            u,
+            (d.data()?.position as string | null) ?? null
+          )
+        })
+        const placeResult = await placeGkOnTeamWithoutGk(
+          adminDb,
+          matchId,
+          userId,
+          rsvpPositionsByUserId,
+          userPositionsByUserId
+        )
+        if (placeResult.placed && placeResult.replacedUserId) {
+          swapOccurred = true
+          const replacedSnap = await adminDb
+            .collection('users')
+            .doc(placeResult.replacedUserId)
+            .get()
+          otherPlayerDisplayName = replacedSnap.exists
+            ? (replacedSnap.data()?.displayName as string) || undefined
+            : undefined
+        }
+      }
+
+      auditLog({
+        action: 'rsvp.position_changed',
+        actorUid: uid,
+        targetUid: userId,
+        matchId,
+        entityType: 'rsvp',
+        entityId: rsvpId,
+        source: 'api',
+        metadata: {
+          oldPosition: oldPosition,
+          newPosition,
+          swapOccurred,
+        },
+      })
+
       return NextResponse.json({
         updated: true,
         swapOccurred,
@@ -452,7 +564,11 @@ export async function PATCH(request: NextRequest) {
       .doc(matchId)
       .get()
     if (!matchSnapForCancel.exists) {
-      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+      return rsvpFailed(uid, 404, 'Match not found', {
+        matchId,
+        entityId: rsvpId,
+        targetUid: userId,
+      })
     }
     const matchDataForCancel = matchSnapForCancel.data()!
     const matchDateForCancel =
@@ -467,9 +583,11 @@ export async function PATCH(request: NextRequest) {
         requesterIsAdmin = isAdmin
       }
       if (!requesterIsAdmin) {
-        return NextResponse.json(
-          { error: 'Cannot cancel RSVP after the match has started' },
-          { status: 403 }
+        return rsvpFailed(
+          uid,
+          403,
+          'Cannot cancel RSVP after the match has started',
+          { matchId, entityId: rsvpId, targetUid: userId }
         )
       }
     }
@@ -522,15 +640,36 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    auditLog({
+      action: 'rsvp.cancelled',
+      actorUid: uid,
+      targetUid: userId,
+      matchId,
+      entityType: 'rsvp',
+      entityId: rsvpId,
+      source: 'api',
+      metadata: {
+        cancelledByAdmin: !isOwner,
+        teamsUpdated: removed,
+      },
+    })
+
     return NextResponse.json({
       cancelled: true,
       teamsUpdated: removed,
     })
   } catch (error: any) {
     console.error('Error updating/cancelling RSVP:', error)
-    return NextResponse.json(
-      { error: sanitizeErrorForClient(error, 'Failed to cancel RSVP') },
-      { status: 500 }
-    )
+    const message = sanitizeErrorForClient(error, 'Failed to cancel RSVP')
+    if (uid) {
+      logUserError({
+        action: 'rsvp.failed',
+        actorUid: uid,
+        status: 500,
+        message,
+        entityType: 'rsvp',
+      })
+    }
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

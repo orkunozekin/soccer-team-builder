@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { getAdminDb } from '@/lib/firebase/admin'
-import { isWithinCheckInWindow } from '@/lib/utils/checkIn'
+import { auditLog } from '@/lib/services/auditService'
 
 /**
  * POST /api/check-in/host
@@ -49,27 +49,6 @@ export async function POST(request: NextRequest) {
     if (matchData.deletedAt != null) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 })
     }
-    const matchDate = matchData.date?.toDate?.() ?? new Date(matchData.date)
-    const time = typeof matchData.time === 'string' ? matchData.time : null
-
-    // Host override allowed during window; clearing also allowed after window for corrections.
-    if (attended && !isWithinCheckInWindow(matchDate, time)) {
-      // Still allow host mark present slightly outside window for late arrivals —
-      // plan says host is the fallback; allow while RSVP window isn't long past.
-      // Keep soft gate: reject only if more than RSVP close (start+4h) has passed.
-      const { getRSVPSchedule } = await import('@/lib/utils/rsvpScheduler')
-      const { closeAt } = getRSVPSchedule(matchDate, time)
-      if (closeAt && new Date() > closeAt) {
-        return NextResponse.json(
-          {
-            error: 'Check-in window for this match has ended',
-            code: 'WINDOW',
-          },
-          { status: 403 }
-        )
-      }
-    }
-
     const rsvpSnap = await adminDb
       .collection('rsvps')
       .where('matchId', '==', matchId)
@@ -103,6 +82,17 @@ export async function POST(request: NextRequest) {
         updatedAt: now,
       })
     }
+
+    auditLog({
+      action: attended ? 'check_in.host' : 'check_in.cleared',
+      actorUid: uid,
+      targetUid: userId,
+      matchId,
+      entityType: 'rsvp',
+      entityId: rsvpDoc.id,
+      source: 'api',
+      metadata: { attended },
+    })
 
     return NextResponse.json({ success: true, rsvpId: rsvpDoc.id, attended })
   } catch (error: unknown) {

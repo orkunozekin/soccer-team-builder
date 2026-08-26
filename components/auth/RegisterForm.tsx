@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
 import { loginWithGoogle, registerUser } from '@/lib/firebase/auth'
+import { recordAuditEventAPI } from '@/lib/api/client'
 import { createUser, getUser } from '@/lib/services/userService'
 import { useAuthStore } from '@/store/authStore'
 
@@ -45,10 +46,15 @@ export function RegisterForm() {
 
       // Create user document in Firestore (jersey number still needed for RSVP)
       await createUser(user.uid, email, displayName || email.split('@')[0])
+      recordAuditEventAPI({ action: 'auth.register' })
 
       router.push('/matches')
     } catch {
       setError('Failed to create account')
+      recordAuditEventAPI({
+        action: 'auth.register_failed',
+        metadata: { message: 'Failed to create account' },
+      })
     } finally {
       setLoading(false)
     }
@@ -65,11 +71,18 @@ export function RegisterForm() {
         const displayName =
           user.displayName ?? user.email?.split('@')[0] ?? 'User'
         await createUser(user.uid, user.email ?? '', displayName)
+        recordAuditEventAPI({ action: 'auth.register' })
+      } else {
+        recordAuditEventAPI({ action: 'auth.login' })
       }
       setUser(user)
       router.push('/matches')
     } catch {
       setError('Failed to sign in with Google')
+      recordAuditEventAPI({
+        action: 'auth.register_failed',
+        metadata: { message: 'Failed to sign in with Google', provider: 'google' },
+      })
     } finally {
       setGoogleLoading(false)
     }

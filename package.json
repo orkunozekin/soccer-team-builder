@@ -16,6 +16,7 @@
     "setup:qstash-rsvp": "node scripts/setup-qstash-rsvp-schedule.mjs",
     "setup:qstash-materialize": "node scripts/setup-qstash-materialize-schedules.mjs",
     "backfill:match-locations": "npx tsx scripts/backfill-match-locations.ts",
+    "migrate:saved-locations": "npx tsx scripts/migrate-saved-locations.ts",
     "rsvp-order": "node scripts/rsvp-order.mjs",
     "regenerate-teams": "npx tsx scripts/regenerate-teams.ts"
   },
