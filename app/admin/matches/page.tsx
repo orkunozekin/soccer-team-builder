@@ -31,7 +31,7 @@ function filterMatches(matches: Match[], filter: MatchFilter): Match[] {
 export default function AdminMatchesPage() {
   const { matches, setMatches, setLoading } = useMatchStore()
   const [rsvpCounts, setRsvpCounts] = useState<Record<string, number>>({})
-  const [filter, setFilter] = useState<MatchFilter>('all')
+  const [filter, setFilter] = useState<MatchFilter>('upcoming')
 
   useEffect(() => {
     const fetchMatches = async () => {

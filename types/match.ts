@@ -18,6 +18,11 @@ export interface Match {
   rsvpCloseAt: Date | null
   /** When set, match is soft-deleted and hidden from normal listings. */
   deletedAt?: Date | null
+  /** Present when this match was created from a recurring schedule. */
+  scheduleId?: string | null
+  scheduleSlotId?: string | null
+  /** Stable key e.g. "sched_x:slot_y:2026-09-01" */
+  scheduleOccurrenceKey?: string | null
   createdAt: Date
   updatedAt: Date
 }

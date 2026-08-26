@@ -11,6 +11,11 @@ const LINKS = [
     isActive: (pathname: string) => pathname.startsWith('/admin/matches'),
   },
   {
+    href: '/admin/schedules',
+    label: 'Schedules',
+    isActive: (pathname: string) => pathname.startsWith('/admin/schedules'),
+  },
+  {
     href: '/admin/locations',
     label: 'Locations',
     isActive: (pathname: string) => pathname.startsWith('/admin/locations'),

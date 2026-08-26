@@ -1,10 +1,7 @@
-import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
-import { getAdminDb } from '@/lib/firebase/admin'
+import { createMatchDoc } from '@/lib/matches/createMatch'
 import { auditLog } from '@/lib/services/auditService'
-import { serializeMatchLocation } from '@/lib/utils/location'
-import { getRSVPSchedule } from '@/lib/utils/rsvpScheduler'
 import type { MatchLocation } from '@/types/match'
 
 export async function POST(request: NextRequest) {
@@ -43,40 +40,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const adminDb = getAdminDb()
-    if (!adminDb) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      )
-    }
-
-    const { openAt, closeAt } = getRSVPSchedule(matchDate, time)
-    const matchId = `match_${Date.now()}`
-    const now = Timestamp.now()
-    const locationValue =
-        typeof location === 'string'
-          ? serializeMatchLocation({
-              name: location,
-              address: location,
-              lat: null,
-              lng: null,
-            })
-          : serializeMatchLocation(location as MatchLocation | null)
-    await adminDb
-      .collection('matches')
-      .doc(matchId)
-      .set({
-        date: Timestamp.fromDate(matchDate),
-        time,
-        location: locationValue,
-        rsvpOpen: false,
-        rsvpOpenAt: openAt ? Timestamp.fromDate(openAt) : null,
-        rsvpCloseAt: closeAt ? Timestamp.fromDate(closeAt) : null,
-        deletedAt: null,
-        createdAt: now,
-        updatedAt: now,
-      })
+    const locationValue = (location as MatchLocation | null) ?? null
+    const { matchId } = await createMatchDoc({
+      date: matchDate,
+      time,
+      location: locationValue,
+    })
 
     auditLog({
       action: 'match.created',
@@ -89,7 +58,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({ success: true, matchId })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating match:', error)
     const { sanitizeErrorForClient } = await import('@/lib/api/sanitizeError')
     return NextResponse.json(
