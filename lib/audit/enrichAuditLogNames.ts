@@ -13,7 +13,7 @@ function collectUserIds(logs: AuditLog[]): string[] {
       ids.add(log.targetUid)
     }
   }
-  return [...ids]
+  return Array.from(ids)
 }
 
 /**
