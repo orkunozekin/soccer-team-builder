@@ -33,6 +33,10 @@ function mapDocToMatch(match: Record<string, unknown>, id: string): Match {
     rsvpOpenAt,
     rsvpCloseAt,
     deletedAt,
+    scheduleId: (match.scheduleId as string | null | undefined) ?? null,
+    scheduleSlotId: (match.scheduleSlotId as string | null | undefined) ?? null,
+    scheduleOccurrenceKey:
+      (match.scheduleOccurrenceKey as string | null | undefined) ?? null,
     createdAt: timestampToDate(match.createdAt as never) || new Date(),
     updatedAt: timestampToDate(match.updatedAt as never) || new Date(),
   }

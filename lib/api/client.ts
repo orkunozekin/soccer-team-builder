@@ -344,3 +344,80 @@ export async function hostCheckInAPI(
 
   return response.json()
 }
+
+export type ScheduleAPIPayload = {
+  name: string
+  cadence: 'weekly' | 'monthly'
+  interval: number
+  slots: Array<{
+    id?: string
+    day: number
+    time: string
+    location?: {
+      name: string
+      address: string
+      lat: number | null
+      lng: number | null
+    } | null
+  }>
+  active?: boolean
+}
+
+export async function listSchedulesAPI(): Promise<{
+  schedules: import('@/types/schedule').MatchSchedule[]
+}> {
+  const response = await apiRequest('/schedules', { method: 'GET' })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to list schedules')
+  }
+  return response.json()
+}
+
+export async function createScheduleAPI(
+  payload: ScheduleAPIPayload
+): Promise<{
+  success: boolean
+  schedule: import('@/types/schedule').MatchSchedule
+}> {
+  const response = await apiRequest('/schedules', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to create schedule')
+  }
+  return response.json()
+}
+
+export async function updateScheduleAPI(
+  scheduleId: string,
+  payload: Partial<ScheduleAPIPayload> & { active?: boolean }
+): Promise<{
+  success: boolean
+  schedule: import('@/types/schedule').MatchSchedule
+}> {
+  const response = await apiRequest(`/schedules/${scheduleId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to update schedule')
+  }
+  return response.json()
+}
+
+export async function deleteScheduleAPI(
+  scheduleId: string
+): Promise<{ success: boolean }> {
+  const response = await apiRequest(`/schedules/${scheduleId}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to delete schedule')
+  }
+  return response.json()
+}
