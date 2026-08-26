@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { GET } from './route'
 import { verifyAdmin } from '@/lib/api/auth'
+import { enrichAuditLogsWithDisplayNames } from '@/lib/audit/enrichAuditLogNames'
 import { countAuditLogs, queryAuditLogs } from '@/lib/audit/queryAuditLogs'
 import { getAdminDb } from '@/lib/firebase/admin'
 
@@ -17,6 +18,10 @@ vi.mock('@/lib/firebase/admin', () => ({
 vi.mock('@/lib/audit/queryAuditLogs', () => ({
   queryAuditLogs: vi.fn(),
   countAuditLogs: vi.fn(),
+}))
+
+vi.mock('@/lib/audit/enrichAuditLogNames', () => ({
+  enrichAuditLogsWithDisplayNames: vi.fn(async (_db, logs) => logs),
 }))
 
 vi.mock('@/lib/services/auditService', () => ({
@@ -63,6 +68,14 @@ describe('GET /api/audit', () => {
       nextCursor: null,
     })
     vi.mocked(countAuditLogs).mockResolvedValue(1)
+    vi.mocked(enrichAuditLogsWithDisplayNames).mockImplementation(
+      async (_db, logs) =>
+        logs.map(log =>
+          log.actorUid === 'user1'
+            ? { ...log, actorDisplayName: 'Ada Lovelace' }
+            : log
+        )
+    )
 
     const response = await GET(
       new NextRequest('http://localhost/api/audit?includeCount=true&limit=10')
@@ -75,6 +88,7 @@ describe('GET /api/audit', () => {
         expect.objectContaining({
           id: 'audit_1',
           action: 'rsvp.confirmed',
+          actorDisplayName: 'Ada Lovelace',
         }),
       ],
       nextCursor: null,
@@ -84,5 +98,6 @@ describe('GET /api/audit', () => {
       expect.anything(),
       expect.objectContaining({ limit: 10 })
     )
+    expect(enrichAuditLogsWithDisplayNames).toHaveBeenCalled()
   })
 })
