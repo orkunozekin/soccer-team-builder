@@ -179,10 +179,6 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
                   matchRSVPs={matchRSVPs}
                   onDone={refetchMatchRoster}
                 />
-                <RsvpOrderCard
-                  matchRSVPs={matchRSVPs}
-                  users={rosterUsers}
-                />
               </>
             )}
           </div>
@@ -221,6 +217,12 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
             </div>
           )}
         </div>
+
+        {isAdmin && (
+          <div className="mt-10">
+            <RsvpOrderCard matchRSVPs={matchRSVPs} users={rosterUsers} />
+          </div>
+        )}
       </div>
     </div>
   )
