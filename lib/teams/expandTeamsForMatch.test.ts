@@ -341,6 +341,7 @@ describe('expandTeamsForMatch', () => {
     expect(result).toEqual({ regenerated: true })
     const team1 = getTeams().find(t => (t.data.teamNumber as number) === 1)
     const team2 = getTeams().find(t => (t.data.teamNumber as number) === 2)
+    expect(team1?.data.playerIds).toContain('gk_late')
     expect(team1?.data.playerIds).not.toContain('p1')
     expect(team2?.data.playerIds).toContain('p1')
   })
@@ -350,7 +351,7 @@ describe('expandTeamsForMatch', () => {
     const team2Ids = Array.from({ length: 11 }, (_, i) => `p${i + 12}`)
     const allIds = [...team1Ids, ...team2Ids, 'gk_late']
 
-    const { adminDb, getTeams } = createMockFirestore({
+    const { adminDb, getTeams, getMatch } = createMockFirestore({
       rsvps: allIds.map((id, index) =>
         makeRsvpDoc(
           `r${index + 1}`,
@@ -376,10 +377,15 @@ describe('expandTeamsForMatch', () => {
     const result = await expandTeamsForMatch(adminDb, 'match1')
 
     expect(result).toEqual({ regenerated: true })
+    const team1 = getTeams().find(t => (t.data.teamNumber as number) === 1)
     const team2 = getTeams().find(t => (t.data.teamNumber as number) === 2)
     const team3 = getTeams().find(t => (t.data.teamNumber as number) === 3)
+    expect(team1?.data.playerIds).toContain('gk_late')
     expect(team2?.data.playerIds).toContain('p22')
     expect(team3?.data.playerIds).not.toContain('p22')
+    expect(getMatch()?.data.gkReplacements).toEqual({
+      gk_late: 'p11',
+    })
   })
 
   it('preserves explicit transfers during force regeneration', async () => {
