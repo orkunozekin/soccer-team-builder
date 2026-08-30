@@ -308,6 +308,80 @@ describe('expandTeamsForMatch', () => {
     })
   })
 
+  it('preserves manualTeamAssignments during incremental assignment', async () => {
+    const { adminDb, getTeams } = createMockFirestore({
+      rsvps: [
+        makeRsvpDoc('r1', 'p1', new Date('2024-01-01T10:00:00Z')),
+        makeRsvpDoc('r2', 'p2', new Date('2024-01-01T11:00:00Z')),
+        makeRsvpDoc(
+          'r3',
+          'gk_late',
+          new Date('2024-01-01T12:00:00Z'),
+          'match1',
+          'GK'
+        ),
+      ],
+      users: [
+        makeUserDoc('p1'),
+        makeUserDoc('p2'),
+        makeUserDoc('gk_late', 'GK'),
+      ],
+      teams: [
+        makeTeamDoc('team1', 1, ['p1']),
+        makeTeamDoc('team2', 2, ['p2']),
+      ],
+      match: {
+        id: 'match1',
+        data: { manualTeamAssignments: { p1: 2 } },
+      },
+    })
+
+    const result = await expandTeamsForMatch(adminDb, 'match1')
+
+    expect(result).toEqual({ regenerated: true })
+    const team1 = getTeams().find(t => (t.data.teamNumber as number) === 1)
+    const team2 = getTeams().find(t => (t.data.teamNumber as number) === 2)
+    expect(team1?.data.playerIds).not.toContain('p1')
+    expect(team2?.data.playerIds).toContain('p1')
+  })
+
+  it('preserves manualTeamAssignments when GK shifting would bump a pinned player', async () => {
+    const team1Ids = Array.from({ length: 11 }, (_, i) => `p${i + 1}`)
+    const team2Ids = Array.from({ length: 11 }, (_, i) => `p${i + 12}`)
+    const allIds = [...team1Ids, ...team2Ids, 'gk_late']
+
+    const { adminDb, getTeams } = createMockFirestore({
+      rsvps: allIds.map((id, index) =>
+        makeRsvpDoc(
+          `r${index + 1}`,
+          id,
+          new Date(2024, 0, 1, 0, index),
+          'match1',
+          id === 'gk_late' ? 'GK' : 'ST'
+        )
+      ),
+      users: allIds.map(id =>
+        makeUserDoc(id, id === 'gk_late' ? 'GK' : 'ST')
+      ),
+      teams: [
+        makeTeamDoc('team1', 1, team1Ids),
+        makeTeamDoc('team2', 2, team2Ids),
+      ],
+      match: {
+        id: 'match1',
+        data: { manualTeamAssignments: { p22: 2 } },
+      },
+    })
+
+    const result = await expandTeamsForMatch(adminDb, 'match1')
+
+    expect(result).toEqual({ regenerated: true })
+    const team2 = getTeams().find(t => (t.data.teamNumber as number) === 2)
+    const team3 = getTeams().find(t => (t.data.teamNumber as number) === 3)
+    expect(team2?.data.playerIds).toContain('p22')
+    expect(team3?.data.playerIds).not.toContain('p22')
+  })
+
   it('preserves explicit transfers during force regeneration', async () => {
     const { adminDb, getTeams } = createMockFirestore({
       rsvps: [
