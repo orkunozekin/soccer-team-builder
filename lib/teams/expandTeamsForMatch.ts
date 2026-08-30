@@ -8,6 +8,7 @@ import { Timestamp } from 'firebase-admin/firestore'
 import type { Firestore, QuerySnapshot } from 'firebase-admin/firestore'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import {
+  applyPersistedTransfersKeepingBalance,
   assignUnassignedPlayersToTeams,
   computeTeamCountForRSVPCount,
   generateTeamsWithReplacements,
@@ -73,6 +74,32 @@ async function incrementallyAssignUnassignedPlayers(
       desiredTeamCount
     )
 
+  const matchRef = adminDb.collection('matches').doc(matchId)
+  const matchSnap = await matchRef.get()
+  const persisted = matchSnap.exists
+    ? ((matchSnap.data()?.manualTeamAssignments as
+        | Record<string, number>
+        | undefined) ?? {})
+    : {}
+
+  const maxSizeByTeamNumber = new Map(
+    existingTeams.map(t => [t.teamNumber, 11] as const)
+  )
+  for (const team of updatedAssignments) {
+    if (!maxSizeByTeamNumber.has(team.teamNumber)) {
+      maxSizeByTeamNumber.set(team.teamNumber, 11)
+    }
+  }
+
+  const finalAssignments =
+    Object.keys(persisted).length > 0
+      ? applyPersistedTransfersKeepingBalance(
+          updatedAssignments,
+          persisted,
+          maxSizeByTeamNumber
+        )
+      : updatedAssignments
+
   const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
   const existingByNumber = new Map(
     existingTeams.map(t => [t.teamNumber, t])
@@ -81,8 +108,6 @@ async function incrementallyAssignUnassignedPlayers(
   const writes: Promise<unknown>[] = []
 
   if (gkReplacements.length > 0) {
-    const matchRef = adminDb.collection('matches').doc(matchId)
-    const matchSnap = await matchRef.get()
     const existing = matchSnap.exists
       ? ((matchSnap.data()?.gkReplacements as
           | Record<string, string>
@@ -100,8 +125,8 @@ async function incrementallyAssignUnassignedPlayers(
     )
   }
 
-  for (let i = 0; i < updatedAssignments.length; i++) {
-    const assignment = updatedAssignments[i]
+  for (let i = 0; i < finalAssignments.length; i++) {
+    const assignment = finalAssignments[i]
     const existing = existingByNumber.get(assignment.teamNumber)
     if (existing) {
       const playerIdsChanged =
