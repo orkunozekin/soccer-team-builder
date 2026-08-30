@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { EditMatchCard } from '@/components/admin/EditMatchCard'
 import { ImpersonateRSVP } from '@/components/admin/ImpersonateRSVP'
+import { RsvpOrderCard } from '@/components/admin/RsvpOrderCard'
 import { PlayerTransfer } from '@/components/admin/PlayerTransfer'
 import { RebalanceTeamsButton } from '@/components/admin/RebalanceTeamsButton'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
@@ -177,6 +178,10 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
                   match={currentMatch}
                   matchRSVPs={matchRSVPs}
                   onDone={refetchMatchRoster}
+                />
+                <RsvpOrderCard
+                  matchRSVPs={matchRSVPs}
+                  users={rosterUsers}
                 />
               </>
             )}
