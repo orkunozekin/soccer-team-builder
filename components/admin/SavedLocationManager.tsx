@@ -22,6 +22,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import {
+  type SavedLocationAPIResult,
   createSavedLocationAPI,
   deleteSavedLocationAPI,
   updateSavedLocationAPI,
@@ -29,16 +30,45 @@ import {
 import { hasValidCoords } from '@/lib/utils/geo'
 import type { SavedLocation } from '@/types/savedLocation'
 
+function toSavedLocation(
+  id: string,
+  payload: {
+    name: string
+    address: string
+    lat: number | null
+    lng: number | null
+  },
+  timestamps?: Pick<SavedLocationAPIResult, 'createdAt' | 'updatedAt'> | null
+): SavedLocation {
+  return {
+    id,
+    name: payload.name,
+    address: payload.address,
+    lat: payload.lat,
+    lng: payload.lng,
+    createdAt: timestamps?.createdAt
+      ? new Date(timestamps.createdAt)
+      : new Date(),
+    updatedAt: timestamps?.updatedAt
+      ? new Date(timestamps.updatedAt)
+      : new Date(),
+  }
+}
+
 interface SavedLocationFormProps {
   initial?: SavedLocation | null
-  onSaved?: () => void | Promise<void>
+  onSaved?: (location: SavedLocation) => void | Promise<void>
   onCancel?: () => void
+  nameId?: string
+  addressId?: string
 }
 
 export function SavedLocationForm({
   initial = null,
   onSaved,
   onCancel,
+  nameId,
+  addressId,
 }: SavedLocationFormProps) {
   const [locationName, setLocationName] = useState(initial?.name ?? '')
   const [address, setAddress] = useState(initial?.address ?? '')
@@ -73,14 +103,26 @@ export function SavedLocationForm({
     try {
       if (initial) {
         await updateSavedLocationAPI(initial.id, payload)
+        await onSaved?.(
+          toSavedLocation(initial.id, payload, {
+            createdAt: initial.createdAt.toISOString(),
+            updatedAt: new Date().toISOString(),
+          })
+        )
       } else {
-        await createSavedLocationAPI(payload)
+        const result = await createSavedLocationAPI(payload)
         setLocationName('')
         setAddress('')
         setLat(null)
         setLng(null)
+        await onSaved?.(
+          toSavedLocation(
+            result.location?.id ?? result.locationId,
+            result.location ?? payload,
+            result.location
+          )
+        )
       }
-      await onSaved?.()
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : 'Failed to save location'
@@ -114,9 +156,15 @@ export function SavedLocationForm({
           setLng(coords.lng)
         }}
         disabled={saving}
-        nameId={initial ? `edit-location-name-${initial.id}` : 'new-location-name'}
+        nameId={
+          nameId ??
+          (initial ? `edit-location-name-${initial.id}` : 'new-location-name')
+        }
         addressId={
-          initial ? `edit-location-address-${initial.id}` : 'new-location-address'
+          addressId ??
+          (initial
+            ? `edit-location-address-${initial.id}`
+            : 'new-location-address')
         }
       />
 
@@ -231,8 +279,8 @@ export function SavedLocationCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete saved location?</AlertDialogTitle>
             <AlertDialogDescription>
-              Existing matches keep their copied location data. This only removes
-              the saved location from the picker list.
+              Existing matches keep their copied location data. This only
+              removes the saved location from the picker list.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

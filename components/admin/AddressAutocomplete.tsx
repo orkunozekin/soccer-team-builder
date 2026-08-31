@@ -250,7 +250,7 @@ export function AddressAutocomplete({
           autoComplete="off"
         />
         {open && suggestions.length > 0 && (
-          <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border border-zinc-200 bg-white py-1 shadow-md dark:border-zinc-700 dark:bg-zinc-900">
+          <ul className="absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-md border border-zinc-200 bg-white py-1 shadow-md dark:border-zinc-700 dark:bg-zinc-900">
             {suggestions.map(s => (
               <li key={s.mapbox_id}>
                 <button
