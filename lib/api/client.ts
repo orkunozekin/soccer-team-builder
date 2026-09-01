@@ -490,9 +490,19 @@ export type SavedLocationPayload = {
   lng: number | null
 }
 
+export type SavedLocationAPIResult = SavedLocationPayload & {
+  id: string
+  createdAt: string | null
+  updatedAt: string | null
+}
+
 export async function createSavedLocationAPI(
   location: SavedLocationPayload
-): Promise<{ success: boolean; locationId: string }> {
+): Promise<{
+  success: boolean
+  locationId: string
+  location: SavedLocationAPIResult
+}> {
   const response = await apiRequest('/locations', {
     method: 'POST',
     body: JSON.stringify(location),
