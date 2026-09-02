@@ -58,6 +58,13 @@ function buildFilteredQuery(
   if (filters.matchId?.trim()) {
     q = q.where('matchId', '==', filters.matchId.trim())
   }
+  if (filters.since) {
+    const sinceDate =
+      filters.since instanceof Date ? filters.since : new Date(filters.since)
+    if (!Number.isNaN(sinceDate.getTime())) {
+      q = q.where('createdAt', '>=', Timestamp.fromDate(sinceDate))
+    }
+  }
 
   return q.orderBy('createdAt', 'desc')
 }

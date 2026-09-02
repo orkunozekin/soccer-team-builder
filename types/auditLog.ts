@@ -82,6 +82,8 @@ export interface AuditLogFilters {
   actorUid?: string
   targetUid?: string
   matchId?: string
+  /** Inclusive lower bound on createdAt (ISO date or Date). */
+  since?: Date | string
 }
 
 export const ALL_AUDIT_ACTIONS: readonly AuditAction[] = [

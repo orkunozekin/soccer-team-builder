@@ -47,6 +47,7 @@
     "react-day-picker": "^9.13.2",
     "react-dom": "18.2.0",
     "react-hook-form": "^7.53.0",
+    "recharts": "^2.15.0",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^10.0.0",
     "zod": "^3.23.8",
