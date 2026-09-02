@@ -51,8 +51,10 @@ export function DatePickerTime({
     : undefined
 
   return (
-    <FieldGroup className={cn('flex-row flex-wrap gap-4', className)}>
-      <Field className="w-full sm:w-[14rem]">
+    <FieldGroup
+      className={cn('min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap', className)}
+    >
+      <Field className="min-w-0 w-full sm:w-[14rem]">
         <FieldLabel htmlFor={dateId}>Date</FieldLabel>
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
@@ -82,7 +84,7 @@ export function DatePickerTime({
           </PopoverContent>
         </Popover>
       </Field>
-      <Field className="w-full sm:w-[14rem]">
+      <Field className="min-w-0 w-full sm:w-[14rem]">
         <FieldLabel htmlFor={timeId}>Time</FieldLabel>
         <Input
           type="time"
@@ -91,7 +93,7 @@ export function DatePickerTime({
           value={time}
           onChange={e => onTimeChange(e.target.value)}
           disabled={disabled}
-          className="h-11 w-full bg-background text-base sm:h-9 sm:text-sm [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+          className="h-11 w-full min-w-0 max-w-full bg-background text-base sm:h-9 sm:text-sm [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
         />
       </Field>
     </FieldGroup>
