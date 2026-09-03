@@ -575,9 +575,7 @@ export async function listAuditLogsAPI(params: {
   if (params.matchId?.trim()) search.set('matchId', params.matchId.trim())
 
   const qs = search.toString()
-  const url = `/audit${qs ? `?${qs}` : ''}`
-
-  const response = await apiRequest(url)
+  const response = await apiRequest(`/audit${qs ? `?${qs}` : ''}`)
 
   if (!response.ok) {
     const error = await response.json()
