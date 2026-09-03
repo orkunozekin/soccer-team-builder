@@ -5,7 +5,7 @@ import { AnalyticsDashboard } from '@/components/admin/AnalyticsDashboard'
 
 export default function AdminAnalyticsPage() {
   return (
-    <div className="container mx-auto max-w-5xl min-w-0 px-4 py-8">
+    <div className="container mx-auto max-w-7xl min-w-0 px-4 py-8">
       <AdminNav />
 
       <div className="mb-6">
@@ -13,7 +13,7 @@ export default function AdminAnalyticsPage() {
           Analytics
         </h1>
         <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-          Review user activity, admin actions, and system events
+          Activity overview, trends, and recent events
         </p>
       </div>
 

@@ -3,6 +3,7 @@
  * These functions call our Next.js API routes instead of directly calling Firebase
  */
 
+import type { AuditStats } from '@/lib/audit/computeAuditStats'
 import { auth } from '@/lib/firebase/config'
 import { useAuthStore } from '@/store/authStore'
 import type {
@@ -579,6 +580,20 @@ export async function listAuditLogsAPI(params: {
   if (!response.ok) {
     const error = await response.json()
     throw new Error(error.error || 'Failed to load analytics')
+  }
+
+  return response.json()
+}
+
+export async function getAuditStatsAPI(): Promise<{
+  success: boolean
+  stats: AuditStats
+}> {
+  const response = await apiRequest('/audit/stats')
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to load analytics stats')
   }
 
   return response.json()
