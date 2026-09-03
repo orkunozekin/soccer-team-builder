@@ -249,8 +249,8 @@ describe('POST /api/teams/rebalance', () => {
 
     const team1 = getTeams().find(t => (t.data.teamNumber as number) === 1)
     const team2 = getTeams().find(t => (t.data.teamNumber as number) === 2)
-    expect((team1?.data.playerIds as string[]).length).toBe(7)
-    expect((team2?.data.playerIds as string[]).length).toBe(7)
+    expect(team1?.data.playerIds).toEqual(playerIds.slice(0, 7))
+    expect(team2?.data.playerIds).toEqual(playerIds.slice(7, 14))
     expect(getMatchData().manualTeamAssignments).toEqual({})
   })
 
@@ -386,5 +386,54 @@ describe('POST /api/teams/rebalance', () => {
       expect(team1Ids).toContain(id)
     }
     expect(getMatchData().manualTeamAssignments).toEqual(persistedManual)
+  })
+
+  it('places later team pairs by contiguous RSVP order (not position scramble)', async () => {
+    // 44 players → 4 teams of 11. RSVPs 23–24 must land on Team 3, not Team 4.
+    const playerIds = Array.from({ length: 44 }, (_, i) => `p${i + 1}`)
+    const positions = ['ST', 'CB', 'CM', 'CAM', 'LW', 'RB', 'CDM', 'LWB', 'RW', 'LB', 'GK']
+    const rsvps = playerIds.map((id, i) =>
+      makeRsvpDoc(
+        `r${i + 1}`,
+        id,
+        new Date(Date.UTC(2024, 0, 1, 10, i))
+      )
+    )
+    const users = playerIds.map((id, i) =>
+      makeUserDoc(id, positions[i % positions.length]!)
+    )
+
+    const { adminDb, getTeams } = createRebalanceMockRepos({
+      rsvps,
+      users,
+      teams: [
+        makeTeamDoc('team1', 1, playerIds.slice(0, 11)),
+        makeTeamDoc('team2', 2, playerIds.slice(11, 22)),
+        makeTeamDoc('team3', 3, playerIds.slice(22, 33)),
+        makeTeamDoc('team4', 4, playerIds.slice(33)),
+      ],
+      match: { id: 'match1', data: { manualTeamAssignments: {} } },
+    })
+
+    vi.mocked(getAdminDb).mockReturnValue(adminDb as never)
+
+    const response = await POST(makeRequest())
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.assignedCounts).toEqual([11, 11, 11, 11])
+
+    const byNumber = (n: number) =>
+      (getTeams().find(t => (t.data.teamNumber as number) === n)?.data
+        .playerIds as string[]) ?? []
+
+    expect(byNumber(1)).toEqual(playerIds.slice(0, 11))
+    expect(byNumber(2)).toEqual(playerIds.slice(11, 22))
+    expect(byNumber(3)).toEqual(playerIds.slice(22, 33))
+    expect(byNumber(4)).toEqual(playerIds.slice(33, 44))
+    expect(byNumber(3)).toContain('p23')
+    expect(byNumber(3)).toContain('p24')
+    expect(byNumber(4)).not.toContain('p23')
+    expect(byNumber(4)).not.toContain('p24')
   })
 })
