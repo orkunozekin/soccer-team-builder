@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { appendFileSync, mkdirSync } from 'fs'
 import { verifyAuth, verifyAdmin } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { enrichAuditLogsWithDisplayNames } from '@/lib/audit/enrichAuditLogNames'
@@ -14,31 +13,6 @@ import {
   type AuditLogInput,
   type AuditSource,
 } from '@/types/auditLog'
-
-// #region agent log
-function agentServerLog(
-  hypothesisId: string,
-  location: string,
-  message: string,
-  data: Record<string, unknown>
-) {
-  try {
-    mkdirSync('/opt/cursor/logs', { recursive: true })
-    appendFileSync(
-      '/opt/cursor/logs/debug.log',
-      JSON.stringify({
-        hypothesisId,
-        location,
-        message,
-        data,
-        timestamp: Date.now(),
-      }) + '\n'
-    )
-  } catch {
-    // ignore debug log failures
-  }
-}
-// #endregion
 
 function isClientAuditAction(action: string): action is AuditAction {
   return (CLIENT_AUDIT_ACTIONS as readonly string[]).includes(action)
@@ -100,60 +74,19 @@ export async function GET(request: NextRequest) {
       matchId: searchParams.get('matchId')?.trim() || undefined,
     }
 
-    // #region agent log
-    agentServerLog('H5', 'audit/route.ts:GET:parsed', 'parsed audit GET query', {
-      limit,
-      cursor,
-      includeCount,
-      rawAction: searchParams.get('action'),
-      rawSource: searchParams.get('source'),
-      filters,
-      actionParsedOk:
-        !searchParams.get('action') || filters.action === searchParams.get('action'),
-      sourceParsedOk:
-        !searchParams.get('source') || filters.source === searchParams.get('source'),
+    const [{ logs, nextCursor }, totalCount] = await Promise.all([
+      queryAuditLogs(adminDb, { limit, cursor, filters }),
+      includeCount ? countAuditLogs(adminDb, filters) : Promise.resolve(undefined),
+    ])
+
+    const enrichedLogs = await enrichAuditLogsWithDisplayNames(adminDb, logs)
+
+    return NextResponse.json({
+      success: true,
+      logs: enrichedLogs,
+      nextCursor,
+      ...(totalCount != null ? { totalCount } : {}),
     })
-    // #endregion
-
-    try {
-      const [{ logs, nextCursor }, totalCount] = await Promise.all([
-        queryAuditLogs(adminDb, { limit, cursor, filters }),
-        includeCount ? countAuditLogs(adminDb, filters) : Promise.resolve(undefined),
-      ])
-
-      const enrichedLogs = await enrichAuditLogsWithDisplayNames(adminDb, logs)
-
-      // #region agent log
-      agentServerLog('H5', 'audit/route.ts:GET:success', 'audit query succeeded', {
-        logCount: enrichedLogs.length,
-        totalCount: totalCount ?? null,
-        nextCursor,
-        firstAction: enrichedLogs[0]?.action ?? null,
-        actionsSample: enrichedLogs.slice(0, 5).map(l => l.action),
-        filters,
-        includeCount,
-      })
-      // #endregion
-
-      return NextResponse.json({
-        success: true,
-        logs: enrichedLogs,
-        nextCursor,
-        ...(totalCount != null ? { totalCount } : {}),
-      })
-    } catch (queryError: unknown) {
-      // #region agent log
-      agentServerLog('H4', 'audit/route.ts:GET:queryError', 'Firestore query/count failed', {
-        filters,
-        includeCount,
-        error:
-          queryError instanceof Error
-            ? { message: queryError.message, name: queryError.name }
-            : String(queryError),
-      })
-      // #endregion
-      throw queryError
-    }
   } catch (error: unknown) {
     console.error('audit GET error:', error)
     return NextResponse.json(
