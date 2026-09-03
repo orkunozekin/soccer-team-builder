@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { format, formatDistanceToNow } from 'date-fns'
 import {
   AlertCircle,
@@ -264,16 +264,25 @@ export function AuditEventLog() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const cursorsRef = useRef(cursors)
+  cursorsRef.current = cursors
+
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
-  const fetchPage = useCallback(
-    async (pageNum: number, cursor: string | null, nextFilters: FilterState) => {
+  useEffect(() => {
+    let cancelled = false
+    const pageNum = page
+    const nextFilters = appliedFilters
+    const cursorForRequest =
+      pageNum === 1 ? null : (cursorsRef.current[pageNum - 2] ?? null)
+
+    async function load() {
       setLoading(true)
       setError('')
       try {
         const result = await listAuditLogsAPI({
           limit: PAGE_SIZE,
-          cursor,
+          cursor: cursorForRequest,
           includeCount: pageNum === 1,
           action: nextFilters.action,
           source: nextFilters.source,
@@ -282,9 +291,11 @@ export function AuditEventLog() {
           matchId: nextFilters.matchId,
         })
 
+        if (cancelled) return
+
         setLogs(result.logs)
-        if (pageNum === 1 && result.totalCount != null) {
-          setTotalCount(result.totalCount)
+        if (pageNum === 1) {
+          setTotalCount(result.totalCount ?? 0)
         }
         setCursors(prev => {
           const next = [...prev]
@@ -292,19 +303,22 @@ export function AuditEventLog() {
           return next
         })
       } catch (err: unknown) {
+        if (cancelled) return
         setLogs([])
+        setTotalCount(0)
         setError(err instanceof Error ? err.message : 'Failed to load events')
       } finally {
-        setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+        }
       }
-    },
-    []
-  )
+    }
 
-  useEffect(() => {
-    const cursorForRequest = page === 1 ? null : (cursors[page - 2] ?? null)
-    void fetchPage(page, cursorForRequest, appliedFilters)
-  }, [page, appliedFilters, fetchPage])
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [page, appliedFilters])
 
   const hasPendingFilterChanges = useMemo(
     () => JSON.stringify(filters) !== JSON.stringify(appliedFilters),
@@ -312,16 +326,26 @@ export function AuditEventLog() {
   )
 
   const applyFilters = () => {
-    setAppliedFilters(filters)
+    // Copy so appliedFilters is a distinct object from the live draft filters
+    const next = { ...filters }
+    setAppliedFilters(next)
     setPage(1)
     setCursors([null])
+    setTotalCount(0)
+    setLogs([])
+    setLoading(true)
+    setError('')
   }
 
   const clearFilters = () => {
     setFilters(EMPTY_FILTERS)
-    setAppliedFilters(EMPTY_FILTERS)
+    setAppliedFilters({ ...EMPTY_FILTERS })
     setPage(1)
     setCursors([null])
+    setTotalCount(0)
+    setLogs([])
+    setLoading(true)
+    setError('')
   }
 
   return (
@@ -464,7 +488,7 @@ export function AuditEventLog() {
           No events match your filters.
         </p>
       ) : (
-        <div className="space-y-2">
+        <div className={cn('space-y-2', loading && 'opacity-60')}>
           {logs.map(log => (
             <EventRow key={log.id} log={log} />
           ))}
@@ -478,8 +502,14 @@ export function AuditEventLog() {
           totalCount={totalCount}
           pageSize={PAGE_SIZE}
           itemLabel="events"
-          onPrevious={() => setPage(p => Math.max(1, p - 1))}
-          onNext={() => setPage(p => Math.min(totalPages, p + 1))}
+          onPrevious={() => {
+            if (loading) return
+            setPage(p => Math.max(1, p - 1))
+          }}
+          onNext={() => {
+            if (loading) return
+            setPage(p => Math.min(totalPages, p + 1))
+          }}
         />
       ) : null}
     </div>
