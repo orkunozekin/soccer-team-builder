@@ -1,6 +1,7 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, act } from '@testing-library/react'
+import { Children, type ReactNode, isValidElement } from 'react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuditEventLog } from './AuditEventLog'
 import { listAuditLogsAPI } from '@/lib/api/client'
 import type { AuditLog } from '@/types/auditLog'
@@ -14,14 +15,12 @@ vi.mock('next/link', () => ({
     children,
     href,
   }: {
-    children: React.ReactNode
+    children: ReactNode
     href: string
   }) => <a href={href}>{children}</a>,
 }))
 
 vi.mock('@/components/ui/select', () => {
-  const React = require('react') as typeof import('react')
-
   function Select({
     value,
     onValueChange,
@@ -29,28 +28,35 @@ vi.mock('@/components/ui/select', () => {
   }: {
     value: string
     onValueChange: (value: string) => void
-    children: React.ReactNode
+    children: ReactNode
   }) {
     const options: { value: string; label: string }[] = []
     let triggerId: string | undefined
 
-    React.Children.forEach(children, child => {
-      if (!React.isValidElement(child)) return
-      if (child.type?.displayName === 'SelectTrigger') {
-        triggerId = child.props.id
+    Children.forEach(children, child => {
+      if (!isValidElement(child)) return
+      const childType = child.type as { displayName?: string }
+      if (childType.displayName === 'SelectTrigger') {
+        triggerId = (child.props as { id?: string }).id
       }
-      if (child.type?.displayName === 'SelectContent') {
-        React.Children.forEach(child.props.children, option => {
-          if (
-            React.isValidElement(option) &&
-            option.type?.displayName === 'SelectItem'
-          ) {
-            options.push({
-              value: option.props.value,
-              label: String(option.props.children),
-            })
+      if (childType.displayName === 'SelectContent') {
+        Children.forEach(
+          (child.props as { children?: ReactNode }).children,
+          option => {
+            if (!isValidElement(option)) return
+            const optionType = option.type as { displayName?: string }
+            if (optionType.displayName === 'SelectItem') {
+              const props = option.props as {
+                value: string
+                children?: ReactNode
+              }
+              options.push({
+                value: props.value,
+                label: String(props.children),
+              })
+            }
           }
-        })
+        )
       }
     })
 
@@ -71,22 +77,23 @@ vi.mock('@/components/ui/select', () => {
   }
   Select.displayName = 'Select'
 
-  function passthrough({ children, ...props }: { children?: React.ReactNode; id?: string }) {
+  function passthrough({
+    children,
+    ...props
+  }: {
+    children?: ReactNode
+    id?: string
+  }) {
     return <div {...props}>{children}</div>
   }
   passthrough.displayName = 'SelectTrigger'
 
-  function SelectContent({ children }: { children?: React.ReactNode }) {
+  function SelectContent({ children }: { children?: ReactNode }) {
     return <>{children}</>
   }
   SelectContent.displayName = 'SelectContent'
 
-  function SelectItem({
-    children,
-  }: {
-    value: string
-    children?: React.ReactNode
-  }) {
+  function SelectItem({ children }: { value: string; children?: ReactNode }) {
     return <>{children}</>
   }
   SelectItem.displayName = 'SelectItem'
