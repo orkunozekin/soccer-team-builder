@@ -575,14 +575,76 @@ export async function listAuditLogsAPI(params: {
   if (params.matchId?.trim()) search.set('matchId', params.matchId.trim())
 
   const qs = search.toString()
-  const response = await apiRequest(`/audit${qs ? `?${qs}` : ''}`)
+  const url = `/audit${qs ? `?${qs}` : ''}`
+
+  // #region agent log
+  void fetch('/api/agent-debug-log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      hypothesisId: 'H2',
+      location: 'client.ts:listAuditLogsAPI:request',
+      message: 'outgoing audit list request',
+      data: {
+        url,
+        params: {
+          limit: params.limit,
+          cursor: params.cursor ?? null,
+          includeCount: params.includeCount ?? false,
+          action: params.action || '',
+          source: params.source || '',
+          actorUid: params.actorUid || '',
+          targetUid: params.targetUid || '',
+          matchId: params.matchId || '',
+        },
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+  // #endregion
+
+  const response = await apiRequest(url)
 
   if (!response.ok) {
     const error = await response.json()
+    // #region agent log
+    void fetch('/api/agent-debug-log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hypothesisId: 'H4',
+        location: 'client.ts:listAuditLogsAPI:error',
+        message: 'audit list request failed',
+        data: { status: response.status, error: error?.error ?? error, url },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {})
+    // #endregion
     throw new Error(error.error || 'Failed to load analytics')
   }
 
-  return response.json()
+  const json = await response.json()
+  // #region agent log
+  void fetch('/api/agent-debug-log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      hypothesisId: 'H5',
+      location: 'client.ts:listAuditLogsAPI:response',
+      message: 'audit list response received',
+      data: {
+        url,
+        logCount: Array.isArray(json.logs) ? json.logs.length : null,
+        totalCount: json.totalCount ?? null,
+        hasTotalCountKey: Object.prototype.hasOwnProperty.call(json, 'totalCount'),
+        nextCursor: json.nextCursor ?? null,
+        firstAction: json.logs?.[0]?.action ?? null,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+  // #endregion
+  return json
 }
 
 export async function getAuditStatsAPI(): Promise<{

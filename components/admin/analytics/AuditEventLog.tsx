@@ -37,6 +37,27 @@ import {
 
 const PAGE_SIZE = 15
 
+// #region agent log
+function agentLog(
+  hypothesisId: string,
+  location: string,
+  message: string,
+  data: Record<string, unknown>
+) {
+  void fetch('/api/agent-debug-log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+}
+// #endregion
+
 type FilterState = {
   action: AuditAction | ''
   source: AuditSource | ''
@@ -268,6 +289,16 @@ export function AuditEventLog() {
 
   const fetchPage = useCallback(
     async (pageNum: number, cursor: string | null, nextFilters: FilterState) => {
+      // #region agent log
+      const reqId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+      agentLog('H2', 'AuditEventLog.tsx:fetchPage:entry', 'fetchPage called', {
+        reqId,
+        pageNum,
+        cursor,
+        nextFilters,
+        includeCount: pageNum === 1,
+      })
+      // #endregion
       setLoading(true)
       setError('')
       try {
@@ -282,6 +313,20 @@ export function AuditEventLog() {
           matchId: nextFilters.matchId,
         })
 
+        // #region agent log
+        agentLog('H3', 'AuditEventLog.tsx:fetchPage:success', 'fetchPage success before setState', {
+          reqId,
+          pageNum,
+          logCount: result.logs.length,
+          firstAction: result.logs[0]?.action ?? null,
+          actionsSample: result.logs.slice(0, 5).map(l => l.action),
+          totalCount: result.totalCount ?? null,
+          nextCursor: result.nextCursor,
+          willUpdateTotalCount: pageNum === 1 && result.totalCount != null,
+          filtersUsed: nextFilters,
+        })
+        // #endregion
+
         setLogs(result.logs)
         if (pageNum === 1 && result.totalCount != null) {
           setTotalCount(result.totalCount)
@@ -292,6 +337,15 @@ export function AuditEventLog() {
           return next
         })
       } catch (err: unknown) {
+        // #region agent log
+        agentLog('H4', 'AuditEventLog.tsx:fetchPage:error', 'fetchPage error path', {
+          reqId,
+          pageNum,
+          error: err instanceof Error ? err.message : String(err),
+          note: 'logs cleared but totalCount NOT reset',
+          filtersUsed: nextFilters,
+        })
+        // #endregion
         setLogs([])
         setError(err instanceof Error ? err.message : 'Failed to load events')
       } finally {
@@ -303,8 +357,31 @@ export function AuditEventLog() {
 
   useEffect(() => {
     const cursorForRequest = page === 1 ? null : (cursors[page - 2] ?? null)
+    // #region agent log
+    agentLog('H1', 'AuditEventLog.tsx:useEffect', 'effect fired — will fetch', {
+      page,
+      cursorForRequest,
+      appliedFilters,
+      cursorsLen: cursors.length,
+      cursorsOmittedFromDeps: true,
+    })
+    // #endregion
     void fetchPage(page, cursorForRequest, appliedFilters)
   }, [page, appliedFilters, fetchPage])
+
+  // #region agent log
+  useEffect(() => {
+    agentLog('H6', 'AuditEventLog.tsx:paginationState', 'pagination-related state', {
+      page,
+      totalPages,
+      totalCount,
+      logsLen: logs.length,
+      loading,
+      error: error || null,
+      appliedFilters,
+    })
+  }, [page, totalPages, totalCount, logs.length, loading, error, appliedFilters])
+  // #endregion
 
   const hasPendingFilterChanges = useMemo(
     () => JSON.stringify(filters) !== JSON.stringify(appliedFilters),
@@ -312,12 +389,27 @@ export function AuditEventLog() {
   )
 
   const applyFilters = () => {
+    // #region agent log
+    agentLog('H1', 'AuditEventLog.tsx:applyFilters', 'applyFilters clicked', {
+      filters,
+      appliedFiltersBefore: appliedFilters,
+      pageBefore: page,
+      filtersEqualApplied: JSON.stringify(filters) === JSON.stringify(appliedFilters),
+      pageAlreadyOne: page === 1,
+    })
+    // #endregion
     setAppliedFilters(filters)
     setPage(1)
     setCursors([null])
   }
 
   const clearFilters = () => {
+    // #region agent log
+    agentLog('H1', 'AuditEventLog.tsx:clearFilters', 'clearFilters clicked', {
+      pageBefore: page,
+      appliedFiltersBefore: appliedFilters,
+    })
+    // #endregion
     setFilters(EMPTY_FILTERS)
     setAppliedFilters(EMPTY_FILTERS)
     setPage(1)
