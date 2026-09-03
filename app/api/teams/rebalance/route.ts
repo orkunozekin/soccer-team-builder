@@ -9,27 +9,13 @@ import {
 } from '@/lib/utils/teamGenerator'
 import type { User } from '@/types/user'
 
-type Bucket = 'GK' | 'DEF' | 'MID' | 'FWD' | 'UNK'
-
 function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
   if (!t) return null
   if (t instanceof Date) return t
   return (t as Timestamp).toDate()
 }
 
-function bucketForPosition(position: string | null | undefined): Bucket {
-  if (!position) return 'UNK'
-  const p = position.toUpperCase().trim()
-  if (isGoalkeeper(p)) return 'GK'
-
-  // Common soccer shorthand buckets. Everything else falls back to UNK.
-  if (['LB', 'RB', 'CB', 'LWB', 'RWB', 'DEF', 'D'].includes(p)) return 'DEF'
-  if (['CDM', 'CM', 'CAM', 'LM', 'RM', 'MID', 'M'].includes(p)) return 'MID'
-  if (['LW', 'RW', 'ST', 'CF', 'FWD', 'F'].includes(p)) return 'FWD'
-
-  return 'UNK'
-}
-
+/** Split `totalPlayers` evenly across pair capacities (e.g. 14 → [7, 7]). */
 function computeTargetSizes(
   totalPlayers: number,
   capacities: number[]
@@ -198,102 +184,34 @@ export async function POST(request: NextRequest) {
       .sort((a, b) => a.rsvpAt.getTime() - b.rsvpAt.getTime())
       .map(x => x.id)
 
-    // Process teams in pairs: (1&2), (3&4), (5&6), ... Each pair gets the next N players
-    // by RSVP order and keeps them within that pair only (balanced between the two).
+    // Fill every team from the RSVP-sorted roster. Teams are processed in pairs
+    // (1&2), (3&4), … only so each matchup gets even sizes; within a pair the
+    // earlier team always gets the earlier contiguous RSVP slice (no position
+    // scrambling). Example with 45 players: Team 3 = RSVPs 23–33, Team 4 = 34–44.
     const numTeams = teams.length
     const assigned: string[][] = teams.map(() => [])
     let rosterOffset = 0
-
-    const balanceChunkBetweenTwoTeams = (
-      chunk: string[],
-      t0: number,
-      t1: number
-    ) => {
-      if (chunk.length === 0) return
-      const pairCaps = [capacities[t0]!, capacities[t1]!]
-      const pairTargets = computeTargetSizes(chunk.length, pairCaps)
-      const targets: number[] = teams.map((_, i) => {
-        if (i === t0) return pairTargets[0]!
-        if (i === t1) return pairTargets[1]!
-        return 0
-      })
-
-      const buckets: Record<Bucket, string[]> = {
-        GK: [],
-        DEF: [],
-        MID: [],
-        FWD: [],
-        UNK: [],
-      }
-      for (const id of chunk) {
-        const user = userById.get(id)
-        buckets[bucketForPosition(user?.position)].push(id)
-      }
-
-      const pickNextTeam = (eligible: number[]) => {
-        let best = eligible[0]!
-        for (const idx of eligible) {
-          const remBest = targets[best]! - assigned[best]!.length
-          const remIdx = targets[idx]! - assigned[idx]!.length
-          if (remIdx > remBest) best = idx
-          else if (
-            remIdx === remBest &&
-            assigned[idx]!.length < assigned[best]!.length
-          )
-            best = idx
-        }
-        return best
-      }
-
-      const teamHasGK = (idx: number) =>
-        assigned[idx]!.some(id =>
-          isGoalkeeper(userById.get(id)?.position ?? null)
-        )
-
-      const assignFrom = (bucket: Bucket) => {
-        for (const playerId of buckets[bucket]) {
-          const eligible = [t0, t1].filter(
-            idx => assigned[idx]!.length < targets[idx]!
-          )
-          if (eligible.length === 0) break
-          const teamIdx = pickNextTeam(eligible)
-          assigned[teamIdx]!.push(playerId)
-        }
-      }
-
-      // GK: at most one per team so we never give one team two GKs and the other none
-      for (const playerId of buckets.GK) {
-        const eligible = [t0, t1].filter(
-          idx => assigned[idx]!.length < targets[idx]! && !teamHasGK(idx)
-        )
-        if (eligible.length === 0) break
-        const teamIdx = pickNextTeam(eligible)
-        assigned[teamIdx]!.push(playerId)
-      }
-      assignFrom('DEF')
-      assignFrom('MID')
-      assignFrom('FWD')
-      assignFrom('UNK')
-    }
 
     for (let p = 0; p < numTeams; p += 2) {
       const t0 = p
       const t1 = p + 1
 
       if (t1 < numTeams) {
-        // Full pair: take next (cap[t0] + cap[t1]) players and balance between t0 and t1
         const pairCap = capacities[t0]! + capacities[t1]!
         const chunk = roster.slice(rosterOffset, rosterOffset + pairCap)
         rosterOffset += chunk.length
-        balanceChunkBetweenTwoTeams(chunk, t0, t1)
+        const [target0, target1] = computeTargetSizes(chunk.length, [
+          capacities[t0]!,
+          capacities[t1]!,
+        ])
+        assigned[t0] = chunk.slice(0, target0)
+        assigned[t1] = chunk.slice(target0, target0 + target1)
       } else {
         // Odd team: take next cap[t0] players and assign all to t0
         const cap = capacities[t0]!
         const chunk = roster.slice(rosterOffset, rosterOffset + cap)
         rosterOffset += chunk.length
-        for (const playerId of chunk) {
-          assigned[t0]!.push(playerId)
-        }
+        assigned[t0] = [...chunk]
       }
     }
 

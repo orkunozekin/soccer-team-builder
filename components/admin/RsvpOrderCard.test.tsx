@@ -120,4 +120,20 @@ describe('RsvpOrderCard', () => {
 
     expect(screen.getByText(/no confirmed rsvps yet/i)).toBeInTheDocument()
   })
+
+  it('describes RSVP-order team fill', async () => {
+    const user = userEvent.setup()
+    render(
+      <RsvpOrderCard
+        matchRSVPs={[makeRsvp('r1', 'u1', new Date('2026-01-01T12:00:00Z'))]}
+        users={users}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: /rsvp order \(1\)/i }))
+
+    expect(
+      screen.getByText(/teams are filled in this order/i)
+    ).toBeInTheDocument()
+  })
 })

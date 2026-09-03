@@ -48,7 +48,8 @@ export function RsvpOrderCard({ matchRSVPs, users }: RsvpOrderCardProps) {
           <AccordionContent className="px-6 pb-4">
             <CardDescription className="mb-4">
               Confirmed players in the order they RSVP&apos;d (earliest first).
-              This is the order used for team generation.
+              Teams are filled in this order: Team 1 gets the earliest RSVPs,
+              then Team 2, then Team 3, and so on.
             </CardDescription>
             {orderedRsvps.length === 0 ? (
               <p className="text-sm text-zinc-500">No confirmed RSVPs yet.</p>
