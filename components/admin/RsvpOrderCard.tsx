@@ -9,20 +9,12 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Card, CardDescription } from '@/components/ui/card'
-import { SOCCER_POSITIONS } from '@/lib/constants/positions'
-import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import type { RSVP } from '@/types/rsvp'
 import type { User } from '@/types/user'
 
 interface RsvpOrderCardProps {
   matchRSVPs: RSVP[]
   users: User[]
-}
-
-function positionLabel(value: string | null): string {
-  if (!value) return '—'
-  const p = SOCCER_POSITIONS.find(x => x.value === value)
-  return p ? p.label : value
 }
 
 export function RsvpOrderCard({ matchRSVPs, users }: RsvpOrderCardProps) {
@@ -59,7 +51,6 @@ export function RsvpOrderCard({ matchRSVPs, users }: RsvpOrderCardProps) {
                   const user = usersById.get(rsvp.userId)
                   const displayName =
                     user?.displayName || user?.email || rsvp.userId
-                  const position = rsvp.position ?? user?.position ?? null
 
                   return (
                     <li
@@ -77,15 +68,6 @@ export function RsvpOrderCard({ matchRSVPs, users }: RsvpOrderCardProps) {
                           {format(rsvp.rsvpAt, 'MMM d, yyyy h:mm a')}
                         </p>
                       </div>
-                      <span
-                        className={`shrink-0 text-xs ${
-                          position && isGoalkeeper(position)
-                            ? 'rounded bg-amber-200/90 px-1.5 py-0.5 text-amber-900 dark:bg-amber-700/50 dark:text-amber-100'
-                            : 'text-zinc-600 dark:text-zinc-400'
-                        }`}
-                      >
-                        {positionLabel(position)}
-                      </span>
                     </li>
                   )
                 })}
