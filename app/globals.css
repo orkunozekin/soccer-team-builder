@@ -16,7 +16,6 @@
       #fff3f2 80%,
       #ffe8e6 100%
     );
-    background-attachment: fixed;
   }
 
   .dark .pitch-bg {
@@ -27,7 +26,18 @@
       hsl(0 20% 12%) 60%,
       hsl(0 25% 14%) 100%
     );
-    background-attachment: fixed;
+  }
+
+  /* Fixed backgrounds are unreliable on mobile browsers and can leave a
+     large empty scrollable region below content (especially iOS Safari). */
+  @media (hover: hover) and (pointer: fine) {
+    .pitch-bg {
+      background-attachment: fixed;
+    }
+
+    .dark .pitch-bg {
+      background-attachment: fixed;
+    }
   }
 
   .card-soccer-accent {
@@ -95,8 +105,12 @@
   * {
     @apply border-border;
   }
+  html {
+    overflow-x: clip;
+  }
   body {
     @apply pitch-bg bg-background text-foreground;
+    overflow-x: clip;
   }
 
   /* Date and time inputs: picker icon on the very right */
