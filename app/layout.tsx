@@ -1,9 +1,10 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 import { EmulatorAuthGate } from '@/components/auth/EmulatorAuthGate'
 import { AdminUiToggle } from '@/components/dev/AdminUiToggle'
+import { MobileViewportFix } from '@/components/layout/MobileViewportFix'
 import { Navigation } from '@/components/layout/Navigation'
 import { cn } from '@/lib/utils'
 
@@ -18,6 +19,15 @@ export const metadata: Metadata = {
   description: 'Soccerville Team Builder',
 }
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  // Prefer resizing the layout when the virtual keyboard opens so pages like
+  // Profile do not keep an inflated scrollable gap after dismiss (Android;
+  // ignored on iOS today, where MobileViewportFix compensates).
+  interactiveWidget: 'resizes-content',
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,6 +38,7 @@ export default function RootLayout({
       <body className={cn(inter.variable, 'font-sans antialiased')}>
         <EmulatorAuthGate>
           <AuthProvider>
+            <MobileViewportFix />
             <Navigation />
             {children}
             <AdminUiToggle />
