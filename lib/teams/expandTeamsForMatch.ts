@@ -91,12 +91,17 @@ async function incrementallyAssignUnassignedPlayers(
     }
   }
 
+  const rsvpAtByUserId = new Map(
+    rsvpsToUse.map(r => [r.userId, r.rsvpAt?.getTime() ?? 0])
+  )
+
   const finalAssignments =
     Object.keys(persisted).length > 0
       ? applyPersistedTransfersKeepingBalance(
           updatedAssignments,
           persisted,
-          maxSizeByTeamNumber
+          maxSizeByTeamNumber,
+          rsvpAtByUserId
         )
       : updatedAssignments
 
@@ -192,10 +197,24 @@ async function fullyRegenerateTeams(
         | undefined) ?? {})
     : {}
 
+  const maxSizeByTeamNumber = new Map<number, number>()
+  for (const team of baselineTeams) {
+    maxSizeByTeamNumber.set(team.teamNumber, 11)
+  }
+  for (const team of currentAssignments) {
+    if (!maxSizeByTeamNumber.has(team.teamNumber)) {
+      maxSizeByTeamNumber.set(team.teamNumber, 11)
+    }
+  }
+  const rsvpAtByUserId = new Map(
+    rsvpsToUse.map(r => [r.userId, r.rsvpAt?.getTime() ?? 0])
+  )
+
   const teamAssignments = mergeBaselineWithManualTransfers(
     currentAssignments,
     baselineTeams,
-    persisted
+    persisted,
+    { maxSizeByTeamNumber, rsvpAtByUserId }
   )
 
   const teamsCol = adminDb.collection(`matches/${matchId}/teams`)

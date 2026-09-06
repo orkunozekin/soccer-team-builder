@@ -382,10 +382,92 @@ describe('expandTeamsForMatch', () => {
     const team3 = getTeams().find(t => (t.data.teamNumber as number) === 3)
     expect(team1?.data.playerIds).toContain('gk_late')
     expect(team2?.data.playerIds).toContain('p22')
+    // Pin keeps p22 on team 2, but capacity is enforced: someone else shifts to team 3.
+    expect(team1?.data.playerIds).toHaveLength(11)
+    expect(team2?.data.playerIds).toHaveLength(11)
+    expect(team3?.data.playerIds).toHaveLength(1)
     expect(team3?.data.playerIds).not.toContain('p22')
     expect(getMatch()?.data.gkReplacements).toEqual({
       gk_late: 'p11',
     })
+  })
+
+  it('shifts the 22nd RSVP to team 3 when a late GK is assigned to full team 1', async () => {
+    const team1Ids = Array.from({ length: 11 }, (_, i) => `p${i + 1}`)
+    const team2Ids = Array.from({ length: 11 }, (_, i) => `p${i + 12}`)
+    const allIds = [...team1Ids, ...team2Ids, 'gk_late']
+
+    const { adminDb, getTeams } = createMockFirestore({
+      rsvps: allIds.map((id, index) =>
+        makeRsvpDoc(
+          `r${index + 1}`,
+          id,
+          new Date(2024, 0, 1, 0, index),
+          'match1',
+          id === 'gk_late' ? 'GK' : 'ST'
+        )
+      ),
+      users: allIds.map(id =>
+        makeUserDoc(id, id === 'gk_late' ? 'GK' : 'ST')
+      ),
+      teams: [
+        makeTeamDoc('team1', 1, team1Ids),
+        makeTeamDoc('team2', 2, team2Ids),
+      ],
+      match: { id: 'match1', data: {} },
+    })
+
+    await expandTeamsForMatch(adminDb, 'match1')
+
+    const team1 = getTeams().find(t => (t.data.teamNumber as number) === 1)
+    const team2 = getTeams().find(t => (t.data.teamNumber as number) === 2)
+    const team3 = getTeams().find(t => (t.data.teamNumber as number) === 3)
+    expect(team1?.data.playerIds).toHaveLength(11)
+    expect(team2?.data.playerIds).toHaveLength(11)
+    expect(team3?.data.playerIds).toEqual(['p22'])
+    expect(team1?.data.playerIds).toContain('gk_late')
+  })
+
+  it('does not leave team 1 over capacity when a pinned player would return after GK shift', async () => {
+    const team1Ids = Array.from({ length: 11 }, (_, i) => `p${i + 1}`)
+    const team2Ids = Array.from({ length: 11 }, (_, i) => `p${i + 12}`)
+    const allIds = [...team1Ids, ...team2Ids, 'gk_late']
+
+    const { adminDb, getTeams } = createMockFirestore({
+      rsvps: allIds.map((id, index) =>
+        makeRsvpDoc(
+          `r${index + 1}`,
+          id,
+          new Date(2024, 0, 1, 0, index),
+          'match1',
+          id === 'gk_late' ? 'GK' : 'ST'
+        )
+      ),
+      users: allIds.map(id =>
+        makeUserDoc(id, id === 'gk_late' ? 'GK' : 'ST')
+      ),
+      teams: [
+        makeTeamDoc('team1', 1, team1Ids),
+        makeTeamDoc('team2', 2, team2Ids),
+      ],
+      match: {
+        id: 'match1',
+        // p11 is the player GK shift bumps off team 1; pinning them back
+        // previously left team 1 with 12 players.
+        data: { manualTeamAssignments: { p11: 1 } },
+      },
+    })
+
+    await expandTeamsForMatch(adminDb, 'match1')
+
+    const team1 = getTeams().find(t => (t.data.teamNumber as number) === 1)
+    const team2 = getTeams().find(t => (t.data.teamNumber as number) === 2)
+    const team3 = getTeams().find(t => (t.data.teamNumber as number) === 3)
+    expect(team1?.data.playerIds).toContain('gk_late')
+    expect(team1?.data.playerIds).toContain('p11')
+    expect(team1?.data.playerIds).toHaveLength(11)
+    expect(team2?.data.playerIds).toHaveLength(11)
+    expect(team3?.data.playerIds).toHaveLength(1)
   })
 
   it('preserves explicit transfers during force regeneration', async () => {

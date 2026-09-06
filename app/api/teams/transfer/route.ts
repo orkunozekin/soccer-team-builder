@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { auditLog } from '@/lib/services/auditService'
+import { enforceTeamMaxSizes } from '@/lib/utils/teamGenerator'
 
 function uniq(ids: string[]): string[] {
   return Array.from(new Set(ids))
@@ -186,23 +187,96 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, swapped: true })
     }
 
-    // One-way transfer: remove player from every team, then add to target
-    for (const team of teams) {
-      if (!team.playerIds.includes(playerId)) continue
-      if (team.id === targetTeamId) continue
-      batch.update(teamsCol.doc(team.id), {
-        playerIds: team.playerIds.filter(id => id !== playerId),
+    // One-way transfer: move in memory, then cascade overflow so no team exceeds
+    // maxSize (e.g. assigning a GK onto a full team 1 shifts the 22nd RSVP to team 3).
+    const nextAssignments = teams.map(t => ({
+      teamNumber: t.teamNumber,
+      playerIds: t.playerIds.filter(id => id !== playerId),
+      id: t.id,
+      maxSize: t.maxSize,
+    }))
+    const targetAssignment = nextAssignments.find(t => t.id === targetTeamId)
+    if (!targetAssignment) {
+      return NextResponse.json(
+        { error: 'Target team not found' },
+        { status: 404 }
+      )
+    }
+    targetAssignment.playerIds = uniq([
+      ...targetAssignment.playerIds,
+      playerId,
+    ])
+
+    const manualPins = new Map<string, number>(
+      Object.entries(existingAssignments).filter(
+        (entry): entry is [string, number] => typeof entry[1] === 'number'
+      )
+    )
+    manualPins.set(playerId, targetTeam.teamNumber)
+
+    const rsvpSnap = await adminDb
+      .collection('rsvps')
+      .where('matchId', '==', matchId)
+      .where('status', '==', 'confirmed')
+      .get()
+    const rsvpAtByUserId = new Map<string, number>()
+    rsvpSnap.docs.forEach(d => {
+      const data = d.data()
+      const uid = data.userId as string
+      const rsvpAt = data.rsvpAt?.toDate?.() ?? new Date(0)
+      rsvpAtByUserId.set(uid, rsvpAt.getTime())
+    })
+
+    const maxSizeByTeamNumber = new Map(
+      nextAssignments.map(t => [t.teamNumber, t.maxSize] as const)
+    )
+    const enforced = enforceTeamMaxSizes(
+      nextAssignments.map(t => ({
+        teamNumber: t.teamNumber,
+        playerIds: t.playerIds,
+      })),
+      maxSizeByTeamNumber,
+      { manualPins, rsvpAtByUserId }
+    )
+
+    const TEAM_COLORS = [
+      '#f97316',
+      '#3b82f6',
+      '#eab308',
+      '#65a30d',
+      '#ef4444',
+      '#8b5cf6',
+    ]
+    const TEAM_NAMES = ['Orange', 'Blue', 'Yellow', 'Lime', 'Red', 'Purple']
+    const existingByNumber = new Map(
+      nextAssignments.map(t => [t.teamNumber, t] as const)
+    )
+
+    for (const assignment of enforced) {
+      const existing = existingByNumber.get(assignment.teamNumber)
+      if (existing) {
+        batch.update(teamsCol.doc(existing.id), {
+          playerIds: assignment.playerIds,
+          updatedAt: now,
+        })
+        continue
+      }
+      const teamId = `team_${matchId}_${assignment.teamNumber}_${Date.now()}`
+      batch.set(teamsCol.doc(teamId), {
+        matchId,
+        teamNumber: assignment.teamNumber,
+        name:
+          TEAM_NAMES[(assignment.teamNumber - 1) % TEAM_NAMES.length] ??
+          `Team ${assignment.teamNumber}`,
+        color:
+          TEAM_COLORS[(assignment.teamNumber - 1) % TEAM_COLORS.length] ??
+          '#3b82f6',
+        playerIds: assignment.playerIds,
+        maxSize: 11,
+        createdAt: now,
         updatedAt: now,
       })
     }
-
-    batch.update(teamsCol.doc(targetTeamId), {
-      playerIds: uniq([
-        ...targetTeam.playerIds.filter(id => id !== playerId),
-        playerId,
-      ]),
-      updatedAt: now,
-    })
 
     await batch.commit()
 

@@ -233,10 +233,14 @@ export async function POST(request: NextRequest) {
     const maxSizeByTeamNumber = new Map(
       teams.map(t => [t.teamNumber, t.maxSize] as const)
     )
+    const rsvpAtByUserId = new Map(
+      uniqueRsvpsSorted.map(r => [r.userId, r.rsvpAt.getTime()])
+    )
     const finalTeams = applyPersistedTransfersKeepingBalance(
       baselineTeams,
       persisted,
-      maxSizeByTeamNumber
+      maxSizeByTeamNumber,
+      rsvpAtByUserId
     )
     const finalByNumber = new Map(
       finalTeams.map(t => [t.teamNumber, t.playerIds])
@@ -244,6 +248,17 @@ export async function POST(request: NextRequest) {
     const finalAssigned = teams.map(
       t => finalByNumber.get(t.teamNumber) ?? []
     )
+
+    const TEAM_COLORS = [
+      '#f97316',
+      '#3b82f6',
+      '#eab308',
+      '#65a30d',
+      '#ef4444',
+      '#8b5cf6',
+    ]
+    const TEAM_NAMES = ['Orange', 'Blue', 'Yellow', 'Lime', 'Red', 'Purple']
+    const existingNumbers = new Set(teams.map(t => t.teamNumber))
 
     const now = Timestamp.now()
     const batch = adminDb.batch()
@@ -253,6 +268,25 @@ export async function POST(request: NextRequest) {
         updatedAt: now,
       })
     })
+    for (const assignment of finalTeams) {
+      if (existingNumbers.has(assignment.teamNumber)) continue
+      if (assignment.playerIds.length === 0) continue
+      const teamId = `team_${matchId}_${assignment.teamNumber}_${Date.now()}`
+      batch.set(teamsCol.doc(teamId), {
+        matchId,
+        teamNumber: assignment.teamNumber,
+        name:
+          TEAM_NAMES[(assignment.teamNumber - 1) % TEAM_NAMES.length] ??
+          `Team ${assignment.teamNumber}`,
+        color:
+          TEAM_COLORS[(assignment.teamNumber - 1) % TEAM_COLORS.length] ??
+          '#3b82f6',
+        playerIds: assignment.playerIds,
+        maxSize: 11,
+        createdAt: now,
+        updatedAt: now,
+      })
+    }
     await batch.commit()
 
     // Persist GK replacements so when that GK later changes position, we can swap them with the person they replaced
