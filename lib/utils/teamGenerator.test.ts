@@ -5,6 +5,7 @@ import {
   assignUnassignedPlayersToTeams,
   computeTeamCountForRSVPCount,
   deriveManualTransfers,
+  enforceTeamMaxSizes,
   generateTeamsWithReplacements,
   isGoalkeeper,
   mergeBaselineWithManualTransfers,
@@ -656,6 +657,103 @@ describe('applyPersistedTransfersKeepingBalance', () => {
       expect.arrayContaining(['p1', 'p4'])
     )
     expect(result.find(t => t.teamNumber === 2)?.playerIds).not.toContain('p3')
+  })
+
+  it('cascades overflow to team 3 when a pin would leave team 2 with 12 after GK shift', () => {
+    const team1 = Array.from({ length: 11 }, (_, i) =>
+      i === 10 ? 'gk_late' : `p${i + 1}`
+    )
+    // After GK shift: p11 on team 2, p22 on team 3
+    const team2 = [
+      'p11',
+      ...Array.from({ length: 10 }, (_, i) => `p${i + 12}`),
+    ]
+    const baseline = [
+      { teamNumber: 1, playerIds: team1 },
+      { teamNumber: 2, playerIds: team2 },
+      { teamNumber: 3, playerIds: ['p22'] },
+    ]
+    const rsvpAtByUserId = new Map<string, number>()
+    for (let i = 1; i <= 22; i++) {
+      rsvpAtByUserId.set(`p${i}`, i)
+    }
+    rsvpAtByUserId.set('gk_late', 23)
+
+    const result = applyPersistedTransfersKeepingBalance(
+      baseline,
+      { p22: 2 },
+      new Map([
+        [1, 11],
+        [2, 11],
+        [3, 11],
+      ]),
+      rsvpAtByUserId
+    )
+
+    expect(result.find(t => t.teamNumber === 1)?.playerIds).toHaveLength(11)
+    expect(result.find(t => t.teamNumber === 2)?.playerIds).toHaveLength(11)
+    expect(result.find(t => t.teamNumber === 2)?.playerIds).toContain('p22')
+    expect(result.find(t => t.teamNumber === 3)?.playerIds).toHaveLength(1)
+    expect(result.find(t => t.teamNumber === 3)?.playerIds).not.toContain(
+      'p22'
+    )
+  })
+})
+
+describe('enforceTeamMaxSizes', () => {
+  it('shifts the latest unpinned player from team 1 onto team 2 then team 3', () => {
+    const team1 = Array.from({ length: 12 }, (_, i) => `p${i + 1}`)
+    const team2 = Array.from({ length: 11 }, (_, i) => `p${i + 13}`)
+    const rsvpAtByUserId = new Map<string, number>()
+    for (let i = 1; i <= 23; i++) {
+      rsvpAtByUserId.set(`p${i}`, i)
+    }
+
+    const result = enforceTeamMaxSizes(
+      [
+        { teamNumber: 1, playerIds: team1 },
+        { teamNumber: 2, playerIds: team2 },
+      ],
+      new Map([
+        [1, 11],
+        [2, 11],
+      ]),
+      { rsvpAtByUserId }
+    )
+
+    expect(result.find(t => t.teamNumber === 1)?.playerIds).toHaveLength(11)
+    expect(result.find(t => t.teamNumber === 1)?.playerIds).not.toContain('p12')
+    expect(result.find(t => t.teamNumber === 2)?.playerIds).toHaveLength(11)
+    expect(result.find(t => t.teamNumber === 3)?.playerIds).toEqual(['p23'])
+  })
+
+  it('preserves pinned players and overflows someone else', () => {
+    const team2 = Array.from({ length: 12 }, (_, i) => `p${i + 12}`)
+    const rsvpAtByUserId = new Map<string, number>()
+    for (let i = 12; i <= 23; i++) {
+      rsvpAtByUserId.set(`p${i}`, i)
+    }
+
+    const result = enforceTeamMaxSizes(
+      [
+        { teamNumber: 1, playerIds: Array.from({ length: 11 }, (_, i) => `p${i + 1}`) },
+        { teamNumber: 2, playerIds: team2 },
+        { teamNumber: 3, playerIds: [] },
+      ],
+      new Map([
+        [1, 11],
+        [2, 11],
+        [3, 11],
+      ]),
+      {
+        manualPins: new Map([['p22', 2]]),
+        rsvpAtByUserId,
+      }
+    )
+
+    expect(result.find(t => t.teamNumber === 2)?.playerIds).toContain('p22')
+    expect(result.find(t => t.teamNumber === 2)?.playerIds).toHaveLength(11)
+    expect(result.find(t => t.teamNumber === 3)?.playerIds).toEqual(['p23'])
   })
 })
 

@@ -361,13 +361,24 @@ export function mergeManualTransfers(
 export function mergeBaselineWithManualTransfers(
   currentTeams: TeamAssignment[],
   baselineTeams: TeamAssignment[],
-  persistedManualAssignments?: Record<string, number>
+  persistedManualAssignments?: Record<string, number>,
+  options?: {
+    maxSizeByTeamNumber?: Map<number, number>
+    rsvpAtByUserId?: Map<string, number>
+  }
 ): TeamAssignment[] {
   const manualTransfers = mergeManualTransfers(
     deriveManualTransfers(currentTeams, baselineTeams),
     persistedManualAssignments
   )
-  return applyManualTeamTransfers(baselineTeams, manualTransfers)
+  const merged = applyManualTeamTransfers(baselineTeams, manualTransfers)
+  if (!options?.maxSizeByTeamNumber) {
+    return merged
+  }
+  return enforceTeamMaxSizes(merged, options.maxSizeByTeamNumber, {
+    manualPins: manualTransfers,
+    rsvpAtByUserId: options.rsvpAtByUserId,
+  })
 }
 
 function computePairTargetSizes(
@@ -390,17 +401,104 @@ function computePairTargetSizes(
 }
 
 /**
+ * Prefer latest-RSVP unpinned players when a team is over capacity. Falls back to
+ * the latest pinned player only when everyone on the team is pinned there.
+ */
+function pickOverflowPlayerId(
+  playerIds: string[],
+  teamNumber: number,
+  manualPins: Map<string, number>,
+  rsvpAtByUserId?: Map<string, number>
+): string | null {
+  if (playerIds.length === 0) return null
+
+  const byLatestRsvp = (ids: string[]): string[] =>
+    [...ids].sort(
+      (a, b) =>
+        (rsvpAtByUserId?.get(b) ?? 0) - (rsvpAtByUserId?.get(a) ?? 0)
+    )
+
+  const unpinned = playerIds.filter(
+    id => manualPins.get(id) !== teamNumber
+  )
+  if (unpinned.length > 0) {
+    return byLatestRsvp(unpinned)[0] ?? null
+  }
+  return byLatestRsvp(playerIds)[0] ?? null
+}
+
+/**
+ * Cascade players off any over-capacity team onto the next team (creating it if
+ * needed). Used after GK shift-down + pin re-application so a pinned 22nd RSVP
+ * (or a newly assigned GK) cannot leave team 1/2 with 12 players.
+ */
+export function enforceTeamMaxSizes(
+  teams: TeamAssignment[],
+  maxSizeByTeamNumber: Map<number, number>,
+  options?: {
+    manualPins?: Map<string, number>
+    rsvpAtByUserId?: Map<string, number>
+  }
+): TeamAssignment[] {
+  const manualPins = options?.manualPins ?? new Map<string, number>()
+  const rsvpAtByUserId = options?.rsvpAtByUserId
+  const result = teams
+    .map(t => ({ teamNumber: t.teamNumber, playerIds: [...t.playerIds] }))
+    .sort((a, b) => a.teamNumber - b.teamNumber)
+
+  // Iterate with index growth so newly created overflow teams are also enforced.
+  for (let i = 0; i < result.length; i++) {
+    const team = result[i]
+    if (!team) continue
+    const cap = maxSizeByTeamNumber.get(team.teamNumber) ?? 11
+
+    while (team.playerIds.length > cap) {
+      const overflowId = pickOverflowPlayerId(
+        team.playerIds,
+        team.teamNumber,
+        manualPins,
+        rsvpAtByUserId
+      )
+      if (!overflowId) break
+
+      team.playerIds = team.playerIds.filter(id => id !== overflowId)
+
+      let next = result[i + 1]
+      if (!next) {
+        const nextNumber =
+          result.length > 0
+            ? Math.max(...result.map(t => t.teamNumber)) + 1
+            : team.teamNumber + 1
+        next = { teamNumber: nextNumber, playerIds: [] }
+        result.push(next)
+        if (!maxSizeByTeamNumber.has(nextNumber)) {
+          maxSizeByTeamNumber.set(nextNumber, 11)
+        }
+      }
+      if (!next.playerIds.includes(overflowId)) {
+        next.playerIds.push(overflowId)
+      }
+    }
+  }
+
+  return result
+}
+
+/**
  * Rebalance path: apply only persisted admin pins onto a fresh balanced baseline,
  * then restore pair sizes by moving players who are not pinned to their current team.
  *
  * Unlike mergeBaselineWithManualTransfers, this does NOT treat the current skewed
  * roster as implied transfers (that undoes rebalance). Size-neutral swaps stay;
  * one-way pins stay on their preferred team while unpinned players fill the gap.
+ * Finally enforce maxSize so pin re-application after GK shift-down cannot leave
+ * a team of 12 (excess cascades to the next team).
  */
 export function applyPersistedTransfersKeepingBalance(
   baselineTeams: TeamAssignment[],
   persistedManualAssignments: Record<string, number> | undefined,
-  maxSizeByTeamNumber: Map<number, number>
+  maxSizeByTeamNumber: Map<number, number>,
+  rsvpAtByUserId?: Map<string, number>
 ): TeamAssignment[] {
   const manualPins = mergeManualTransfers(new Map(), persistedManualAssignments)
   const teams = applyManualTeamTransfers(baselineTeams, manualPins).sort(
@@ -445,7 +543,10 @@ export function applyPersistedTransfersKeepingBalance(
     }
   }
 
-  return teams
+  return enforceTeamMaxSizes(teams, maxSizeByTeamNumber, {
+    manualPins,
+    rsvpAtByUserId,
+  })
 }
 
 /**

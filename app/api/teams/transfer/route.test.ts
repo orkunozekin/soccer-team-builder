@@ -48,12 +48,15 @@ function makeDocSnap(doc: StoredDoc | null) {
 function createTransferMockDb(initial: {
   teams: StoredDoc[]
   match?: StoredDoc | null
+  rsvps?: StoredDoc[]
 }) {
   let teams = [...initial.teams]
   let matchData: Record<string, unknown> = {
     ...(initial.match?.data ?? {}),
   }
+  const rsvps = [...(initial.rsvps ?? [])]
   const teamUpdates: Array<{ id: string; data: Record<string, unknown> }> = []
+  const teamSets: Array<{ id: string; data: Record<string, unknown> }> = []
   const matchSets: Array<Record<string, unknown>> = []
 
   const adminDb = {
@@ -71,6 +74,20 @@ function createTransferMockDb(initial: {
                   : team
               )
             },
+            set: async (data: Record<string, unknown>) => {
+              teamSets.push({ id, data })
+              teams = [...teams.filter(t => t.id !== id), { id, data }]
+            },
+          }),
+        }
+      }
+
+      if (path === 'rsvps') {
+        return {
+          where: () => ({
+            where: () => ({
+              get: async () => makeQuerySnap(rsvps),
+            }),
           }),
         }
       }
@@ -110,19 +127,31 @@ function createTransferMockDb(initial: {
       throw new Error(`Unexpected collection path: ${path}`)
     },
     batch: () => {
-      const pending: Array<{ id: string; data: Record<string, unknown> }> = []
+      const pendingUpdates: Array<{
+        id: string
+        data: Record<string, unknown>
+      }> = []
+      const pendingSets: Array<{ id: string; data: Record<string, unknown> }> =
+        []
       return {
         update: (ref: { id: string }, data: Record<string, unknown>) => {
-          pending.push({ id: ref.id, data })
+          pendingUpdates.push({ id: ref.id, data })
+        },
+        set: (ref: { id: string }, data: Record<string, unknown>) => {
+          pendingSets.push({ id: ref.id, data })
         },
         commit: async () => {
-          for (const update of pending) {
+          for (const update of pendingUpdates) {
             teamUpdates.push(update)
             teams = teams.map(team =>
               team.id === update.id
                 ? { ...team, data: { ...team.data, ...update.data } }
                 : team
             )
+          }
+          for (const set of pendingSets) {
+            teamSets.push(set)
+            teams = [...teams.filter(t => t.id !== set.id), set]
           }
         },
       }
@@ -133,6 +162,7 @@ function createTransferMockDb(initial: {
     adminDb,
     getTeams: () => teams,
     getTeamUpdates: () => teamUpdates,
+    getTeamSets: () => teamSets,
     getMatchData: () => matchData,
     getMatchSets: () => matchSets,
   }
@@ -331,5 +361,62 @@ describe('POST /api/teams/transfer', () => {
     expect(res.status).toBe(400)
     const json = await res.json()
     expect(json.error).toMatch(/not found on target team/i)
+  })
+
+  it('shifts the 22nd RSVP to team 3 when assigning a GK onto full team 1', async () => {
+    const team1Ids = Array.from({ length: 11 }, (_, i) => `p${i + 1}`)
+    const team2Ids = Array.from({ length: 11 }, (_, i) => `p${i + 12}`)
+    const allIds = [...team1Ids, ...team2Ids, 'gk_late']
+    const rsvps = allIds.map((id, index) => ({
+      id: `r_${id}`,
+      data: {
+        matchId: 'm1',
+        userId: id,
+        status: 'confirmed',
+        rsvpAt: { toDate: () => new Date(2024, 0, 1, 0, index) },
+      },
+    }))
+
+    const { adminDb, getTeams } = createTransferMockDb({
+      teams: [
+        {
+          id: 't1',
+          data: { teamNumber: 1, playerIds: team1Ids, maxSize: 11 },
+        },
+        {
+          id: 't2',
+          data: { teamNumber: 2, playerIds: team2Ids, maxSize: 11 },
+        },
+        {
+          id: 't3',
+          data: { teamNumber: 3, playerIds: ['gk_late'], maxSize: 11 },
+        },
+      ],
+      rsvps,
+      match: { id: 'm1', data: { manualTeamAssignments: {} } },
+    })
+    vi.mocked(getAdminDb).mockReturnValue(adminDb as never)
+
+    const res = await POST(
+      makeRequest({
+        matchId: 'm1',
+        playerId: 'gk_late',
+        targetTeamId: 't1',
+        currentTeamId: 't3',
+      })
+    )
+    expect(res.status).toBe(200)
+
+    const teams = getTeams()
+    const team1 = teams.find(t => t.id === 't1')
+    const team2 = teams.find(t => t.id === 't2')
+    const team3 = teams.find(t => t.id === 't3')
+
+    expect(team1?.data.playerIds).toContain('gk_late')
+    expect(team1?.data.playerIds).toHaveLength(11)
+    expect(team2?.data.playerIds).toContain('p11')
+    expect(team2?.data.playerIds).toHaveLength(11)
+    expect(team3?.data.playerIds).toEqual(['p22'])
+    expect(team3?.data.playerIds).not.toContain('gk_late')
   })
 })
