@@ -68,17 +68,21 @@ describe('RsvpOrderCard', () => {
     expect(screen.getByText('2')).toBeInTheDocument()
   })
 
-  it('prefers RSVP position over profile position', async () => {
+  it('does not show player positions', async () => {
     const user = userEvent.setup()
     const matchRSVPs = [
       makeRsvp('r1', 'u1', new Date('2026-01-01T12:00:00Z'), 'GK'),
+      makeRsvp('r2', 'u2', new Date('2026-01-02T12:00:00Z'), 'ST'),
     ]
 
     render(<RsvpOrderCard matchRSVPs={matchRSVPs} users={users} />)
 
-    await user.click(screen.getByRole('button', { name: /rsvp order \(1\)/i }))
+    await user.click(screen.getByRole('button', { name: /rsvp order \(2\)/i }))
 
-    expect(screen.getByText('GK (Goalkeeper)')).toBeInTheDocument()
+    expect(screen.queryByText(/goalkeeper/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/striker/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/\bCM\b/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/\bST\b/)).not.toBeInTheDocument()
   })
 
   it('shows empty state when there are no confirmed RSVPs', async () => {
