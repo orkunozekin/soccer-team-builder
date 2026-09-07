@@ -300,15 +300,20 @@ export function ScheduleForm({
                   />
                 )}
               </div>
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <Label>Time</Label>
-                <Input
-                  type="time"
-                  value={slot.time}
-                  onChange={e => updateSlot(slot.key, { time: e.target.value })}
-                  disabled={loading}
-                  required
-                />
+                <div className="w-full min-w-0 max-w-full overflow-hidden">
+                  <Input
+                    type="time"
+                    value={slot.time}
+                    onChange={e =>
+                      updateSlot(slot.key, { time: e.target.value })
+                    }
+                    disabled={loading}
+                    required
+                    className="min-w-0 max-w-full appearance-none"
+                  />
+                </div>
               </div>
             </div>
 
