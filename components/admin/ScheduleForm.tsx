@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { TimePicker } from '@/components/ui/time-picker'
 import type { MatchLocation } from '@/types/match'
 import type {
   MatchSchedule,
@@ -301,19 +302,13 @@ export function ScheduleForm({
                 )}
               </div>
               <div className="min-w-0 space-y-2">
-                <Label>Time</Label>
-                <div className="w-full min-w-0 max-w-full overflow-hidden">
-                  <Input
-                    type="time"
-                    value={slot.time}
-                    onChange={e =>
-                      updateSlot(slot.key, { time: e.target.value })
-                    }
-                    disabled={loading}
-                    required
-                    className="min-w-0 max-w-full appearance-none"
-                  />
-                </div>
+                <Label htmlFor={`slot-time-${slot.key}`}>Time</Label>
+                <TimePicker
+                  id={`slot-time-${slot.key}`}
+                  value={slot.time}
+                  onChange={next => updateSlot(slot.key, { time: next })}
+                  disabled={loading}
+                />
               </div>
             </div>
 
