@@ -6,12 +6,12 @@ import { ChevronDownIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { TimePicker } from '@/components/ui/time-picker'
 import { cn } from '@/lib/utils'
 
 export interface DatePickerTimeProps {
@@ -52,9 +52,12 @@ export function DatePickerTime({
 
   return (
     <FieldGroup
-      className={cn('min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap', className)}
+      className={cn(
+        'min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap',
+        className
+      )}
     >
-      <Field className="min-w-0 w-full sm:w-[14rem]">
+      <Field className="w-full min-w-0 sm:w-[14rem]">
         <FieldLabel htmlFor={dateId}>Date</FieldLabel>
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
@@ -62,7 +65,7 @@ export function DatePickerTime({
               variant="outline"
               id={dateId}
               disabled={disabled}
-              className="h-11 w-full min-w-[8rem] justify-between text-base font-normal sm:h-9 sm:text-sm"
+              className="h-11 w-full min-w-0 justify-between text-base font-normal sm:h-9 sm:text-sm"
             >
               {dateObj ? format(dateObj, 'PPP') : datePlaceholder}
               <ChevronDownIcon className="h-4 w-4 opacity-50" />
@@ -84,16 +87,14 @@ export function DatePickerTime({
           </PopoverContent>
         </Popover>
       </Field>
-      <Field className="min-w-0 w-full sm:w-[14rem]">
+      <Field className="w-full min-w-0 sm:w-[14rem]">
         <FieldLabel htmlFor={timeId}>Time</FieldLabel>
-        <Input
-          type="time"
+        <TimePicker
           id={timeId}
-          step={timeStep}
           value={time}
-          onChange={e => onTimeChange(e.target.value)}
+          onChange={onTimeChange}
           disabled={disabled}
-          className="h-11 w-full min-w-0 max-w-full bg-background text-base sm:h-9 sm:text-sm [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+          step={timeStep}
         />
       </Field>
     </FieldGroup>
