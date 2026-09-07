@@ -86,15 +86,17 @@ export function DatePickerTime({
       </Field>
       <Field className="min-w-0 w-full sm:w-[14rem]">
         <FieldLabel htmlFor={timeId}>Time</FieldLabel>
-        <Input
-          type="time"
-          id={timeId}
-          step={timeStep}
-          value={time}
-          onChange={e => onTimeChange(e.target.value)}
-          disabled={disabled}
-          className="h-11 w-full min-w-0 max-w-full bg-background text-base sm:h-9 sm:text-sm [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-        />
+        <div className="w-full min-w-0 max-w-full overflow-hidden">
+          <Input
+            type="time"
+            id={timeId}
+            step={timeStep}
+            value={time}
+            onChange={e => onTimeChange(e.target.value)}
+            disabled={disabled}
+            className="h-11 w-full min-w-0 max-w-full appearance-none bg-background text-base sm:h-9 sm:text-sm [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+          />
+        </div>
       </Field>
     </FieldGroup>
   )
