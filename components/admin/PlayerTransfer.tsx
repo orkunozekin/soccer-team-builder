@@ -1,14 +1,14 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Button } from '@/components/ui/button'
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import { Button } from '@/components/ui/button'
+import { Card, CardDescription } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -187,162 +187,172 @@ export function PlayerTransfer({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Transfer Player</CardTitle>
-        <CardDescription>
-          {mode === 'swap'
-            ? 'Swap two players between teams in one step'
-            : 'Move a player to another team'}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={mode === 'move' ? 'default' : 'outline'}
-            className="h-9 flex-1"
-            onClick={() => handleModeChange('move')}
-          >
-            Move
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={mode === 'swap' ? 'default' : 'outline'}
-            className={cn('h-9 flex-1')}
-            onClick={() => handleModeChange('swap')}
-          >
-            Swap
-          </Button>
-        </div>
+      <Accordion type="single" collapsible className="w-full">
+        <AccordionItem value="transfer-player" className="border-0">
+          <AccordionTrigger className="px-6 py-4 hover:no-underline">
+            <span className="text-base font-semibold">Transfer Player</span>
+          </AccordionTrigger>
+          <AccordionContent className="px-6 pb-4">
+            <CardDescription className="mb-4">
+              {mode === 'swap'
+                ? 'Swap two players between teams in one step'
+                : 'Move a player to another team'}
+            </CardDescription>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={mode === 'move' ? 'default' : 'outline'}
+                  className="h-9 flex-1"
+                  onClick={() => handleModeChange('move')}
+                >
+                  Move
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={mode === 'swap' ? 'default' : 'outline'}
+                  className={cn('h-9 flex-1')}
+                  onClick={() => handleModeChange('swap')}
+                >
+                  Swap
+                </Button>
+              </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            {mode === 'swap' ? 'Player A' : 'Select Player'}
-          </label>
-          <Select
-            value={selectedPlayerId}
-            onValueChange={value => {
-              setSelectedPlayerId(value)
-              setSwapWithPlayerId('')
-              const teamId = teams.find(t => t.playerIds.includes(value))?.id
-              if (mode === 'swap' && teamId && targetTeamId === teamId) {
-                setTargetTeamId('')
-              }
-            }}
-          >
-            <SelectTrigger className="h-11 sm:h-9">
-              <SelectValue placeholder="Choose a player" />
-            </SelectTrigger>
-            <SelectContent>
-              {availablePlayers.map(user => (
-                <SelectItem key={user.uid} value={user.uid}>
-                  <span
-                    className="flex items-center justify-between gap-2 rounded-sm px-2 py-1"
-                    style={styleForTeamColor(
-                      teamColorByPlayerId.get(user.uid) ?? null
-                    )}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {mode === 'swap' ? 'Player A' : 'Select Player'}
+                </label>
+                <Select
+                  value={selectedPlayerId}
+                  onValueChange={value => {
+                    setSelectedPlayerId(value)
+                    setSwapWithPlayerId('')
+                    const teamId = teams.find(t =>
+                      t.playerIds.includes(value)
+                    )?.id
+                    if (mode === 'swap' && teamId && targetTeamId === teamId) {
+                      setTargetTeamId('')
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-11 sm:h-9">
+                    <SelectValue placeholder="Choose a player" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availablePlayers.map(user => (
+                      <SelectItem key={user.uid} value={user.uid}>
+                        <span
+                          className="flex items-center justify-between gap-2 rounded-sm px-2 py-1"
+                          style={styleForTeamColor(
+                            teamColorByPlayerId.get(user.uid) ?? null
+                          )}
+                        >
+                          <span className="truncate">
+                            {user.displayName}{' '}
+                            {user.jerseyNumber && `#${user.jerseyNumber}`}
+                            {user.position && ` (${user.position})`}
+                          </span>
+                          <span className="shrink-0 text-xs opacity-90">
+                            {teamNameByPlayerId.get(user.uid) ?? ''}
+                          </span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {mode === 'swap' ? 'Player B team' : 'Transfer To'}
+                </label>
+                <Select
+                  value={targetTeamId}
+                  onValueChange={value => {
+                    setTargetTeamId(value)
+                    setSwapWithPlayerId('')
+                  }}
+                >
+                  <SelectTrigger className="h-11 sm:h-9">
+                    <SelectValue placeholder="Choose destination" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {destinationTeams.map(team => (
+                      <SelectItem key={team.id} value={team.id}>
+                        <span
+                          className="flex items-center justify-between gap-2 rounded-sm px-2 py-1"
+                          style={styleForTeamColor(
+                            teamColorById.get(team.id) ?? null
+                          )}
+                          title={teamNameById.get(team.id)}
+                        >
+                          <span className="truncate">
+                            {teamNameById.get(team.id)} ({team.playerIds.length}
+                            /{team.maxSize})
+                          </span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {mode === 'swap' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Swap with (Player B)
+                  </label>
+                  <Select
+                    value={swapWithPlayerId}
+                    onValueChange={setSwapWithPlayerId}
+                    disabled={!targetTeamId || swapCandidates.length === 0}
                   >
-                    <span className="truncate">
-                      {user.displayName}{' '}
-                      {user.jerseyNumber && `#${user.jerseyNumber}`}
-                      {user.position && ` (${user.position})`}
-                    </span>
-                    <span className="shrink-0 text-xs opacity-90">
-                      {teamNameByPlayerId.get(user.uid) ?? ''}
-                    </span>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+                    <SelectTrigger className="h-11 sm:h-9">
+                      <SelectValue
+                        placeholder={
+                          !targetTeamId
+                            ? 'Choose a team first'
+                            : swapCandidates.length === 0
+                              ? 'No players on that team'
+                              : 'Choose player to swap with'
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {swapCandidates.map(user => (
+                        <SelectItem key={user.uid} value={user.uid}>
+                          <span className="truncate">
+                            {user.displayName}{' '}
+                            {user.jerseyNumber && `#${user.jerseyNumber}`}
+                            {user.position && ` (${user.position})`}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            {mode === 'swap' ? 'Player B team' : 'Transfer To'}
-          </label>
-          <Select
-            value={targetTeamId}
-            onValueChange={value => {
-              setTargetTeamId(value)
-              setSwapWithPlayerId('')
-            }}
-          >
-            <SelectTrigger className="h-11 sm:h-9">
-              <SelectValue placeholder="Choose destination" />
-            </SelectTrigger>
-            <SelectContent>
-              {destinationTeams.map(team => (
-                <SelectItem key={team.id} value={team.id}>
-                  <span
-                    className="flex items-center justify-between gap-2 rounded-sm px-2 py-1"
-                    style={styleForTeamColor(
-                      teamColorById.get(team.id) ?? null
-                    )}
-                    title={teamNameById.get(team.id)}
-                  >
-                    <span className="truncate">
-                      {teamNameById.get(team.id)} ({team.playerIds.length}/
-                      {team.maxSize})
-                    </span>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+              {error && (
+                <div className="rounded-md border border-red-300 bg-red-100 p-3 text-sm font-medium text-red-950 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
+                  {error}
+                </div>
+              )}
 
-        {mode === 'swap' && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Swap with (Player B)</label>
-            <Select
-              value={swapWithPlayerId}
-              onValueChange={setSwapWithPlayerId}
-              disabled={!targetTeamId || swapCandidates.length === 0}
-            >
-              <SelectTrigger className="h-11 sm:h-9">
-                <SelectValue
-                  placeholder={
-                    !targetTeamId
-                      ? 'Choose a team first'
-                      : swapCandidates.length === 0
-                        ? 'No players on that team'
-                        : 'Choose player to swap with'
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {swapCandidates.map(user => (
-                  <SelectItem key={user.uid} value={user.uid}>
-                    <span className="truncate">
-                      {user.displayName}{' '}
-                      {user.jerseyNumber && `#${user.jerseyNumber}`}
-                      {user.position && ` (${user.position})`}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {error && (
-          <div className="rounded-md border border-red-300 bg-red-100 p-3 text-sm font-medium text-red-950 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
-            {error}
-          </div>
-        )}
-
-        <Button
-          onClick={handleTransfer}
-          disabled={!canSubmit}
-          loading={loading}
-          className="h-11 w-full sm:h-9"
-        >
-          {mode === 'swap' ? 'Swap players' : 'Transfer Player'}
-        </Button>
-      </CardContent>
+              <Button
+                onClick={handleTransfer}
+                disabled={!canSubmit}
+                loading={loading}
+                className="h-11 w-full sm:h-9"
+              >
+                {mode === 'swap' ? 'Swap players' : 'Transfer Player'}
+              </Button>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </Card>
   )
 }

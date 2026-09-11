@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { PositionSelector } from '@/components/profile/PositionSelector'
-import { Button } from '@/components/ui/button'
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import { Button } from '@/components/ui/button'
+import { Card, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cancelRSVPAPI, confirmRSVPAPI, searchUsersAPI } from '@/lib/api/client'
@@ -110,122 +110,135 @@ export function ImpersonateRSVP({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">RSVP as player</CardTitle>
-        <CardDescription>
-          Search for a user and RSVP or cancel on their behalf.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="impersonate-search">Search by name or email</Label>
-          <Input
-            id="impersonate-search"
-            type="text"
-            placeholder="Type to search..."
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            className="w-full"
-          />
-        </div>
-
-        {searching && <p className="text-sm text-zinc-500">Searching...</p>}
-
-        {!searching &&
-          query.trim() &&
-          searchResults.length > 0 &&
-          !selected && (
-            <ul className="max-h-40 divide-y overflow-y-auto rounded-md border">
-              {searchResults.map(u => (
-                <li key={u.uid}>
-                  <button
-                    type="button"
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                    onClick={() => {
-                      setSelected(u)
-                      setQuery('')
-                      setSearchResults([])
-                    }}
-                  >
-                    {u.displayName || u.email || u.uid}
-                    {u.email && u.displayName && (
-                      <span className="ml-1 text-zinc-500">({u.email})</span>
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-        {selected && (
-          <div className="space-y-3 rounded-md border bg-zinc-50 p-3 dark:bg-zinc-900/50">
-            <p className="text-sm font-medium">
-              {hasRsvp ? 'Cancel RSVP for' : 'RSVP as'}{' '}
-              <span className="text-zinc-900 dark:text-zinc-100">
-                {selected.displayName || selected.email || selected.uid}
-              </span>
-            </p>
-            {hasRsvp ? (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleCancelRSVP}
-                  loading={loading}
-                >
-                  Cancel RSVP
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelected(null)}
-                  disabled={loading}
-                >
-                  Clear
-                </Button>
-              </div>
-            ) : (
+      <Accordion type="single" collapsible className="w-full">
+        <AccordionItem value="rsvp-as-player" className="border-0">
+          <AccordionTrigger className="px-6 py-4 hover:no-underline">
+            <span className="text-base font-semibold">RSVP as player</span>
+          </AccordionTrigger>
+          <AccordionContent className="px-6 pb-4">
+            <CardDescription className="mb-4">
+              Search for a user and RSVP or cancel on their behalf.
+            </CardDescription>
+            <div className="space-y-4">
               <div className="space-y-2">
-                <div className="flex flex-wrap items-end gap-2">
-                  <div className="min-w-[12rem]">
-                    <PositionSelector
-                      value={position}
-                      onValueChange={setPosition}
-                      disabled={loading}
-                      hideLabel
-                    />
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={handleConfirmRSVP}
-                    loading={loading}
-                  >
-                    RSVP as this player
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSelected(null)
-                      setPosition(null)
-                    }}
-                    disabled={loading}
-                  >
-                    Clear
-                  </Button>
-                </div>
-                <p className="text-xs text-zinc-500">
-                  Position is optional; profile position is used if not set.
-                </p>
+                <Label htmlFor="impersonate-search">
+                  Search by name or email
+                </Label>
+                <Input
+                  id="impersonate-search"
+                  type="text"
+                  placeholder="Type to search..."
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  className="w-full"
+                />
               </div>
-            )}
-          </div>
-        )}
 
-        {error && (
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-        )}
-      </CardContent>
+              {searching && (
+                <p className="text-sm text-zinc-500">Searching...</p>
+              )}
+
+              {!searching &&
+                query.trim() &&
+                searchResults.length > 0 &&
+                !selected && (
+                  <ul className="max-h-40 divide-y overflow-y-auto rounded-md border">
+                    {searchResults.map(u => (
+                      <li key={u.uid}>
+                        <button
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                          onClick={() => {
+                            setSelected(u)
+                            setQuery('')
+                            setSearchResults([])
+                          }}
+                        >
+                          {u.displayName || u.email || u.uid}
+                          {u.email && u.displayName && (
+                            <span className="ml-1 text-zinc-500">
+                              ({u.email})
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+              {selected && (
+                <div className="space-y-3 rounded-md border bg-zinc-50 p-3 dark:bg-zinc-900/50">
+                  <p className="text-sm font-medium">
+                    {hasRsvp ? 'Cancel RSVP for' : 'RSVP as'}{' '}
+                    <span className="text-zinc-900 dark:text-zinc-100">
+                      {selected.displayName || selected.email || selected.uid}
+                    </span>
+                  </p>
+                  {hasRsvp ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleCancelRSVP}
+                        loading={loading}
+                      >
+                        Cancel RSVP
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelected(null)}
+                        disabled={loading}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-end gap-2">
+                        <div className="min-w-[12rem]">
+                          <PositionSelector
+                            value={position}
+                            onValueChange={setPosition}
+                            disabled={loading}
+                            hideLabel
+                          />
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={handleConfirmRSVP}
+                          loading={loading}
+                        >
+                          RSVP as this player
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelected(null)
+                            setPosition(null)
+                          }}
+                          disabled={loading}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                      <p className="text-xs text-zinc-500">
+                        Position is optional; profile position is used if not
+                        set.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {error && (
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </Card>
   )
 }
