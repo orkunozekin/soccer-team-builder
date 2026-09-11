@@ -33,6 +33,12 @@ const baseMatch: Match = {
   updatedAt: new Date(),
 }
 
+async function expandSection(
+  user: ReturnType<typeof userEvent.setup>
+) {
+  await user.click(screen.getByRole('button', { name: /rsvp as player/i }))
+}
+
 describe('ImpersonateRSVP', () => {
   it('renders null when match RSVP is closed', () => {
     const closedMatch: Match = { ...baseMatch, rsvpOpen: false }
@@ -40,6 +46,17 @@ describe('ImpersonateRSVP', () => {
       <ImpersonateRSVP match={closedMatch} matchRSVPs={[]} />
     )
     expect(container).toBeEmptyDOMElement()
+  })
+
+  it('is collapsed by default', () => {
+    render(<ImpersonateRSVP match={baseMatch} matchRSVPs={[]} />)
+
+    expect(
+      screen.queryByLabelText(/search by name or email/i)
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /rsvp as player/i })
+    ).toHaveAttribute('data-state', 'closed')
   })
 
   it('searches and RSVPs as a user without existing RSVP', async () => {
@@ -61,6 +78,8 @@ describe('ImpersonateRSVP', () => {
     render(
       <ImpersonateRSVP match={baseMatch} matchRSVPs={[]} onDone={onDone} />
     )
+
+    await expandSection(user)
 
     const input = screen.getByLabelText(/search by name or email/i)
     await user.type(input, 'User')
@@ -115,6 +134,8 @@ describe('ImpersonateRSVP', () => {
     render(
       <ImpersonateRSVP match={baseMatch} matchRSVPs={[rsvp]} onDone={onDone} />
     )
+
+    await expandSection(user)
 
     const input = screen.getByLabelText(/search by name or email/i)
     await user.type(input, 'User')

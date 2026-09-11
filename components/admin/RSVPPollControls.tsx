@@ -2,15 +2,15 @@
 
 import { useState } from 'react'
 import { format } from 'date-fns'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardDescription } from '@/components/ui/card'
 import { updateMatchAPI } from '@/lib/api/client'
 import { getRSVPSchedule } from '@/lib/utils/rsvpScheduler'
 import { useMatchStore } from '@/store/matchStore'
@@ -75,60 +75,66 @@ export function RSVPPollControls({ match, onUpdated }: RSVPPollControlsProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>RSVP Poll Controls</CardTitle>
-        <CardDescription>
-          Manually control RSVP poll status for this match
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Current Status:</span>
-          <Badge variant={match.rsvpOpen ? 'default' : 'outline'}>
-            {match.rsvpOpen ? 'Open' : 'Closed'}
-          </Badge>
-        </div>
+      <Accordion type="single" collapsible className="w-full">
+        <AccordionItem value="rsvp-poll-controls" className="border-0">
+          <AccordionTrigger className="px-6 py-4 hover:no-underline">
+            <span className="text-base font-semibold">RSVP Poll Controls</span>
+          </AccordionTrigger>
+          <AccordionContent className="px-6 pb-4">
+            <CardDescription className="mb-4">
+              Manually control RSVP poll status for this match
+            </CardDescription>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Current Status:</span>
+                <Badge variant={match.rsvpOpen ? 'default' : 'outline'}>
+                  {match.rsvpOpen ? 'Open' : 'Closed'}
+                </Badge>
+              </div>
 
-        {schedule.openAt && schedule.closeAt && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            <span className="font-medium">Default window:</span>{' '}
-            {format(schedule.openAt, 'MMM d, h:mm a')} –{' '}
-            {format(schedule.closeAt, 'MMM d, h:mm a')} CT
-          </p>
-        )}
+              {schedule.openAt && schedule.closeAt && (
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  <span className="font-medium">Default window:</span>{' '}
+                  {format(schedule.openAt, 'MMM d, h:mm a')} –{' '}
+                  {format(schedule.closeAt, 'MMM d, h:mm a')} CT
+                </p>
+              )}
 
-        {error && (
-          <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
-            {error}
-          </div>
-        )}
+              {error && (
+                <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                  {error}
+                </div>
+              )}
 
-        {success && (
-          <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-400">
-            RSVP status updated successfully!
-          </div>
-        )}
+              {success && (
+                <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                  RSVP status updated successfully!
+                </div>
+              )}
 
-        <div className="flex gap-2">
-          <Button
-            onClick={() => handleToggleRSVP(true)}
-            disabled={loading || match.rsvpOpen}
-            loading={loading}
-            className="h-11 flex-1 sm:h-9"
-          >
-            Open RSVP
-          </Button>
-          <Button
-            onClick={() => handleToggleRSVP(false)}
-            disabled={!match.rsvpOpen}
-            loading={loading}
-            variant="outline"
-            className="h-11 flex-1 sm:h-9"
-          >
-            Close RSVP
-          </Button>
-        </div>
-      </CardContent>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => handleToggleRSVP(true)}
+                  disabled={loading || match.rsvpOpen}
+                  loading={loading}
+                  className="h-11 flex-1 sm:h-9"
+                >
+                  Open RSVP
+                </Button>
+                <Button
+                  onClick={() => handleToggleRSVP(false)}
+                  disabled={!match.rsvpOpen}
+                  loading={loading}
+                  variant="outline"
+                  className="h-11 flex-1 sm:h-9"
+                >
+                  Close RSVP
+                </Button>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </Card>
   )
 }

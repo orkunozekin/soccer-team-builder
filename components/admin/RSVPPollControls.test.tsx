@@ -42,9 +42,27 @@ const baseMatch: Match = {
   updatedAt: new Date(),
 }
 
+async function expandSection(
+  user: ReturnType<typeof userEvent.setup>
+) {
+  await user.click(screen.getByRole('button', { name: /rsvp poll controls/i }))
+}
+
 describe('RSVPPollControls', () => {
-  it('shows current RSVP status and disables appropriate buttons', () => {
+  it('is collapsed by default', () => {
     render(<RSVPPollControls match={baseMatch} />)
+
+    expect(screen.queryByText(/current status/i)).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /rsvp poll controls/i })
+    ).toHaveAttribute('data-state', 'closed')
+  })
+
+  it('shows current RSVP status and disables appropriate buttons', async () => {
+    const user = userEvent.setup()
+    render(<RSVPPollControls match={baseMatch} />)
+
+    await expandSection(user)
 
     expect(screen.getByText(/current status/i)).toBeInTheDocument()
     expect(screen.getByText(content => content === 'Open')).toBeInTheDocument()
@@ -62,6 +80,8 @@ describe('RSVPPollControls', () => {
     const closedMatch: Match = { ...baseMatch, rsvpOpen: false }
 
     render(<RSVPPollControls match={closedMatch} onUpdated={onUpdated} />)
+
+    await expandSection(user)
 
     const openButton = screen.getByRole('button', { name: /open rsvp/i })
     await user.click(openButton)
@@ -85,6 +105,8 @@ describe('RSVPPollControls', () => {
     const onUpdated = vi.fn()
 
     render(<RSVPPollControls match={baseMatch} onUpdated={onUpdated} />)
+
+    await expandSection(user)
 
     const closeButton = screen.getByRole('button', { name: /close rsvp/i })
     await user.click(closeButton)
