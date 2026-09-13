@@ -1,6 +1,10 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  formatJerseyDisplay,
+  formatPositionDisplay,
+} from '@/lib/utils/jerseyNumber'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { User } from '@/types/user'
 
@@ -28,7 +32,7 @@ export function BenchList({ playerIds, users }: BenchListProps) {
           {benchUsers.map(user => (
             <div key={user.uid} className="flex items-center gap-2 text-sm">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-500 text-xs font-bold text-white">
-                {user.jerseyNumber != null ? user.jerseyNumber : ''}
+                {formatJerseyDisplay(user.jerseyNumber)}
               </span>
               <span>{user.displayName}</span>
               {user.position && (
@@ -39,7 +43,7 @@ export function BenchList({ playerIds, users }: BenchListProps) {
                       : 'text-zinc-600 dark:text-zinc-400'
                   }`}
                 >
-                  {user.position}
+                  {formatPositionDisplay(user.position)}
                 </span>
               )}
             </div>

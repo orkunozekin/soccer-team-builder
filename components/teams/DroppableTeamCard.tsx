@@ -20,6 +20,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import type { AttendanceLabel } from '@/lib/utils/checkIn'
+import {
+  formatJerseyDisplay,
+  formatPositionDisplay,
+} from '@/lib/utils/jerseyNumber'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
@@ -128,6 +132,8 @@ export function PlayerTile({
           'bg-primary/10 font-medium ring-1 ring-primary/40 dark:bg-primary/20 dark:ring-primary/50',
         className
       )}
+      // WebKit: do not turn jersey + name + position into a Maps link.
+      {...{ 'x-apple-data-detectors': 'false' }}
     >
       {showGrip && (
         <span
@@ -143,7 +149,7 @@ export function PlayerTile({
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
         style={{ backgroundColor: teamColor || '#3b82f6' }}
       >
-        {user.jerseyNumber != null ? user.jerseyNumber : ''}
+        {formatJerseyDisplay(user.jerseyNumber)}
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate leading-tight" title={displayName}>
@@ -157,7 +163,7 @@ export function PlayerTile({
                 'font-medium text-amber-700 dark:text-amber-400'
             )}
           >
-            {user.position}
+            {formatPositionDisplay(user.position)}
           </p>
         ) : null}
       </div>

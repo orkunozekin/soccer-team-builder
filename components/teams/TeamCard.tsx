@@ -2,6 +2,10 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  formatJerseyDisplay,
+  formatPositionDisplay,
+} from '@/lib/utils/jerseyNumber'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
@@ -49,12 +53,13 @@ export function TeamCard({ team, users, currentUserId }: TeamCardProps) {
                       ? 'bg-primary/10 font-medium ring-1 ring-primary/40 dark:bg-primary/20 dark:ring-primary/50'
                       : ''
                   }`}
+                  {...{ 'x-apple-data-detectors': 'false' }}
                 >
                   <span
                     className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white"
                     style={{ backgroundColor: team.color || '#3b82f6' }}
                   >
-                    {user.jerseyNumber != null ? user.jerseyNumber : ''}
+                    {formatJerseyDisplay(user.jerseyNumber)}
                   </span>
                   <span>{user.displayName}</span>
                   {user.position && (
@@ -66,7 +71,7 @@ export function TeamCard({ team, users, currentUserId }: TeamCardProps) {
                           : ''
                       }`}
                     >
-                      {user.position}
+                      {formatPositionDisplay(user.position)}
                     </Badge>
                   )}
                 </div>
