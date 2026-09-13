@@ -17,6 +17,12 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'Soccerville',
   description: 'Soccerville Team Builder',
+  // Jersey numbers + names + position codes (e.g. "10 Joel Hawbaker ST") look
+  // like street addresses to mobile Safari/Chrome data detectors.
+  formatDetection: {
+    address: false,
+    telephone: false,
+  },
 }
 
 export const viewport: Viewport = {

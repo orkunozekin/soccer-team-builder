@@ -1,6 +1,10 @@
 'use client'
 
 import { formatPitchDisplayName } from '@/lib/utils/displayName'
+import {
+  formatJerseyDisplay,
+  formatPositionDisplay,
+} from '@/lib/utils/jerseyNumber'
 import { PitchPosition } from '@/lib/utils/pitchLayout'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { Team } from '@/types/team'
@@ -54,7 +58,7 @@ export function PlayerMarker({
             isGK ? 'text-zinc-900' : 'text-white'
           } ${isMobile ? 'text-[10px]' : 'text-sm'}`}
         >
-          {user.jerseyNumber != null ? user.jerseyNumber : ''}
+          {formatJerseyDisplay(user.jerseyNumber)}
         </span>
       </div>
       <div
@@ -70,7 +74,7 @@ export function PlayerMarker({
           <span
             className={`leading-tight text-white/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${isMobile ? 'text-[7px]' : 'text-[9px]'}`}
           >
-            {user.position}
+            {formatPositionDisplay(user.position)}
           </span>
         )}
       </div>
