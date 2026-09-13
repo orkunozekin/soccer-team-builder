@@ -36,7 +36,7 @@ Building a soccer pickup match team builder web application from scratch. The de
 2. User profiles with jersey number and position
 3. Match management with RSVP system
 4. Automated team generation (prioritize goalkeepers and admins)
-5. Soccer pitch visualization for team rosters
+5. Soccer pitch visualization for team rosters — see `docs/features/pitch-lineup-feature-plan.md` (LaunchDarkly-gated revival)
 6. Admin controls (match management, player transfers, RSVP poll controls)
 7. RSVP scheduling (automatic: Mon/Wed 6am-8pm CT, Sun 6am-5pm CT)
 
@@ -47,6 +47,10 @@ Building a soccer pickup match team builder web application from scratch. The de
 - Use `'use client'` directive for interactive components
 - Use Route Handlers (`app/api/*/route.ts`) for API endpoints
 - Soccer pitch must be fully responsive with mobile optimizations
+
+## Feature plans
+
+Scoped plans live under `docs/features/`. For pitch lineups + LaunchDarkly prerequisite, start from `docs/features/pitch-lineup-feature-plan.md`.
 
 ## Starting Point
 
