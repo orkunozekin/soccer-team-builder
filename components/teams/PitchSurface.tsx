@@ -1,7 +1,7 @@
 import { PitchMarkings } from './PitchMarkings'
 
 /**
- * Pitch background: dark purple surface + lavender markings.
+ * Pitch background: striped grass + white markings.
  */
 export function PitchSurface() {
   return (

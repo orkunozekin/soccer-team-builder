@@ -586,7 +586,7 @@ The position field is stored as a string in Firestore, allowing flexibility for 
 Pitch lineup is gated by LaunchDarkly flag `pitch-lineup-view` (default off). When the flag is off, `TeamsDisplay` shows the list/card view only. When on, users get a Pitch / List toggle (players default to Pitch; admins default to List for DnD/check-in).
 
 - **Visual Design**:
-  - Dark purple pitch surface with lavender markings (CSS tokens `--pitch-surface`, `--pitch-markings`)
+  - Green field with white markings (CSS tokens `--pitch-surface`, `--pitch-markings`)
   - Teams 1–2 share one mirrored dual-team pitch (team 1 top half attacking down; team 2 bottom half attacking up)
   - Team 3+ use separate pitches (mobile may use `TeamToggle`)
   - Compact player markers: jersey number, truncated name, position code; GK kit distinct

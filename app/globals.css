@@ -72,11 +72,11 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    /* Soccer pitch lineup surface (purple field + lavender markings) */
-    --pitch-surface: #3b1f5e;
-    --pitch-surface-alt: #331a52;
-    --pitch-markings: #c4b0e0;
-    --pitch-border: #d4c4ec;
+    /* Soccer pitch lineup surface (striped grass + white markings) */
+    --pitch-surface: #2d6a2d;
+    --pitch-surface-alt: #276027;
+    --pitch-markings: #f5faf5;
+    --pitch-border: #ffffff;
   }
   .dark {
     --background: 240 10% 3.9%;
