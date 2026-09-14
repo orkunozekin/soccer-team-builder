@@ -32,20 +32,20 @@ export const POSITION_COORDINATES: Record<string, PitchPosition> = {
   RWB: { x: 95, y: 26 },
   RB: { x: 94, y: 14 },
 
-  // Central spine spaced ~22pts apart so half-pitch compression still
-  // leaves ~60px+ between a label and the next marker circle.
-  CDM: { x: 50, y: 30 },
-  LM: { x: 6, y: 52 },
-  LCM: { x: 35, y: 52 },
-  CM: { x: 50, y: 52 },
-  RCM: { x: 65, y: 52 },
-  RM: { x: 94, y: 52 },
-  CAM: { x: 50, y: 74 },
+  // Central spine: keep ST short of midfield so opposing strikers do not collide,
+  // while still leaving label room between CDM/CM/CAM/ST.
+  CDM: { x: 50, y: 24 },
+  LM: { x: 6, y: 44 },
+  LCM: { x: 35, y: 44 },
+  CM: { x: 50, y: 44 },
+  RCM: { x: 65, y: 44 },
+  RM: { x: 94, y: 44 },
+  CAM: { x: 50, y: 60 },
 
-  LW: { x: 6, y: 88 },
-  CF: { x: 50, y: 90 },
-  ST: { x: 50, y: 96 },
-  RW: { x: 94, y: 88 },
+  LW: { x: 6, y: 74 },
+  CF: { x: 50, y: 76 },
+  ST: { x: 50, y: 80 },
+  RW: { x: 94, y: 74 },
 }
 
 /**
