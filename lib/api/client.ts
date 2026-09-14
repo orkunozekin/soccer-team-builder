@@ -262,10 +262,12 @@ export async function updateProfileAPI(updates: {
   displayName?: string
   jerseyNumber?: number | null
   position?: string | null
+  syncEmail?: boolean
 }): Promise<{ success: boolean }> {
   const response = await apiRequest('/users/me', {
     method: 'PATCH',
     body: JSON.stringify(updates),
+    forceRefreshToken: updates.syncEmail === true,
   })
 
   if (!response.ok) {

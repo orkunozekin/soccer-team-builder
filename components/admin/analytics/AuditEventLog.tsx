@@ -68,6 +68,12 @@ function getActionDescription(log: AuditLog): string {
       return `Failed sign-in attempt`
     case 'auth.register_failed':
       return `Failed registration attempt`
+    case 'auth.password_reset_requested':
+      return `Password reset requested`
+    case 'auth.email_change_requested':
+      return `${actor} requested an email change`
+    case 'auth.password_changed':
+      return `${actor} changed their password`
     case 'rsvp.confirmed':
       return `${actor} confirmed RSVP`
     case 'rsvp.cancelled':

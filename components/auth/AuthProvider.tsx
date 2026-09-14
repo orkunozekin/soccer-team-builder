@@ -6,7 +6,7 @@ import { auth } from '@/lib/firebase/config'
 import { getDocument } from '@/lib/firebase/firestore'
 import { timestampToDate } from '@/lib/firebase/firestore'
 import { createUser } from '@/lib/services/userService'
-import { recordAuditEventAPI } from '@/lib/api/client'
+import { recordAuditEventAPI, updateProfileAPI } from '@/lib/api/client'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import { useAuthStore } from '@/store/authStore'
 import { User } from '@/types/user'
@@ -87,10 +87,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               const roleRaw =
                 typeof userDoc.role === 'string' ? userDoc.role.trim() : ''
               const role: User['role'] = roleRaw === 'admin' ? 'admin' : 'user'
+              const authEmail = firebaseUser.email ?? ''
+              const firestoreEmail =
+                typeof userDoc.email === 'string' ? userDoc.email : ''
+
+              // After verifyBeforeUpdateEmail completes, Auth has the new
+              // address while Firestore may still have the old one.
+              if (
+                authEmail &&
+                firestoreEmail.toLowerCase() !== authEmail.toLowerCase()
+              ) {
+                try {
+                  await updateProfileAPI({ syncEmail: true })
+                } catch (syncErr) {
+                  console.error('Failed to sync email to Firestore:', syncErr)
+                }
+              }
 
               const userData: User = {
                 uid: firebaseUser.uid,
-                email: (userDoc.email as string) ?? firebaseUser.email ?? '',
+                email: authEmail || firestoreEmail,
                 displayName:
                   (userDoc.displayName as string) ??
                   firebaseUser.displayName ??

@@ -18,11 +18,12 @@ export async function getAuthToken(request: Request): Promise<string | null> {
  */
 export async function verifyAuth(request: Request): Promise<{
   uid: string | null
+  email: string | null
   error: string | null
 }> {
   const token = await getAuthToken(request)
   if (!token) {
-    return { uid: null, error: 'No authorization token provided' }
+    return { uid: null, email: null, error: 'No authorization token provided' }
   }
 
   try {
@@ -36,16 +37,21 @@ export async function verifyAuth(request: Request): Promise<{
       console.warn(
         'Firebase Admin SDK not configured, using fallback verification'
       )
-      return { uid: 'fallback', error: null }
+      return { uid: 'fallback', email: null, error: null }
     }
 
     const decodedToken = await adminAuth.verifyIdToken(token)
-    return { uid: decodedToken.uid, error: null }
+    return {
+      uid: decodedToken.uid,
+      email: typeof decodedToken.email === 'string' ? decodedToken.email : null,
+      error: null,
+    }
   } catch (error: any) {
     const message = error?.message ?? String(error)
     console.error('Token verification error:', message)
     return {
       uid: null,
+      email: null,
       error: message?.includes('auth/') ? message : 'Invalid or expired token',
     }
   }

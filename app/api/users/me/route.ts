@@ -71,6 +71,23 @@ export async function PATCH(request: NextRequest) {
       changedFields.push('position')
     }
 
+    // Sync Firestore email from the verified ID token (after Auth email change).
+    // Never trust a client-supplied email string.
+    if (body?.syncEmail === true) {
+      const tokenEmail =
+        typeof auth.email === 'string' ? auth.email.trim() : ''
+      if (!tokenEmail) {
+        return profileUpdateFailed(
+          uid,
+          400,
+          'Verified email is not available on this session'
+        )
+      }
+      updates.email = tokenEmail
+      updates.emailLower = tokenEmail.toLowerCase()
+      changedFields.push('email')
+    }
+
     if (changedFields.length === 0) {
       return profileUpdateFailed(uid, 400, 'No profile fields to update')
     }

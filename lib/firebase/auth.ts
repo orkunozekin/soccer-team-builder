@@ -1,11 +1,15 @@
 import {
+  EmailAuthProvider,
   GoogleAuthProvider,
   User,
   UserCredential,
   createUserWithEmailAndPassword,
+  reauthenticateWithCredential,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
+  updatePassword,
+  verifyBeforeUpdateEmail,
 } from 'firebase/auth'
 import { auth } from './config'
 
@@ -53,4 +57,85 @@ export const logoutUser = async (): Promise<void> => {
 
 export const getCurrentUser = (): User | null => {
   return auth.currentUser
+}
+
+export const hasPasswordProvider = (user: User): boolean => {
+  return user.providerData.some(provider => provider.providerId === 'password')
+}
+
+const reauthenticateWithPassword = async (
+  user: User,
+  password: string
+): Promise<UserCredential> => {
+  const email = user.email
+  if (!email) {
+    throw new Error('No email is associated with this account.')
+  }
+  const credential = EmailAuthProvider.credential(email, password)
+  return reauthenticateWithCredential(user, credential)
+}
+
+export const updateUserPassword = async (
+  user: User,
+  currentPassword: string,
+  newPassword: string
+): Promise<void> => {
+  await reauthenticateWithPassword(user, currentPassword)
+  await updatePassword(user, newPassword)
+}
+
+export const requestEmailUpdate = async (
+  user: User,
+  currentPassword: string,
+  newEmail: string
+): Promise<void> => {
+  const trimmedEmail = newEmail.trim()
+  await reauthenticateWithPassword(user, currentPassword)
+  const continueUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/profile`
+      : undefined
+  await verifyBeforeUpdateEmail(
+    user,
+    trimmedEmail,
+    continueUrl
+      ? { url: continueUrl, handleCodeInApp: false }
+      : undefined
+  )
+}
+
+export const getAuthErrorMessage = (
+  error: unknown,
+  fallback: string
+): string => {
+  const code =
+    error && typeof error === 'object' && 'code' in error
+      ? String((error as { code: string }).code)
+      : ''
+
+  switch (code) {
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'Current password is incorrect.'
+    case 'auth/weak-password':
+      return 'Password must be at least 6 characters.'
+    case 'auth/email-already-in-use':
+      return 'That email is already in use by another account.'
+    case 'auth/invalid-email':
+      return 'Please enter a valid email address.'
+    case 'auth/requires-recent-login':
+      return 'For security, please sign out and sign back in, then try again.'
+    case 'auth/too-many-requests':
+      return 'Too many attempts. Please wait a moment and try again.'
+    case 'auth/network-request-failed':
+      return 'Network error. Check your connection and try again.'
+    default:
+      break
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return fallback
 }

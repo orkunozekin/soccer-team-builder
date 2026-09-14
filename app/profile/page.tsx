@@ -4,6 +4,8 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { AttendanceStatsCard } from '@/components/profile/AttendanceStatsCard'
+import { EmailUpdateForm } from '@/components/profile/EmailUpdateForm'
+import { PasswordUpdateForm } from '@/components/profile/PasswordUpdateForm'
 import { ProfileForm } from '@/components/profile/ProfileForm'
 import {
   Card,
@@ -12,11 +14,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { hasPasswordProvider } from '@/lib/firebase/auth'
 import { useAuth } from '@/lib/hooks/useAuth'
 
 export default function ProfilePage() {
   const router = useRouter()
   const { user, loading } = useAuth()
+  const showAccountSecurity = Boolean(user && hasPasswordProvider(user))
 
   useEffect(() => {
     if (!loading && !user) {
@@ -59,6 +63,38 @@ export default function ProfilePage() {
             <ProfileForm />
           </CardContent>
         </Card>
+
+        {showAccountSecurity && (
+          <>
+            <Card className="overflow-hidden rounded-xl border-zinc-200 shadow-sm dark:border-zinc-800">
+              <CardHeader className="pb-4 sm:px-8 sm:pt-8">
+                <CardTitle className="text-xl font-semibold tracking-tight sm:text-2xl">
+                  Email
+                </CardTitle>
+                <CardDescription className="text-sm text-zinc-500 dark:text-zinc-400">
+                  Change the email you use to sign in
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="sm:px-8 sm:pb-8">
+                <EmailUpdateForm />
+              </CardContent>
+            </Card>
+
+            <Card className="overflow-hidden rounded-xl border-zinc-200 shadow-sm dark:border-zinc-800">
+              <CardHeader className="pb-4 sm:px-8 sm:pt-8">
+                <CardTitle className="text-xl font-semibold tracking-tight sm:text-2xl">
+                  Password
+                </CardTitle>
+                <CardDescription className="text-sm text-zinc-500 dark:text-zinc-400">
+                  Update your account password
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="sm:px-8 sm:pb-8">
+                <PasswordUpdateForm />
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   )

@@ -4,6 +4,8 @@ export type AuditAction =
   | 'auth.login_failed'
   | 'auth.register_failed'
   | 'auth.password_reset_requested'
+  | 'auth.email_change_requested'
+  | 'auth.password_changed'
   | 'user.created'
   | 'user.profile_updated'
   | 'user.profile_update_failed'
@@ -92,6 +94,8 @@ export const ALL_AUDIT_ACTIONS: readonly AuditAction[] = [
   'auth.login_failed',
   'auth.register_failed',
   'auth.password_reset_requested',
+  'auth.email_change_requested',
+  'auth.password_changed',
   'user.created',
   'user.profile_updated',
   'user.profile_update_failed',
@@ -134,5 +138,7 @@ export const CLIENT_AUDIT_ACTIONS: readonly AuditAction[] = [
   'auth.register',
   'auth.login_failed',
   'auth.register_failed',
+  'auth.email_change_requested',
+  'auth.password_changed',
   'user.created',
 ] as const
