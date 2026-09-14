@@ -50,8 +50,20 @@ describe('getAuthErrorMessage', () => {
       getAuthErrorMessage({ code: 'auth/wrong-password' }, 'fallback')
     ).toBe('Current password is incorrect.')
     expect(
+      getAuthErrorMessage(
+        { code: 'auth/invalid-credential' },
+        'fallback',
+        'login'
+      )
+    ).toBe('Incorrect email or password.')
+    expect(
       getAuthErrorMessage({ code: 'auth/email-already-in-use' }, 'fallback')
-    ).toBe('That email is already in use by another account.')
+    ).toBe(
+      'An account with this email already exists. Try signing in instead.'
+    )
+    expect(
+      getAuthErrorMessage({ code: 'auth/user-not-found' }, 'fallback', 'login')
+    ).toBe('No account found with that email. Try creating an account.')
   })
 
   it('falls back for unknown errors', () => {

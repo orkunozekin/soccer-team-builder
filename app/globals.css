@@ -112,9 +112,16 @@
   }
   html {
     overflow-x: clip;
+    min-height: 100%;
+    /* Match pitch-bg fallback so overscroll / short pages never flash white. */
+    background-color: #fff3f2;
+  }
+  html.dark {
+    background-color: hsl(240 10% 10%);
   }
   body {
-    @apply pitch-bg bg-background text-foreground;
+    /* pitch-bg owns the page background; do not layer bg-background (white). */
+    @apply pitch-bg min-h-dvh text-foreground;
     overflow-x: clip;
   }
 

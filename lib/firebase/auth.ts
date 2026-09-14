@@ -106,7 +106,8 @@ export const requestEmailUpdate = async (
 
 export const getAuthErrorMessage = (
   error: unknown,
-  fallback: string
+  fallback: string,
+  context: 'login' | 'register' | 'profile' | 'google' = 'profile'
 ): string => {
   const code =
     error && typeof error === 'object' && 'code' in error
@@ -116,21 +117,39 @@ export const getAuthErrorMessage = (
   switch (code) {
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
-      return 'Current password is incorrect.'
+      return context === 'login' || context === 'register'
+        ? 'Incorrect email or password.'
+        : 'Current password is incorrect.'
+    case 'auth/user-not-found':
+      return 'No account found with that email. Try creating an account.'
+    case 'auth/email-already-in-use':
+      return 'An account with this email already exists. Try signing in instead.'
     case 'auth/weak-password':
       return 'Password must be at least 6 characters.'
-    case 'auth/email-already-in-use':
-      return 'That email is already in use by another account.'
     case 'auth/invalid-email':
       return 'Please enter a valid email address.'
+    case 'auth/user-disabled':
+      return 'This account has been disabled. Contact an admin for help.'
     case 'auth/requires-recent-login':
       return 'For security, please sign out and sign back in, then try again.'
     case 'auth/too-many-requests':
       return 'Too many attempts. Please wait a moment and try again.'
     case 'auth/network-request-failed':
       return 'Network error. Check your connection and try again.'
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
+      return 'Google sign-in was cancelled.'
+    case 'auth/account-exists-with-different-credential':
+      return 'An account already exists with this email using a different sign-in method.'
+    case 'auth/popup-blocked':
+      return 'Pop-up was blocked. Allow pop-ups for this site and try again.'
     default:
       break
+  }
+
+  // Prefer mapped auth codes; avoid leaking raw Firebase strings to users.
+  if (code.startsWith('auth/')) {
+    return fallback
   }
 
   if (error instanceof Error && error.message) {

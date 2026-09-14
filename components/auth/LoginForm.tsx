@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
-import { loginUser, loginWithGoogle } from '@/lib/firebase/auth'
+import { loginUser, loginWithGoogle, getAuthErrorMessage } from '@/lib/firebase/auth'
 import { recordAuditEventAPI } from '@/lib/api/client'
 import { createUser, getUser } from '@/lib/services/userService'
 import { useAuthStore } from '@/store/authStore'
@@ -33,11 +33,16 @@ export function LoginForm() {
       setUser(userCredential.user)
       recordAuditEventAPI({ action: 'auth.login' })
       router.push('/matches')
-    } catch {
-      setError('Failed to sign in')
+    } catch (err: unknown) {
+      const message = getAuthErrorMessage(
+        err,
+        'Failed to sign in. Please try again.',
+        'login'
+      )
+      setError(message)
       recordAuditEventAPI({
         action: 'auth.login_failed',
-        metadata: { message: 'Failed to sign in' },
+        metadata: { message },
       })
     } finally {
       setLoading(false)
@@ -61,11 +66,16 @@ export function LoginForm() {
       }
       setUser(user)
       router.push('/matches')
-    } catch {
-      setError('Failed to sign in with Google')
+    } catch (err: unknown) {
+      const message = getAuthErrorMessage(
+        err,
+        'Failed to sign in with Google. Please try again.',
+        'google'
+      )
+      setError(message)
       recordAuditEventAPI({
         action: 'auth.login_failed',
-        metadata: { message: 'Failed to sign in with Google', provider: 'google' },
+        metadata: { message, provider: 'google' },
       })
     } finally {
       setGoogleLoading(false)
