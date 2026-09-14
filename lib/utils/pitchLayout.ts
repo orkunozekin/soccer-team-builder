@@ -20,30 +20,32 @@ export interface PlayerOnPitch {
 }
 
 export const POSITION_COORDINATES: Record<string, PitchPosition> = {
-  GK: { x: 50, y: 5 },
+  GK: { x: 50, y: 3 },
 
   // Fullbacks sit wide; LCB/RCB are display-only pair slots so duplicate CBs
   // do not steal LB/RB and stack on top of real fullbacks.
-  LB: { x: 6, y: 20 },
-  LWB: { x: 5, y: 36 },
-  LCB: { x: 30, y: 20 },
-  CB: { x: 50, y: 20 },
-  RCB: { x: 70, y: 20 },
-  RWB: { x: 95, y: 36 },
-  RB: { x: 94, y: 20 },
+  LB: { x: 6, y: 14 },
+  LWB: { x: 5, y: 26 },
+  LCB: { x: 30, y: 14 },
+  CB: { x: 50, y: 14 },
+  RCB: { x: 70, y: 14 },
+  RWB: { x: 95, y: 26 },
+  RB: { x: 94, y: 14 },
 
-  CDM: { x: 50, y: 42 },
-  LM: { x: 6, y: 50 },
-  LCM: { x: 35, y: 50 },
-  CM: { x: 50, y: 50 },
-  RCM: { x: 65, y: 50 },
-  RM: { x: 94, y: 50 },
-  CAM: { x: 50, y: 58 },
+  // Central spine spaced ~22pts apart so half-pitch compression still
+  // leaves ~60px+ between a label and the next marker circle.
+  CDM: { x: 50, y: 30 },
+  LM: { x: 6, y: 52 },
+  LCM: { x: 35, y: 52 },
+  CM: { x: 50, y: 52 },
+  RCM: { x: 65, y: 52 },
+  RM: { x: 94, y: 52 },
+  CAM: { x: 50, y: 74 },
 
-  LW: { x: 6, y: 75 },
-  CF: { x: 50, y: 80 },
-  ST: { x: 50, y: 85 },
-  RW: { x: 94, y: 75 },
+  LW: { x: 6, y: 88 },
+  CF: { x: 50, y: 90 },
+  ST: { x: 50, y: 96 },
+  RW: { x: 94, y: 88 },
 }
 
 /**
@@ -137,8 +139,10 @@ export function mapToHalfPitch(
   position: PitchPosition,
   half: 'top' | 'bottom'
 ): PitchPosition {
-  const scale = 0.46
-  const margin = 2
+  // Use most of each half so vertical stacks (CDM/CM/CAM/ST) keep
+  // enough gap for name labels under each marker.
+  const scale = 0.49
+  const margin = 1
   if (half === 'top') {
     return {
       x: 100 - position.x,
