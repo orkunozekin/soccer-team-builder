@@ -126,8 +126,32 @@ describe('assignPitchSlots', () => {
     ])
     const byId = Object.fromEntries(result.map(p => [p.user.uid, p]))
 
-    expect(byId.hasRsvp.assignedSlot).toBe('CM')
-    expect(byId.noRsvp.assignedSlot).toBe('CDM')
+    // Two CMs pair horizontally; earliest RSVP gets LCM
+    expect(byId.hasRsvp.assignedSlot).toBe('LCM')
+    expect(byId.noRsvp.assignedSlot).toBe('RCM')
+    expect(byId.hasRsvp.position.y).toBe(byId.noRsvp.position.y)
+  })
+
+  it('keeps multiple CMs on the same horizontal band', () => {
+    const users = [
+      makeUser('cm1', { position: 'CM' }),
+      makeUser('cm2', { position: 'CM' }),
+      makeUser('lm', { position: 'LM' }),
+      makeUser('rm', { position: 'RM' }),
+    ]
+    const team = makeTeam(['cm1', 'cm2', 'lm', 'rm'])
+    const rsvps = users.map((u, i) =>
+      makeRSVP(u.uid, new Date(`2024-01-01T10:0${i}:00Z`))
+    )
+    const result = assignPitchSlots(team, users, rsvps)
+    const byId = Object.fromEntries(result.map(p => [p.user.uid, p]))
+
+    expect(byId.cm1.assignedSlot).toBe('LCM')
+    expect(byId.cm2.assignedSlot).toBe('RCM')
+    expect(byId.cm1.position.y).toBe(POSITION_COORDINATES.CM.y)
+    expect(byId.cm2.position.y).toBe(POSITION_COORDINATES.CM.y)
+    expect(byId.lm.position.x).toBe(POSITION_COORDINATES.LB.x)
+    expect(byId.rm.position.x).toBe(POSITION_COORDINATES.RB.x)
   })
 
   it('defaults missing position to CM', () => {
@@ -140,15 +164,14 @@ describe('assignPitchSlots', () => {
   })
 
   it('falls back to a horizontal nudge when preferred and adjacent slots are taken', () => {
-    // Fill CM + all CM adjacency: CDM, CAM, LM, RM
-    const ids = ['cm1', 'cdm', 'cam', 'lm', 'rm', 'cm2']
+    // Three CMs + fill LCM/RCM band leftovers via CDM/CAM so the third nudges
+    const ids = ['cm1', 'cm2', 'cdm', 'cam', 'cm3']
     const users = [
       makeUser('cm1', { position: 'CM' }),
+      makeUser('cm2', { position: 'CM' }),
       makeUser('cdm', { position: 'CDM' }),
       makeUser('cam', { position: 'CAM' }),
-      makeUser('lm', { position: 'LM' }),
-      makeUser('rm', { position: 'RM' }),
-      makeUser('cm2', { position: 'CM' }),
+      makeUser('cm3', { position: 'CM' }),
     ]
     const team = makeTeam(ids)
     const rsvps = ids.map((id, i) =>
@@ -156,12 +179,12 @@ describe('assignPitchSlots', () => {
     )
 
     const result = assignPitchSlots(team, users, rsvps)
-    const cm2 = result.find(p => p.user.uid === 'cm2')
-    expect(cm2).toBeDefined()
-    expect(cm2!.preferredPosition).toBe('CM')
+    const cm3 = result.find(p => p.user.uid === 'cm3')
+    expect(cm3).toBeDefined()
+    expect(cm3!.preferredPosition).toBe('CM')
     // Nudge moves x away from the pure coordinate of the fallback slot
-    expect(cm2!.position.x).not.toBe(
-      POSITION_COORDINATES[cm2!.assignedSlot].x
+    expect(cm3!.position.x).not.toBe(
+      POSITION_COORDINATES[cm3!.assignedSlot].x
     )
   })
 

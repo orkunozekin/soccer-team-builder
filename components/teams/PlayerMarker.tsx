@@ -36,7 +36,7 @@ export function PlayerMarker({
 }: PlayerMarkerProps) {
   const isGK = isGoalkeeper(user.position)
   const clickable = isAdmin && onPlayerClick
-  const size = isMobile ? 22 : 30
+  const size = isMobile ? 26 : 34
 
   const content = (
     <>
@@ -62,28 +62,28 @@ export function PlayerMarker({
         <span
           className={`relative z-[1] font-bold tabular-nums leading-none drop-shadow-sm ${
             isGK ? 'text-zinc-900' : 'text-white'
-          } ${isMobile ? 'text-[8px]' : 'text-[11px]'}`}
+          } ${isMobile ? 'text-[10px]' : 'text-xs'}`}
         >
           {formatJerseyDisplay(user.jerseyNumber)}
         </span>
       </div>
       <div
-        className={`absolute left-1/2 top-full mt-0.5 flex -translate-x-1/2 flex-col items-center gap-0 text-center ${
-          isMobile ? 'w-[2.75rem]' : 'w-[3.75rem]'
+        className={`absolute left-1/2 top-full mt-0.5 flex -translate-x-1/2 flex-col items-center gap-0.5 text-center ${
+          isMobile ? 'w-[4.25rem]' : 'w-[5.5rem]'
         }`}
       >
         <span
-          className={`block truncate whitespace-nowrap font-semibold leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)] ${
-            isMobile ? 'text-[7px]' : 'text-[9px]'
+          className={`block truncate whitespace-nowrap font-semibold leading-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] ${
+            isMobile ? 'text-[10px]' : 'text-xs'
           }`}
           title={user.displayName}
         >
-          {formatPitchDisplayName(user.displayName, isMobile ? 8 : 12)}
+          {formatPitchDisplayName(user.displayName, isMobile ? 11 : 14)}
         </span>
         {user.position && (
           <span
-            className={`leading-none text-[color:var(--pitch-markings)] drop-shadow-[0_1px_1px_rgba(0,0,0,0.85)] ${
-              isMobile ? 'text-[6px]' : 'text-[8px]'
+            className={`leading-none text-white/85 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)] ${
+              isMobile ? 'text-[9px]' : 'text-[10px]'
             }`}
           >
             {formatPositionDisplay(user.position)}

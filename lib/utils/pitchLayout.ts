@@ -32,22 +32,24 @@ export const POSITION_COORDINATES: Record<string, PitchPosition> = {
   RWB: { x: 95, y: 36 },
   RB: { x: 94, y: 20 },
 
-  CDM: { x: 50, y: 40 },
-  LM: { x: 18, y: 50 },
+  CDM: { x: 50, y: 42 },
+  LM: { x: 6, y: 50 },
+  LCM: { x: 35, y: 50 },
   CM: { x: 50, y: 50 },
-  CAM: { x: 50, y: 60 },
-  RM: { x: 82, y: 50 },
+  RCM: { x: 65, y: 50 },
+  RM: { x: 94, y: 50 },
+  CAM: { x: 50, y: 58 },
 
-  LW: { x: 18, y: 75 },
+  LW: { x: 6, y: 75 },
   CF: { x: 50, y: 80 },
   ST: { x: 50, y: 85 },
-  RW: { x: 82, y: 75 },
+  RW: { x: 94, y: 75 },
 }
 
 /**
  * Overflow targets when preferred slot is taken (in order).
  * Display-only — never mutates stored RSVP/profile position.
- * LCB/RCB are layout-only slots (not profile position codes).
+ * LCB/RCB/LCM/RCM are layout-only slots (not profile position codes).
  */
 export const POSITION_ADJACENCY: Record<string, string[]> = {
   GK: ['CDM', 'CB', 'CM'],
@@ -59,10 +61,12 @@ export const POSITION_ADJACENCY: Record<string, string[]> = {
   LWB: ['LB', 'LM', 'LW', 'LCB'],
   RWB: ['RB', 'RM', 'RW', 'RCB'],
   CDM: ['CM', 'CB', 'CAM'],
-  CM: ['CDM', 'CAM', 'LM', 'RM'],
+  CM: ['LCM', 'RCM', 'CDM', 'CAM'],
+  LCM: ['CM', 'LM', 'CDM', 'CAM'],
+  RCM: ['CM', 'RM', 'CDM', 'CAM'],
   CAM: ['CM', 'CF', 'ST', 'CDM'],
-  LM: ['LW', 'LWB', 'CM', 'CAM'],
-  RM: ['RW', 'RWB', 'CM', 'CAM'],
+  LM: ['LW', 'LWB', 'LCM', 'CAM'],
+  RM: ['RW', 'RWB', 'RCM', 'CAM'],
   LW: ['LM', 'CF', 'ST', 'LWB'],
   RW: ['RM', 'CF', 'ST', 'RWB'],
   CF: ['ST', 'CAM', 'LW', 'RW'],
@@ -213,10 +217,16 @@ export function assignPitchSlots(
   }[] = []
 
   // Pass 1: earliest per preferred group claims the canonical slot.
-  // Multiple CBs pair as LCB/RCB so they do not sit on LB/RB.
+  // Multiple CBs/CMs pair horizontally (LCB/RCB, LCM/RCM) so duplicates
+  // stay on the same band instead of stacking on fullbacks or wing slots.
+  const horizontalPairs: Record<string, readonly [string, string]> = {
+    CB: ['LCB', 'RCB'],
+    CM: ['LCM', 'RCM'],
+  }
+
   for (const [preferred, list] of Array.from(groups.entries())) {
-    if (preferred === 'CB' && list.length >= 2) {
-      const pairSlots = ['LCB', 'RCB'] as const
+    const pairSlots = horizontalPairs[preferred]
+    if (pairSlots && list.length >= 2) {
       const paired = Math.min(list.length, pairSlots.length)
       for (let i = 0; i < paired; i++) {
         const slot = pairSlots[i]
@@ -246,9 +256,10 @@ export function assignPitchSlots(
   // Pass 2: remaining players (global rsvpAt order) take nearest free adjacent.
   const remaining: SlotCandidate[] = []
   for (const [preferred, list] of Array.from(groups.entries())) {
+    const pairSlots = horizontalPairs[preferred]
     const alreadyAssigned =
-      preferred === 'CB' && list.length >= 2
-        ? Math.min(list.length, 2)
+      pairSlots && list.length >= 2
+        ? Math.min(list.length, pairSlots.length)
         : 1
     for (let i = alreadyAssigned; i < list.length; i++) {
       remaining.push(list[i])
