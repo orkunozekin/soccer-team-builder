@@ -1,12 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import {
   LDProvider,
   useFlags,
   useLDClient,
 } from 'launchdarkly-react-client-sdk'
-import type { LDContext } from 'launchdarkly-js-client-sdk'
 import { FeatureFlagContext } from '@/components/flags/FeatureFlagContext'
 import {
   FEATURE_FLAG_DEFAULTS,
@@ -14,26 +13,11 @@ import {
   getLocalFeatureFlagOverrides,
   type FeatureFlagKey,
 } from '@/lib/flags/featureFlags'
+import { anonymousContext, contextFromAuth } from '@/lib/flags/ldContext'
 import { useAuth } from '@/lib/hooks/useAuth'
 
 const CLIENT_SIDE_ID =
   process.env.NEXT_PUBLIC_LAUNCHDARKLY_CLIENT_ID?.trim() ?? ''
-
-function anonymousContext(): LDContext {
-  return {
-    kind: 'user',
-    key: 'anonymous',
-    anonymous: true,
-  }
-}
-
-function contextFromAuth(uid: string, email: string | null): LDContext {
-  return {
-    kind: 'user',
-    key: uid,
-    email: email ?? undefined,
-  }
-}
 
 function readTypedFlags(
   raw: Record<string, unknown>
@@ -50,16 +34,21 @@ function readTypedFlags(
   return next
 }
 
+function closedFlags(): Partial<Record<FeatureFlagKey, boolean>> {
+  return {
+    ...FEATURE_FLAG_DEFAULTS,
+    ...getLocalFeatureFlagOverrides(),
+  }
+}
+
 /**
- * Bridges LD `useFlags` into our typed context and identifies the user when auth resolves.
+ * Bridges LD `useFlags` into our typed context and re-identifies when auth changes.
  */
 function LaunchDarklyBridge({ children }: { children: ReactNode }) {
   const flags = useFlags()
   const ldClient = useLDClient()
   const { user } = useAuth()
-  const [typedFlags, setTypedFlags] = useState(() =>
-    readTypedFlags(flags as Record<string, unknown>)
-  )
+  const [typedFlags, setTypedFlags] = useState(closedFlags)
 
   useEffect(() => {
     setTypedFlags({
@@ -70,12 +59,27 @@ function LaunchDarklyBridge({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ldClient) return
+    let cancelled = false
     const ctx = user
       ? contextFromAuth(user.uid, user.email)
       : anonymousContext()
-    void ldClient.identify(ctx).catch(() => {
-      // Fail-closed: leave flags at defaults / last known values
-    })
+
+    void ldClient
+      .identify(ctx)
+      .then(raw => {
+        if (cancelled) return
+        setTypedFlags({
+          ...readTypedFlags(raw as Record<string, unknown>),
+          ...getLocalFeatureFlagOverrides(),
+        })
+      })
+      .catch(() => {
+        // Fail-closed: leave flags at defaults / last known values
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [ldClient, user])
 
   return (
@@ -88,34 +92,39 @@ function LaunchDarklyBridge({ children }: { children: ReactNode }) {
 /**
  * App-wide LaunchDarkly provider. Nest under AuthProvider so context can use uid/email.
  * When the client ID is missing, children still render and all flags stay false.
+ *
+ * Waits for Firebase auth to finish loading before booting the LD client so we do
+ * not evaluate flags as `anonymous` for a signed-in Google user.
  */
 export function LaunchDarklyProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth()
-
-  const initialContext = useMemo(
-    () =>
-      user
-        ? contextFromAuth(user.uid, user.email)
-        : anonymousContext(),
-    // Only seed once for LDProvider; identify() handles later auth changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  )
+  const { user, loading } = useAuth()
 
   if (!CLIENT_SIDE_ID) {
     return (
-      <FeatureFlagContext.Provider
-        value={{ ...FEATURE_FLAG_DEFAULTS, ...getLocalFeatureFlagOverrides() }}
-      >
+      <FeatureFlagContext.Provider value={closedFlags()}>
         {children}
       </FeatureFlagContext.Provider>
     )
   }
 
+  // Auth still resolving: keep fail-closed defaults (do not boot LD as anonymous).
+  if (loading) {
+    return (
+      <FeatureFlagContext.Provider value={closedFlags()}>
+        {children}
+      </FeatureFlagContext.Provider>
+    )
+  }
+
+  const context = user
+    ? contextFromAuth(user.uid, user.email)
+    : anonymousContext()
+
   return (
     <LDProvider
+      key={user?.uid ?? 'anonymous'}
       clientSideID={CLIENT_SIDE_ID}
-      context={initialContext}
+      context={context}
       options={{
         // Do not block first paint; list view stays safe until flags arrive.
         bootstrap: 'localStorage',
