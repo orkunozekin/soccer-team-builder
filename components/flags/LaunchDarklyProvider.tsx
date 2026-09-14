@@ -1,11 +1,7 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
-import {
-  LDProvider,
-  useFlags,
-  useLDClient,
-} from 'launchdarkly-react-client-sdk'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { LDProvider, useLDClient } from 'launchdarkly-react-client-sdk'
 import { FeatureFlagContext } from '@/components/flags/FeatureFlagContext'
 import {
   FEATURE_FLAG_DEFAULTS,
@@ -42,20 +38,44 @@ function closedFlags(): Partial<Record<FeatureFlagKey, boolean>> {
 }
 
 /**
- * Bridges LD `useFlags` into our typed context and re-identifies when auth changes.
+ * Syncs typed flags from the LD client only (never from an empty useFlags()
+ * snapshot that would wipe a successful identify() back to defaults).
  */
 function LaunchDarklyBridge({ children }: { children: ReactNode }) {
-  const flags = useFlags()
   const ldClient = useLDClient()
   const { user } = useAuth()
   const [typedFlags, setTypedFlags] = useState(closedFlags)
 
-  useEffect(() => {
+  const applyFlags = useCallback((raw: Record<string, unknown>) => {
     setTypedFlags({
-      ...readTypedFlags(flags as Record<string, unknown>),
+      ...readTypedFlags(raw),
       ...getLocalFeatureFlagOverrides(),
     })
-  }, [flags])
+  }, [])
+
+  useEffect(() => {
+    if (!ldClient) return
+    let cancelled = false
+
+    const syncFromClient = () => {
+      if (cancelled) return
+      applyFlags(ldClient.allFlags() as Record<string, unknown>)
+    }
+
+    void ldClient
+      .waitForInitialization(5)
+      .then(syncFromClient)
+      .catch(() => {
+        // Fail-closed: leave defaults
+      })
+
+    ldClient.on('change', syncFromClient)
+
+    return () => {
+      cancelled = true
+      ldClient.off('change', syncFromClient)
+    }
+  }, [ldClient, applyFlags])
 
   useEffect(() => {
     if (!ldClient) return
@@ -68,10 +88,7 @@ function LaunchDarklyBridge({ children }: { children: ReactNode }) {
       .identify(ctx)
       .then(raw => {
         if (cancelled) return
-        setTypedFlags({
-          ...readTypedFlags(raw as Record<string, unknown>),
-          ...getLocalFeatureFlagOverrides(),
-        })
+        applyFlags(raw as Record<string, unknown>)
       })
       .catch(() => {
         // Fail-closed: leave flags at defaults / last known values
@@ -80,7 +97,7 @@ function LaunchDarklyBridge({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [ldClient, user])
+  }, [ldClient, user, applyFlags])
 
   return (
     <FeatureFlagContext.Provider value={typedFlags}>
@@ -126,8 +143,8 @@ export function LaunchDarklyProvider({ children }: { children: ReactNode }) {
       clientSideID={CLIENT_SIDE_ID}
       context={context}
       options={{
-        // Do not block first paint; list view stays safe until flags arrive.
-        bootstrap: 'localStorage',
+        // Avoid localStorage bootstrap: a cached `false` from before targeting
+        // was configured can stick and race with identify().
         streaming: true,
       }}
       reactOptions={{

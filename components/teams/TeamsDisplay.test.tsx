@@ -81,25 +81,22 @@ describe('TeamsDisplay pitch flag', () => {
     expect(screen.queryByText('Pitch')).toBeNull()
   })
 
-  it('shows Pitch/List toggle when flag is on and can switch to pitch', async () => {
+  it('shows Pitch/List toggle when flag is on and defaults to pitch for admins', async () => {
     const user = userEvent.setup()
     render(
       <FeatureFlagContext.Provider value={{ 'pitch-lineup-view': true }}>
-        <TeamsDisplay teams={teams} users={users} isAdmin={false} />
+        <TeamsDisplay teams={teams} users={users} isAdmin={true} />
       </FeatureFlagContext.Provider>
     )
 
-    const toggle = screen.getByRole('group', { name: 'Teams view' })
-    expect(toggle).toBeInTheDocument()
-
-    // Non-admin defaults to pitch
-    expect(screen.getByText(/Team 1/i)).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Teams view' })).toBeInTheDocument()
+    // Defaults to pitch (team labels on dual pitch)
+    expect(screen.getAllByText(/Team 1|Team 2/).length).toBeGreaterThan(0)
 
     await user.click(screen.getByRole('button', { name: 'List' }))
     expect(screen.getByText('Team 1')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Pitch' }))
-    // Dual pitch labels use team names
     expect(screen.getAllByText(/Team 1|Team 2/).length).toBeGreaterThan(0)
   })
 })

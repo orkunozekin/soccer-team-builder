@@ -109,9 +109,7 @@ export function TeamsDisplay({
   const dndEnabled = Boolean(isAdmin && matchId && onTeamsChanged)
   const { updateRSVPAttendance, bulkUpdateRSVPAttendance } = useMatchStore()
   const [pageIndex, setPageIndex] = useState(0)
-  const [viewMode, setViewMode] = useState<TeamsViewMode>(() =>
-    isAdmin ? 'list' : 'pitch'
-  )
+  const [viewMode, setViewMode] = useState<TeamsViewMode>('pitch')
   const [transferError, setTransferError] = useState('')
   const [transferring, setTransferring] = useState<string | null>(null)
   const [hostCheckInBusy, setHostCheckInBusy] = useState<string | null>(null)
@@ -132,11 +130,11 @@ export function TeamsDisplay({
     setLocalTeams(teams)
   }, [teams])
 
-  // When the flag turns on, default players to pitch and admins to list (DnD).
+  // When the flag turns on, show pitch by default (admins can switch to List for DnD).
   useEffect(() => {
     if (!showPitchFlag) return
-    setViewMode(isAdmin ? 'list' : 'pitch')
-  }, [showPitchFlag, isAdmin])
+    setViewMode('pitch')
+  }, [showPitchFlag])
 
   const showPitchView = showPitchFlag && viewMode === 'pitch'
 
