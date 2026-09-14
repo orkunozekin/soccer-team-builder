@@ -207,6 +207,42 @@ describe('assignPitchSlots', () => {
     expect(result.find(p => p.user.uid === 'b')!.assignedSlot).not.toBe('ST')
   })
 
+  it('places duplicate STs side-by-side on the same band', () => {
+    const users = [
+      makeUser('early', { position: 'ST' }),
+      makeUser('late', { position: 'ST' }),
+    ]
+    const team = makeTeam(['early', 'late'])
+    const result = assignPitchSlots(team, users, [
+      makeRSVP('early', new Date('2024-01-01T10:00:00Z')),
+      makeRSVP('late', new Date('2024-01-01T11:00:00Z')),
+    ])
+    const byId = Object.fromEntries(result.map(p => [p.user.uid, p]))
+
+    expect(byId.early.assignedSlot).toBe('LST')
+    expect(byId.late.assignedSlot).toBe('RST')
+    expect(byId.early.position.y).toBe(byId.late.position.y)
+    expect(byId.early.position.x).toBeLessThan(byId.late.position.x)
+  })
+
+  it('places duplicate CAMs side-by-side on the same band', () => {
+    const users = [
+      makeUser('a', { position: 'CAM' }),
+      makeUser('b', { position: 'CAM' }),
+    ]
+    const team = makeTeam(['a', 'b'])
+    const result = assignPitchSlots(team, users, [
+      makeRSVP('a', new Date('2024-01-01T10:00:00Z')),
+      makeRSVP('b', new Date('2024-01-01T11:00:00Z')),
+    ])
+    const byId = Object.fromEntries(result.map(p => [p.user.uid, p]))
+
+    expect(byId.a.assignedSlot).toBe('LCAM')
+    expect(byId.b.assignedSlot).toBe('RCAM')
+    expect(byId.a.position.y).toBe(byId.b.position.y)
+    expect(byId.a.position.x).toBeLessThan(byId.b.position.x)
+  })
+
   it('keeps wing slots inset from the touchline', () => {
     expect(POSITION_COORDINATES.LB.x).toBeGreaterThanOrEqual(
       PITCH_EDGE_MARGIN_X

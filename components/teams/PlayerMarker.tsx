@@ -71,7 +71,7 @@ export function PlayerMarker({
       >
         <span
           className={`block truncate whitespace-nowrap font-bold leading-none text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] ${
-            isMobile ? 'text-sm' : 'text-base'
+            isMobile ? 'text-[11px]' : 'text-xs'
           }`}
           title={user.displayName}
         >

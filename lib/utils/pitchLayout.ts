@@ -39,24 +39,34 @@ export const POSITION_COORDINATES: Record<string, PitchPosition> = {
 
   // Central spine: keep ST short of midfield so opposing strikers do not collide,
   // while still leaving label room between CDM/CM/CAM/ST.
+  // LCDM/RCDM, LCAM/RCAM, LCF/RCF, LST/RST are display-only pair slots so
+  // duplicate CDM/CAM/CF/ST sit side-by-side instead of stacking vertically.
+  LCDM: { x: 38, y: 28 },
   CDM: { x: 50, y: 28 },
+  RCDM: { x: 62, y: 28 },
   LM: { x: 16, y: 46 },
   LCM: { x: 35, y: 46 },
   CM: { x: 50, y: 46 },
   RCM: { x: 65, y: 46 },
   RM: { x: 84, y: 46 },
+  LCAM: { x: 38, y: 62 },
   CAM: { x: 50, y: 62 },
+  RCAM: { x: 62, y: 62 },
 
   LW: { x: 16, y: 76 },
+  LCF: { x: 38, y: 78 },
   CF: { x: 50, y: 78 },
+  RCF: { x: 62, y: 78 },
+  LST: { x: 38, y: 82 },
   ST: { x: 50, y: 82 },
+  RST: { x: 62, y: 82 },
   RW: { x: 84, y: 76 },
 }
 
 /**
  * Overflow targets when preferred slot is taken (in order).
  * Display-only — never mutates stored RSVP/profile position.
- * LCB/RCB/LCM/RCM are layout-only slots (not profile position codes).
+ * LCB/RCB/LCM/RCM/LCDM/RCDM/LCAM/RCAM/LCF/RCF/LST/RST are layout-only slots.
  */
 export const POSITION_ADJACENCY: Record<string, string[]> = {
   GK: ['CDM', 'CB', 'CM'],
@@ -67,17 +77,25 @@ export const POSITION_ADJACENCY: Record<string, string[]> = {
   RCB: ['CB', 'RB', 'CDM', 'RWB'],
   LWB: ['LB', 'LM', 'LW', 'LCB'],
   RWB: ['RB', 'RM', 'RW', 'RCB'],
-  CDM: ['CM', 'CB', 'CAM'],
+  CDM: ['LCDM', 'RCDM', 'CM', 'CB', 'CAM'],
+  LCDM: ['CDM', 'LCM', 'CB', 'CAM'],
+  RCDM: ['CDM', 'RCM', 'CB', 'CAM'],
   CM: ['LCM', 'RCM', 'CDM', 'CAM'],
   LCM: ['CM', 'LM', 'CDM', 'CAM'],
   RCM: ['CM', 'RM', 'CDM', 'CAM'],
-  CAM: ['CM', 'CF', 'ST', 'CDM'],
+  CAM: ['LCAM', 'RCAM', 'CM', 'CF', 'ST', 'CDM'],
+  LCAM: ['CAM', 'LCM', 'CF', 'CDM'],
+  RCAM: ['CAM', 'RCM', 'CF', 'CDM'],
   LM: ['LW', 'LWB', 'LCM', 'CAM'],
   RM: ['RW', 'RWB', 'RCM', 'CAM'],
   LW: ['LM', 'CF', 'ST', 'LWB'],
   RW: ['RM', 'CF', 'ST', 'RWB'],
-  CF: ['ST', 'CAM', 'LW', 'RW'],
-  ST: ['CF', 'CAM', 'LW', 'RW'],
+  CF: ['LCF', 'RCF', 'ST', 'CAM', 'LW', 'RW'],
+  LCF: ['CF', 'LST', 'CAM', 'LW'],
+  RCF: ['CF', 'RST', 'CAM', 'RW'],
+  ST: ['LST', 'RST', 'CF', 'CAM', 'LW', 'RW'],
+  LST: ['ST', 'LCF', 'CAM', 'LW'],
+  RST: ['ST', 'RCF', 'CAM', 'RW'],
 }
 
 function normalizePosition(position: string | null | undefined): string {
@@ -224,8 +242,14 @@ export function separatePlayers(
 
         const dist = Math.sqrt(dist2)
         const push = ((1 - dist) / 2) * 0.85
-        const ux = (nx / dist) * push * minSepX
-        const uy = (ny / dist) * push * minSepY
+        let ux = (nx / dist) * push * minSepX
+        let uy = (ny / dist) * push * minSepY
+
+        // Same preferred role (e.g. two STs) should stay on one horizontal band.
+        if (players[i].preferredPosition === players[j].preferredPosition) {
+          ux *= 1.2
+          uy *= 0.2
+        }
 
         a.x = Math.max(minX, Math.min(maxX, a.x - ux))
         a.y = Math.max(minY, Math.min(maxY, a.y - uy))
@@ -340,11 +364,15 @@ export function assignPitchSlots(
   }[] = []
 
   // Pass 1: earliest per preferred group claims the canonical slot.
-  // Multiple CBs/CMs pair horizontally (LCB/RCB, LCM/RCM) so duplicates
-  // stay on the same band instead of stacking on fullbacks or wing slots.
+  // Multiple players at the same central role pair horizontally so
+  // duplicates stay on one band (e.g. two STs side-by-side, not stacked).
   const horizontalPairs: Record<string, readonly [string, string]> = {
     CB: ['LCB', 'RCB'],
+    CDM: ['LCDM', 'RCDM'],
     CM: ['LCM', 'RCM'],
+    CAM: ['LCAM', 'RCAM'],
+    CF: ['LCF', 'RCF'],
+    ST: ['LST', 'RST'],
   }
 
   for (const [preferred, list] of Array.from(groups.entries())) {
