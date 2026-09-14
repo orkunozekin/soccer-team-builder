@@ -36,7 +36,7 @@ export function PlayerMarker({
 }: PlayerMarkerProps) {
   const isGK = isGoalkeeper(user.position)
   const clickable = isAdmin && onPlayerClick
-  const size = isMobile ? 28 : 36
+  const size = isMobile ? 30 : 40
 
   const content = (
     <>
@@ -62,28 +62,28 @@ export function PlayerMarker({
         <span
           className={`relative z-[1] font-bold tabular-nums leading-none drop-shadow-sm ${
             isGK ? 'text-zinc-900' : 'text-white'
-          } ${isMobile ? 'text-[11px]' : 'text-sm'}`}
+          } ${isMobile ? 'text-xs' : 'text-base'}`}
         >
           {formatJerseyDisplay(user.jerseyNumber)}
         </span>
       </div>
       <div
-        className={`absolute left-1/2 top-full mt-0.5 flex -translate-x-1/2 flex-col items-center gap-0.5 text-center ${
-          isMobile ? 'w-[5rem]' : 'w-[6.5rem]'
+        className={`absolute left-1/2 top-full mt-1 flex -translate-x-1/2 flex-col items-center gap-0.5 text-center ${
+          isMobile ? 'w-[5.75rem]' : 'w-[7.5rem]'
         }`}
       >
         <span
           className={`block truncate whitespace-nowrap font-bold leading-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] ${
-            isMobile ? 'text-xs' : 'text-sm'
+            isMobile ? 'text-sm' : 'text-base'
           }`}
           title={user.displayName}
         >
-          {formatPitchDisplayName(user.displayName, isMobile ? 12 : 16)}
+          {formatPitchDisplayName(user.displayName, isMobile ? 14 : 18)}
         </span>
         {user.position && (
           <span
-            className={`font-medium leading-none text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)] ${
-              isMobile ? 'text-[10px]' : 'text-xs'
+            className={`font-semibold leading-none text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)] ${
+              isMobile ? 'text-xs' : 'text-sm'
             }`}
           >
             {formatPositionDisplay(user.position)}
