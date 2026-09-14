@@ -45,6 +45,25 @@ vi.mock('@/components/profile/ProfileCompleteModal', () => ({
     props.open ? <div>Profile modal open</div> : null,
 }))
 
+vi.mock('@/components/matches/RSVPPositionModal', () => ({
+  RSVPPositionModal: (props: {
+    open: boolean
+    onConfirm: (position: string | null) => void
+    defaultPosition: string | null
+  }) =>
+    props.open ? (
+      <div>
+        <span>Position modal open</span>
+        <button
+          type="button"
+          onClick={() => props.onConfirm(props.defaultPosition)}
+        >
+          Confirm RSVP
+        </button>
+      </div>
+    ) : null,
+}))
+
 const baseMatch: Match = {
   id: 'match1',
   date: new Date('2099-06-15T00:00:00Z'),
@@ -100,7 +119,7 @@ describe('RSVPButton', () => {
     expect(screen.getByText(/profile modal open/i)).toBeInTheDocument()
   })
 
-  it('calls confirmRSVPAPI and toggles to Cancel RSVP when profile is complete', async () => {
+  it('opens position modal then confirms RSVP when profile is complete', async () => {
     const user = userEvent.setup()
 
     useAuthMock.mockReturnValue({
@@ -123,8 +142,11 @@ describe('RSVPButton', () => {
     render(<RSVPButton match={baseMatch} />)
 
     await user.click(screen.getByRole('button', { name: /rsvp to match/i }))
+    expect(screen.getByText(/position modal open/i)).toBeInTheDocument()
 
-    expect(confirmRSVPAPIMock).toHaveBeenCalledWith('match1', undefined)
+    await user.click(screen.getByRole('button', { name: /confirm rsvp/i }))
+
+    expect(confirmRSVPAPIMock).toHaveBeenCalledWith('match1', 'ST')
     expect(
       screen.getByRole('button', { name: /cancel rsvp/i })
     ).toBeInTheDocument()

@@ -18,10 +18,13 @@ import {
 } from '@/components/ui/card'
 import { updateRSVPPositionAPI } from '@/lib/api/client'
 import { SOCCER_POSITIONS } from '@/lib/constants/positions'
+import { getTeamPositionOccupancy } from '@/lib/utils/pitchLayout'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { useMatchStore } from '@/store/matchStore'
 import { Match } from '@/types/match'
 import { RSVP } from '@/types/rsvp'
+import { Team } from '@/types/team'
+import { User } from '@/types/user'
 
 interface MatchDetailsProps {
   match: Match
@@ -34,6 +37,10 @@ interface MatchDetailsProps {
   userProfilePosition: string | null
   onTeamsRegenerated?: () => void | Promise<void>
   onMatchRefetch?: () => void | Promise<void>
+  /** Teams + roster users for team-aware position occupancy cues */
+  teams?: Team[]
+  rosterUsers?: User[]
+  currentUserId?: string | null
 }
 
 function positionLabel(value: string | null): string {
@@ -51,6 +58,9 @@ export function MatchDetails({
   userProfilePosition,
   onTeamsRegenerated,
   onMatchRefetch,
+  teams = [],
+  rosterUsers = [],
+  currentUserId = null,
 }: MatchDetailsProps) {
   const matchDate = new Date(match.date)
   const formattedDate = format(matchDate, 'EEEE, MMM d')
@@ -58,6 +68,11 @@ export function MatchDetails({
 
   const { updateRSVPPosition } = useMatchStore()
   const currentPosition = userRsvp?.position ?? userProfilePosition ?? null
+
+  const userTeam = currentUserId
+    ? teams.find(t => t.playerIds.includes(currentUserId))
+    : undefined
+  const positionOccupancy = getTeamPositionOccupancy(userTeam, rosterUsers)
   const [editPosition, setEditPosition] = useState<string | null>(
     currentPosition
   )
@@ -192,6 +207,11 @@ export function MatchDetails({
                     onValueChange={setEditPosition}
                     disabled={positionLoading}
                     hideLabel
+                    occupancy={
+                      Object.keys(positionOccupancy).length > 0
+                        ? positionOccupancy
+                        : undefined
+                    }
                   />
                 </div>
                 <Button
@@ -230,6 +250,9 @@ export function MatchDetails({
                 onTeamsRegenerated={onTeamsRegenerated}
                 onMatchRefetch={onMatchRefetch}
                 onRsvpSuccess={() => setHighlightPosition(true)}
+                teams={teams}
+                rosterUsers={rosterUsers}
+                currentUserId={currentUserId}
               />
             </div>
           )}

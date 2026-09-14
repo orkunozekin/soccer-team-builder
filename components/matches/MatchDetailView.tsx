@@ -164,6 +164,9 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
               userProfilePosition={userProfilePosition}
               onTeamsRegenerated={refetchMatchRoster}
               onMatchRefetch={refetchMatchRoster}
+              teams={teams}
+              rosterUsers={usersWithMatchPosition}
+              currentUserId={user.uid}
             />
 
             {isAdmin && currentMatch && (

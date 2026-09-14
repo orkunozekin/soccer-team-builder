@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { RSVPPositionModal } from '@/components/matches/RSVPPositionModal'
 import { RSVPSuccessCelebration } from '@/components/matches/RSVPSuccessCelebration'
 import { PositionSelector } from '@/components/profile/PositionSelector'
 import { ProfileCompleteModal } from '@/components/profile/ProfileCompleteModal'
@@ -19,11 +20,14 @@ import { cancelRSVPAPI, confirmRSVPAPI } from '@/lib/api/client'
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getUserRSVP } from '@/lib/services/rsvpService'
+import { getTeamPositionOccupancy } from '@/lib/utils/pitchLayout'
 import { isProfileComplete } from '@/lib/utils/profile'
 import { hasMatchStarted } from '@/lib/utils/rsvpScheduler'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { useMatchStore } from '@/store/matchStore'
 import { Match } from '@/types/match'
+import { Team } from '@/types/team'
+import { User } from '@/types/user'
 
 interface RSVPButtonProps {
   match: Match
@@ -32,6 +36,9 @@ interface RSVPButtonProps {
   onMatchRefetch?: () => void | Promise<void>
   /** Called after a successful RSVP confirmation */
   onRsvpSuccess?: () => void
+  teams?: Team[]
+  rosterUsers?: User[]
+  currentUserId?: string | null
 }
 
 export function RSVPButton({
@@ -39,6 +46,9 @@ export function RSVPButton({
   onTeamsRegenerated,
   onMatchRefetch,
   onRsvpSuccess,
+  teams = [],
+  rosterUsers = [],
+  currentUserId = null,
 }: RSVPButtonProps) {
   const { user, userData } = useAuth()
   const { isAdmin } = useAdmin()
@@ -48,6 +58,7 @@ export function RSVPButton({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false)
+  const [positionModalOpen, setPositionModalOpen] = useState(false)
   const [showPositionPickerForGkBlock, setShowPositionPickerForGkBlock] =
     useState(false)
   const [positionForRsvp, setPositionForRsvp] = useState<string | null>(null)
@@ -57,6 +68,14 @@ export function RSVPButton({
 
   const dismissCelebration = useCallback(() => setShowCelebration(false), [])
 
+  const uid = currentUserId ?? user?.uid ?? null
+  const userTeam = uid
+    ? teams.find(t => t.playerIds.includes(uid))
+    : undefined
+  const positionOccupancy = useMemo(
+    () => getTeamPositionOccupancy(userTeam, rosterUsers),
+    [userTeam, rosterUsers]
+  )
   useEffect(() => {
     if (user && matchRSVPs.length > 0) {
       const userRSVP = matchRSVPs.find(r => r.userId === user.uid)
@@ -99,6 +118,7 @@ export function RSVPButton({
       setShowCelebration(true)
       onRsvpSuccess?.()
       setPositionForRsvp(null)
+      setPositionModalOpen(false)
       if (regenerated && onTeamsRegenerated) {
         await onTeamsRegenerated()
       }
@@ -109,6 +129,7 @@ export function RSVPButton({
         await onMatchRefetch()
       }
       if (message.includes('2 goalkeepers')) {
+        setPositionModalOpen(false)
         setShowPositionPickerForGkBlock(true)
         setPositionForRsvp(null)
       }
@@ -142,11 +163,11 @@ export function RSVPButton({
       return
     }
 
-    await submitConfirmRSVP()
+    setPositionModalOpen(true)
   }
 
   const handleProfileSaved = () => {
-    submitConfirmRSVP()
+    setPositionModalOpen(true)
   }
 
   const handleRsvpWithPosition = () => {
@@ -233,6 +254,18 @@ export function RSVPButton({
         onOpenChange={setProfileDrawerOpen}
         onSaved={handleProfileSaved}
       />
+      <RSVPPositionModal
+        open={positionModalOpen}
+        onOpenChange={setPositionModalOpen}
+        defaultPosition={userData?.position ?? null}
+        onConfirm={pos => submitConfirmRSVP(pos)}
+        loading={loading}
+        occupancy={
+          Object.keys(positionOccupancy).length > 0
+            ? positionOccupancy
+            : undefined
+        }
+      />
       {showPositionPickerForGkBlock && (
         <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/80 p-3 dark:border-amber-800 dark:bg-amber-950/30">
           <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
@@ -246,6 +279,11 @@ export function RSVPButton({
                 onValueChange={setPositionForRsvp}
                 disabled={loading}
                 hideLabel
+                occupancy={
+                  Object.keys(positionOccupancy).length > 0
+                    ? positionOccupancy
+                    : undefined
+                }
               />
             </div>
             <Button

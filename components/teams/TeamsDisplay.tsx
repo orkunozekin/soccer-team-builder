@@ -11,7 +11,12 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { DroppableTeamCard, PlayerTile, CheckInStatusLegend } from './DroppableTeamCard'
+import {
+  DroppableTeamCard,
+  PlayerTile,
+  CheckInStatusLegend,
+} from './DroppableTeamCard'
+import { SoccerPitch } from './SoccerPitch'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +28,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { cancelRSVPAPI, hostCheckInAllAPI, hostCheckInAPI, transferPlayerAPI } from '@/lib/api/client'
+import {
+  cancelRSVPAPI,
+  hostCheckInAllAPI,
+  hostCheckInAPI,
+  transferPlayerAPI,
+} from '@/lib/api/client'
+import { useFeatureFlag } from '@/lib/flags/useFeatureFlag'
 import { cn } from '@/lib/utils'
 import {
   getAttendanceLabel,
@@ -37,6 +48,7 @@ import { User } from '@/types/user'
 import { useMatchStore } from '@/store/matchStore'
 
 type DragData = { playerId: string; fromTeamId: string }
+type TeamsViewMode = 'pitch' | 'list'
 
 interface TeamsDisplayProps {
   matchId?: string
@@ -93,9 +105,13 @@ export function TeamsDisplay({
   matchTime = null,
   allowCancelRsvp = true,
 }: TeamsDisplayProps) {
+  const showPitchFlag = useFeatureFlag('pitch-lineup-view')
   const dndEnabled = Boolean(isAdmin && matchId && onTeamsChanged)
   const { updateRSVPAttendance, bulkUpdateRSVPAttendance } = useMatchStore()
   const [pageIndex, setPageIndex] = useState(0)
+  const [viewMode, setViewMode] = useState<TeamsViewMode>(() =>
+    isAdmin ? 'list' : 'pitch'
+  )
   const [transferError, setTransferError] = useState('')
   const [transferring, setTransferring] = useState<string | null>(null)
   const [hostCheckInBusy, setHostCheckInBusy] = useState<string | null>(null)
@@ -115,6 +131,14 @@ export function TeamsDisplay({
   useEffect(() => {
     setLocalTeams(teams)
   }, [teams])
+
+  // When the flag turns on, default players to pitch and admins to list (DnD).
+  useEffect(() => {
+    if (!showPitchFlag) return
+    setViewMode(isAdmin ? 'list' : 'pitch')
+  }, [showPitchFlag, isAdmin])
+
+  const showPitchView = showPitchFlag && viewMode === 'pitch'
 
   const attendanceByUserId = useMemo(() => {
     const map = new Map<string, AttendanceLabel>()
@@ -316,7 +340,7 @@ export function TeamsDisplay({
     }
   }
 
-  const content = (
+  const listContent = (
     <div
       className={cn(
         'grid min-w-0 gap-4',
@@ -397,6 +421,32 @@ export function TeamsDisplay({
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
         <h2 className="min-w-0 truncate text-2xl font-bold">Teams</h2>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {showPitchFlag ? (
+            <div
+              className="inline-flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-700"
+              role="group"
+              aria-label="Teams view"
+            >
+              <Button
+                type="button"
+                size="sm"
+                variant={viewMode === 'pitch' ? 'default' : 'ghost'}
+                className="h-8 px-3"
+                onClick={() => setViewMode('pitch')}
+              >
+                Pitch
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                className="h-8 px-3"
+                onClick={() => setViewMode('list')}
+              >
+                List
+              </Button>
+            </div>
+          ) : null}
           {showMarkAllPresent ? (
             <Button
               size="sm"
@@ -413,9 +463,11 @@ export function TeamsDisplay({
         </div>
       </div>
 
-      {attendanceByUserId.size > 0 ? <CheckInStatusLegend /> : null}
+      {!showPitchView && attendanceByUserId.size > 0 ? (
+        <CheckInStatusLegend />
+      ) : null}
 
-      {pages.length > 1 && (
+      {!showPitchView && pages.length > 1 && (
         <div className="flex flex-wrap gap-2">
           {pages.map((p, i) => (
             <Button
@@ -437,27 +489,37 @@ export function TeamsDisplay({
         </div>
       )}
 
-      <DndContext
-        sensors={sensors}
-        onDragStart={handleDragStart}
-        onDragCancel={handleDragCancel}
-        onDragEnd={handleDragEnd}
-      >
-        {content}
-        <DragOverlay dropAnimation={null}>
-          {activeDrag ? (
-            <div className="min-w-[220px] rounded-md border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-950">
-              <PlayerTile
-                user={activeDrag.user}
-                teamColor={activeDrag.teamColor}
-                showGrip
-                attendanceLabel={activeDrag.attendanceLabel}
-                className="cursor-grabbing"
-              />
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+      {showPitchView ? (
+        <SoccerPitch
+          teams={teamsSorted}
+          users={users}
+          matchRSVPs={matchRSVPs}
+          isAdmin={isAdmin}
+          currentUserId={currentUserId}
+        />
+      ) : (
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragCancel={handleDragCancel}
+          onDragEnd={handleDragEnd}
+        >
+          {listContent}
+          <DragOverlay dropAnimation={null}>
+            {activeDrag ? (
+              <div className="min-w-[220px] rounded-md border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-950">
+                <PlayerTile
+                  user={activeDrag.user}
+                  teamColor={activeDrag.teamColor}
+                  showGrip
+                  attendanceLabel={activeDrag.attendanceLabel}
+                  className="cursor-grabbing"
+                />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
     </div>
   )
 }

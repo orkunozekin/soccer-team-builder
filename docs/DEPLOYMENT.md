@@ -70,6 +70,11 @@ When deploying to Vercel, add these environment variables in Vercel Dashboard:
 - `FIREBASE_SERVICE_ACCOUNT_KEY` - Paste the entire JSON content (minified) from your service account file
 - OR `GOOGLE_APPLICATION_CREDENTIALS` - Path to service account file (if using file-based approach)
 
+**LaunchDarkly (optional):**
+
+- `NEXT_PUBLIC_LAUNCHDARKLY_CLIENT_ID` - Client-side ID for feature flags (e.g. `pitch-lineup-view`)
+- Create the boolean flag `pitch-lineup-view` (default off) in the LD dashboard for production
+
 ### Deploy Steps
 
 1. Push your code to GitHub

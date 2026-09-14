@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 import { EmulatorAuthGate } from '@/components/auth/EmulatorAuthGate'
+import { LaunchDarklyProvider } from '@/components/flags/LaunchDarklyProvider'
 import { AdminUiToggle } from '@/components/dev/AdminUiToggle'
 import { MobileViewportFix } from '@/components/layout/MobileViewportFix'
 import { Navigation } from '@/components/layout/Navigation'
@@ -44,10 +45,12 @@ export default function RootLayout({
       <body className={cn(inter.variable, 'font-sans antialiased')}>
         <EmulatorAuthGate>
           <AuthProvider>
-            <MobileViewportFix />
-            <Navigation />
-            {children}
-            <AdminUiToggle />
+            <LaunchDarklyProvider>
+              <MobileViewportFix />
+              <Navigation />
+              {children}
+              <AdminUiToggle />
+            </LaunchDarklyProvider>
           </AuthProvider>
         </EmulatorAuthGate>
       </body>

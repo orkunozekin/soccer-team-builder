@@ -1,7 +1,6 @@
 /**
- * Premier League–style pitch markings (SVG).
- * Center line, center circle, penalty areas + arcs, goal areas, corner arcs.
- * Dimensions: FIFA standard 105m × 68m.
+ * FIFA-style pitch markings (SVG).
+ * Stroke color comes from --pitch-markings CSS variable.
  */
 export function PitchMarkings({ className }: { className?: string }) {
   const W = 105
@@ -16,6 +15,7 @@ export function PitchMarkings({ className }: { className?: string }) {
   const arcR = 9.15
   const cornerR = 1
   const lineWidth = 0.4
+  const stroke = 'var(--pitch-markings)'
 
   return (
     <svg
@@ -29,7 +29,7 @@ export function PitchMarkings({ className }: { className?: string }) {
         y1={cy}
         x2={W}
         y2={cy}
-        stroke="white"
+        stroke={stroke}
         strokeWidth={lineWidth}
         fill="none"
       />
@@ -37,7 +37,7 @@ export function PitchMarkings({ className }: { className?: string }) {
         cx={cx}
         cy={cy}
         r={circleR}
-        stroke="white"
+        stroke={stroke}
         strokeWidth={lineWidth}
         fill="none"
       />
@@ -46,7 +46,7 @@ export function PitchMarkings({ className }: { className?: string }) {
         y={0}
         width={penWidth}
         height={penDepth}
-        stroke="white"
+        stroke={stroke}
         strokeWidth={lineWidth}
         fill="none"
       />
@@ -55,13 +55,13 @@ export function PitchMarkings({ className }: { className?: string }) {
         y={0}
         width={goalWidth}
         height={goalDepth}
-        stroke="white"
+        stroke={stroke}
         strokeWidth={lineWidth}
         fill="none"
       />
       <path
         d={`M ${cx - arcR} ${penDepth} A ${arcR} ${arcR} 0 0 1 ${cx + arcR} ${penDepth}`}
-        stroke="white"
+        stroke={stroke}
         strokeWidth={lineWidth}
         fill="none"
       />
@@ -70,7 +70,7 @@ export function PitchMarkings({ className }: { className?: string }) {
         y={H - penDepth}
         width={penWidth}
         height={penDepth}
-        stroke="white"
+        stroke={stroke}
         strokeWidth={lineWidth}
         fill="none"
       />
@@ -79,37 +79,37 @@ export function PitchMarkings({ className }: { className?: string }) {
         y={H - goalDepth}
         width={goalWidth}
         height={goalDepth}
-        stroke="white"
+        stroke={stroke}
         strokeWidth={lineWidth}
         fill="none"
       />
       <path
         d={`M ${cx - arcR} ${H - penDepth} A ${arcR} ${arcR} 0 0 0 ${cx + arcR} ${H - penDepth}`}
-        stroke="white"
+        stroke={stroke}
         strokeWidth={lineWidth}
         fill="none"
       />
       <path
         d={`M ${cornerR} 0 Q 0 0 0 ${cornerR}`}
-        stroke="white"
+        stroke={stroke}
         strokeWidth={lineWidth}
         fill="none"
       />
       <path
         d={`M ${W - cornerR} 0 Q ${W} 0 ${W} ${cornerR}`}
-        stroke="white"
+        stroke={stroke}
         strokeWidth={lineWidth}
         fill="none"
       />
       <path
         d={`M 0 ${H - cornerR} Q 0 ${H} ${cornerR} ${H}`}
-        stroke="white"
+        stroke={stroke}
         strokeWidth={lineWidth}
         fill="none"
       />
       <path
         d={`M ${W - cornerR} ${H} Q ${W} ${H} ${W} ${H - cornerR}`}
-        stroke="white"
+        stroke={stroke}
         strokeWidth={lineWidth}
         fill="none"
       />

@@ -18,6 +18,16 @@ interface PositionSelectorProps {
   hideLabel?: boolean
   labelClassName?: string
   triggerClassName?: string
+  /**
+   * Optional per-position claim counts for the player's team.
+   * Selecting an occupied position remains allowed; cues are informational.
+   */
+  occupancy?: Record<string, number>
+}
+
+function occupancyLabel(count: number | undefined): string | null {
+  if (!count || count < 1) return null
+  return `${count} claimed`
 }
 
 export function PositionSelector({
@@ -27,6 +37,7 @@ export function PositionSelector({
   hideLabel = false,
   labelClassName,
   triggerClassName,
+  occupancy,
 }: PositionSelectorProps) {
   return (
     <div className="space-y-1.5">
@@ -50,11 +61,16 @@ export function PositionSelector({
           <SelectValue placeholder="Select your position" />
         </SelectTrigger>
         <SelectContent>
-          {SOCCER_POSITIONS.map(position => (
-            <SelectItem key={position.value} value={position.value}>
-              {position.label}
-            </SelectItem>
-          ))}
+          {SOCCER_POSITIONS.map(position => {
+            const claimed = occupancyLabel(occupancy?.[position.value])
+            return (
+              <SelectItem key={position.value} value={position.value}>
+                {claimed
+                  ? `${position.label} · ${claimed}`
+                  : position.label}
+              </SelectItem>
+            )
+          })}
         </SelectContent>
       </Select>
     </div>
