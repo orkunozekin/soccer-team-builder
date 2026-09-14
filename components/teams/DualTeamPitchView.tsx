@@ -30,7 +30,9 @@ export function DualTeamPitchView({
   onPlayerClick,
   currentUserId = null,
 }: DualTeamPitchViewProps) {
-  const aspectRatio = isMobile ? '3/4' : '68/105'
+  // IFAB vertical pitch: width/length = 68/105 (goals top & bottom).
+  // Must match PitchMarkings viewBox or lines stretch incorrectly.
+  const aspectRatio = `${68 / 105}`
 
   return (
     <div

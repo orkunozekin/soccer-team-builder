@@ -38,8 +38,9 @@ export function SinglePitchView({
       ? undefined
       : `scaleX(${scaleX}) scaleY(${scaleY})`
 
-  // Mobile: slightly taller so markers remain readable.
-  const aspectRatio = isMobile ? '4/3' : '105/68'
+  // IFAB vertical pitch: width/length = 68/105 (goals top & bottom).
+  // Must match PitchMarkings viewBox or lines stretch incorrectly.
+  const aspectRatio = `${68 / 105}`
 
   return (
     <div
