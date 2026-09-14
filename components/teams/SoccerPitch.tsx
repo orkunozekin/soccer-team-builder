@@ -61,13 +61,13 @@ export function SoccerPitch({
     )
   }
 
-  // Single team only — one pitch.
+  // Single team only — keep players in their own half (not full-pitch spread).
   if (!primaryPair) {
     const team = sortedTeams[0]
     return (
       <SinglePitchView
         team={team}
-        players={layoutTeamOnPitch(team, users, matchRSVPs)}
+        players={layoutTeamOnPitch(team, users, matchRSVPs, 'bottom')}
         isMobile={isMobile}
         isAdmin={isAdmin}
         onPlayerClick={onPlayerClick}
@@ -120,7 +120,8 @@ export function SoccerPitch({
                 players={layoutTeamOnPitch(
                   selectedExtra,
                   users,
-                  matchRSVPs
+                  matchRSVPs,
+                  'bottom'
                 )}
                 isMobile={isMobile}
                 isAdmin={isAdmin}
@@ -135,7 +136,7 @@ export function SoccerPitch({
               <SinglePitchView
                 key={team.id}
                 team={team}
-                players={layoutTeamOnPitch(team, users, matchRSVPs)}
+                players={layoutTeamOnPitch(team, users, matchRSVPs, 'bottom')}
                 isMobile={isMobile}
                 isAdmin={isAdmin}
                 onPlayerClick={onPlayerClick}

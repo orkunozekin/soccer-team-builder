@@ -345,6 +345,30 @@ describe('layoutTeamOnPitch', () => {
       }
     }
   })
+
+  it('keeps a sparse single-team roster in the bottom half only', () => {
+    const users = [
+      makeUser('gk', { position: 'GK' }),
+      makeUser('st', { position: 'ST' }),
+    ]
+    const team = makeTeam(['gk', 'st'])
+    const rsvps = [
+      makeRSVP('gk', new Date('2024-01-01T10:00:00Z')),
+      makeRSVP('st', new Date('2024-01-01T10:01:00Z')),
+    ]
+
+    const full = layoutTeamOnPitch(team, users, rsvps)
+    const half = layoutTeamOnPitch(team, users, rsvps, 'bottom')
+
+    // Full pitch spreads GK near the top and ST near the bottom.
+    expect(Math.min(...full.map(p => p.position.y))).toBeLessThan(50)
+    expect(Math.max(...full.map(p => p.position.y))).toBeGreaterThan(50)
+
+    // Half-pitch layout (extra / single team) stays on its own side.
+    for (const p of half) {
+      expect(p.position.y).toBeGreaterThan(50)
+    }
+  })
 })
 
 describe('mapToHalfPitch', () => {
