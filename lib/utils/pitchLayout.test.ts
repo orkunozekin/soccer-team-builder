@@ -85,11 +85,34 @@ describe('assignPitchSlots', () => {
     const result = assignPitchSlots(team, users, rsvps)
     const byId = Object.fromEntries(result.map(p => [p.user.uid, p]))
 
-    expect(byId.early.assignedSlot).toBe('CB')
-    expect(byId.early.position).toEqual(POSITION_COORDINATES.CB)
-    // CB adjacency: LB, RB, CDM, CM
-    expect(byId.late.assignedSlot).toBe('LB')
-    expect(byId.late.position).toEqual(POSITION_COORDINATES.LB)
+    // Multiple CBs pair as LCB/RCB instead of stealing LB/RB
+    expect(byId.early.assignedSlot).toBe('LCB')
+    expect(byId.early.position).toEqual(POSITION_COORDINATES.LCB)
+    expect(byId.late.assignedSlot).toBe('RCB')
+    expect(byId.late.position).toEqual(POSITION_COORDINATES.RCB)
+  })
+
+  it('keeps LB/RB free when two CBs are present', () => {
+    const users = [
+      makeUser('cb1', { position: 'CB' }),
+      makeUser('cb2', { position: 'CB' }),
+      makeUser('lb', { position: 'LB' }),
+      makeUser('rb', { position: 'RB' }),
+    ]
+    const team = makeTeam(['cb1', 'cb2', 'lb', 'rb'])
+    const rsvps = users.map((u, i) =>
+      makeRSVP(u.uid, new Date(`2024-01-01T10:0${i}:00Z`))
+    )
+    const result = assignPitchSlots(team, users, rsvps)
+    const byId = Object.fromEntries(result.map(p => [p.user.uid, p]))
+
+    expect(byId.cb1.assignedSlot).toBe('LCB')
+    expect(byId.cb2.assignedSlot).toBe('RCB')
+    expect(byId.lb.assignedSlot).toBe('LB')
+    expect(byId.rb.assignedSlot).toBe('RB')
+    // Fullbacks stay wide of the CB pair
+    expect(byId.lb.position.x).toBeLessThan(byId.cb1.position.x - 10)
+    expect(byId.rb.position.x).toBeGreaterThan(byId.cb2.position.x + 10)
   })
 
   it('sorts players without RSVP after those with rsvpAt', () => {
@@ -160,7 +183,7 @@ describe('assignPitchSlots', () => {
 })
 
 describe('mapToHalfPitch', () => {
-  it('compresses top-half and mirrors bottom-half', () => {
+  it('compresses top-half and mirrors bottom-half Y', () => {
     const gk = POSITION_COORDINATES.GK
     const top = mapToHalfPitch(gk, 'top')
     const bottom = mapToHalfPitch(gk, 'bottom')
@@ -169,6 +192,22 @@ describe('mapToHalfPitch', () => {
     expect(bottom.y).toBeGreaterThan(50)
     expect(top.x).toBe(gk.x)
     expect(bottom.x).toBe(gk.x)
+  })
+
+  it('mirrors X for the top half so LB is team-left (screen-right)', () => {
+    const lb = POSITION_COORDINATES.LB
+    const rb = POSITION_COORDINATES.RB
+    const topLb = mapToHalfPitch(lb, 'top')
+    const topRb = mapToHalfPitch(rb, 'top')
+    const bottomLb = mapToHalfPitch(lb, 'bottom')
+    const bottomRb = mapToHalfPitch(rb, 'bottom')
+
+    // Top team attacks down: LB on screen-right
+    expect(topLb.x).toBeGreaterThan(topRb.x)
+    expect(topLb.x).toBeCloseTo(100 - lb.x)
+    // Bottom team attacks up: LB on screen-left
+    expect(bottomLb.x).toBeLessThan(bottomRb.x)
+    expect(bottomLb.x).toBe(lb.x)
   })
 })
 

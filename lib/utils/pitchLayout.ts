@@ -22,35 +22,42 @@ export interface PlayerOnPitch {
 export const POSITION_COORDINATES: Record<string, PitchPosition> = {
   GK: { x: 50, y: 5 },
 
-  LB: { x: 15, y: 25 },
-  LWB: { x: 10, y: 30 },
+  // Fullbacks sit wide; LCB/RCB are display-only pair slots so duplicate CBs
+  // do not steal LB/RB and stack on top of real fullbacks.
+  LB: { x: 6, y: 20 },
+  LWB: { x: 5, y: 36 },
+  LCB: { x: 30, y: 20 },
   CB: { x: 50, y: 20 },
-  RWB: { x: 90, y: 30 },
-  RB: { x: 85, y: 25 },
+  RCB: { x: 70, y: 20 },
+  RWB: { x: 95, y: 36 },
+  RB: { x: 94, y: 20 },
 
   CDM: { x: 50, y: 40 },
-  LM: { x: 20, y: 50 },
+  LM: { x: 18, y: 50 },
   CM: { x: 50, y: 50 },
   CAM: { x: 50, y: 60 },
-  RM: { x: 80, y: 50 },
+  RM: { x: 82, y: 50 },
 
-  LW: { x: 25, y: 75 },
+  LW: { x: 18, y: 75 },
   CF: { x: 50, y: 80 },
   ST: { x: 50, y: 85 },
-  RW: { x: 75, y: 75 },
+  RW: { x: 82, y: 75 },
 }
 
 /**
  * Overflow targets when preferred slot is taken (in order).
  * Display-only — never mutates stored RSVP/profile position.
+ * LCB/RCB are layout-only slots (not profile position codes).
  */
 export const POSITION_ADJACENCY: Record<string, string[]> = {
   GK: ['CDM', 'CB', 'CM'],
-  LB: ['LWB', 'CB', 'LM', 'CDM'],
-  RB: ['RWB', 'CB', 'RM', 'CDM'],
-  CB: ['LB', 'RB', 'CDM', 'CM'],
-  LWB: ['LB', 'LM', 'LW', 'CDM'],
-  RWB: ['RB', 'RM', 'RW', 'CDM'],
+  LB: ['LWB', 'LM', 'LCB', 'CDM'],
+  RB: ['RWB', 'RM', 'RCB', 'CDM'],
+  CB: ['LCB', 'RCB', 'CDM', 'CM'],
+  LCB: ['CB', 'LB', 'CDM', 'LWB'],
+  RCB: ['CB', 'RB', 'CDM', 'RWB'],
+  LWB: ['LB', 'LM', 'LW', 'LCB'],
+  RWB: ['RB', 'RM', 'RW', 'RCB'],
   CDM: ['CM', 'CB', 'CAM'],
   CM: ['CDM', 'CAM', 'LM', 'RM'],
   CAM: ['CM', 'CF', 'ST', 'CDM'],
@@ -118,7 +125,9 @@ export function getOffsetPosition(
 
 /**
  * Map a full-pitch slot into the top or bottom half for dual-team display.
- * Team 1 (top) attacks down; team 2 (bottom) attacks up.
+ * Team 1 (top) attacks down — mirror X so the team's left (LB) is on
+ * screen-right when facing the opponent.
+ * Team 2 (bottom) attacks up — keep X as-is (LB on screen-left).
  */
 export function mapToHalfPitch(
   position: PitchPosition,
@@ -128,7 +137,7 @@ export function mapToHalfPitch(
   const margin = 2
   if (half === 'top') {
     return {
-      x: position.x,
+      x: 100 - position.x,
       y: margin + position.y * scale,
     }
   }
@@ -204,7 +213,24 @@ export function assignPitchSlots(
   }[] = []
 
   // Pass 1: earliest per preferred group claims the canonical slot.
+  // Multiple CBs pair as LCB/RCB so they do not sit on LB/RB.
   for (const [preferred, list] of Array.from(groups.entries())) {
+    if (preferred === 'CB' && list.length >= 2) {
+      const pairSlots = ['LCB', 'RCB'] as const
+      const paired = Math.min(list.length, pairSlots.length)
+      for (let i = 0; i < paired; i++) {
+        const slot = pairSlots[i]
+        claimedSlots.add(slotKey(slot))
+        assignments.push({
+          user: list[i].user,
+          preferred,
+          assignedSlot: slot,
+          position: { ...getPitchPosition(slot) },
+        })
+      }
+      continue
+    }
+
     const earliest = list[0]
     if (!earliest) continue
     const key = slotKey(preferred)
@@ -219,8 +245,12 @@ export function assignPitchSlots(
 
   // Pass 2: remaining players (global rsvpAt order) take nearest free adjacent.
   const remaining: SlotCandidate[] = []
-  for (const list of Array.from(groups.values())) {
-    for (let i = 1; i < list.length; i++) {
+  for (const [preferred, list] of Array.from(groups.entries())) {
+    const alreadyAssigned =
+      preferred === 'CB' && list.length >= 2
+        ? Math.min(list.length, 2)
+        : 1
+    for (let i = alreadyAssigned; i < list.length; i++) {
       remaining.push(list[i])
     }
   }
