@@ -109,7 +109,7 @@ export function TeamsDisplay({
   const dndEnabled = Boolean(isAdmin && matchId && onTeamsChanged)
   const { updateRSVPAttendance, bulkUpdateRSVPAttendance } = useMatchStore()
   const [pageIndex, setPageIndex] = useState(0)
-  const [viewMode, setViewMode] = useState<TeamsViewMode>('pitch')
+  const [viewMode, setViewMode] = useState<TeamsViewMode>('list')
   const [transferError, setTransferError] = useState('')
   const [transferring, setTransferring] = useState<string | null>(null)
   const [hostCheckInBusy, setHostCheckInBusy] = useState<string | null>(null)
@@ -130,10 +130,10 @@ export function TeamsDisplay({
     setLocalTeams(teams)
   }, [teams])
 
-  // When the flag turns on, show pitch by default (admins can switch to List for DnD).
+  // When the flag turns on, keep list as the default (Pitch is opt-in).
   useEffect(() => {
     if (!showPitchFlag) return
-    setViewMode('pitch')
+    setViewMode('list')
   }, [showPitchFlag])
 
   const showPitchView = showPitchFlag && viewMode === 'pitch'
@@ -428,20 +428,20 @@ export function TeamsDisplay({
               <Button
                 type="button"
                 size="sm"
-                variant={viewMode === 'pitch' ? 'default' : 'ghost'}
-                className="h-8 px-3"
-                onClick={() => setViewMode('pitch')}
-              >
-                Pitch
-              </Button>
-              <Button
-                type="button"
-                size="sm"
                 variant={viewMode === 'list' ? 'default' : 'ghost'}
                 className="h-8 px-3"
                 onClick={() => setViewMode('list')}
               >
                 List
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={viewMode === 'pitch' ? 'default' : 'ghost'}
+                className="h-8 px-3"
+                onClick={() => setViewMode('pitch')}
+              >
+                Pitch
               </Button>
             </div>
           ) : null}
