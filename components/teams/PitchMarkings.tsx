@@ -106,8 +106,10 @@ export function PitchMarkings({ className }: { className?: string }) {
         fill={stroke}
         stroke="none"
       />
+      {/* Penalty arc ("D"): only the segment outside the box, toward midfield.
+          SVG y grows downward, so top arc uses sweep=0; bottom uses sweep=1. */}
       <path
-        d={`M ${cx - arcChordHalf} ${PENALTY_DEPTH} A ${CIRCLE_R} ${CIRCLE_R} 0 0 1 ${cx + arcChordHalf} ${PENALTY_DEPTH}`}
+        d={`M ${cx - arcChordHalf} ${PENALTY_DEPTH} A ${CIRCLE_R} ${CIRCLE_R} 0 0 0 ${cx + arcChordHalf} ${PENALTY_DEPTH}`}
         stroke={stroke}
         strokeWidth={LINE}
         fill="none"
@@ -140,7 +142,7 @@ export function PitchMarkings({ className }: { className?: string }) {
         stroke="none"
       />
       <path
-        d={`M ${cx - arcChordHalf} ${LENGTH - PENALTY_DEPTH} A ${CIRCLE_R} ${CIRCLE_R} 0 0 0 ${cx + arcChordHalf} ${LENGTH - PENALTY_DEPTH}`}
+        d={`M ${cx - arcChordHalf} ${LENGTH - PENALTY_DEPTH} A ${CIRCLE_R} ${CIRCLE_R} 0 0 1 ${cx + arcChordHalf} ${LENGTH - PENALTY_DEPTH}`}
         stroke={stroke}
         strokeWidth={LINE}
         fill="none"

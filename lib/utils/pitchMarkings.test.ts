@@ -47,4 +47,14 @@ describe('IFAB pitch marking proportions', () => {
     // Arc must not span the full box width
     expect(2 * arcChordHalf).toBeLessThan(PENALTY_WIDTH)
   })
+
+  it('places the arc apex outside the box (toward midfield), not inside', () => {
+    // Top goal: apex of the outside arc is further from the goal than the box line
+    const topApex = PENALTY_MARK + CIRCLE_R
+    expect(topApex).toBeGreaterThan(PENALTY_DEPTH)
+    // Bottom goal: apex is closer to midfield than the box line
+    const bottomBoxLine = LENGTH - PENALTY_DEPTH
+    const bottomApex = LENGTH - PENALTY_MARK - CIRCLE_R
+    expect(bottomApex).toBeLessThan(bottomBoxLine)
+  })
 })
