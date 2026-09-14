@@ -222,7 +222,7 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
         </div>
 
         {isAdmin && (
-          <div className="mt-10">
+          <div className="mt-4">
             <RsvpOrderCard matchRSVPs={matchRSVPs} users={rosterUsers} />
           </div>
         )}

@@ -81,7 +81,7 @@ describe('TeamsDisplay pitch flag', () => {
     expect(screen.queryByText('Pitch')).toBeNull()
   })
 
-  it('shows Pitch/List toggle when flag is on and defaults to pitch for admins', async () => {
+  it('shows List/Pitch toggle when flag is on and defaults to list', async () => {
     const user = userEvent.setup()
     render(
       <FeatureFlagContext.Provider value={{ 'pitch-lineup-view': true }}>
@@ -90,13 +90,17 @@ describe('TeamsDisplay pitch flag', () => {
     )
 
     expect(screen.getByRole('group', { name: 'Teams view' })).toBeInTheDocument()
-    // Defaults to pitch (team labels on dual pitch)
-    expect(screen.getAllByText(/Team 1|Team 2/).length).toBeGreaterThan(0)
+    // Defaults to list — team cards, not pitch markers
+    expect(screen.getByText('Team 1')).toBeInTheDocument()
+
+    const buttons = screen.getAllByRole('button', { name: /list|pitch/i })
+    expect(buttons.map(b => b.textContent)).toEqual(['List', 'Pitch'])
+
+    await user.click(screen.getByRole('button', { name: 'Pitch' }))
+    expect(screen.queryByText('Team 1')).toBeNull()
+    expect(screen.getByText('u1')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'List' }))
     expect(screen.getByText('Team 1')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Pitch' }))
-    expect(screen.getAllByText(/Team 1|Team 2/).length).toBeGreaterThan(0)
   })
 })

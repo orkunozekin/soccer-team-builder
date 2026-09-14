@@ -19,39 +19,54 @@ export interface PlayerOnPitch {
   preferredPosition: string
 }
 
-export const POSITION_COORDINATES: Record<string, PitchPosition> = {
-  GK: { x: 50, y: 3 },
+/** Keep markers inset so name labels stay inside the pitch. */
+export const PITCH_EDGE_MARGIN_X = 14
+export const PITCH_EDGE_MARGIN_Y = 5
 
-  // Fullbacks sit wide; LCB/RCB are display-only pair slots so duplicate CBs
+export const POSITION_COORDINATES: Record<string, PitchPosition> = {
+  GK: { x: 50, y: 5 },
+
+  // Fullbacks / wing-backs sit wide but inset from the touchline so names
+  // do not clip. LCB/RCB are display-only pair slots so duplicate CBs
   // do not steal LB/RB and stack on top of real fullbacks.
-  LB: { x: 6, y: 14 },
-  LWB: { x: 5, y: 26 },
-  LCB: { x: 30, y: 14 },
-  CB: { x: 50, y: 14 },
-  RCB: { x: 70, y: 14 },
-  RWB: { x: 95, y: 26 },
-  RB: { x: 94, y: 14 },
+  LB: { x: 16, y: 16 },
+  LWB: { x: 14, y: 30 },
+  LCB: { x: 34, y: 16 },
+  CB: { x: 50, y: 16 },
+  RCB: { x: 66, y: 16 },
+  RWB: { x: 86, y: 30 },
+  RB: { x: 84, y: 16 },
 
   // Central spine: keep ST short of midfield so opposing strikers do not collide,
   // while still leaving label room between CDM/CM/CAM/ST.
-  CDM: { x: 50, y: 24 },
-  LM: { x: 6, y: 44 },
-  LCM: { x: 35, y: 44 },
-  CM: { x: 50, y: 44 },
-  RCM: { x: 65, y: 44 },
-  RM: { x: 94, y: 44 },
-  CAM: { x: 50, y: 60 },
+  // LCDM/RCDM, LCAM/RCAM, LCF/RCF, LST/RST are display-only pair slots so
+  // duplicate CDM/CAM/CF/ST sit side-by-side instead of stacking vertically.
+  LCDM: { x: 38, y: 28 },
+  CDM: { x: 50, y: 28 },
+  RCDM: { x: 62, y: 28 },
+  LM: { x: 16, y: 46 },
+  LCM: { x: 35, y: 46 },
+  CM: { x: 50, y: 46 },
+  RCM: { x: 65, y: 46 },
+  RM: { x: 84, y: 46 },
+  LCAM: { x: 38, y: 62 },
+  CAM: { x: 50, y: 62 },
+  RCAM: { x: 62, y: 62 },
 
-  LW: { x: 6, y: 74 },
-  CF: { x: 50, y: 76 },
-  ST: { x: 50, y: 80 },
-  RW: { x: 94, y: 74 },
+  LW: { x: 16, y: 76 },
+  LCF: { x: 38, y: 78 },
+  CF: { x: 50, y: 78 },
+  RCF: { x: 62, y: 78 },
+  LST: { x: 38, y: 82 },
+  ST: { x: 50, y: 82 },
+  RST: { x: 62, y: 82 },
+  RW: { x: 84, y: 76 },
 }
 
 /**
  * Overflow targets when preferred slot is taken (in order).
  * Display-only — never mutates stored RSVP/profile position.
- * LCB/RCB/LCM/RCM are layout-only slots (not profile position codes).
+ * LCB/RCB/LCM/RCM/LCDM/RCDM/LCAM/RCAM/LCF/RCF/LST/RST are layout-only slots.
  */
 export const POSITION_ADJACENCY: Record<string, string[]> = {
   GK: ['CDM', 'CB', 'CM'],
@@ -62,17 +77,25 @@ export const POSITION_ADJACENCY: Record<string, string[]> = {
   RCB: ['CB', 'RB', 'CDM', 'RWB'],
   LWB: ['LB', 'LM', 'LW', 'LCB'],
   RWB: ['RB', 'RM', 'RW', 'RCB'],
-  CDM: ['CM', 'CB', 'CAM'],
+  CDM: ['LCDM', 'RCDM', 'CM', 'CB', 'CAM'],
+  LCDM: ['CDM', 'LCM', 'CB', 'CAM'],
+  RCDM: ['CDM', 'RCM', 'CB', 'CAM'],
   CM: ['LCM', 'RCM', 'CDM', 'CAM'],
   LCM: ['CM', 'LM', 'CDM', 'CAM'],
   RCM: ['CM', 'RM', 'CDM', 'CAM'],
-  CAM: ['CM', 'CF', 'ST', 'CDM'],
+  CAM: ['LCAM', 'RCAM', 'CM', 'CF', 'ST', 'CDM'],
+  LCAM: ['CAM', 'LCM', 'CF', 'CDM'],
+  RCAM: ['CAM', 'RCM', 'CF', 'CDM'],
   LM: ['LW', 'LWB', 'LCM', 'CAM'],
   RM: ['RW', 'RWB', 'RCM', 'CAM'],
   LW: ['LM', 'CF', 'ST', 'LWB'],
   RW: ['RM', 'CF', 'ST', 'RWB'],
-  CF: ['ST', 'CAM', 'LW', 'RW'],
-  ST: ['CF', 'CAM', 'LW', 'RW'],
+  CF: ['LCF', 'RCF', 'ST', 'CAM', 'LW', 'RW'],
+  LCF: ['CF', 'LST', 'CAM', 'LW'],
+  RCF: ['CF', 'RST', 'CAM', 'RW'],
+  ST: ['LST', 'RST', 'CF', 'CAM', 'LW', 'RW'],
+  LST: ['ST', 'LCF', 'CAM', 'LW'],
+  RST: ['ST', 'RCF', 'CAM', 'RW'],
 }
 
 function normalizePosition(position: string | null | undefined): string {
@@ -115,17 +138,26 @@ export function getPitchPosition(position: string | null): PitchPosition {
 }
 
 /**
- * Escape hatch: small horizontal nudge when all adjacent role slots are taken.
+ * Escape hatch: small 2D nudge when all adjacent role slots are taken.
  */
 export function getOffsetPosition(
   basePosition: PitchPosition,
   index: number,
   total: number
 ): PitchPosition {
-  const offsetX = (index - (total - 1) / 2) * 8
+  const col = index % 3
+  const row = Math.floor(index / 3)
+  const offsetX = (col - ((total - 1) % 3) / 2) * 10
+  const offsetY = row * 8
   return {
-    x: Math.max(5, Math.min(95, basePosition.x + offsetX)),
-    y: basePosition.y,
+    x: Math.max(
+      PITCH_EDGE_MARGIN_X,
+      Math.min(100 - PITCH_EDGE_MARGIN_X, basePosition.x + offsetX)
+    ),
+    y: Math.max(
+      PITCH_EDGE_MARGIN_Y,
+      Math.min(100 - PITCH_EDGE_MARGIN_Y, basePosition.y + offsetY)
+    ),
   }
 }
 
@@ -153,6 +185,117 @@ export function mapToHalfPitch(
     x: position.x,
     y: 100 - margin - position.y * scale,
   }
+}
+
+export interface SeparatePlayersOptions {
+  minX?: number
+  maxX?: number
+  minY?: number
+  maxY?: number
+  /** Minimum horizontal gap between marker centers (%). */
+  minSepX?: number
+  /** Minimum vertical gap between marker centers (%). */
+  minSepY?: number
+  iterations?: number
+}
+
+/**
+ * Push markers apart so nodes and name labels do not overlap.
+ * Uses an elliptical minimum-distance model (wider than tall) because
+ * names sit under nodes and need horizontal clearance.
+ */
+export function separatePlayers(
+  players: PlayerOnPitch[],
+  options: SeparatePlayersOptions = {}
+): PlayerOnPitch[] {
+  if (players.length <= 1) return players
+
+  const minX = options.minX ?? PITCH_EDGE_MARGIN_X
+  const maxX = options.maxX ?? 100 - PITCH_EDGE_MARGIN_X
+  const minY = options.minY ?? PITCH_EDGE_MARGIN_Y
+  const maxY = options.maxY ?? 100 - PITCH_EDGE_MARGIN_Y
+  const minSepX = options.minSepX ?? 15
+  const minSepY = options.minSepY ?? 11
+  const iterations = options.iterations ?? 50
+
+  const positions = players.map(p => ({ ...p.position }))
+
+  for (let iter = 0; iter < iterations; iter++) {
+    let moved = false
+
+    for (let i = 0; i < positions.length; i++) {
+      for (let j = i + 1; j < positions.length; j++) {
+        const a = positions[i]
+        const b = positions[j]
+        let dx = b.x - a.x
+        let dy = b.y - a.y
+
+        if (dx === 0 && dy === 0) {
+          dx = (i % 2 === 0 ? 1 : -1) * 0.35
+          dy = 0.35
+        }
+
+        const nx = dx / minSepX
+        const ny = dy / minSepY
+        const dist2 = nx * nx + ny * ny
+        if (dist2 >= 1) continue
+
+        const dist = Math.sqrt(dist2)
+        const push = ((1 - dist) / 2) * 0.85
+        let ux = (nx / dist) * push * minSepX
+        let uy = (ny / dist) * push * minSepY
+
+        // Same preferred role (e.g. two STs) should stay on one horizontal band.
+        if (players[i].preferredPosition === players[j].preferredPosition) {
+          ux *= 1.2
+          uy *= 0.2
+        }
+
+        a.x = Math.max(minX, Math.min(maxX, a.x - ux))
+        a.y = Math.max(minY, Math.min(maxY, a.y - uy))
+        b.x = Math.max(minX, Math.min(maxX, b.x + ux))
+        b.y = Math.max(minY, Math.min(maxY, b.y + uy))
+        moved = true
+      }
+    }
+
+    if (!moved) break
+  }
+
+  return players.map((p, i) => ({
+    ...p,
+    position: positions[i],
+  }))
+}
+
+/**
+ * Assign slots, optionally map to a dual-pitch half, then separate overlaps.
+ */
+export function layoutTeamOnPitch(
+  team: Team,
+  users: User[],
+  matchRSVPs: RSVP[] = [],
+  half?: 'top' | 'bottom'
+): PlayerOnPitch[] {
+  let players = assignPitchSlots(team, users, matchRSVPs)
+
+  if (half) {
+    players = players.map(p => ({
+      ...p,
+      position: mapToHalfPitch(p.position, half),
+    }))
+    return separatePlayers(players, {
+      minX: PITCH_EDGE_MARGIN_X,
+      maxX: 100 - PITCH_EDGE_MARGIN_X,
+      minY: half === 'top' ? 3 : 52,
+      maxY: half === 'top' ? 48 : 97,
+      // Half-pitch is vertically compressed; keep enough room for names.
+      minSepX: 14,
+      minSepY: 9,
+    })
+  }
+
+  return separatePlayers(players)
 }
 
 /**
@@ -221,11 +364,15 @@ export function assignPitchSlots(
   }[] = []
 
   // Pass 1: earliest per preferred group claims the canonical slot.
-  // Multiple CBs/CMs pair horizontally (LCB/RCB, LCM/RCM) so duplicates
-  // stay on the same band instead of stacking on fullbacks or wing slots.
+  // Multiple players at the same central role pair horizontally so
+  // duplicates stay on one band (e.g. two STs side-by-side, not stacked).
   const horizontalPairs: Record<string, readonly [string, string]> = {
     CB: ['LCB', 'RCB'],
+    CDM: ['LCDM', 'RCDM'],
     CM: ['LCM', 'RCM'],
+    CAM: ['LCAM', 'RCAM'],
+    CF: ['LCF', 'RCF'],
+    ST: ['LST', 'RST'],
   }
 
   for (const [preferred, list] of Array.from(groups.entries())) {
@@ -326,5 +473,5 @@ export function getTeamPlayers(
   users: User[],
   matchRSVPs: RSVP[] = []
 ): PlayerOnPitch[] {
-  return assignPitchSlots(team, users, matchRSVPs)
+  return layoutTeamOnPitch(team, users, matchRSVPs)
 }

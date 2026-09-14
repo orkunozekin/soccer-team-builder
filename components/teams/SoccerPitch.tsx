@@ -5,11 +5,7 @@ import { DualTeamPitchView } from './DualTeamPitchView'
 import { SinglePitchView } from './SinglePitchView'
 import { TeamToggle } from './TeamToggle'
 import { useWindowWidth } from '@/lib/hooks/useWindowWidth'
-import {
-  getTeamPlayers,
-  mapToHalfPitch,
-  type PlayerOnPitch,
-} from '@/lib/utils/pitchLayout'
+import { layoutTeamOnPitch } from '@/lib/utils/pitchLayout'
 import type { RSVP } from '@/types/rsvp'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
@@ -22,16 +18,6 @@ export interface SoccerPitchProps {
   onPlayerClick?: (userId: string, teamId: string | null) => void
   isAdmin?: boolean
   currentUserId?: string | null
-}
-
-function withHalfPositions(
-  players: PlayerOnPitch[],
-  half: 'top' | 'bottom'
-): PlayerOnPitch[] {
-  return players.map(p => ({
-    ...p,
-    position: mapToHalfPitch(p.position, half),
-  }))
 }
 
 export function SoccerPitch({
@@ -81,12 +67,11 @@ export function SoccerPitch({
     return (
       <SinglePitchView
         team={team}
-        players={getTeamPlayers(team, users, matchRSVPs)}
+        players={layoutTeamOnPitch(team, users, matchRSVPs)}
         isMobile={isMobile}
         isAdmin={isAdmin}
         onPlayerClick={onPlayerClick}
         currentUserId={currentUserId}
-        label={team.name || `Team ${team.teamNumber}`}
       />
     )
   }
@@ -96,14 +81,8 @@ export function SoccerPitch({
     <DualTeamPitchView
       teamTop={teamTop}
       teamBottom={teamBottom}
-      playersTop={withHalfPositions(
-        getTeamPlayers(teamTop, users, matchRSVPs),
-        'top'
-      )}
-      playersBottom={withHalfPositions(
-        getTeamPlayers(teamBottom, users, matchRSVPs),
-        'bottom'
-      )}
+      playersTop={layoutTeamOnPitch(teamTop, users, matchRSVPs, 'top')}
+      playersBottom={layoutTeamOnPitch(teamBottom, users, matchRSVPs, 'bottom')}
       isMobile={isMobile}
       isAdmin={isAdmin}
       onPlayerClick={onPlayerClick}
@@ -138,14 +117,15 @@ export function SoccerPitch({
             {selectedExtra ? (
               <SinglePitchView
                 team={selectedExtra}
-                players={getTeamPlayers(selectedExtra, users, matchRSVPs)}
+                players={layoutTeamOnPitch(
+                  selectedExtra,
+                  users,
+                  matchRSVPs
+                )}
                 isMobile={isMobile}
                 isAdmin={isAdmin}
                 onPlayerClick={onPlayerClick}
                 currentUserId={currentUserId}
-                label={
-                  selectedExtra.name || `Team ${selectedExtra.teamNumber}`
-                }
               />
             ) : null}
           </>
@@ -155,12 +135,11 @@ export function SoccerPitch({
               <SinglePitchView
                 key={team.id}
                 team={team}
-                players={getTeamPlayers(team, users, matchRSVPs)}
+                players={layoutTeamOnPitch(team, users, matchRSVPs)}
                 isMobile={isMobile}
                 isAdmin={isAdmin}
                 onPlayerClick={onPlayerClick}
                 currentUserId={currentUserId}
-                label={team.name || `Team ${team.teamNumber}`}
               />
             ))}
           </div>

@@ -14,9 +14,6 @@ interface SinglePitchViewProps {
   flipX?: boolean
   flipY?: boolean
   currentUserId?: string | null
-  /** Optional label overlay (e.g. team name on dual pitch halves). */
-  label?: string
-  labelSide?: 'top' | 'bottom'
 }
 
 export function SinglePitchView({
@@ -28,8 +25,6 @@ export function SinglePitchView({
   flipX = false,
   flipY = false,
   currentUserId = null,
-  label,
-  labelSide = 'top',
 }: SinglePitchViewProps) {
   const scaleX = flipX ? -1 : 1
   const scaleY = flipY ? -1 : 1
@@ -53,16 +48,6 @@ export function SinglePitchView({
     >
       <div className="relative h-full w-full overflow-visible">
         <PitchSurface />
-        {label ? (
-          <div
-            className={`pointer-events-none absolute left-2 z-20 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90 ${
-              labelSide === 'top' ? 'top-2' : 'bottom-2'
-            }`}
-            style={{ backgroundColor: `${team.color || '#1e40af'}cc` }}
-          >
-            {label}
-          </div>
-        ) : null}
         {players.map(({ user, position }) => (
           <PlayerMarker
             key={user.uid}

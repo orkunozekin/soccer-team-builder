@@ -1,10 +1,7 @@
 'use client'
 
 import { formatPitchDisplayName } from '@/lib/utils/displayName'
-import {
-  formatJerseyDisplay,
-  formatPositionDisplay,
-} from '@/lib/utils/jerseyNumber'
+import { formatJerseyDisplay } from '@/lib/utils/jerseyNumber'
 import { PitchPosition } from '@/lib/utils/pitchLayout'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { Team } from '@/types/team'
@@ -68,27 +65,18 @@ export function PlayerMarker({
         </span>
       </div>
       <div
-        className={`absolute left-1/2 top-full mt-1 flex -translate-x-1/2 flex-col items-center gap-0.5 text-center ${
+        className={`absolute left-1/2 top-full mt-0 flex -translate-x-1/2 flex-col items-center text-center ${
           isMobile ? 'w-[5.75rem]' : 'w-[7.5rem]'
         }`}
       >
         <span
-          className={`block truncate whitespace-nowrap font-bold leading-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] ${
-            isMobile ? 'text-sm' : 'text-base'
+          className={`block truncate whitespace-nowrap font-bold leading-none text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] ${
+            isMobile ? 'text-[11px]' : 'text-xs'
           }`}
           title={user.displayName}
         >
           {formatPitchDisplayName(user.displayName, isMobile ? 14 : 18)}
         </span>
-        {user.position && (
-          <span
-            className={`font-semibold leading-none text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)] ${
-              isMobile ? 'text-xs' : 'text-sm'
-            }`}
-          >
-            {formatPositionDisplay(user.position)}
-          </span>
-        )}
       </div>
     </>
   )
