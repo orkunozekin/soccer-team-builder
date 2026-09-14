@@ -11,6 +11,7 @@ import { FeatureFlagContext } from '@/components/flags/FeatureFlagContext'
 import {
   FEATURE_FLAG_DEFAULTS,
   FEATURE_FLAG_KEYS,
+  getLocalFeatureFlagOverrides,
   type FeatureFlagKey,
 } from '@/lib/flags/featureFlags'
 import { useAuth } from '@/lib/hooks/useAuth'
@@ -61,7 +62,10 @@ function LaunchDarklyBridge({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
-    setTypedFlags(readTypedFlags(flags as Record<string, unknown>))
+    setTypedFlags({
+      ...readTypedFlags(flags as Record<string, unknown>),
+      ...getLocalFeatureFlagOverrides(),
+    })
   }, [flags])
 
   useEffect(() => {
@@ -100,7 +104,9 @@ export function LaunchDarklyProvider({ children }: { children: ReactNode }) {
 
   if (!CLIENT_SIDE_ID) {
     return (
-      <FeatureFlagContext.Provider value={FEATURE_FLAG_DEFAULTS}>
+      <FeatureFlagContext.Provider
+        value={{ ...FEATURE_FLAG_DEFAULTS, ...getLocalFeatureFlagOverrides() }}
+      >
         {children}
       </FeatureFlagContext.Provider>
     )
