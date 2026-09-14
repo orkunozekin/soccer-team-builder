@@ -46,6 +46,16 @@ GOOGLE_APPLICATION_CREDENTIALS=./firebase-service-account.json
 
 **Note:** Replace the placeholder values with your actual Firebase project values.
 
+### Optional: LaunchDarkly feature flags
+
+To enable gradual rollouts (for example the pitch lineup view), add a client-side ID:
+
+```env
+NEXT_PUBLIC_LAUNCHDARKLY_CLIENT_ID=your_client_side_id
+```
+
+Create a boolean flag named `pitch-lineup-view` (default `false`) in the LaunchDarkly dashboard for each environment. When the env var is unset or the flag is off, the match teams UI stays on the list view.
+
 ## Quick Start
 
 1. Copy `.env.local.example` to `.env.local` (or create it manually)

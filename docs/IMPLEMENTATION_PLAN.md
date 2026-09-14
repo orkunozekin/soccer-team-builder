@@ -583,48 +583,31 @@ The position field is stored as a string in Firestore, allowing flexibility for 
 
 ### Soccer Pitch Visualization
 
-The primary team display will show rosters on a soccer pitch visualization:
+Pitch lineup is gated by LaunchDarkly flag `pitch-lineup-view` (default off). When the flag is off, `TeamsDisplay` shows the list/card view only. When on, users get a Pitch / List toggle (players default to Pitch; admins default to List for DnD/check-in).
 
 - **Visual Design**:
-  - Green field background with white field markings (center line, center circle, penalty boxes, goal areas)
-  - Two halves of the pitch side-by-side for Team 1 and Team 2
-  - Players displayed as positioned elements with jersey number, name, and position badge
-  - Color-coded by team (using team colors)
-  - Bench area displayed below or beside the pitch
+  - Green field with white markings (CSS tokens `--pitch-surface`, `--pitch-markings`)
+  - Teams 1–2 share one mirrored dual-team pitch (team 1 top half attacking down; team 2 bottom half attacking up)
+  - Team 3+ use separate pitches (mobile may use `TeamToggle`)
+  - Compact player markers: jersey number, truncated name, position code; GK kit distinct
+  - List view retained for admin DnD, check-in, and cancel RSVP
 
-- **Position Mapping**:
-  - Players are positioned on the pitch based on their position attribute
-  - Goalkeepers at the goal area
-  - Defenders in defensive third
-  - Midfielders in middle third
-  - Forwards in attacking third
-  - Players without positions default to center positions
-  - Multiple players in same position are offset horizontally
+- **Position Mapping** (display-only; does not rewrite `RSVP.position`):
+  - Match position = RSVP snapshot else profile (`usersWithMatchPosition`)
+  - Earliest `rsvpAt` claims the canonical preferred slot; later duplicates take nearest free adjacent roles (`POSITION_ADJACENCY` in `pitchLayout.ts`)
+  - Missing position defaults to CM; escape hatch is a small horizontal nudge when all adjacent slots are taken
 
-- **Interactivity** (Admin only):
-  - Drag-and-drop players between positions on the pitch
-  - Click players to transfer between teams or bench
-  - Visual feedback during transfers
+- **Interactivity**:
+  - Admin team transfers stay on the List view (no pitch-surface DnD in v1)
+  - Position picker shows team occupancy cues (`CB · 2 claimed`); collisions remain allowed
 
-- **Responsive Design** (100% responsive requirement):
-  - **Desktop (≥1024px)**:
-    - Side-by-side pitch view (both teams visible)
-    - Full player information displayed
-    - Hover interactions for player details
-    - Drag-and-drop enabled for admin
-  - **Tablet (768px-1023px)**:
-    - Stacked pitch view (teams vertically stacked)
-    - Full width pitch for better visibility
-    - Touch-optimized interactions
-    - Simplified but complete player information
-  - **Mobile (<768px)**:
-    - Single pitch view with team toggle button/switcher
-    - Touch-friendly player badges (44x44px minimum)
-    - Swipe gestures for team switching (optional)
-    - Abbreviated player names if needed
-    - Bottom sheet or full-screen modals for player details
-    - Optimized font sizes and spacing
-    - Horizontal scroll option for pitch if needed
+- **Feature flags**:
+  - Client SDK: `launchdarkly-react-client-sdk` via `LaunchDarklyProvider` under `AuthProvider`
+  - Hook: `useFeatureFlag('pitch-lineup-view')` (fail-closed when client ID missing)
+
+- **Responsive Design**:
+  - Dual pitch scales for mobile/desktop; extra teams use toggle or stacked single pitches
+  - Marker sizes tuned for dense ~11-player readability on small screens
 
 ## Responsive Design Requirements
 

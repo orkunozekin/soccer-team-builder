@@ -36,43 +36,55 @@ export function PlayerMarker({
 }: PlayerMarkerProps) {
   const isGK = isGoalkeeper(user.position)
   const clickable = isAdmin && onPlayerClick
+  const size = isMobile ? 30 : 40
 
   const content = (
     <>
       <div
-        className={`flex flex-col items-center justify-center rounded-full border-2 shadow-md ${
+        className={`relative flex items-center justify-center rounded-full border shadow-sm ${
           isCurrentUser
-            ? 'animate-headcount-bump border-red-50 ring-2 ring-red-50/60'
-            : 'border-white'
+            ? 'animate-headcount-bump border-red-50 ring-2 ring-red-50/50'
+            : 'border-white/90'
         }`}
         style={{
-          width: isMobile ? 28 : 44,
-          height: isMobile ? 28 : 44,
-          minWidth: isMobile ? 28 : 44,
-          minHeight: isMobile ? 28 : 44,
-          backgroundColor: isGK ? '#eab308' : team.color || '#1e40af',
+          width: size,
+          height: size,
+          minWidth: size,
+          minHeight: size,
+          backgroundColor: isGK ? '#f5d76e' : team.color || '#1e40af',
         }}
       >
+        {/* Silhouette ring — denser pro-lineup look without requiring photos */}
         <span
-          className={`font-bold tabular-nums leading-none drop-shadow-sm ${
+          className="pointer-events-none absolute inset-[2px] rounded-full bg-black/10"
+          aria-hidden
+        />
+        <span
+          className={`relative z-[1] font-bold tabular-nums leading-none drop-shadow-sm ${
             isGK ? 'text-zinc-900' : 'text-white'
-          } ${isMobile ? 'text-[10px]' : 'text-sm'}`}
+          } ${isMobile ? 'text-xs' : 'text-base'}`}
         >
           {formatJerseyDisplay(user.jerseyNumber)}
         </span>
       </div>
       <div
-        className={`absolute left-1/2 top-full mt-px flex -translate-x-1/2 flex-col items-center gap-px text-center ${isMobile ? 'w-[3rem]' : 'w-[4.5rem]'}`}
+        className={`absolute left-1/2 top-full mt-1 flex -translate-x-1/2 flex-col items-center gap-0.5 text-center ${
+          isMobile ? 'w-[5.75rem]' : 'w-[7.5rem]'
+        }`}
       >
         <span
-          className={`block truncate whitespace-nowrap font-medium leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] ${isMobile ? 'text-[8px]' : 'text-[10px]'}`}
+          className={`block truncate whitespace-nowrap font-bold leading-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] ${
+            isMobile ? 'text-sm' : 'text-base'
+          }`}
           title={user.displayName}
         >
-          {formatPitchDisplayName(user.displayName, isMobile ? 10 : 14)}
+          {formatPitchDisplayName(user.displayName, isMobile ? 14 : 18)}
         </span>
         {user.position && (
           <span
-            className={`leading-tight text-white/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${isMobile ? 'text-[7px]' : 'text-[9px]'}`}
+            className={`font-semibold leading-none text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)] ${
+              isMobile ? 'text-xs' : 'text-sm'
+            }`}
           >
             {formatPositionDisplay(user.position)}
           </span>
@@ -83,8 +95,8 @@ export function PlayerMarker({
 
   return (
     <div
-      className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 transform transition-transform ${
-        clickable ? 'cursor-pointer hover:scale-110' : ''
+      className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 transform transition-transform duration-200 ease-out ${
+        clickable ? 'cursor-pointer hover:z-20 hover:scale-110' : ''
       }`}
       style={{ left: `${position.x}%`, top: `${position.y}%` }}
       onClick={() => clickable && onPlayerClick(user.uid, team.id)}

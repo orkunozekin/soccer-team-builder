@@ -13,6 +13,8 @@ interface RSVPPositionModalProps {
   defaultPosition: string | null
   onConfirm: (position: string | null) => void | Promise<void>
   loading?: boolean
+  /** Team occupancy counts when the user is already on a team */
+  occupancy?: Record<string, number>
 }
 
 export function RSVPPositionModal({
@@ -21,6 +23,7 @@ export function RSVPPositionModal({
   defaultPosition,
   onConfirm,
   loading = false,
+  occupancy,
 }: RSVPPositionModalProps) {
   const [position, setPosition] = useState<string | null>(defaultPosition)
   const [mounted, setMounted] = useState(false)
@@ -82,6 +85,11 @@ export function RSVPPositionModal({
             value={position}
             onValueChange={setPosition}
             disabled={loading}
+            occupancy={
+              occupancy && Object.keys(occupancy).length > 0
+                ? occupancy
+                : undefined
+            }
           />
           <div className="mt-6 flex justify-end gap-2">
             <Button
