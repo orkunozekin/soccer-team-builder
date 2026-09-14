@@ -109,7 +109,7 @@ export function TeamsDisplay({
   const dndEnabled = Boolean(isAdmin && matchId && onTeamsChanged)
   const { updateRSVPAttendance, bulkUpdateRSVPAttendance } = useMatchStore()
   const [pageIndex, setPageIndex] = useState(0)
-  const [viewMode, setViewMode] = useState<TeamsViewMode>('list')
+  const [viewMode, setViewMode] = useState<TeamsViewMode>('pitch')
   const [transferError, setTransferError] = useState('')
   const [transferring, setTransferring] = useState<string | null>(null)
   const [hostCheckInBusy, setHostCheckInBusy] = useState<string | null>(null)
@@ -130,10 +130,10 @@ export function TeamsDisplay({
     setLocalTeams(teams)
   }, [teams])
 
-  // When the flag turns on, keep list as the default (Pitch is opt-in).
+  // When the flag turns on, show pitch by default (List remains available for DnD).
   useEffect(() => {
     if (!showPitchFlag) return
-    setViewMode('list')
+    setViewMode('pitch')
   }, [showPitchFlag])
 
   const showPitchView = showPitchFlag && viewMode === 'pitch'
@@ -419,32 +419,19 @@ export function TeamsDisplay({
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h2 className="min-w-0 truncate text-2xl font-bold">Teams</h2>
         <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
-          {showPitchFlag ? (
-            <div
-              className="inline-flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-700"
-              role="group"
-              aria-label="Teams view"
-            >
-              <Button
-                type="button"
-                size="sm"
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                className="h-8 px-3"
-                onClick={() => setViewMode('list')}
-              >
-                List
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={viewMode === 'pitch' ? 'default' : 'ghost'}
-                className="h-8 px-3"
-                onClick={() => setViewMode('pitch')}
-              >
-                Pitch
-              </Button>
-            </div>
-          ) : null}
+          {pages.length > 1
+            ? pages.map((p, i) => (
+                <Button
+                  key={`${p.start}-${p.end}`}
+                  size="sm"
+                  className="h-9"
+                  variant={i === safePageIndex ? 'default' : 'outline'}
+                  onClick={() => setPageIndex(i)}
+                >
+                  {p.label}
+                </Button>
+              ))
+            : null}
           {showMarkAllPresent ? (
             <Button
               size="sm"
@@ -461,25 +448,38 @@ export function TeamsDisplay({
         </div>
       </div>
 
+      {showPitchFlag ? (
+        <div className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+          <div
+            className="inline-flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-700"
+            role="group"
+            aria-label="Teams view"
+          >
+            <Button
+              type="button"
+              size="sm"
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              className="h-8 px-3"
+              onClick={() => setViewMode('list')}
+            >
+              List
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={viewMode === 'pitch' ? 'default' : 'ghost'}
+              className="h-8 px-3"
+              onClick={() => setViewMode('pitch')}
+            >
+              Pitch
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {!showPitchView && attendanceByUserId.size > 0 ? (
         <CheckInStatusLegend />
       ) : null}
-
-      {!showPitchView && pages.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          {pages.map((p, i) => (
-            <Button
-              key={`${p.start}-${p.end}`}
-              size="sm"
-              className="h-9"
-              variant={i === safePageIndex ? 'default' : 'outline'}
-              onClick={() => setPageIndex(i)}
-            >
-              {p.label}
-            </Button>
-          ))}
-        </div>
-      )}
 
       {transferError && (
         <div className="rounded-md border border-red-300 bg-red-100 p-3 text-sm font-medium text-red-950 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
@@ -489,7 +489,7 @@ export function TeamsDisplay({
 
       {showPitchView ? (
         <SoccerPitch
-          teams={teamsSorted}
+          teams={visibleTeams}
           users={users}
           matchRSVPs={matchRSVPs}
           isAdmin={isAdmin}
