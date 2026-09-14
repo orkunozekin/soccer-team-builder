@@ -416,9 +416,9 @@ export function TeamsDisplay({
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h2 className="min-w-0 truncate text-2xl font-bold">Teams</h2>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
           {showPitchFlag ? (
             <div
               className="inline-flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-700"

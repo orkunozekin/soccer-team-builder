@@ -41,18 +41,6 @@ export function DualTeamPitchView({
     >
       <div className="relative h-full w-full overflow-visible">
         <PitchSurface />
-        <div
-          className="pointer-events-none absolute left-2 top-2 z-20 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90"
-          style={{ backgroundColor: `${teamTop.color || '#1e40af'}cc` }}
-        >
-          {teamTop.name || `Team ${teamTop.teamNumber}`}
-        </div>
-        <div
-          className="pointer-events-none absolute bottom-2 left-2 z-20 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90"
-          style={{ backgroundColor: `${teamBottom.color || '#991b1b'}cc` }}
-        >
-          {teamBottom.name || `Team ${teamBottom.teamNumber}`}
-        </div>
         {playersTop.map(({ user, position }) => (
           <PlayerMarker
             key={`top-${user.uid}`}

@@ -90,13 +90,15 @@ describe('TeamsDisplay pitch flag', () => {
     )
 
     expect(screen.getByRole('group', { name: 'Teams view' })).toBeInTheDocument()
-    // Defaults to pitch (team labels on dual pitch)
-    expect(screen.getAllByText(/Team 1|Team 2/).length).toBeGreaterThan(0)
+    // Defaults to pitch — player markers, not list team cards
+    expect(screen.getByText('u1')).toBeInTheDocument()
+    expect(screen.queryByText('Team 1')).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'List' }))
     expect(screen.getByText('Team 1')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Pitch' }))
-    expect(screen.getAllByText(/Team 1|Team 2/).length).toBeGreaterThan(0)
+    expect(screen.queryByText('Team 1')).toBeNull()
+    expect(screen.getByText('u1')).toBeInTheDocument()
   })
 })

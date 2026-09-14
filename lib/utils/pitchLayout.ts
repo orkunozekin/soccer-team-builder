@@ -19,33 +19,38 @@ export interface PlayerOnPitch {
   preferredPosition: string
 }
 
-export const POSITION_COORDINATES: Record<string, PitchPosition> = {
-  GK: { x: 50, y: 3 },
+/** Keep markers inset so name labels stay inside the pitch. */
+export const PITCH_EDGE_MARGIN_X = 14
+export const PITCH_EDGE_MARGIN_Y = 5
 
-  // Fullbacks sit wide; LCB/RCB are display-only pair slots so duplicate CBs
+export const POSITION_COORDINATES: Record<string, PitchPosition> = {
+  GK: { x: 50, y: 5 },
+
+  // Fullbacks / wing-backs sit wide but inset from the touchline so names
+  // do not clip. LCB/RCB are display-only pair slots so duplicate CBs
   // do not steal LB/RB and stack on top of real fullbacks.
-  LB: { x: 6, y: 14 },
-  LWB: { x: 5, y: 26 },
-  LCB: { x: 30, y: 14 },
-  CB: { x: 50, y: 14 },
-  RCB: { x: 70, y: 14 },
-  RWB: { x: 95, y: 26 },
-  RB: { x: 94, y: 14 },
+  LB: { x: 16, y: 16 },
+  LWB: { x: 14, y: 30 },
+  LCB: { x: 34, y: 16 },
+  CB: { x: 50, y: 16 },
+  RCB: { x: 66, y: 16 },
+  RWB: { x: 86, y: 30 },
+  RB: { x: 84, y: 16 },
 
   // Central spine: keep ST short of midfield so opposing strikers do not collide,
   // while still leaving label room between CDM/CM/CAM/ST.
-  CDM: { x: 50, y: 24 },
-  LM: { x: 6, y: 44 },
-  LCM: { x: 35, y: 44 },
-  CM: { x: 50, y: 44 },
-  RCM: { x: 65, y: 44 },
-  RM: { x: 94, y: 44 },
-  CAM: { x: 50, y: 60 },
+  CDM: { x: 50, y: 28 },
+  LM: { x: 16, y: 46 },
+  LCM: { x: 35, y: 46 },
+  CM: { x: 50, y: 46 },
+  RCM: { x: 65, y: 46 },
+  RM: { x: 84, y: 46 },
+  CAM: { x: 50, y: 62 },
 
-  LW: { x: 6, y: 74 },
-  CF: { x: 50, y: 76 },
-  ST: { x: 50, y: 80 },
-  RW: { x: 94, y: 74 },
+  LW: { x: 16, y: 76 },
+  CF: { x: 50, y: 78 },
+  ST: { x: 50, y: 82 },
+  RW: { x: 84, y: 76 },
 }
 
 /**
@@ -115,17 +120,26 @@ export function getPitchPosition(position: string | null): PitchPosition {
 }
 
 /**
- * Escape hatch: small horizontal nudge when all adjacent role slots are taken.
+ * Escape hatch: small 2D nudge when all adjacent role slots are taken.
  */
 export function getOffsetPosition(
   basePosition: PitchPosition,
   index: number,
   total: number
 ): PitchPosition {
-  const offsetX = (index - (total - 1) / 2) * 8
+  const col = index % 3
+  const row = Math.floor(index / 3)
+  const offsetX = (col - ((total - 1) % 3) / 2) * 10
+  const offsetY = row * 8
   return {
-    x: Math.max(5, Math.min(95, basePosition.x + offsetX)),
-    y: basePosition.y,
+    x: Math.max(
+      PITCH_EDGE_MARGIN_X,
+      Math.min(100 - PITCH_EDGE_MARGIN_X, basePosition.x + offsetX)
+    ),
+    y: Math.max(
+      PITCH_EDGE_MARGIN_Y,
+      Math.min(100 - PITCH_EDGE_MARGIN_Y, basePosition.y + offsetY)
+    ),
   }
 }
 
@@ -153,6 +167,111 @@ export function mapToHalfPitch(
     x: position.x,
     y: 100 - margin - position.y * scale,
   }
+}
+
+export interface SeparatePlayersOptions {
+  minX?: number
+  maxX?: number
+  minY?: number
+  maxY?: number
+  /** Minimum horizontal gap between marker centers (%). */
+  minSepX?: number
+  /** Minimum vertical gap between marker centers (%). */
+  minSepY?: number
+  iterations?: number
+}
+
+/**
+ * Push markers apart so nodes and name labels do not overlap.
+ * Uses an elliptical minimum-distance model (wider than tall) because
+ * names sit under nodes and need horizontal clearance.
+ */
+export function separatePlayers(
+  players: PlayerOnPitch[],
+  options: SeparatePlayersOptions = {}
+): PlayerOnPitch[] {
+  if (players.length <= 1) return players
+
+  const minX = options.minX ?? PITCH_EDGE_MARGIN_X
+  const maxX = options.maxX ?? 100 - PITCH_EDGE_MARGIN_X
+  const minY = options.minY ?? PITCH_EDGE_MARGIN_Y
+  const maxY = options.maxY ?? 100 - PITCH_EDGE_MARGIN_Y
+  const minSepX = options.minSepX ?? 15
+  const minSepY = options.minSepY ?? 11
+  const iterations = options.iterations ?? 50
+
+  const positions = players.map(p => ({ ...p.position }))
+
+  for (let iter = 0; iter < iterations; iter++) {
+    let moved = false
+
+    for (let i = 0; i < positions.length; i++) {
+      for (let j = i + 1; j < positions.length; j++) {
+        const a = positions[i]
+        const b = positions[j]
+        let dx = b.x - a.x
+        let dy = b.y - a.y
+
+        if (dx === 0 && dy === 0) {
+          dx = (i % 2 === 0 ? 1 : -1) * 0.35
+          dy = 0.35
+        }
+
+        const nx = dx / minSepX
+        const ny = dy / minSepY
+        const dist2 = nx * nx + ny * ny
+        if (dist2 >= 1) continue
+
+        const dist = Math.sqrt(dist2)
+        const push = ((1 - dist) / 2) * 0.85
+        const ux = (nx / dist) * push * minSepX
+        const uy = (ny / dist) * push * minSepY
+
+        a.x = Math.max(minX, Math.min(maxX, a.x - ux))
+        a.y = Math.max(minY, Math.min(maxY, a.y - uy))
+        b.x = Math.max(minX, Math.min(maxX, b.x + ux))
+        b.y = Math.max(minY, Math.min(maxY, b.y + uy))
+        moved = true
+      }
+    }
+
+    if (!moved) break
+  }
+
+  return players.map((p, i) => ({
+    ...p,
+    position: positions[i],
+  }))
+}
+
+/**
+ * Assign slots, optionally map to a dual-pitch half, then separate overlaps.
+ */
+export function layoutTeamOnPitch(
+  team: Team,
+  users: User[],
+  matchRSVPs: RSVP[] = [],
+  half?: 'top' | 'bottom'
+): PlayerOnPitch[] {
+  let players = assignPitchSlots(team, users, matchRSVPs)
+
+  if (half) {
+    players = players.map(p => ({
+      ...p,
+      position: mapToHalfPitch(p.position, half),
+    }))
+    return separatePlayers(players, {
+      minX: PITCH_EDGE_MARGIN_X,
+      maxX: 100 - PITCH_EDGE_MARGIN_X,
+      minY: half === 'top' ? 3 : 52,
+      maxY: half === 'top' ? 48 : 97,
+      // Half-pitch is vertically compressed; keep enough room for names.
+      minSepX: 14,
+      minSepY: 9,
+    })
+  }
+
+  return separatePlayers(players)
 }
 
 /**
@@ -326,5 +445,5 @@ export function getTeamPlayers(
   users: User[],
   matchRSVPs: RSVP[] = []
 ): PlayerOnPitch[] {
-  return assignPitchSlots(team, users, matchRSVPs)
+  return layoutTeamOnPitch(team, users, matchRSVPs)
 }

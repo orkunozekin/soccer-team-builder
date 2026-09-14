@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   assignPitchSlots,
   getTeamPositionOccupancy,
+  layoutTeamOnPitch,
   mapToHalfPitch,
+  PITCH_EDGE_MARGIN_X,
   POSITION_COORDINATES,
+  separatePlayers,
 } from './pitchLayout'
 import type { RSVP } from '@/types/rsvp'
 import type { Team } from '@/types/team'
@@ -202,6 +205,109 @@ describe('assignPitchSlots', () => {
     expect(result.find(p => p.user.uid === 'a')!.user.position).toBe('ST')
     expect(result.find(p => p.user.uid === 'b')!.user.position).toBe('ST')
     expect(result.find(p => p.user.uid === 'b')!.assignedSlot).not.toBe('ST')
+  })
+
+  it('keeps wing slots inset from the touchline', () => {
+    expect(POSITION_COORDINATES.LB.x).toBeGreaterThanOrEqual(
+      PITCH_EDGE_MARGIN_X
+    )
+    expect(POSITION_COORDINATES.LWB.x).toBeGreaterThanOrEqual(
+      PITCH_EDGE_MARGIN_X
+    )
+    expect(POSITION_COORDINATES.RB.x).toBeLessThanOrEqual(
+      100 - PITCH_EDGE_MARGIN_X
+    )
+    expect(POSITION_COORDINATES.RWB.x).toBeLessThanOrEqual(
+      100 - PITCH_EDGE_MARGIN_X
+    )
+  })
+})
+
+describe('separatePlayers', () => {
+  it('pushes overlapping markers apart', () => {
+    const users = [
+      makeUser('a', { position: 'LB' }),
+      makeUser('b', { position: 'LB' }),
+    ]
+    const stacked = [
+      {
+        user: users[0],
+        position: { x: 50, y: 50 },
+        assignedSlot: 'LB',
+        preferredPosition: 'LB',
+      },
+      {
+        user: users[1],
+        position: { x: 50, y: 50 },
+        assignedSlot: 'LWB',
+        preferredPosition: 'LB',
+      },
+    ]
+
+    const result = separatePlayers(stacked, { minSepX: 14, minSepY: 10 })
+    const dx = Math.abs(result[0].position.x - result[1].position.x)
+    const dy = Math.abs(result[0].position.y - result[1].position.y)
+    expect(dx >= 10 || dy >= 8).toBe(true)
+  })
+
+  it('clamps markers inside pitch margins', () => {
+    const users = [makeUser('a'), makeUser('b')]
+    const result = separatePlayers(
+      [
+        {
+          user: users[0],
+          position: { x: 2, y: 2 },
+          assignedSlot: 'LB',
+          preferredPosition: 'LB',
+        },
+        {
+          user: users[1],
+          position: { x: 3, y: 3 },
+          assignedSlot: 'LWB',
+          preferredPosition: 'LWB',
+        },
+      ],
+      { minSepX: 14, minSepY: 10 }
+    )
+
+    for (const p of result) {
+      expect(p.position.x).toBeGreaterThanOrEqual(PITCH_EDGE_MARGIN_X)
+      expect(p.position.x).toBeLessThanOrEqual(100 - PITCH_EDGE_MARGIN_X)
+      expect(p.position.y).toBeGreaterThanOrEqual(5)
+    }
+  })
+})
+
+describe('layoutTeamOnPitch', () => {
+  it('separates a crowded left flank on the half pitch', () => {
+    const ids = ['lb1', 'lb2', 'lwb1', 'lwb2']
+    const users = [
+      makeUser('lb1', { position: 'LB' }),
+      makeUser('lb2', { position: 'LB' }),
+      makeUser('lwb1', { position: 'LWB' }),
+      makeUser('lwb2', { position: 'LWB' }),
+    ]
+    const team = makeTeam(ids)
+    const rsvps = ids.map((id, i) =>
+      makeRSVP(id, new Date(`2024-01-01T10:0${i}:00Z`))
+    )
+
+    const result = layoutTeamOnPitch(team, users, rsvps, 'top')
+    expect(result).toHaveLength(4)
+
+    for (let i = 0; i < result.length; i++) {
+      expect(result[i].position.x).toBeGreaterThanOrEqual(PITCH_EDGE_MARGIN_X)
+      expect(result[i].position.x).toBeLessThanOrEqual(
+        100 - PITCH_EDGE_MARGIN_X
+      )
+      for (let j = i + 1; j < result.length; j++) {
+        const dx = Math.abs(result[i].position.x - result[j].position.x)
+        const dy = Math.abs(result[i].position.y - result[j].position.y)
+        // Elliptical separation used on half pitch (minSepX=14, minSepY=9)
+        const norm = (dx / 14) ** 2 + (dy / 9) ** 2
+        expect(norm).toBeGreaterThanOrEqual(0.85)
+      }
+    }
   })
 })
 
