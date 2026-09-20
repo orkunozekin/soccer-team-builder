@@ -34,6 +34,8 @@ export function PlayerMarker({
   const isGK = isGoalkeeper(user.position)
   const clickable = isAdmin && onPlayerClick
   const size = isMobile ? 30 : 40
+  // Bottom-half markers sit near the goal line; labels below clip past the pitch.
+  const nameAbove = position.y >= 84
 
   const content = (
     <>
@@ -65,14 +67,18 @@ export function PlayerMarker({
         </span>
       </div>
       <div
-        className={`absolute left-1/2 top-full mt-0 flex -translate-x-1/2 flex-col items-center text-center ${
-          isMobile ? 'w-[5.75rem]' : 'w-[7.5rem]'
-        }`}
+        className={`absolute left-1/2 flex -translate-x-1/2 flex-col items-center text-center ${
+          nameAbove ? 'bottom-full mb-0.5' : 'top-full mt-0'
+        } ${isMobile ? 'w-[5.75rem]' : 'w-[7.5rem]'}`}
       >
         <span
-          className={`block truncate whitespace-nowrap font-bold leading-none text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] ${
-            isMobile ? 'text-[11px]' : 'text-xs'
-          }`}
+          className={`block max-w-full whitespace-nowrap font-bold ${
+            isGK
+              ? // Solid black on a light pill — readable on grass. Avoid
+                // leading-none + truncate which clips glyph descenders.
+                'rounded-sm bg-white/90 px-1.5 py-0.5 text-black leading-tight shadow-sm'
+              : 'truncate leading-none text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)]'
+          } ${isMobile ? 'text-[11px]' : 'text-xs'}`}
           title={user.displayName}
         >
           {formatPitchDisplayName(user.displayName, isMobile ? 14 : 18)}

@@ -208,7 +208,7 @@ export function separatePlayers(
   players: PlayerOnPitch[],
   options: SeparatePlayersOptions = {}
 ): PlayerOnPitch[] {
-  if (players.length <= 1) return players
+  if (players.length === 0) return players
 
   const minX = options.minX ?? PITCH_EDGE_MARGIN_X
   const maxX = options.maxX ?? 100 - PITCH_EDGE_MARGIN_X
@@ -218,7 +218,16 @@ export function separatePlayers(
   const minSepY = options.minSepY ?? 11
   const iterations = options.iterations ?? 50
 
-  const positions = players.map(p => ({ ...p.position }))
+  const clamp = (pos: PitchPosition): PitchPosition => ({
+    x: Math.max(minX, Math.min(maxX, pos.x)),
+    y: Math.max(minY, Math.min(maxY, pos.y)),
+  })
+
+  if (players.length === 1) {
+    return [{ ...players[0], position: clamp(players[0].position) }]
+  }
+
+  const positions = players.map(p => clamp(p.position))
 
   for (let iter = 0; iter < iterations; iter++) {
     let moved = false
@@ -264,7 +273,7 @@ export function separatePlayers(
 
   return players.map((p, i) => ({
     ...p,
-    position: positions[i],
+    position: clamp(positions[i]),
   }))
 }
 
@@ -287,8 +296,10 @@ export function layoutTeamOnPitch(
     return separatePlayers(players, {
       minX: PITCH_EDGE_MARGIN_X,
       maxX: 100 - PITCH_EDGE_MARGIN_X,
+      // Keep bottom-half markers inset so labels (even when flipped above)
+      // and jersey discs are not clipped by the pitch edge / parent overflow.
       minY: half === 'top' ? 3 : 52,
-      maxY: half === 'top' ? 48 : 97,
+      maxY: half === 'top' ? 48 : 94,
       // Half-pitch is vertically compressed; keep enough room for names.
       minSepX: 14,
       minSepY: 9,
