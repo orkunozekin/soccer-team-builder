@@ -21,8 +21,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async firebaseUser => {
       setUser(firebaseUser)
-      setLoading(true)
 
+      // Auth store starts with loading: true. Do not flip loading back to true
+      // on later auth callbacks (token refresh, user doc re-fetch, etc.). That
+      // remounts LaunchDarkly + page trees and can leave match detail stuck on
+      // its skeleton during client-side navigations.
       const clearLoadingTimeout = () => {
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current)
@@ -30,10 +33,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      timeoutRef.current = setTimeout(() => {
-        timeoutRef.current = null
-        setLoading(false)
-      }, AUTH_LOADING_TIMEOUT_MS)
+      if (useAuthStore.getState().loading && timeoutRef.current == null) {
+        timeoutRef.current = setTimeout(() => {
+          timeoutRef.current = null
+          setLoading(false)
+        }, AUTH_LOADING_TIMEOUT_MS)
+      }
 
       try {
         if (firebaseUser) {
