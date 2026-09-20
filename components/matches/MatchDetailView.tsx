@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { EditMatchCard } from '@/components/admin/EditMatchCard'
 import { ImpersonateRSVP } from '@/components/admin/ImpersonateRSVP'
@@ -60,7 +60,7 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
   const [loadingMatch, setLoadingMatch] = useState(true)
   const [teams, setTeams] = useState<Team[]>([])
   const [rosterUsers, setRosterUsers] = useState<User[]>([])
-  const [loadingTeams, setLoadingTeams] = useState(true)
+  const fetchGen = useRef(0)
   const usersWithMatchPosition = useMemo(() => {
     const rsvpByUserId = new Map(matchRSVPs.map(r => [r.userId, r]))
     return rosterUsers.map(u => {
@@ -77,68 +77,63 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
   }, [rosterUsers, matchRSVPs])
 
   useEffect(() => {
-    let cancelled = false
+    if (!matchId || !userId) return
+
+    const gen = ++fetchGen.current
+    setLoadingMatch(true)
+    setTeams([])
+    setRosterUsers([])
+    // Clear RSVPs only while the full-page skeleton is showing so we never
+    // paint "0 confirmed" / missing teams for a match that still has data.
+    setMatchRSVPs([])
 
     const fetchMatchData = async () => {
-      // Wait for route params / auth without clearing the skeleton. A prior
-      // bug returned here after setLoadingMatch(true) on a stale run, which
-      // left the page stuck on the skeleton until a full reload.
-      if (!matchId || !userId) return
-
-      setLoadingMatch(true)
-      setLoadingTeams(true)
-      setTeams([])
-      setRosterUsers([])
-      setMatchRSVPs([])
-
       try {
         const nextMatch = await getMatch(matchId)
-        if (cancelled) return
+        if (gen !== fetchGen.current) return
         if (!nextMatch) {
           router.push(backLink.href)
           return
         }
 
         setCurrentMatch(nextMatch)
-        // Show the match shell as soon as the match doc is ready. Roster
-        // fetches can hang or fail without blocking the whole page.
-        setLoadingMatch(false)
 
         try {
           const [matchTeams, rsvps] = await Promise.all([
             getMatchTeams(matchId),
             getMatchRSVPs(matchId),
           ])
-          if (cancelled) return
+          if (gen !== fetchGen.current) return
           setTeams(matchTeams)
           setMatchRSVPs(rsvps)
+
+          // Reveal only after match + teams/RSVPs are applied. Revealing
+          // earlier caused half-loaded pages (0 confirmed, no teams) when a
+          // newer effect cancelled the roster portion mid-flight.
+          setLoadingMatch(false)
+
           const users = await getUsersByIds(
             collectMatchParticipantIds(matchTeams, rsvps)
           )
-          if (cancelled) return
+          if (gen !== fetchGen.current) return
           setRosterUsers(users)
         } catch {
+          if (gen !== fetchGen.current) return
           console.error('Failed to load teams or players')
-        } finally {
-          if (!cancelled) setLoadingTeams(false)
+          setLoadingMatch(false)
         }
       } catch {
-        if (!cancelled) {
-          console.error('Failed to load match')
-          router.push(backLink.href)
-        }
+        if (gen !== fetchGen.current) return
+        console.error('Failed to load match')
+        router.push(backLink.href)
       } finally {
-        if (!cancelled) {
+        if (gen === fetchGen.current) {
           setLoadingMatch(false)
-          setLoadingTeams(false)
         }
       }
     }
 
     fetchMatchData()
-    return () => {
-      cancelled = true
-    }
   }, [
     matchId,
     userId,
@@ -150,18 +145,21 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
 
   const refetchMatchRoster = async () => {
     if (!matchId) return
+    const gen = ++fetchGen.current
     try {
       const [matchData, rsvpsData, teamsData] = await Promise.all([
         getMatch(matchId),
         getMatchRSVPs(matchId),
         getMatchTeams(matchId),
       ])
+      if (gen !== fetchGen.current) return
       if (matchData) setCurrentMatch(matchData)
       setMatchRSVPs(rsvpsData)
       setTeams(teamsData)
       const usersData = await getUsersByIds(
         collectMatchParticipantIds(teamsData, rsvpsData)
       )
+      if (gen !== fetchGen.current) return
       setRosterUsers(usersData)
     } catch (e) {
       console.error('refetchMatchRoster failed:', e)
@@ -176,7 +174,7 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
     return null
   }
 
-  const hasTeamsPanel = !loadingTeams && teams.length > 0
+  const hasTeamsPanel = teams.length > 0
   const confirmedRsvps = matchRSVPs.filter(r => r.status === 'confirmed')
   const checkedInCount = confirmedRsvps.filter(r => r.attended === true).length
   const showCheckInHeadcount = hasCheckInWindowStarted(match.date, match.time)
