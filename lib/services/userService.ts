@@ -42,18 +42,25 @@ export const getUser = async (uid: string): Promise<User | null> => {
 }
 
 export const getUsersByIds = async (uids: string[]): Promise<User[]> => {
-  const uniqueIds = Array.from(new Set(uids.filter((id): id is string => Boolean(id))))
+  const uniqueIds = Array.from(
+    new Set(uids.filter((id): id is string => Boolean(id)))
+  )
   if (uniqueIds.length === 0) return []
 
   const users = await Promise.all(
     uniqueIds.map(async uid => {
-      const userDoc = await getDocument('users', uid)
-      if (!userDoc) return null
-      return mapDocToUser({
-        ...userDoc,
-        id: uid,
-        uid: (userDoc.uid as string) ?? uid,
-      })
+      try {
+        const userDoc = await getDocument('users', uid)
+        if (!userDoc) return null
+        return mapDocToUser({
+          ...userDoc,
+          id: uid,
+          uid: (userDoc.uid as string) ?? uid,
+        })
+      } catch (error) {
+        console.error('Failed to load user', uid, error)
+        return null
+      }
     })
   )
 

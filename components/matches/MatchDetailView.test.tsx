@@ -63,7 +63,9 @@ vi.mock('@/components/matches/MatchDetails', () => ({
 }))
 
 vi.mock('@/components/teams/TeamsDisplay', () => ({
-  TeamsDisplay: () => <div>TeamsDisplayMock</div>,
+  TeamsDisplay: ({ users }: { users: { uid: string }[] }) => (
+    <div>TeamsDisplayMock:{users.length}</div>
+  ),
 }))
 
 vi.mock('@/components/admin/EditMatchCard', () => ({
@@ -154,7 +156,7 @@ describe('MatchDetailView', () => {
     render(<MatchDetailView backLink={backLink} />)
 
     expect(await screen.findByText('MatchDetailsMock:0')).toBeInTheDocument()
-    expect(screen.getByText('TeamsDisplayMock')).toBeInTheDocument()
+    expect(screen.getByText('TeamsDisplayMock:1')).toBeInTheDocument()
     expect(screen.queryByText('EditMatchCardMock')).not.toBeInTheDocument()
   })
 
@@ -181,22 +183,23 @@ describe('MatchDetailView', () => {
 
     expect(screen.getByText('EditMatchCardMock')).toBeInTheDocument()
     expect(screen.getByText('ImpersonateRSVPMock')).toBeInTheDocument()
-    expect(screen.getByText('TeamsDisplayMock')).toBeInTheDocument()
+    expect(screen.getByText('TeamsDisplayMock:1')).toBeInTheDocument()
     await waitFor(() => {
       expect(screen.getByText('PlayerTransferMock')).toBeInTheDocument()
     })
   })
 
-  it('shows the match even when roster user fetch never resolves', async () => {
+  it('keeps pitch roster placeholders when profile fetch never resolves', async () => {
     getMatchMock.mockResolvedValueOnce(mockMatch())
-    getMatchRSVPsMock.mockResolvedValueOnce([mockRsvp()])
+    getMatchRSVPsMock.mockResolvedValueOnce([mockRsvp('user1')])
     getMatchTeamsMock.mockResolvedValueOnce([mockTeam()])
     getUsersByIdsMock.mockReturnValueOnce(new Promise(() => {}))
 
     render(<MatchDetailView backLink={backLink} />)
 
     expect(await screen.findByText('MatchDetailsMock:1')).toBeInTheDocument()
-    expect(screen.getByText('TeamsDisplayMock')).toBeInTheDocument()
+    // Placeholder from team playerIds so SoccerPitch is not empty.
+    expect(screen.getByText('TeamsDisplayMock:1')).toBeInTheDocument()
   })
 
   it('recovers when matchId is missing on the first paint then arrives', async () => {
@@ -262,6 +265,6 @@ describe('MatchDetailView', () => {
     resolveTeams([mockTeam()])
 
     expect(await screen.findByText('MatchDetailsMock:2')).toBeInTheDocument()
-    expect(screen.getByText('TeamsDisplayMock')).toBeInTheDocument()
+    expect(screen.getByText('TeamsDisplayMock:2')).toBeInTheDocument()
   })
 })

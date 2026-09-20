@@ -337,9 +337,22 @@ export function assignPitchSlots(
     matchRSVPs.map(r => [r.userId, r.rsvpAt] as const)
   )
 
-  const teamUsers = team.playerIds
-    .map(id => usersById.get(id))
-    .filter((u): u is User => !!u)
+  const teamUsers = team.playerIds.map(id => {
+    const existing = usersById.get(id)
+    if (existing) return existing
+    // Profile hydration can lag or fail; still place a marker from RSVP data.
+    const rsvp = matchRSVPs.find(r => r.userId === id)
+    return {
+      uid: id,
+      email: '',
+      displayName: 'Player',
+      jerseyNumber: rsvp?.jerseyNumber ?? null,
+      position: rsvp?.position ?? null,
+      role: 'user' as const,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } satisfies User
+  })
 
   const groups = new Map<string, SlotCandidate[]>()
   for (const user of teamUsers) {
