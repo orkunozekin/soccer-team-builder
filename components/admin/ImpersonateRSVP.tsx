@@ -20,7 +20,7 @@ type SearchUser = {
   uid: string
   email: string
   displayName: string
-  role: 'user' | 'admin'
+  role: 'user' | 'super_user'
 }
 
 interface ImpersonateRSVPProps {

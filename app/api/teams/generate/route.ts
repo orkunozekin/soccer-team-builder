@@ -1,27 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdmin } from '@/lib/api/auth'
+import { verifyClubAdminForMatch } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { expandTeamsForMatch } from '@/lib/teams/expandTeamsForMatch'
 import { auditLog } from '@/lib/services/auditService'
 
 export async function POST(request: NextRequest) {
   try {
-    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
-    if (authError || !uid) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Admin privileges required' },
-        { status: 403 }
-      )
-    }
-
     const { matchId } = await request.json()
 
     if (!matchId) {
       return NextResponse.json({ error: 'Match ID required' }, { status: 400 })
+    }
+
+    const {
+      uid,
+      isClubAdmin,
+      error: authError,
+      matchExists,
+    } = await verifyClubAdminForMatch(request, matchId)
+    if (authError || !uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!matchExists) {
+      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+    }
+    if (!isClubAdmin) {
+      return NextResponse.json(
+        { error: 'Club admin privileges required' },
+        { status: 403 }
+      )
     }
 
     const adminDb = getAdminDb()

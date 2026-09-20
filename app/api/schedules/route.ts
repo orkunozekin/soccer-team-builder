@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdmin } from '@/lib/api/auth'
+import { resolveClubIdForWrite, verifyClubAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { mapScheduleDoc, materializeSchedule } from '@/lib/schedules/materializeSchedule'
 import {
@@ -11,13 +11,17 @@ import { SCHEDULE_TIMEZONE } from '@/types/schedule'
 
 export async function GET(request: NextRequest) {
   try {
-    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
+    const clubIdParam = request.nextUrl.searchParams.get('clubId')
+    const { uid, isClubAdmin, error: authError } = await verifyClubAdmin(
+      request,
+      clubIdParam
+    )
     if (authError || !uid) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    if (!isAdmin) {
+    if (!isClubAdmin) {
       return NextResponse.json(
-        { error: 'Admin privileges required' },
+        { error: 'Club admin privileges required' },
         { status: 403 }
       )
     }
@@ -48,18 +52,39 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
+    const body = await request.json()
+    const provisional = await verifyClubAdmin(
+      request,
+      typeof body?.clubId === 'string' ? body.clubId.trim() : null
+    )
+    if (provisional.error || !provisional.uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const resolved = await resolveClubIdForWrite(
+      provisional.uid,
+      typeof body?.clubId === 'string' ? body.clubId : null
+    )
+    if (!resolved.clubId) {
+      return NextResponse.json(
+        { error: resolved.error || 'clubId is required' },
+        { status: 400 }
+      )
+    }
+    const clubId = resolved.clubId
+    const { uid, isClubAdmin, error: authError } = await verifyClubAdmin(
+      request,
+      clubId
+    )
     if (authError || !uid) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    if (!isAdmin) {
+    if (!isClubAdmin) {
       return NextResponse.json(
-        { error: 'Admin privileges required' },
+        { error: 'Club admin privileges required' },
         { status: 403 }
       )
     }
 
-    const body = await request.json()
     const validated = validateScheduleInput(body)
     if (!validated.ok) {
       return NextResponse.json({ error: validated.error }, { status: 400 })
@@ -92,6 +117,7 @@ export async function POST(request: NextRequest) {
         timezone: timezone || SCHEDULE_TIMEZONE,
         slots: serializeSlotsForFirestore(slots),
         active: isActive,
+        clubId,
         createdAt: now,
         updatedAt: now,
         createdBy: uid,
@@ -109,6 +135,7 @@ export async function POST(request: NextRequest) {
       timezone: timezone || SCHEDULE_TIMEZONE,
       slots: serializeSlotsForFirestore(slots),
       active: isActive,
+      clubId,
       createdAt: now,
       updatedAt: now,
       createdBy: uid,

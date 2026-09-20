@@ -1,4 +1,4 @@
-export type UserRole = 'user' | 'admin'
+export type UserRole = 'user' | 'super_user'
 
 export interface User {
   uid: string
@@ -7,6 +7,8 @@ export interface User {
   jerseyNumber: number | null
   position: string | null
   role: UserRole
+  /** Currently selected club for multi-club UX; optional until set */
+  activeClubId?: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -20,6 +22,15 @@ export interface UserFirestore {
   jerseyNumber: number | null
   position: string | null
   role: UserRole
+  activeClubId?: string | null
   createdAt: any // Firestore Timestamp
   updatedAt: any // Firestore Timestamp
+}
+
+/**
+ * Normalize legacy `admin` docs to `super_user` until backfill completes.
+ */
+export function normalizeUserRole(role: unknown): UserRole {
+  if (role === 'admin' || role === 'super_user') return 'super_user'
+  return 'user'
 }

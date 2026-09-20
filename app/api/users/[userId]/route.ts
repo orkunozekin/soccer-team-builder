@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdmin } from '@/lib/api/auth'
+import { verifySuperUser } from '@/lib/api/auth'
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin'
 import { removeUserFromMatchTeams } from '@/lib/teams/removeUserFromMatchTeams'
 import { auditLog } from '@/lib/services/auditService'
@@ -20,13 +20,13 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
-  const { uid, isAdmin, error: authError } = await verifyAdmin(request)
+  const { uid, isSuperUser, error: authError } = await verifySuperUser(request)
   if (authError || !uid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  if (!isAdmin) {
+  if (!isSuperUser) {
     return NextResponse.json(
-      { error: 'Admin privileges required' },
+      { error: 'Super user privileges required' },
       { status: 403 }
     )
   }
@@ -47,7 +47,11 @@ export async function PATCH(
   const body = await request.json().catch(() => null)
   const roleRaw = body?.role
   const role: UserRole | null =
-    roleRaw === 'admin' || roleRaw === 'user' ? roleRaw : null
+    roleRaw === 'super_user' || roleRaw === 'user'
+      ? roleRaw
+      : roleRaw === 'admin'
+        ? 'super_user' // legacy alias during transition
+        : null
   if (!role) {
     return userErrorResponse(
       {
@@ -118,13 +122,13 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
-  const { uid, isAdmin, error: authError } = await verifyAdmin(request)
+  const { uid, isSuperUser, error: authError } = await verifySuperUser(request)
   if (authError || !uid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  if (!isAdmin) {
+  if (!isSuperUser) {
     return NextResponse.json(
-      { error: 'Admin privileges required' },
+      { error: 'Super user privileges required' },
       { status: 403 }
     )
   }

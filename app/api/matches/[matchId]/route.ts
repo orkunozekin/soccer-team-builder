@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdmin } from '@/lib/api/auth'
+import { verifyClubAdminForMatch } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { deleteMatch } from '@/lib/matches/deleteMatch'
 import { auditLog } from '@/lib/services/auditService'
@@ -25,17 +25,28 @@ export async function PATCH(
   { params }: { params: Promise<{ matchId: string }> }
 ) {
   try {
-    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
-    if (authError || !isAdmin) {
-      return NextResponse.json(
-        { error: 'Admin privileges required' },
-        { status: 403 }
-      )
-    }
-
     const { matchId } = await params
     if (!matchId) {
       return NextResponse.json({ error: 'Match ID required' }, { status: 400 })
+    }
+
+    const {
+      uid,
+      isClubAdmin,
+      error: authError,
+      matchExists,
+    } = await verifyClubAdminForMatch(request, matchId)
+    if (authError || !uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!matchExists) {
+      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+    }
+    if (!isClubAdmin) {
+      return NextResponse.json(
+        { error: 'Club admin privileges required' },
+        { status: 403 }
+      )
     }
 
     const body = await request.json()
@@ -152,17 +163,28 @@ export async function DELETE(
   { params }: { params: Promise<{ matchId: string }> }
 ) {
   try {
-    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
-    if (authError || !isAdmin) {
-      return NextResponse.json(
-        { error: 'Admin privileges required' },
-        { status: 403 }
-      )
-    }
-
     const { matchId } = await params
     if (!matchId) {
       return NextResponse.json({ error: 'Match ID required' }, { status: 400 })
+    }
+
+    const {
+      uid,
+      isClubAdmin,
+      error: authError,
+      matchExists,
+    } = await verifyClubAdminForMatch(request, matchId)
+    if (authError || !uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!matchExists) {
+      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+    }
+    if (!isClubAdmin) {
+      return NextResponse.json(
+        { error: 'Club admin privileges required' },
+        { status: 403 }
+      )
     }
 
     const adminDb = getAdminDb()

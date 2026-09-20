@@ -1,11 +1,11 @@
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { POST } from './route'
-import { verifyAdmin } from '@/lib/api/auth'
+import { verifyClubAdminForMatch } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 
 vi.mock('@/lib/api/auth', () => ({
-  verifyAdmin: vi.fn(),
+  verifyClubAdminForMatch: vi.fn(),
 }))
 
 vi.mock('@/lib/firebase/admin', () => ({
@@ -102,9 +102,12 @@ function createHostMockDb(initial: {
 describe('POST /api/check-in/host', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(verifyAdmin).mockResolvedValue({
+    vi.mocked(verifyClubAdminForMatch).mockResolvedValue({
       uid: 'admin-1',
-      isAdmin: true,
+      isClubAdmin: true,
+      matchExists: true,
+      isSuperUser: true,
+      clubId: null,
       error: null,
     })
   })
@@ -157,9 +160,12 @@ describe('POST /api/check-in/host', () => {
   })
 
   it('requires admin privileges', async () => {
-    vi.mocked(verifyAdmin).mockResolvedValue({
+    vi.mocked(verifyClubAdminForMatch).mockResolvedValue({
       uid: 'user-1',
-      isAdmin: false,
+      isClubAdmin: false,
+      matchExists: true,
+      isSuperUser: false,
+      clubId: null,
       error: null,
     })
 

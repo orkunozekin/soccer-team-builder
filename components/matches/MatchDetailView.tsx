@@ -12,6 +12,7 @@ import { MatchDetails } from '@/components/matches/MatchDetails'
 import { TeamsDisplay } from '@/components/teams/TeamsDisplay'
 import { BackLink } from '@/components/ui/back-link'
 import { useAdmin } from '@/lib/hooks/useAdmin'
+import { useIsClubAdmin } from '@/lib/hooks/useClubMemberships'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getMatch } from '@/lib/services/matchService'
 import { getMatchRSVPs } from '@/lib/services/rsvpService'
@@ -53,6 +54,8 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
     useMatchStore()
   const match =
     currentMatch && matchId && currentMatch.id === matchId ? currentMatch : null
+  const { isClubAdmin } = useIsClubAdmin(match?.clubId)
+  const canManageMatch = isAdmin || isClubAdmin
   const userRsvp = userId
     ? (matchRSVPs.find(r => r.userId === userId) ?? null)
     : null

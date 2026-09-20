@@ -19,6 +19,8 @@ export interface MatchSchedule {
   timezone: string
   slots: ScheduleSlot[]
   active: boolean
+  /** Owning club (tenant). Required for new schedules; backfilled for existing. */
+  clubId?: string | null
   createdAt: Date
   updatedAt: Date
   createdBy: string

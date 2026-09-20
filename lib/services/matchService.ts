@@ -29,6 +29,7 @@ function mapDocToMatch(match: Record<string, unknown>, id: string): Match {
     date: matchDate,
     time: (match.time as string) ?? '',
     location: parseMatchLocation(match.location),
+    clubId: (match.clubId as string | null | undefined) ?? null,
     rsvpOpen: match.rsvpOpen === true,
     rsvpOpenAt,
     rsvpCloseAt,

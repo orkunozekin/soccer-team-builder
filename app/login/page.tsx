@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { LoginForm } from '@/components/auth/LoginForm'
 import { SoccerBallIcon } from '@/components/icons/SoccerBallIcon'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
@@ -15,15 +15,22 @@ import {
 } from '@/components/ui/card'
 import { useAuth } from '@/lib/hooks/useAuth'
 
-export default function LoginPage() {
+function safeRedirectPath(raw: string | null): string {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/matches'
+  return raw
+}
+
+function LoginPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = safeRedirectPath(searchParams.get('redirect'))
   const { isAuthenticated, loading } = useAuth()
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      router.push('/matches')
+      router.push(redirectTo)
     }
-  }, [isAuthenticated, loading, router])
+  }, [isAuthenticated, loading, router, redirectTo])
 
   if (loading) {
     return <PageLoadingSkeleton variant="centered" />
@@ -48,7 +55,10 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <Card className="card-soccer-accent animate-slide-up-fade shadow-lg" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
+        <Card
+          className="card-soccer-accent animate-slide-up-fade shadow-lg"
+          style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}
+        >
           <CardHeader className="space-y-1">
             <CardTitle className="text-center text-2xl font-bold">
               Sign In
@@ -58,13 +68,17 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <LoginForm />
+            <LoginForm redirectTo={redirectTo} />
             <div className="mt-4 text-center text-sm">
               <span className="text-zinc-600 dark:text-zinc-400">
                 Don&apos;t have an account?{' '}
               </span>
               <Link
-                href="/register"
+                href={
+                  redirectTo !== '/matches'
+                    ? `/register?redirect=${encodeURIComponent(redirectTo)}`
+                    : '/register'
+                }
                 className="font-medium text-red-50 hover:underline dark:text-red-400"
               >
                 Sign up
@@ -74,5 +88,13 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<PageLoadingSkeleton variant="centered" />}>
+      <LoginPageInner />
+    </Suspense>
   )
 }

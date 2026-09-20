@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdmin } from '@/lib/api/auth'
+import { verifyClubAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { auditLog } from '@/lib/services/auditService'
 import { serializeMatchLocation } from '@/lib/utils/location'
@@ -11,14 +11,6 @@ export async function PATCH(
   { params }: { params: Promise<{ locationId: string }> }
 ) {
   try {
-    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
-    if (authError || !isAdmin) {
-      return NextResponse.json(
-        { error: 'Admin privileges required' },
-        { status: 403 }
-      )
-    }
-
     const { locationId } = await params
     if (!locationId) {
       return NextResponse.json(
@@ -48,6 +40,24 @@ export async function PATCH(
     const existing = await ref.get()
     if (!existing.exists) {
       return NextResponse.json({ error: 'Location not found' }, { status: 404 })
+    }
+
+    const clubId =
+      typeof existing.data()?.clubId === 'string'
+        ? existing.data()!.clubId
+        : null
+    const { uid, isClubAdmin, error: authError } = await verifyClubAdmin(
+      request,
+      clubId
+    )
+    if (authError || !uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!isClubAdmin) {
+      return NextResponse.json(
+        { error: 'Club admin privileges required' },
+        { status: 403 }
+      )
     }
 
     const now = Timestamp.now()
@@ -94,14 +104,6 @@ export async function DELETE(
   { params }: { params: Promise<{ locationId: string }> }
 ) {
   try {
-    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
-    if (authError || !isAdmin) {
-      return NextResponse.json(
-        { error: 'Admin privileges required' },
-        { status: 403 }
-      )
-    }
-
     const { locationId } = await params
     if (!locationId) {
       return NextResponse.json(
@@ -118,11 +120,32 @@ export async function DELETE(
       )
     }
 
-    const ref = adminDb.collection('savedLocations').doc(locationId)
-    if (!(await ref.get()).exists) {
+    const existing = await adminDb
+      .collection('savedLocations')
+      .doc(locationId)
+      .get()
+    if (!existing.exists) {
       return NextResponse.json({ error: 'Location not found' }, { status: 404 })
     }
+    const clubId =
+      typeof existing.data()?.clubId === 'string'
+        ? existing.data()!.clubId
+        : null
+    const { uid, isClubAdmin, error: authError } = await verifyClubAdmin(
+      request,
+      clubId
+    )
+    if (authError || !uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!isClubAdmin) {
+      return NextResponse.json(
+        { error: 'Club admin privileges required' },
+        { status: 403 }
+      )
+    }
 
+    const ref = adminDb.collection('savedLocations').doc(locationId)
     await ref.delete()
 
     auditLog({

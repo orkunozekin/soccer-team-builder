@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdmin, verifyAuth } from '@/lib/api/auth'
+import { resolveClubIdForWrite, verifyClubAdmin, verifyAuth } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { auditLog } from '@/lib/services/auditService'
 import { serializeMatchLocation } from '@/lib/utils/location'
@@ -60,15 +60,41 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
-    if (authError || !isAdmin) {
+    const body = (await request.json()) as SavedLocationInput & {
+      clubId?: string
+    }
+    const provisional = await verifyClubAdmin(
+      request,
+      typeof body.clubId === 'string' ? body.clubId.trim() : null
+    )
+    if (provisional.error || !provisional.uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const resolved = await resolveClubIdForWrite(
+      provisional.uid,
+      body.clubId
+    )
+    if (!resolved.clubId) {
       return NextResponse.json(
-        { error: 'Admin privileges required' },
+        { error: resolved.error || 'clubId is required' },
+        { status: 400 }
+      )
+    }
+    const clubId = resolved.clubId
+    const { uid, isClubAdmin, error: authError } = await verifyClubAdmin(
+      request,
+      clubId
+    )
+    if (authError || !uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!isClubAdmin) {
+      return NextResponse.json(
+        { error: 'Club admin privileges required' },
         { status: 403 }
       )
     }
 
-    const body = (await request.json()) as SavedLocationInput
     const location = serializeMatchLocation(body)
     if (!location) {
       return NextResponse.json(
@@ -93,6 +119,7 @@ export async function POST(request: NextRequest) {
       .doc(locationId)
       .set({
         ...location,
+        clubId,
         createdAt: now,
         updatedAt: now,
       })

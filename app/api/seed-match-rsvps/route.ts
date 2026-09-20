@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import { NextResponse } from 'next/server'
-import { verifyAdmin } from '@/lib/api/auth'
+import { verifySuperUser } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { expandTeamsForMatch } from '@/lib/teams/expandTeamsForMatch'
 import { TEST_USERS } from '@/lib/testData/testUsers'
@@ -27,8 +27,8 @@ export async function POST(request: Request) {
       process.env.SEED_SECRET && seedSecret === process.env.SEED_SECRET
 
     if (!useSecret) {
-      const { isAdmin, error } = await verifyAdmin(request)
-      if (error || !isAdmin) {
+      const { isSuperUser, error } = await verifySuperUser(request)
+      if (error || !isSuperUser) {
         return NextResponse.json(
           { error: 'Admin required or valid X-Seed-Secret' },
           { status: 403 }

@@ -72,8 +72,12 @@ export function PlayerProfileDetails({ user }: PlayerProfileDetailsProps) {
               Role
             </dt>
             <dd className="mt-1">
-              <Badge variant={user.role === 'admin' ? 'default' : 'outline'}>
-                {user.role === 'admin' ? 'Admin' : 'User'}
+              <Badge
+                variant={
+                  user.role === 'super_user' ? 'default' : 'outline'
+                }
+              >
+                {user.role === 'super_user' ? 'Super user' : 'User'}
               </Badge>
             </dd>
           </div>
