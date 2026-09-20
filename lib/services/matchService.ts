@@ -1,4 +1,4 @@
-import { orderBy } from 'firebase/firestore'
+import { orderBy } from 'firebase/firestore/lite'
 import {
   dateToTimestamp,
   getDocument,

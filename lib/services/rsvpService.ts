@@ -1,4 +1,4 @@
-import { where } from 'firebase/firestore'
+import { where } from 'firebase/firestore/lite'
 import {
   createDocument,
   deleteDocument,

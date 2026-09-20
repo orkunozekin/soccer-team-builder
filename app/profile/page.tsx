@@ -54,19 +54,20 @@ function ProfileSection({
 export default function ProfilePage() {
   const router = useRouter()
   const { user, userData, loading } = useAuth()
+  const userId = user?.uid
   const showAccountSecurity = Boolean(user && hasPasswordProvider(user))
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !userId) {
       router.push('/login')
     }
-  }, [user, loading, router])
+  }, [userId, loading, router])
 
   if (loading) {
     return <PageLoadingSkeleton variant="container" />
   }
 
-  if (!user) {
+  if (!user || !userId) {
     return null
   }
 
