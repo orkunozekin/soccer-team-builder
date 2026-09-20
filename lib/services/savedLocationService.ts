@@ -1,4 +1,4 @@
-import { orderBy } from 'firebase/firestore'
+import { orderBy } from 'firebase/firestore/lite'
 import { queryDocuments, timestampToDate } from '@/lib/firebase/firestore'
 import { parseMatchLocation } from '@/lib/utils/location'
 import type { SavedLocation } from '@/types/savedLocation'

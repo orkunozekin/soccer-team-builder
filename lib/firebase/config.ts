@@ -4,7 +4,7 @@ import {
   Firestore,
   connectFirestoreEmulator,
   getFirestore,
-} from 'firebase/firestore'
+} from 'firebase/firestore/lite'
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -23,7 +23,11 @@ if (getApps().length === 0) {
   app = getApps()[0]
 }
 
-// Initialize Firebase services
+// Initialize Firebase services.
+// Client Firestore uses the Lite SDK on purpose: this app only does one-shot
+// getDoc/getDocs (no onSnapshot). The full SDK still opens Listen/channel
+// WebChannel streams for those reads, which hang intermittently on mobile
+// Chrome and leave route navigations stuck until a hard reload.
 export const auth: Auth = getAuth(app)
 export const db: Firestore = getFirestore(app)
 

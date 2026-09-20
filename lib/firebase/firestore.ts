@@ -6,7 +6,7 @@ import {
   collection,
   deleteDoc,
   doc,
-  getCountFromServer,
+  getCount,
   getDoc,
   getDocs,
   limit,
@@ -15,7 +15,7 @@ import {
   setDoc,
   startAfter,
   updateDoc,
-} from 'firebase/firestore'
+} from 'firebase/firestore/lite'
 import { db } from './config'
 
 /** Build a collection reference; supports subcollections via path like 'matches/matchId/teams'. */
@@ -119,7 +119,10 @@ export const queryDocuments = async (
   const collectionRef = getCollectionRef(collectionName)
   const q = query(collectionRef, ...constraints)
   const querySnapshot = await getDocs(q)
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  return querySnapshot.docs.map(docSnap => ({
+    id: docSnap.id,
+    ...docSnap.data(),
+  }))
 }
 
 /**
@@ -164,6 +167,6 @@ export const getCollectionCount = async (
 ): Promise<number> => {
   const collectionRef = getCollectionRef(collectionName)
   const q = query(collectionRef, ...constraints)
-  const snapshot = await getCountFromServer(q)
+  const snapshot = await getCount(q)
   return snapshot.data().count
 }

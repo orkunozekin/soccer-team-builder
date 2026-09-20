@@ -38,20 +38,28 @@ function closedFlags(): Partial<Record<FeatureFlagKey, boolean>> {
 }
 
 /**
- * Syncs typed flags from the LD client only (never from an empty useFlags()
- * snapshot that would wipe a successful identify() back to defaults).
+ * Syncs typed flags from the LD client into the outer context. Renders no
+ * children so booting/remounting LD never remounts the app route tree.
  */
-function LaunchDarklyBridge({ children }: { children: ReactNode }) {
+function LaunchDarklyBridge({
+  onFlags,
+}: {
+  onFlags: (flags: Partial<Record<FeatureFlagKey, boolean>>) => void
+}) {
   const ldClient = useLDClient()
   const { user } = useAuth()
-  const [typedFlags, setTypedFlags] = useState(closedFlags)
+  const userId = user?.uid
+  const userEmail = user?.email ?? null
 
-  const applyFlags = useCallback((raw: Record<string, unknown>) => {
-    setTypedFlags({
-      ...readTypedFlags(raw),
-      ...getLocalFeatureFlagOverrides(),
-    })
-  }, [])
+  const applyFlags = useCallback(
+    (raw: Record<string, unknown>) => {
+      onFlags({
+        ...readTypedFlags(raw),
+        ...getLocalFeatureFlagOverrides(),
+      })
+    },
+    [onFlags]
+  )
 
   useEffect(() => {
     if (!ldClient) return
@@ -80,8 +88,8 @@ function LaunchDarklyBridge({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!ldClient) return
     let cancelled = false
-    const ctx = user
-      ? contextFromAuth(user.uid, user.email)
+    const ctx = userId
+      ? contextFromAuth(userId, userEmail)
       : anonymousContext()
 
     void ldClient
@@ -97,35 +105,24 @@ function LaunchDarklyBridge({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [ldClient, user, applyFlags])
+  }, [ldClient, userId, userEmail, applyFlags])
 
-  return (
-    <FeatureFlagContext.Provider value={typedFlags}>
-      {children}
-    </FeatureFlagContext.Provider>
-  )
+  return null
 }
 
 /**
  * App-wide LaunchDarkly provider. Nest under AuthProvider so context can use uid/email.
  * When the client ID is missing, children still render and all flags stay false.
  *
- * Waits for Firebase auth to finish loading before booting the LD client so we do
- * not evaluate flags as `anonymous` for a signed-in Google user.
+ * Children render as siblings of the LD client (not inside it) so auth finishing
+ * or LD remounting never remounts route pages mid-navigation — a common cause of
+ * stuck skeletons on mobile Chrome.
  */
 export function LaunchDarklyProvider({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth()
+  const [typedFlags, setTypedFlags] = useState(closedFlags)
 
   if (!CLIENT_SIDE_ID) {
-    return (
-      <FeatureFlagContext.Provider value={closedFlags()}>
-        {children}
-      </FeatureFlagContext.Provider>
-    )
-  }
-
-  // Auth still resolving: keep fail-closed defaults (do not boot LD as anonymous).
-  if (loading) {
     return (
       <FeatureFlagContext.Provider value={closedFlags()}>
         {children}
@@ -138,22 +135,27 @@ export function LaunchDarklyProvider({ children }: { children: ReactNode }) {
     : anonymousContext()
 
   return (
-    <LDProvider
-      key={user?.uid ?? 'anonymous'}
-      clientSideID={CLIENT_SIDE_ID}
-      context={context}
-      options={{
-        // Avoid localStorage bootstrap: a cached `false` from before targeting
-        // was configured can stick and race with identify().
-        streaming: true,
-      }}
-      reactOptions={{
-        // Keep dashboard keys as-is (e.g. pitch-lineup-view).
-        useCamelCaseFlagKeys: false,
-      }}
-      timeout={5}
-    >
-      <LaunchDarklyBridge>{children}</LaunchDarklyBridge>
-    </LDProvider>
+    <FeatureFlagContext.Provider value={typedFlags}>
+      {!loading ? (
+        <LDProvider
+          key={user?.uid ?? 'anonymous'}
+          clientSideID={CLIENT_SIDE_ID}
+          context={context}
+          options={{
+            // Avoid localStorage bootstrap: a cached `false` from before targeting
+            // was configured can stick and race with identify().
+            streaming: true,
+          }}
+          reactOptions={{
+            // Keep dashboard keys as-is (e.g. pitch-lineup-view).
+            useCamelCaseFlagKeys: false,
+          }}
+          timeout={5}
+        >
+          <LaunchDarklyBridge onFlags={setTypedFlags} />
+        </LDProvider>
+      ) : null}
+      {children}
+    </FeatureFlagContext.Provider>
   )
 }

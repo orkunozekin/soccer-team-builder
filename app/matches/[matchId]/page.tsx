@@ -9,19 +9,20 @@ import { useAuth } from '@/lib/hooks/useAuth'
 export default function MatchDetailsPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.uid
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !userId) {
       router.push('/login')
       return
     }
-  }, [authLoading, user, router])
+  }, [authLoading, userId, router])
 
   if (authLoading) {
     return <PageLoadingSkeleton showBack variant="container" />
   }
 
-  if (!user) {
+  if (!userId) {
     return null
   }
 
