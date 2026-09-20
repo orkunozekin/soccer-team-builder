@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { collectMatchParticipantIds } from './matchParticipants'
+import {
+  buildRosterPlaceholders,
+  collectMatchParticipantIds,
+  mergeRosterProfiles,
+} from './matchParticipants'
 import type { RSVP } from '@/types/rsvp'
 import type { Team } from '@/types/team'
 
@@ -57,5 +61,42 @@ describe('collectMatchParticipantIds', () => {
       [makeRsvp('a')]
     )
     expect(ids).toEqual(['a'])
+  })
+})
+
+describe('buildRosterPlaceholders / mergeRosterProfiles', () => {
+  it('builds placeholders from RSVP position and jersey', () => {
+    const rsvp = { ...makeRsvp('a'), position: 'ST', jerseyNumber: 9 }
+    const placeholders = buildRosterPlaceholders(['a', 'b'], [rsvp])
+    expect(placeholders).toHaveLength(2)
+    expect(placeholders[0]).toMatchObject({
+      uid: 'a',
+      displayName: 'Player',
+      position: 'ST',
+      jerseyNumber: 9,
+    })
+    expect(placeholders[1]).toMatchObject({
+      uid: 'b',
+      position: null,
+      jerseyNumber: null,
+    })
+  })
+
+  it('merges profiles over placeholders without dropping missing profiles', () => {
+    const placeholders = buildRosterPlaceholders(
+      ['a', 'b'],
+      [makeRsvp('a'), makeRsvp('b')]
+    )
+    const profiles = [
+      {
+        ...placeholders[0],
+        displayName: 'Alex',
+        email: 'a@example.com',
+      },
+    ]
+    const merged = mergeRosterProfiles(placeholders, profiles)
+    expect(merged.map(u => u.uid)).toEqual(['a', 'b'])
+    expect(merged[0].displayName).toBe('Alex')
+    expect(merged[1].displayName).toBe('Player')
   })
 })

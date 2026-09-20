@@ -166,6 +166,20 @@ describe('assignPitchSlots', () => {
     expect(result[0].assignedSlot).toBe('CM')
   })
 
+  it('still places players when users array is missing profiles', () => {
+    const team = makeTeam(['a', 'b'])
+    const rsvps = [
+      makeRSVP('a', new Date('2024-01-01T10:00:00Z'), { position: 'ST' }),
+      makeRSVP('b', new Date('2024-01-01T10:01:00Z'), { position: 'GK' }),
+    ]
+    const result = assignPitchSlots(team, [], rsvps)
+
+    expect(result).toHaveLength(2)
+    expect(result.map(p => p.user.uid).sort()).toEqual(['a', 'b'])
+    expect(result.find(p => p.user.uid === 'a')?.preferredPosition).toBe('ST')
+    expect(result.find(p => p.user.uid === 'b')?.preferredPosition).toBe('GK')
+  })
+
   it('falls back to a horizontal nudge when preferred and adjacent slots are taken', () => {
     // Three CMs + fill LCM/RCM band leftovers via CDM/CAM so the third nudges
     const ids = ['cm1', 'cm2', 'cdm', 'cam', 'cm3']

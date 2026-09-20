@@ -18,7 +18,11 @@ import { getMatchRSVPs } from '@/lib/services/rsvpService'
 import { getMatchTeams } from '@/lib/services/teamService'
 import { getUsersByIds } from '@/lib/services/userService'
 import { hasCheckInWindowStarted } from '@/lib/utils/checkIn'
-import { collectMatchParticipantIds } from '@/lib/utils/matchParticipants'
+import {
+  buildRosterPlaceholders,
+  collectMatchParticipantIds,
+  mergeRosterProfiles,
+} from '@/lib/utils/matchParticipants'
 import { useMatchStore } from '@/store/matchStore'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
@@ -61,6 +65,7 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
   const [teams, setTeams] = useState<Team[]>([])
   const [rosterUsers, setRosterUsers] = useState<User[]>([])
   const fetchGen = useRef(0)
+  const refetchGen = useRef(0)
   const usersWithMatchPosition = useMemo(() => {
     const rsvpByUserId = new Map(matchRSVPs.map(r => [r.userId, r]))
     return rosterUsers.map(u => {
@@ -80,6 +85,8 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
     if (!matchId || !userId) return
 
     const gen = ++fetchGen.current
+    // Cancel in-flight manual refetches when the route/auth load restarts.
+    refetchGen.current += 1
     setLoadingMatch(true)
     setTeams([])
     setRosterUsers([])
@@ -107,16 +114,16 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
           setTeams(matchTeams)
           setMatchRSVPs(rsvps)
 
-          // Reveal only after match + teams/RSVPs are applied. Revealing
-          // earlier caused half-loaded pages (0 confirmed, no teams) when a
-          // newer effect cancelled the roster portion mid-flight.
+          const participantIds = collectMatchParticipantIds(matchTeams, rsvps)
+          // Placeholders keep pitch/list populated even if profile docs lag
+          // or a later refetch cancels hydration mid-flight.
+          const placeholders = buildRosterPlaceholders(participantIds, rsvps)
+          setRosterUsers(placeholders)
           setLoadingMatch(false)
 
-          const users = await getUsersByIds(
-            collectMatchParticipantIds(matchTeams, rsvps)
-          )
+          const profiles = await getUsersByIds(participantIds)
           if (gen !== fetchGen.current) return
-          setRosterUsers(users)
+          setRosterUsers(mergeRosterProfiles(placeholders, profiles))
         } catch {
           if (gen !== fetchGen.current) return
           console.error('Failed to load teams or players')
@@ -145,22 +152,26 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
 
   const refetchMatchRoster = async () => {
     if (!matchId) return
-    const gen = ++fetchGen.current
+    // Do not bump fetchGen here — that cancelled in-flight profile hydration
+    // and left the pitch with an empty users array after teams had already
+    // been shown.
+    const gen = ++refetchGen.current
     try {
       const [matchData, rsvpsData, teamsData] = await Promise.all([
         getMatch(matchId),
         getMatchRSVPs(matchId),
         getMatchTeams(matchId),
       ])
-      if (gen !== fetchGen.current) return
+      if (gen !== refetchGen.current) return
       if (matchData) setCurrentMatch(matchData)
       setMatchRSVPs(rsvpsData)
       setTeams(teamsData)
-      const usersData = await getUsersByIds(
-        collectMatchParticipantIds(teamsData, rsvpsData)
-      )
-      if (gen !== fetchGen.current) return
-      setRosterUsers(usersData)
+      const participantIds = collectMatchParticipantIds(teamsData, rsvpsData)
+      const placeholders = buildRosterPlaceholders(participantIds, rsvpsData)
+      setRosterUsers(placeholders)
+      const usersData = await getUsersByIds(participantIds)
+      if (gen !== refetchGen.current) return
+      setRosterUsers(mergeRosterProfiles(placeholders, usersData))
     } catch (e) {
       console.error('refetchMatchRoster failed:', e)
     }
