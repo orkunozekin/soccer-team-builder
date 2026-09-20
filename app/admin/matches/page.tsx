@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AdminMatchCard } from '@/components/admin/AdminMatchCard'
 import { AdminNav } from '@/components/admin/AdminNav'
 import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
+import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getAllMatches } from '@/lib/services/matchService'
 import { getMatchRsvpCount } from '@/lib/services/rsvpService'
@@ -29,15 +31,22 @@ function filterMatches(matches: Match[], filter: MatchFilter): Match[] {
 }
 
 export default function AdminMatchesPage() {
-  const { matches, setMatches, setLoading } = useMatchStore()
+  const { matches, setMatches } = useMatchStore()
   const [rsvpCounts, setRsvpCounts] = useState<Record<string, number>>({})
   const [filter, setFilter] = useState<MatchFilter>('upcoming')
+  const [listStatus, setListStatus] = useState<
+    'loading' | 'ready' | 'error'
+  >('loading')
+  const fetchGen = useRef(0)
 
   useEffect(() => {
+    const gen = ++fetchGen.current
+    setListStatus('loading')
+
     const fetchMatches = async () => {
-      setLoading(true)
       try {
         const allMatches = await getAllMatches()
+        if (gen !== fetchGen.current) return
         setMatches(allMatches)
         const counts: Record<string, number> = {}
         await Promise.all(
@@ -45,27 +54,40 @@ export default function AdminMatchesPage() {
             counts[m.id] = await getMatchRsvpCount(m.id)
           })
         )
+        if (gen !== fetchGen.current) return
         setRsvpCounts(counts)
+        setListStatus('ready')
       } catch (error) {
         console.error('Error fetching matches:', error)
-      } finally {
-        setLoading(false)
+        if (gen !== fetchGen.current) return
+        setListStatus('error')
       }
     }
 
     fetchMatches()
-  }, [setMatches, setLoading])
+  }, [setMatches])
 
   const refetchMatches = async () => {
-    const allMatches = await getAllMatches()
-    setMatches(allMatches)
-    const counts: Record<string, number> = {}
-    await Promise.all(
-      allMatches.map(async m => {
-        counts[m.id] = await getMatchRsvpCount(m.id)
-      })
-    )
-    setRsvpCounts(counts)
+    const gen = ++fetchGen.current
+    setListStatus('loading')
+    try {
+      const allMatches = await getAllMatches()
+      if (gen !== fetchGen.current) return
+      setMatches(allMatches)
+      const counts: Record<string, number> = {}
+      await Promise.all(
+        allMatches.map(async m => {
+          counts[m.id] = await getMatchRsvpCount(m.id)
+        })
+      )
+      if (gen !== fetchGen.current) return
+      setRsvpCounts(counts)
+      setListStatus('ready')
+    } catch (error) {
+      console.error('Error fetching matches:', error)
+      if (gen !== fetchGen.current) return
+      setListStatus('error')
+    }
   }
 
   const visibleMatches = useMemo(
@@ -81,6 +103,15 @@ export default function AdminMatchesPage() {
         : filter === 'past'
           ? 'No past matches.'
           : 'No matches created yet. Create one above.'
+
+  if (listStatus === 'loading') {
+    return (
+      <div className="container mx-auto max-w-5xl px-4 py-8">
+        <AdminNav />
+        <PageLoadingSkeleton variant="container" />
+      </div>
+    )
+  }
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8">
@@ -131,7 +162,18 @@ export default function AdminMatchesPage() {
             </div>
           </div>
 
-          {visibleMatches.length === 0 ? (
+          {listStatus === 'error' && matches.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center gap-3 py-6">
+                <p className="text-center text-zinc-600 dark:text-zinc-400">
+                  Could not load matches.
+                </p>
+                <Button type="button" onClick={() => void refetchMatches()}>
+                  Try again
+                </Button>
+              </CardContent>
+            </Card>
+          ) : visibleMatches.length === 0 ? (
             <Card>
               <CardContent className="py-6">
                 <p className="text-center text-zinc-600 dark:text-zinc-400">
