@@ -4,6 +4,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { LocationPicker } from '@/components/admin/LocationPicker'
 import { RSVPPollControls } from '@/components/admin/RSVPPollControls'
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -15,13 +21,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { ButtonSpinner } from '@/components/ui/button-spinner'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardDescription } from '@/components/ui/card'
 import { DatePickerTime } from '@/components/ui/date-picker-time'
 import { deleteMatchAPI, updateMatchAPI } from '@/lib/api/client'
 import { hasValidCoords } from '@/lib/utils/geo'
@@ -40,7 +40,6 @@ export function EditMatchCard({
   onSaved,
   onDeleted,
 }: EditMatchCardProps) {
-  const [expanded, setExpanded] = useState(false)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [locationName, setLocationName] = useState('')
@@ -152,93 +151,76 @@ export function EditMatchCard({
   return (
     <>
       <Card className="w-full max-w-xl">
-        <CardHeader>
-          <CardTitle className="text-lg">Manage match</CardTitle>
-          <CardDescription>
-            Edit date, time, location, and RSVP window.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!expanded ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full sm:w-auto"
-              onClick={() => setExpanded(true)}
-            >
-              Manage match
-            </Button>
-          ) : (
-            <div className="space-y-4">
-              <form onSubmit={handleSaveDateTime} className="space-y-4">
-                <DatePickerTime
-                  dateId="match-date"
-                  timeId="match-time"
-                  date={date}
-                  time={time}
-                  onDateChange={setDate}
-                  onTimeChange={setTime}
-                  datePlaceholder="Select date"
-                  disabled={saving}
-                  timeStep={300}
-                />
-                <LocationPicker
-                  locationName={locationName}
-                  address={address}
-                  lat={lat}
-                  lng={lng}
-                  onLocationNameChange={setLocationName}
-                  onAddressTextChange={setAddress}
-                  onAddressSelect={loc => {
-                    setAddress(loc.address)
-                    setLat(loc.lat)
-                    setLng(loc.lng)
-                  }}
-                  onPinChange={coords => {
-                    if (!coords) {
-                      setLat(null)
-                      setLng(null)
-                      return
-                    }
-                    setLat(coords.lat)
-                    setLng(coords.lng)
-                  }}
-                  disabled={saving}
-                  nameId="match-location-name"
-                  addressId="match-location-address"
-                />
-                {saveSuccessMessage && (
-                  <p className="text-sm text-green-600 dark:text-green-400">
-                    {saveSuccessMessage}
-                  </p>
-                )}
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setExpanded(false)}
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="manage-match" className="border-0">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <span className="text-base font-semibold">Manage match</span>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-4">
+              <CardDescription className="mb-4">
+                Edit date, time, location, and RSVP window.
+              </CardDescription>
+              <div className="space-y-4">
+                <form onSubmit={handleSaveDateTime} className="space-y-4">
+                  <DatePickerTime
+                    dateId="match-date"
+                    timeId="match-time"
+                    date={date}
+                    time={time}
+                    onDateChange={setDate}
+                    onTimeChange={setTime}
+                    datePlaceholder="Select date"
                     disabled={saving}
-                  >
-                    Cancel
-                  </Button>
+                    timeStep={300}
+                  />
+                  <LocationPicker
+                    locationName={locationName}
+                    address={address}
+                    lat={lat}
+                    lng={lng}
+                    onLocationNameChange={setLocationName}
+                    onAddressTextChange={setAddress}
+                    onAddressSelect={loc => {
+                      setAddress(loc.address)
+                      setLat(loc.lat)
+                      setLng(loc.lng)
+                    }}
+                    onPinChange={coords => {
+                      if (!coords) {
+                        setLat(null)
+                        setLng(null)
+                        return
+                      }
+                      setLat(coords.lat)
+                      setLng(coords.lng)
+                    }}
+                    disabled={saving}
+                    nameId="match-location-name"
+                    addressId="match-location-address"
+                  />
+                  {saveSuccessMessage && (
+                    <p className="text-sm text-green-600 dark:text-green-400">
+                      {saveSuccessMessage}
+                    </p>
+                  )}
                   <Button type="submit" loading={saving} disabled={!hasChanges}>
                     Save
                   </Button>
+                </form>
+                <div className="border-t pt-4">
+                  <Button
+                    variant="destructive"
+                    className="w-full sm:w-auto"
+                    loading={deleting}
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    Delete match
+                  </Button>
                 </div>
-              </form>
-              <div className="border-t pt-4">
-                <Button
-                  variant="destructive"
-                  className="w-full sm:w-auto"
-                  loading={deleting}
-                  onClick={() => setDeleteDialogOpen(true)}
-                >
-                  Delete match
-                </Button>
               </div>
-            </div>
-          )}
-        </CardContent>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </Card>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
