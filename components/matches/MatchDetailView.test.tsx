@@ -57,7 +57,9 @@ vi.mock('@/lib/services/userService', () => ({
 }))
 
 vi.mock('@/components/matches/MatchDetails', () => ({
-  MatchDetails: () => <div>MatchDetailsMock</div>,
+  MatchDetails: ({ rsvpCount }: { rsvpCount: number }) => (
+    <div>MatchDetailsMock:{rsvpCount}</div>
+  ),
 }))
 
 vi.mock('@/components/teams/TeamsDisplay', () => ({
@@ -107,9 +109,25 @@ function mockTeam(id = 't1') {
     teamNumber: 1,
     name: 'Team 1',
     color: 'red',
-    playerIds: [],
+    playerIds: ['user1'],
     maxSize: 11,
     createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+}
+
+function mockRsvp(userId = 'user1') {
+  return {
+    id: `rsvp_${userId}`,
+    matchId: 'match1',
+    userId,
+    status: 'confirmed' as const,
+    position: null,
+    jerseyNumber: null,
+    attended: null,
+    checkedInAt: null,
+    checkInMethod: null,
+    rsvpAt: new Date(),
     updatedAt: new Date(),
   }
 }
@@ -135,7 +153,7 @@ describe('MatchDetailView', () => {
 
     render(<MatchDetailView backLink={backLink} />)
 
-    expect(await screen.findByText('MatchDetailsMock')).toBeInTheDocument()
+    expect(await screen.findByText('MatchDetailsMock:0')).toBeInTheDocument()
     expect(screen.getByText('TeamsDisplayMock')).toBeInTheDocument()
     expect(screen.queryByText('EditMatchCardMock')).not.toBeInTheDocument()
   })
@@ -152,13 +170,14 @@ describe('MatchDetailView', () => {
         teamNumber: 2,
         name: 'Team 2',
         color: 'blue',
+        playerIds: [],
       },
     ])
     getUsersByIdsMock.mockResolvedValueOnce([])
 
     render(<MatchDetailView backLink={backLink} />)
 
-    await screen.findByText('MatchDetailsMock')
+    await screen.findByText('MatchDetailsMock:0')
 
     expect(screen.getByText('EditMatchCardMock')).toBeInTheDocument()
     expect(screen.getByText('ImpersonateRSVPMock')).toBeInTheDocument()
@@ -170,14 +189,14 @@ describe('MatchDetailView', () => {
 
   it('shows the match even when roster user fetch never resolves', async () => {
     getMatchMock.mockResolvedValueOnce(mockMatch())
-    getMatchRSVPsMock.mockResolvedValueOnce([])
+    getMatchRSVPsMock.mockResolvedValueOnce([mockRsvp()])
     getMatchTeamsMock.mockResolvedValueOnce([mockTeam()])
-    // Hang forever — previously kept loadingMatch true and stuck the skeleton.
     getUsersByIdsMock.mockReturnValueOnce(new Promise(() => {}))
 
     render(<MatchDetailView backLink={backLink} />)
 
-    expect(await screen.findByText('MatchDetailsMock')).toBeInTheDocument()
+    expect(await screen.findByText('MatchDetailsMock:1')).toBeInTheDocument()
+    expect(screen.getByText('TeamsDisplayMock')).toBeInTheDocument()
   })
 
   it('recovers when matchId is missing on the first paint then arrives', async () => {
@@ -190,13 +209,12 @@ describe('MatchDetailView', () => {
 
     const { rerender } = render(<MatchDetailView backLink={backLink} />)
 
-    // Still skeleton: effect bailed because params were empty.
-    expect(screen.queryByText('MatchDetailsMock')).not.toBeInTheDocument()
+    expect(screen.queryByText(/MatchDetailsMock/)).not.toBeInTheDocument()
 
     params = { matchId: 'match1' }
     rerender(<MatchDetailView backLink={backLink} />)
 
-    expect(await screen.findByText('MatchDetailsMock')).toBeInTheDocument()
+    expect(await screen.findByText('MatchDetailsMock:0')).toBeInTheDocument()
   })
 
   it('does not render a stale store match while loading a different matchId', async () => {
@@ -213,10 +231,37 @@ describe('MatchDetailView', () => {
 
     render(<MatchDetailView backLink={backLink} />)
 
-    expect(screen.queryByText('MatchDetailsMock')).not.toBeInTheDocument()
+    expect(screen.queryByText(/MatchDetailsMock/)).not.toBeInTheDocument()
 
     resolveMatch(mockMatch('match1'))
 
-    expect(await screen.findByText('MatchDetailsMock')).toBeInTheDocument()
+    expect(await screen.findByText('MatchDetailsMock:0')).toBeInTheDocument()
+  })
+
+  it('does not reveal match details before teams and RSVPs resolve', async () => {
+    let resolveTeams: (value: unknown) => void = () => {}
+    getMatchMock.mockResolvedValue(mockMatch())
+    getMatchRSVPsMock.mockResolvedValue([mockRsvp(), mockRsvp('user2')])
+    getMatchTeamsMock.mockImplementation(
+      () =>
+        new Promise(resolve => {
+          resolveTeams = resolve
+        })
+    )
+    getUsersByIdsMock.mockResolvedValue([])
+
+    render(<MatchDetailView backLink={backLink} />)
+
+    await waitFor(() => {
+      expect(getMatchMock).toHaveBeenCalled()
+    })
+    // Match doc may be ready, but UI must stay on the skeleton until roster
+    // data is applied — otherwise we paint "0 confirmed" / no teams.
+    expect(screen.queryByText(/MatchDetailsMock/)).not.toBeInTheDocument()
+
+    resolveTeams([mockTeam()])
+
+    expect(await screen.findByText('MatchDetailsMock:2')).toBeInTheDocument()
+    expect(screen.getByText('TeamsDisplayMock')).toBeInTheDocument()
   })
 })

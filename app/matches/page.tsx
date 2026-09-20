@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
 import { SoccerBallIcon } from '@/components/icons/SoccerBallIcon'
@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getAllMatches } from '@/lib/services/matchService'
@@ -24,60 +25,103 @@ import { useMatchStore } from '@/store/matchStore'
 export default function MatchesPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.uid
   const { isAdmin } = useAdmin()
-  const { matches, loading, setMatches, setLoading } = useMatchStore()
+  const { matches, setMatches } = useMatchStore()
   const [rsvpCounts, setRsvpCounts] = useState<Record<string, number>>({})
+  // Local load state — do not use the shared store `loading` flag. Overlapping
+  // navigations / admin pages flipping that flag made this page treat an
+  // in-flight or failed fetch as a successful empty list.
+  const [listStatus, setListStatus] = useState<
+    'loading' | 'ready' | 'error'
+  >('loading')
+  const fetchGen = useRef(0)
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !userId) {
       router.push('/login')
       return
     }
+    if (authLoading || !userId) return
+
+    const gen = ++fetchGen.current
+    setListStatus('loading')
 
     const fetchMatches = async () => {
-      if (user) {
-        setLoading(true)
-        try {
-          const allMatches = await getAllMatches()
-          const upcoming = allMatches.filter(m => !isMatchPast(m.date, m.time))
-          setMatches(upcoming)
-          const counts: Record<string, number> = {}
-          await Promise.all(
-            upcoming.map(async m => {
-              counts[m.id] = await getMatchRsvpCount(m.id)
-            })
-          )
-          setRsvpCounts(counts)
-        } catch (error) {
-          console.error('Error fetching matches:', error)
-        } finally {
-          setLoading(false)
-        }
+      try {
+        const allMatches = await getAllMatches()
+        if (gen !== fetchGen.current) return
+        const upcoming = allMatches.filter(m => !isMatchPast(m.date, m.time))
+        setMatches(upcoming)
+        const counts: Record<string, number> = {}
+        await Promise.all(
+          upcoming.map(async m => {
+            counts[m.id] = await getMatchRsvpCount(m.id)
+          })
+        )
+        if (gen !== fetchGen.current) return
+        setRsvpCounts(counts)
+        setListStatus('ready')
+      } catch (error) {
+        console.error('Error fetching matches:', error)
+        if (gen !== fetchGen.current) return
+        setListStatus('error')
       }
     }
 
     fetchMatches()
-  }, [user, authLoading, router, setMatches, setLoading])
+  }, [userId, authLoading, router, setMatches])
 
   const refetchMatchesAndCounts = async () => {
-    const allMatches = await getAllMatches()
-    const upcoming = allMatches.filter(m => !isMatchPast(m.date, m.time))
-    setMatches(upcoming)
-    const counts: Record<string, number> = {}
-    await Promise.all(
-      upcoming.map(async m => {
-        counts[m.id] = await getMatchRsvpCount(m.id)
-      })
-    )
-    setRsvpCounts(counts)
+    const gen = ++fetchGen.current
+    setListStatus('loading')
+    try {
+      const allMatches = await getAllMatches()
+      if (gen !== fetchGen.current) return
+      const upcoming = allMatches.filter(m => !isMatchPast(m.date, m.time))
+      setMatches(upcoming)
+      const counts: Record<string, number> = {}
+      await Promise.all(
+        upcoming.map(async m => {
+          counts[m.id] = await getMatchRsvpCount(m.id)
+        })
+      )
+      if (gen !== fetchGen.current) return
+      setRsvpCounts(counts)
+      setListStatus('ready')
+    } catch (error) {
+      console.error('Error fetching matches:', error)
+      if (gen !== fetchGen.current) return
+      setListStatus('error')
+    }
   }
 
-  if (authLoading || loading) {
+  if (authLoading || listStatus === 'loading') {
     return <PageLoadingSkeleton variant="container" />
   }
 
-  if (!user) {
+  if (!userId) {
     return null
+  }
+
+  if (listStatus === 'error' && matches.length === 0) {
+    return (
+      <div className="container mx-auto max-w-5xl px-4 py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Could not load matches</CardTitle>
+            <CardDescription>
+              Something went wrong while fetching upcoming matches.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button type="button" onClick={() => void refetchMatchesAndCounts()}>
+              Try again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
