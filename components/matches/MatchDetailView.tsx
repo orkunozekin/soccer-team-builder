@@ -28,6 +28,16 @@ export interface MatchDetailViewProps {
   backLink: { href: string; label: string }
 }
 
+function paramToString(
+  value: string | string[] | undefined
+): string | undefined {
+  if (typeof value === 'string' && value.length > 0) return value
+  if (Array.isArray(value) && typeof value[0] === 'string' && value[0]) {
+    return value[0]
+  }
+  return undefined
+}
+
 /**
  * Shared match detail UI used by both /matches/[matchId] and /admin/matches/[matchId].
  * Caller must ensure user is authenticated (and admin for admin route).
@@ -35,13 +45,16 @@ export interface MatchDetailViewProps {
 export function MatchDetailView({ backLink }: MatchDetailViewProps) {
   const router = useRouter()
   const params = useParams()
-  const matchId = params?.matchId as string
+  const matchId = paramToString(params?.matchId)
   const { user, userData } = useAuth()
+  const userId = user?.uid
   const { isAdmin } = useAdmin()
   const { currentMatch, setCurrentMatch, matchRSVPs, setMatchRSVPs } =
     useMatchStore()
-  const userRsvp = user
-    ? (matchRSVPs.find(r => r.userId === user.uid) ?? null)
+  const match =
+    currentMatch && matchId && currentMatch.id === matchId ? currentMatch : null
+  const userRsvp = userId
+    ? (matchRSVPs.find(r => r.userId === userId) ?? null)
     : null
   const userProfilePosition = userData?.position ?? null
   const [loadingMatch, setLoadingMatch] = useState(true)
@@ -64,45 +77,76 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
   }, [rosterUsers, matchRSVPs])
 
   useEffect(() => {
+    let cancelled = false
+
     const fetchMatchData = async () => {
-      if (!matchId || !user) return
+      // Wait for route params / auth without clearing the skeleton. A prior
+      // bug returned here after setLoadingMatch(true) on a stale run, which
+      // left the page stuck on the skeleton until a full reload.
+      if (!matchId || !userId) return
 
       setLoadingMatch(true)
+      setLoadingTeams(true)
+      setTeams([])
+      setRosterUsers([])
+      setMatchRSVPs([])
+
       try {
-        const match = await getMatch(matchId)
-        if (!match) {
+        const nextMatch = await getMatch(matchId)
+        if (cancelled) return
+        if (!nextMatch) {
           router.push(backLink.href)
           return
         }
 
-        setCurrentMatch(match)
+        setCurrentMatch(nextMatch)
+        // Show the match shell as soon as the match doc is ready. Roster
+        // fetches can hang or fail without blocking the whole page.
+        setLoadingMatch(false)
 
         try {
           const [matchTeams, rsvps] = await Promise.all([
             getMatchTeams(matchId),
             getMatchRSVPs(matchId),
           ])
+          if (cancelled) return
           setTeams(matchTeams)
           setMatchRSVPs(rsvps)
           const users = await getUsersByIds(
             collectMatchParticipantIds(matchTeams, rsvps)
           )
+          if (cancelled) return
           setRosterUsers(users)
         } catch {
           console.error('Failed to load teams or players')
+        } finally {
+          if (!cancelled) setLoadingTeams(false)
         }
       } catch {
-        console.error('Failed to load match')
-        router.push(backLink.href)
-        return
+        if (!cancelled) {
+          console.error('Failed to load match')
+          router.push(backLink.href)
+        }
       } finally {
-        setLoadingMatch(false)
-        setLoadingTeams(false)
+        if (!cancelled) {
+          setLoadingMatch(false)
+          setLoadingTeams(false)
+        }
       }
     }
 
     fetchMatchData()
-  }, [matchId, user, router, backLink.href, setCurrentMatch, setMatchRSVPs])
+    return () => {
+      cancelled = true
+    }
+  }, [
+    matchId,
+    userId,
+    router,
+    backLink.href,
+    setCurrentMatch,
+    setMatchRSVPs,
+  ])
 
   const refetchMatchRoster = async () => {
     if (!matchId) return
@@ -124,21 +168,18 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
     }
   }
 
-  if (loadingMatch) {
+  if (loadingMatch || !matchId || !match) {
     return <PageLoadingSkeleton showBack variant="container" />
   }
 
-  if (!user || !currentMatch) {
+  if (!userId) {
     return null
   }
 
   const hasTeamsPanel = !loadingTeams && teams.length > 0
   const confirmedRsvps = matchRSVPs.filter(r => r.status === 'confirmed')
   const checkedInCount = confirmedRsvps.filter(r => r.attended === true).length
-  const showCheckInHeadcount = hasCheckInWindowStarted(
-    currentMatch.date,
-    currentMatch.time
-  )
+  const showCheckInHeadcount = hasCheckInWindowStarted(match.date, match.time)
 
   return (
     <div className="flex w-full min-w-0 flex-col items-center overflow-x-hidden">
@@ -156,7 +197,7 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
         >
           <div className="min-w-0 space-y-6">
             <MatchDetails
-              match={currentMatch}
+              match={match}
               rsvpCount={confirmedRsvps.length}
               checkedInCount={checkedInCount}
               showCheckInHeadcount={showCheckInHeadcount}
@@ -166,19 +207,19 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
               onMatchRefetch={refetchMatchRoster}
               teams={teams}
               rosterUsers={usersWithMatchPosition}
-              currentUserId={user.uid}
+              currentUserId={userId}
             />
 
-            {isAdmin && currentMatch && (
+            {isAdmin && (
               <>
                 <EditMatchCard
                   matchId={matchId}
-                  match={currentMatch}
+                  match={match}
                   onSaved={refetchMatchRoster}
                   onDeleted={() => router.push(backLink.href)}
                 />
                 <ImpersonateRSVP
-                  match={currentMatch}
+                  match={match}
                   matchRSVPs={matchRSVPs}
                   onDone={refetchMatchRoster}
                 />
@@ -194,10 +235,10 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
                 users={usersWithMatchPosition}
                 isAdmin={isAdmin ?? false}
                 onTeamsChanged={refetchMatchRoster}
-                currentUserId={user.uid}
+                currentUserId={userId}
                 matchRSVPs={matchRSVPs}
-                matchDate={currentMatch.date}
-                matchTime={currentMatch.time}
+                matchDate={match.date}
+                matchTime={match.time}
                 headerActions={
                   isAdmin && teams.length >= 2 ? (
                     <RebalanceTeamsButton

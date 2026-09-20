@@ -1,14 +1,16 @@
 import { render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { MatchDetailView } from './MatchDetailView'
 
 const routerMock = {
   push: vi.fn(),
 }
 
+const paramsMock = vi.fn(() => ({ matchId: 'match1' }))
+
 vi.mock('next/navigation', () => ({
   useRouter: () => routerMock,
-  useParams: () => ({ matchId: 'match1' }),
+  useParams: () => paramsMock(),
 }))
 
 const useAuthMock = vi.fn()
@@ -78,41 +80,57 @@ vi.mock('@/components/admin/RebalanceTeamsButton', () => ({
   RebalanceTeamsButton: () => <button>RebalanceTeamsButtonMock</button>,
 }))
 
+vi.mock('@/components/admin/RsvpOrderCard', () => ({
+  RsvpOrderCard: () => <div>RsvpOrderCardMock</div>,
+}))
+
 const backLink = { href: '/matches', label: 'Back to matches' }
 
+function mockMatch(id = 'match1') {
+  return {
+    id,
+    date: new Date(),
+    time: '19:00',
+    location: null,
+    rsvpOpen: true,
+    rsvpOpenAt: null,
+    rsvpCloseAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+}
+
+function mockTeam(id = 't1') {
+  return {
+    id,
+    matchId: 'match1',
+    teamNumber: 1,
+    name: 'Team 1',
+    color: 'red',
+    playerIds: [],
+    maxSize: 11,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+}
+
 describe('MatchDetailView', () => {
-  it('renders match and teams details for regular user', async () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    matchStoreState.currentMatch = null
+    matchStoreState.matchRSVPs = []
+    paramsMock.mockReturnValue({ matchId: 'match1' })
     useAuthMock.mockReturnValue({
       user: { uid: 'user1' },
       userData: { uid: 'user1', position: 'ST' },
     })
     useAdminMock.mockReturnValue({ isAdmin: false })
+  })
 
-    getMatchMock.mockResolvedValueOnce({
-      id: 'match1',
-      date: new Date(),
-      time: '19:00',
-      location: null,
-      rsvpOpen: true,
-      rsvpOpenAt: null,
-      rsvpCloseAt: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
+  it('renders match and teams details for regular user', async () => {
+    getMatchMock.mockResolvedValueOnce(mockMatch())
     getMatchRSVPsMock.mockResolvedValueOnce([])
-    getMatchTeamsMock.mockResolvedValueOnce([
-      {
-        id: 't1',
-        matchId: 'match1',
-        teamNumber: 1,
-        name: 'Team 1',
-        color: 'red',
-        playerIds: [],
-        maxSize: 11,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ])
+    getMatchTeamsMock.mockResolvedValueOnce([mockTeam()])
     getUsersByIdsMock.mockResolvedValueOnce([])
 
     render(<MatchDetailView backLink={backLink} />)
@@ -123,46 +141,17 @@ describe('MatchDetailView', () => {
   })
 
   it('shows admin controls when user is admin', async () => {
-    useAuthMock.mockReturnValue({
-      user: { uid: 'admin1' },
-      userData: { uid: 'admin1', position: 'ST' },
-    })
     useAdminMock.mockReturnValue({ isAdmin: true })
 
-    getMatchMock.mockResolvedValueOnce({
-      id: 'match1',
-      date: new Date(),
-      time: '19:00',
-      location: null,
-      rsvpOpen: true,
-      rsvpOpenAt: null,
-      rsvpCloseAt: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
+    getMatchMock.mockResolvedValueOnce(mockMatch())
     getMatchRSVPsMock.mockResolvedValueOnce([])
     getMatchTeamsMock.mockResolvedValueOnce([
+      mockTeam('t1'),
       {
-        id: 't1',
-        matchId: 'match1',
-        teamNumber: 1,
-        name: 'Team 1',
-        color: 'red',
-        playerIds: [],
-        maxSize: 11,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: 't2',
-        matchId: 'match1',
+        ...mockTeam('t2'),
         teamNumber: 2,
         name: 'Team 2',
         color: 'blue',
-        playerIds: [],
-        maxSize: 11,
-        createdAt: new Date(),
-        updatedAt: new Date(),
       },
     ])
     getUsersByIdsMock.mockResolvedValueOnce([])
@@ -177,5 +166,57 @@ describe('MatchDetailView', () => {
     await waitFor(() => {
       expect(screen.getByText('PlayerTransferMock')).toBeInTheDocument()
     })
+  })
+
+  it('shows the match even when roster user fetch never resolves', async () => {
+    getMatchMock.mockResolvedValueOnce(mockMatch())
+    getMatchRSVPsMock.mockResolvedValueOnce([])
+    getMatchTeamsMock.mockResolvedValueOnce([mockTeam()])
+    // Hang forever — previously kept loadingMatch true and stuck the skeleton.
+    getUsersByIdsMock.mockReturnValueOnce(new Promise(() => {}))
+
+    render(<MatchDetailView backLink={backLink} />)
+
+    expect(await screen.findByText('MatchDetailsMock')).toBeInTheDocument()
+  })
+
+  it('recovers when matchId is missing on the first paint then arrives', async () => {
+    let params: { matchId?: string } = {}
+    paramsMock.mockImplementation(() => params)
+    getMatchMock.mockResolvedValueOnce(mockMatch())
+    getMatchRSVPsMock.mockResolvedValueOnce([])
+    getMatchTeamsMock.mockResolvedValueOnce([])
+    getUsersByIdsMock.mockResolvedValueOnce([])
+
+    const { rerender } = render(<MatchDetailView backLink={backLink} />)
+
+    // Still skeleton: effect bailed because params were empty.
+    expect(screen.queryByText('MatchDetailsMock')).not.toBeInTheDocument()
+
+    params = { matchId: 'match1' }
+    rerender(<MatchDetailView backLink={backLink} />)
+
+    expect(await screen.findByText('MatchDetailsMock')).toBeInTheDocument()
+  })
+
+  it('does not render a stale store match while loading a different matchId', async () => {
+    matchStoreState.currentMatch = mockMatch('old-match')
+    let resolveMatch: (value: unknown) => void = () => {}
+    getMatchMock.mockReturnValueOnce(
+      new Promise(resolve => {
+        resolveMatch = resolve
+      })
+    )
+    getMatchRSVPsMock.mockResolvedValueOnce([])
+    getMatchTeamsMock.mockResolvedValueOnce([])
+    getUsersByIdsMock.mockResolvedValueOnce([])
+
+    render(<MatchDetailView backLink={backLink} />)
+
+    expect(screen.queryByText('MatchDetailsMock')).not.toBeInTheDocument()
+
+    resolveMatch(mockMatch('match1'))
+
+    expect(await screen.findByText('MatchDetailsMock')).toBeInTheDocument()
   })
 })
