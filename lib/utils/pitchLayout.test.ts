@@ -383,6 +383,18 @@ describe('layoutTeamOnPitch', () => {
       expect(p.position.y).toBeGreaterThan(50)
     }
   })
+
+  it('clamps bottom-half goalkeepers away from the pitch edge', () => {
+    const users = [makeUser('gk', { position: 'GK' })]
+    const team = makeTeam(['gk'])
+    const rsvps = [makeRSVP('gk', new Date('2024-01-01T10:00:00Z'))]
+
+    const half = layoutTeamOnPitch(team, users, rsvps, 'bottom')
+    expect(half).toHaveLength(1)
+    // Raw mapToHalfPitch(GK, bottom) is ~96.55; clamp keeps label room.
+    expect(half[0].position.y).toBeLessThanOrEqual(94)
+    expect(half[0].position.y).toBeGreaterThan(50)
+  })
 })
 
 describe('mapToHalfPitch', () => {
