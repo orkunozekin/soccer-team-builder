@@ -64,7 +64,7 @@ describe('PlayerMarker', () => {
     expect(name.className).toContain('text-white')
   })
 
-  it('places the name above the marker near the bottom pitch edge', () => {
+  it('places goalkeeper names above the marker near the bottom pitch edge', () => {
     const { container } = render(
       <PlayerMarker
         user={makeUser({ displayName: 'Jordan Goalie' })}
@@ -79,6 +79,26 @@ describe('PlayerMarker', () => {
     expect(labelWrap?.className).toContain('bottom-full')
     expect(labelWrap?.className).not.toContain('top-full')
     expect(container.firstChild).toBeTruthy()
+  })
+
+  it('keeps outfield names below the marker even near the bottom edge', () => {
+    render(
+      <PlayerMarker
+        user={makeUser({
+          position: 'RB',
+          displayName: 'Jhalil Defender',
+          jerseyNumber: 23,
+        })}
+        position={{ x: 84, y: 91 }}
+        team={team}
+        isMobile={false}
+        isAdmin={false}
+      />
+    )
+
+    const labelWrap = screen.getByText('Jhalil D.').parentElement
+    expect(labelWrap?.className).toContain('top-full')
+    expect(labelWrap?.className).not.toContain('bottom-full')
   })
 
   it('places the name below the marker away from the bottom edge', () => {
