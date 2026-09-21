@@ -34,8 +34,9 @@ export function PlayerMarker({
   const isGK = isGoalkeeper(user.position)
   const clickable = isAdmin && onPlayerClick
   const size = isMobile ? 30 : 40
-  // Bottom-half markers sit near the goal line; labels below clip past the pitch.
-  const nameAbove = position.y >= 84
+  // Only bottom-half GKs flip the label above the disc. Outfield defenders near
+  // the goal line (e.g. RB at y≈91) should keep the normal below-marker label.
+  const nameAbove = isGK && position.y >= 84
 
   const content = (
     <>
