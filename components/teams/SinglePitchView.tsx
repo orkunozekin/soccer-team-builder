@@ -38,30 +38,34 @@ export function SinglePitchView({
   const aspectRatio = `${68 / 105}`
 
   return (
-    <div
-      className="relative w-full animate-in fade-in-0 duration-300"
-      style={{
-        aspectRatio,
-        transform: pitchTransform,
-        transformOrigin: 'center',
-      }}
-    >
-      <div className="relative h-full w-full overflow-visible">
-        <PitchSurface />
-        {players.map(({ user, position }) => (
-          <PlayerMarker
-            key={user.uid}
-            user={user}
-            position={position}
-            team={team}
-            isMobile={isMobile}
-            isAdmin={isAdmin}
-            onPlayerClick={onPlayerClick}
-            counterFlipX={flipX}
-            counterFlipY={flipY}
-            isCurrentUser={currentUserId === user.uid}
-          />
-        ))}
+    // pb reserves layout space so bottom-edge name labels can overflow the
+    // grass without colliding with the next section.
+    <div className="relative w-full pb-5 animate-in fade-in-0 duration-300">
+      <div
+        className="relative w-full"
+        style={{
+          aspectRatio,
+          transform: pitchTransform,
+          transformOrigin: 'center',
+        }}
+      >
+        <div className="relative h-full w-full overflow-visible">
+          <PitchSurface />
+          {players.map(({ user, position }) => (
+            <PlayerMarker
+              key={user.uid}
+              user={user}
+              position={position}
+              team={team}
+              isMobile={isMobile}
+              isAdmin={isAdmin}
+              onPlayerClick={onPlayerClick}
+              counterFlipX={flipX}
+              counterFlipY={flipY}
+              isCurrentUser={currentUserId === user.uid}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )
