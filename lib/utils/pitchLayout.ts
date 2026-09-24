@@ -19,7 +19,7 @@ export interface PlayerOnPitch {
   preferredPosition: string
 }
 
-/** Keep markers inset so name labels stay inside the pitch. */
+/** Keep markers inset from the touchline; labels may overflow the pitch edge. */
 export const PITCH_EDGE_MARGIN_X = 14
 export const PITCH_EDGE_MARGIN_Y = 5
 
@@ -296,8 +296,8 @@ export function layoutTeamOnPitch(
     return separatePlayers(players, {
       minX: PITCH_EDGE_MARGIN_X,
       maxX: 100 - PITCH_EDGE_MARGIN_X,
-      // Keep bottom-half markers inset so labels (even when flipped above)
-      // and jersey discs are not clipped by the pitch edge / parent overflow.
+      // Keep bottom-half markers inset so jersey discs stay on the grass;
+      // name labels may intentionally overflow past the pitch edge.
       minY: half === 'top' ? 3 : 52,
       maxY: half === 'top' ? 48 : 94,
       // Half-pitch is vertically compressed; keep enough room for names.

@@ -35,36 +35,37 @@ export function DualTeamPitchView({
   const aspectRatio = `${68 / 105}`
 
   return (
-    <div
-      className="relative w-full animate-in fade-in-0 duration-300"
-      style={{ aspectRatio }}
-    >
-      <div className="relative h-full w-full overflow-visible">
-        <PitchSurface />
-        {playersTop.map(({ user, position }) => (
-          <PlayerMarker
-            key={`top-${user.uid}`}
-            user={user}
-            position={position}
-            team={teamTop}
-            isMobile={isMobile}
-            isAdmin={isAdmin}
-            onPlayerClick={onPlayerClick}
-            isCurrentUser={currentUserId === user.uid}
-          />
-        ))}
-        {playersBottom.map(({ user, position }) => (
-          <PlayerMarker
-            key={`bottom-${user.uid}`}
-            user={user}
-            position={position}
-            team={teamBottom}
-            isMobile={isMobile}
-            isAdmin={isAdmin}
-            onPlayerClick={onPlayerClick}
-            isCurrentUser={currentUserId === user.uid}
-          />
-        ))}
+    // pb reserves layout space so bottom-edge name labels can overflow the
+    // grass without colliding with the next section.
+    <div className="relative w-full pb-5 animate-in fade-in-0 duration-300">
+      <div className="relative w-full" style={{ aspectRatio }}>
+        <div className="relative h-full w-full overflow-visible">
+          <PitchSurface />
+          {playersTop.map(({ user, position }) => (
+            <PlayerMarker
+              key={`top-${user.uid}`}
+              user={user}
+              position={position}
+              team={teamTop}
+              isMobile={isMobile}
+              isAdmin={isAdmin}
+              onPlayerClick={onPlayerClick}
+              isCurrentUser={currentUserId === user.uid}
+            />
+          ))}
+          {playersBottom.map(({ user, position }) => (
+            <PlayerMarker
+              key={`bottom-${user.uid}`}
+              user={user}
+              position={position}
+              team={teamBottom}
+              isMobile={isMobile}
+              isAdmin={isAdmin}
+              onPlayerClick={onPlayerClick}
+              isCurrentUser={currentUserId === user.uid}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )

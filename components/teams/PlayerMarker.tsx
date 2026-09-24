@@ -34,9 +34,6 @@ export function PlayerMarker({
   const isGK = isGoalkeeper(user.position)
   const clickable = isAdmin && onPlayerClick
   const size = isMobile ? 30 : 40
-  // Only bottom-half GKs flip the label above the disc. Outfield defenders near
-  // the goal line (e.g. RB at y≈91) should keep the normal below-marker label.
-  const nameAbove = isGK && position.y >= 84
 
   const content = (
     <>
@@ -67,10 +64,11 @@ export function PlayerMarker({
           {formatJerseyDisplay(user.jerseyNumber)}
         </span>
       </div>
+      {/* Always below the disc — bottom GKs may overflow the pitch edge. */}
       <div
-        className={`absolute left-1/2 flex -translate-x-1/2 flex-col items-center text-center ${
-          nameAbove ? 'bottom-full mb-0.5' : 'top-full mt-0'
-        } ${isMobile ? 'w-[5.75rem]' : 'w-[7.5rem]'}`}
+        className={`absolute left-1/2 top-full mt-0 flex -translate-x-1/2 flex-col items-center text-center ${
+          isMobile ? 'w-[5.75rem]' : 'w-[7.5rem]'
+        }`}
       >
         <span
           className={`block max-w-full whitespace-nowrap font-bold ${
