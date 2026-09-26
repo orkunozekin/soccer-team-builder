@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { JoinClubForm } from '@/components/profile/ProfileClubsSection'
@@ -17,13 +18,13 @@ export default function JoinPageClient() {
   const [autoStatus, setAutoStatus] = useState<string | null>(null)
   const [autoError, setAutoError] = useState('')
 
-  useEffect(() => {
-    if (loading) return
-    if (!user && codeFromUrl) {
-      const next = `/join?code=${encodeURIComponent(codeFromUrl)}`
-      router.replace(`/login?redirect=${encodeURIComponent(next)}`)
-    }
-  }, [loading, user, codeFromUrl, router])
+  const joinPath = codeFromUrl
+    ? `/join?code=${encodeURIComponent(codeFromUrl)}`
+    : '/join'
+  const registerHref = codeFromUrl
+    ? `/register?code=${encodeURIComponent(codeFromUrl)}&redirect=${encodeURIComponent(joinPath)}`
+    : '/register'
+  const loginHref = `/login?redirect=${encodeURIComponent(joinPath)}`
 
   useEffect(() => {
     if (loading || !user || !codeFromUrl) return
@@ -54,7 +55,35 @@ export default function JoinPageClient() {
   }
 
   if (!user) {
-    return null
+    return (
+      <div className="container mx-auto px-4 py-10">
+        <Card className="mx-auto max-w-md">
+          <CardHeader>
+            <CardTitle>Join a club</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {codeFromUrl ? (
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Sign in or create an account to redeem invite code{' '}
+                <span className="font-mono font-medium">{codeFromUrl}</span>.
+              </p>
+            ) : (
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Sign in or create an account, then enter your invite code.
+              </p>
+            )}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button asChild className="flex-1">
+                <Link href={registerHref}>Create account</Link>
+              </Button>
+              <Button asChild variant="outline" className="flex-1">
+                <Link href={loginHref}>Sign in</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (

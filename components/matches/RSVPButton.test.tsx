@@ -22,6 +22,20 @@ vi.mock('@/lib/hooks/useAdmin', () => ({
   useAdmin: () => useAdminMock(),
 }))
 
+vi.mock('@/lib/hooks/useClubMemberships', () => ({
+  useIsClubAdmin: () => ({
+    isClubAdmin: false,
+    isSuperUser: false,
+    loading: false,
+  }),
+  useClubMemberships: () => ({
+    memberships: [],
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+}))
+
 const useMatchStoreMock = vi.fn()
 vi.mock('@/store/matchStore', () => ({
   useMatchStore: () => useMatchStoreMock(),

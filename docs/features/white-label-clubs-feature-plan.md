@@ -7,9 +7,9 @@ Plan to move Soccerville from a single hard-coded club to multi-club tenancy: re
 | Field | Value |
 |-------|-------|
 | Status | in progress |
-| Owner session | cloud agent (implementation start) |
-| Last updated | 2026-09-20 |
-| Related PR / branch | `cursor/white-label-clubs-8675` |
+| Owner session | cloud agent (match scoping + invite register) |
+| Last updated | 2026-09-26 |
+| Related PR / branch | `cursor/white-label-clubs-next-7f02` |
 
 ## Goals (v1)
 
@@ -293,23 +293,26 @@ flowchart TD
 - Auth helpers: `verifySuperUser`, `verifyClubMember`, `verifyClubAdmin`, `verifyCanCreateInvite`, `verifyClubAdminForMatch`, `resolveClubIdForWrite`.
 - Club APIs: create/patch club, mine, invites, redeem, backfill; Wave A/B `verifyAdmin` call sites migrated.
 - Firestore rules + membership indexes; profile clubs UI; `/join`; admin ClubAdminPanel; unit tests for auth helpers + backfill idempotency.
+- Client match scoping: `lib/utils/clubMatches.ts` filters list by `activeClubId` / memberships (keeps unscoped pre-backfill docs); orphan empty state + `/join` CTA on `app/matches/page.tsx`.
+- Match UI gates on club admin: `MatchDetailView` uses `useIsClubAdmin` (`canManageMatch`); `RSVPButton` post-start cancel override; create-match + `MatchCard` use club-admin helpers (not global `isAdmin` alone).
+- Invite-aware registration: `RegisterForm` code field + redeem after signup; `/register` reads `?code=` / `?redirect=`; `/join` offers Create account + Sign in when logged out.
 
 ### Remaining work
 
-- Tighter client match-list filtering by membership/`activeClubId` (reads still broad for pre-backfill docs).
-- Invite-aware registration UX polish; promote/demote club_admin from roster UI.
-- Deploy rules/indexes; run founding-club create + backfill in each environment.
-- Spot-check player cannot hit club-admin APIs; confirm founding-club match list after backfill.
+1. Promote/demote `club_admin` from roster UI (members list API + profile/admin surface on top of `upsertMembership`).
+2. Deploy rules/indexes; run founding-club create + backfill in each environment.
+3. Spot-check player cannot hit club-admin APIs; confirm founding-club match list after backfill.
+4. Optional: club switcher writing `users.activeClubId`; pass explicit `clubId` into `createMatchAPI` from active club.
 
 ### Blockers / risks
 
 - Large blast radius: every `verifyAdmin` call site and Firestore rule assuming a single shared match universe.
-- Shipping memberships without `match.clubId` isolation + membership checks leaks data across clubs.
-- Client still showing admin controls from global `isAdmin` after Wave B would be a footgun — must switch to club-admin checks.
+- Shipping memberships without `match.clubId` isolation + membership checks leaks data across clubs — backfill still required per environment.
+- Unscoped (`clubId` null) matches remain visible to members until stamped; tighten further only after environments are backfilled.
 
 ### Pointers for the next agent
 
-- Start at: run create club + backfill in admin Users → Clubs panel; verify profile invite copy + `/join?code=`.
+- Start at: `GET/PATCH /api/clubs/[clubId]/members` + roster promote/demote UI, or ops backfill via admin Users → Clubs panel.
 - Do not: put `club_admin` on the global `users.role` field; do not rename match lineup `teams`; do not use `team_admin`.
-- Verify with: unit tests for auth helpers + invite redeem + migration idempotency; manual profile invite copy + join flow; confirm founding-club match list still works after `clubId` backfill; spot-check that a player cannot hit club-admin APIs.
+- Verify with: `yarn vitest run lib/utils/clubMatches.test.ts app/matches/page.test.tsx components/matches/MatchDetailView.test.tsx`; manual profile invite copy → `/join?code=` → register → matches scoped to club; club_admin sees manage controls on match detail without global `super_user`.
 - Next skills: `/feature-context` on this file before coding; `/handoff` when a session ends or status changes.

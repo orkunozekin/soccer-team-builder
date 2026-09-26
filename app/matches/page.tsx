@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
 import { SoccerBallIcon } from '@/components/icons/SoccerBallIcon'
@@ -16,17 +17,27 @@ import {
 import { Button } from '@/components/ui/button'
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
 import { getAllMatches } from '@/lib/services/matchService'
 import { getMatchRsvpCount } from '@/lib/services/rsvpService'
 import { cn } from '@/lib/utils'
+import {
+  canCreateClubMatches,
+  canManageMatchClub,
+  filterMatchesForClubScope,
+} from '@/lib/utils/clubMatches'
 import { isMatchPast } from '@/lib/utils/rsvpScheduler'
 import { useMatchStore } from '@/store/matchStore'
 
 export default function MatchesPage() {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user, userData, loading: authLoading } = useAuth()
   const userId = user?.uid
-  const { isAdmin } = useAdmin()
+  const { isAdmin: isSuperUser } = useAdmin()
+  const {
+    memberships,
+    loading: membershipsLoading,
+  } = useClubMemberships()
   const { matches, setMatches } = useMatchStore()
   const [rsvpCounts, setRsvpCounts] = useState<Record<string, number>>({})
   // Local load state — do not use the shared store `loading` flag. Overlapping
@@ -37,12 +48,19 @@ export default function MatchesPage() {
   >('loading')
   const fetchGen = useRef(0)
 
+  const canCreateMatch = canCreateClubMatches({
+    memberships,
+    isSuperUser: !!isSuperUser,
+  })
+
+  const hasActiveMembership = memberships.some(m => m.status === 'active')
+
   useEffect(() => {
     if (!authLoading && !userId) {
       router.push('/login')
       return
     }
-    if (authLoading || !userId) return
+    if (authLoading || !userId || membershipsLoading) return
 
     const gen = ++fetchGen.current
     setListStatus('loading')
@@ -51,7 +69,13 @@ export default function MatchesPage() {
       try {
         const allMatches = await getAllMatches()
         if (gen !== fetchGen.current) return
-        const upcoming = allMatches.filter(m => !isMatchPast(m.date, m.time))
+        const scoped = filterMatchesForClubScope({
+          matches: allMatches,
+          memberships,
+          activeClubId: userData?.activeClubId,
+          isSuperUser: !!isSuperUser,
+        })
+        const upcoming = scoped.filter(m => !isMatchPast(m.date, m.time))
         setMatches(upcoming)
         const counts: Record<string, number> = {}
         await Promise.all(
@@ -70,7 +94,16 @@ export default function MatchesPage() {
     }
 
     fetchMatches()
-  }, [userId, authLoading, router, setMatches])
+  }, [
+    userId,
+    authLoading,
+    membershipsLoading,
+    memberships,
+    userData?.activeClubId,
+    isSuperUser,
+    router,
+    setMatches,
+  ])
 
   const refetchMatchesAndCounts = async () => {
     const gen = ++fetchGen.current
@@ -78,7 +111,13 @@ export default function MatchesPage() {
     try {
       const allMatches = await getAllMatches()
       if (gen !== fetchGen.current) return
-      const upcoming = allMatches.filter(m => !isMatchPast(m.date, m.time))
+      const scoped = filterMatchesForClubScope({
+        matches: allMatches,
+        memberships,
+        activeClubId: userData?.activeClubId,
+        isSuperUser: !!isSuperUser,
+      })
+      const upcoming = scoped.filter(m => !isMatchPast(m.date, m.time))
       setMatches(upcoming)
       const counts: Record<string, number> = {}
       await Promise.all(
@@ -96,7 +135,19 @@ export default function MatchesPage() {
     }
   }
 
-  if (authLoading || listStatus === 'loading') {
+  const manageFlags = useMemo(() => {
+    const flags: Record<string, boolean> = {}
+    for (const match of matches) {
+      flags[match.id] = canManageMatchClub({
+        matchClubId: match.clubId,
+        memberships,
+        isSuperUser: !!isSuperUser,
+      })
+    }
+    return flags
+  }, [matches, memberships, isSuperUser])
+
+  if (authLoading || membershipsLoading || listStatus === 'loading') {
     return <PageLoadingSkeleton variant="container" />
   }
 
@@ -138,7 +189,24 @@ export default function MatchesPage() {
         </div>
       </div>
 
-      {isAdmin && (
+      {!hasActiveMembership && !isSuperUser && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Join a club</CardTitle>
+            <CardDescription>
+              You are not a member of any club yet. Enter an invite code to see
+              that club&apos;s matches.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href="/join">Enter invite code</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {canCreateMatch && (
         <div className="mb-6">
           <CreateMatchCard onMatchCreated={refetchMatchesAndCounts} />
         </div>
@@ -149,14 +217,18 @@ export default function MatchesPage() {
           <CardHeader>
             <CardTitle>No Matches</CardTitle>
             <CardDescription>
-              No matches have been created yet. Check back soon!
+              {hasActiveMembership || isSuperUser
+                ? 'No matches have been created yet. Check back soon!'
+                : 'Join a club with an invite code to see upcoming matches.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              {isAdmin
+              {canCreateMatch
                 ? 'Create a match using the form above.'
-                : 'Check back soon for upcoming matches!'}
+                : hasActiveMembership || isSuperUser
+                  ? 'Check back soon for upcoming matches!'
+                  : 'Ask a club admin for an invite link or code.'}
             </p>
           </CardContent>
         </Card>
@@ -173,7 +245,7 @@ export default function MatchesPage() {
               key={match.id}
               match={match}
               rsvpCount={rsvpCounts[match.id]}
-              isAdmin={isAdmin ?? false}
+              isAdmin={manageFlags[match.id] ?? false}
               index={index}
             />
           ))}

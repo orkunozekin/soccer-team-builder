@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { cancelRSVPAPI, confirmRSVPAPI } from '@/lib/api/client'
-import { useAdmin } from '@/lib/hooks/useAdmin'
+import { useIsClubAdmin } from '@/lib/hooks/useClubMemberships'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getUserRSVP } from '@/lib/services/rsvpService'
 import { getTeamPositionOccupancy } from '@/lib/utils/pitchLayout'
@@ -51,7 +51,7 @@ export function RSVPButton({
   currentUserId = null,
 }: RSVPButtonProps) {
   const { user, userData } = useAuth()
-  const { isAdmin } = useAdmin()
+  const { isClubAdmin: canManageMatch } = useIsClubAdmin(match.clubId)
   const profileComplete = isProfileComplete(userData)
   const { matchRSVPs, addRSVP, removeRSVP } = useMatchStore()
   const [hasRSVPed, setHasRSVPed] = useState(false)
@@ -155,7 +155,7 @@ export function RSVPButton({
     }
 
     if (hasRSVPed) {
-      if (!isAdmin && hasMatchStarted(match.date, match.time)) {
+      if (!canManageMatch && hasMatchStarted(match.date, match.time)) {
         setError('Cannot cancel RSVP after the match has started')
         return
       }
@@ -207,7 +207,7 @@ export function RSVPButton({
   }
 
   const matchStarted = hasMatchStarted(match.date, match.time)
-  if (hasRSVPed && matchStarted && !isAdmin) {
+  if (hasRSVPed && matchStarted && !canManageMatch) {
     return (
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         Match has started. RSVP can no longer be cancelled.
