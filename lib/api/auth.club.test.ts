@@ -93,95 +93,59 @@ describe('auth club helpers', () => {
     expect(result.isSuperUser).toBe(true)
   })
 
-  it('verifyClubAdmin allows club_admin membership', async () => {
-    const { getAdminAuth, getAdminDb } = await import('@/lib/firebase/admin')
-    vi.mocked(getAdminAuth).mockReturnValue({
-      verifyIdToken: vi.fn().mockResolvedValue({ uid: 'u1', email: 'a@b.c' }),
-    } as never)
-
+  function mockAuthDb(opts: {
+    role?: string
+    membershipRole?: 'player' | 'club_admin' | null
+    allowPlayerInvites?: boolean
+  }) {
+    const {
+      role = 'user',
+      membershipRole = null,
+      allowPlayerInvites = false,
+    } = opts
     const userGet = vi.fn().mockResolvedValue({
       exists: true,
-      data: () => ({ role: 'user' }),
+      data: () => ({ role }),
     })
-    const membershipGet = vi.fn().mockResolvedValue({
-      empty: false,
-      docs: [
-        {
-          id: 'c1_u1',
-          data: () => ({
-            clubId: 'c1',
-            userId: 'u1',
-            role: 'club_admin',
-            status: 'active',
-            joinedAt: { toDate: () => new Date() },
-            updatedAt: { toDate: () => new Date() },
-          }),
-        },
-      ],
-    })
-
-    vi.mocked(getAdminDb).mockReturnValue({
-      collection: (name: string) => {
-        if (name === 'users') {
-          return { doc: () => ({ get: userGet }) }
-        }
-        if (name === 'clubMemberships') {
-          return {
-            where: () => ({
-              where: () => ({
-                where: () => ({
-                  limit: () => ({ get: membershipGet }),
+    const membershipGet = vi.fn().mockResolvedValue(
+      membershipRole
+        ? {
+            empty: false,
+            docs: [
+              {
+                id: 'c1_u1',
+                data: () => ({
+                  clubId: 'c1',
+                  userId: 'u1',
+                  role: membershipRole,
+                  status: 'active',
+                  joinedAt: { toDate: () => new Date() },
+                  updatedAt: { toDate: () => new Date() },
                 }),
-              }),
-            }),
+              },
+            ],
           }
-        }
-        return { doc: () => ({ get: vi.fn() }) }
-      },
-    } as never)
-
-    const { verifyClubAdmin } = await import('@/lib/api/auth')
-    const result = await verifyClubAdmin(
-      new Request('http://localhost', {
-        headers: { authorization: 'Bearer tok' },
-      }),
-      'c1'
+        : { empty: true, docs: [] }
     )
-    expect(result.isClubAdmin).toBe(true)
-    expect(result.isSuperUser).toBe(false)
-  })
-
-  it('verifyCanCreateInvite blocks players when allowPlayerInvites is false', async () => {
-    const { getAdminAuth, getAdminDb } = await import('@/lib/firebase/admin')
-    vi.mocked(getAdminAuth).mockReturnValue({
-      verifyIdToken: vi.fn().mockResolvedValue({ uid: 'u1', email: 'a@b.c' }),
-    } as never)
-
-    const userGet = vi.fn().mockResolvedValue({
-      exists: true,
-      data: () => ({ role: 'user' }),
-    })
-    const membershipGet = vi.fn().mockResolvedValue({
-      empty: false,
-      docs: [
-        {
-          id: 'c1_u1',
-          data: () => ({
-            clubId: 'c1',
-            userId: 'u1',
-            role: 'player',
-            status: 'active',
-            joinedAt: { toDate: () => new Date() },
-            updatedAt: { toDate: () => new Date() },
-          }),
-        },
-      ],
-    })
     const clubGet = vi.fn().mockResolvedValue({
       exists: true,
-      data: () => ({ settings: { allowPlayerInvites: false } }),
+      data: () => ({ settings: { allowPlayerInvites } }),
     })
 
+    return { userGet, membershipGet, clubGet }
+  }
+
+  async function installAuthMocks(opts: {
+    role?: string
+    membershipRole?: 'player' | 'club_admin' | null
+    allowPlayerInvites?: boolean
+  }) {
+    const { getAdminAuth, getAdminDb } = await import('@/lib/firebase/admin')
+    vi.mocked(getAdminAuth).mockReturnValue({
+      verifyIdToken: vi.fn().mockResolvedValue({ uid: 'u1', email: 'a@b.c' }),
+    } as never)
+
+    const { userGet, membershipGet, clubGet } = mockAuthDb(opts)
     vi.mocked(getAdminDb).mockReturnValue({
       collection: (name: string) => {
         if (name === 'users') return { doc: () => ({ get: userGet }) }
@@ -200,6 +164,42 @@ describe('auth club helpers', () => {
         return { doc: () => ({ get: vi.fn() }) }
       },
     } as never)
+  }
+
+  it('verifyClubAdmin allows club_admin membership', async () => {
+    await installAuthMocks({ membershipRole: 'club_admin' })
+
+    const { verifyClubAdmin } = await import('@/lib/api/auth')
+    const result = await verifyClubAdmin(
+      new Request('http://localhost', {
+        headers: { authorization: 'Bearer tok' },
+      }),
+      'c1'
+    )
+    expect(result.isClubAdmin).toBe(true)
+    expect(result.isSuperUser).toBe(false)
+  })
+
+  it('verifyClubAdmin rejects player membership', async () => {
+    await installAuthMocks({ membershipRole: 'player' })
+
+    const { verifyClubAdmin } = await import('@/lib/api/auth')
+    const result = await verifyClubAdmin(
+      new Request('http://localhost', {
+        headers: { authorization: 'Bearer tok' },
+      }),
+      'c1'
+    )
+    expect(result.uid).toBe('u1')
+    expect(result.isClubAdmin).toBe(false)
+    expect(result.isSuperUser).toBe(false)
+  })
+
+  it('verifyCanCreateInvite blocks players when allowPlayerInvites is false', async () => {
+    await installAuthMocks({
+      membershipRole: 'player',
+      allowPlayerInvites: false,
+    })
 
     const { verifyCanCreateInvite } = await import('@/lib/api/auth')
     const result = await verifyCanCreateInvite(
@@ -209,5 +209,22 @@ describe('auth club helpers', () => {
       'c1'
     )
     expect(result.allowed).toBe(false)
+  })
+
+  it('verifyCanCreateInvite allows players when allowPlayerInvites is true', async () => {
+    await installAuthMocks({
+      membershipRole: 'player',
+      allowPlayerInvites: true,
+    })
+
+    const { verifyCanCreateInvite } = await import('@/lib/api/auth')
+    const result = await verifyCanCreateInvite(
+      new Request('http://localhost', {
+        headers: { authorization: 'Bearer tok' },
+      }),
+      'c1'
+    )
+    expect(result.allowed).toBe(true)
+    expect(result.createdByRole).toBe('player')
   })
 })
