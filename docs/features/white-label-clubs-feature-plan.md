@@ -10,7 +10,7 @@ Plan to move Soccerville from a single hard-coded club to multi-club tenancy: re
 | Owner session | cloud agent (authZ route tests + profile orphan join) |
 | Last updated | 2026-09-26 |
 | Merged PRs | [#65](https://github.com/orkunozekin/soccer-team-builder/pull/65); [#71](https://github.com/orkunozekin/soccer-team-builder/pull/71); [#73](https://github.com/orkunozekin/soccer-team-builder/pull/73); [#74](https://github.com/orkunozekin/soccer-team-builder/pull/74); [#76](https://github.com/orkunozekin/soccer-team-builder/pull/76) (active club switcher) |
-| Open follow-up PR / branch | `cursor/white-label-authz-tests-b1f0` (club API player-403 tests + profile orphan join form) |
+| Open follow-up PR / branch | [#77](https://github.com/orkunozekin/soccer-team-builder/pull/77) `cursor/white-label-authz-tests-b1f0` (club API player-403 tests + profile orphan join form) |
 | Founding club | **Jax State Soccer Club** (`eJUFKpdHpRsO3vaisI6G`) — membership + resource `clubId` backfill already run in production |
 
 ## Goals (v1)
