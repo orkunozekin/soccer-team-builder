@@ -13,6 +13,7 @@ function BrandLogo({ className }: { className?: string }) {
   return <span className={className}>Soccerville</span>
 }
 
+/** Soccerville platform bar. Club links live on ClubSubNav. */
 export function Navigation() {
   const { user, loading } = useAuth()
   const { isAdmin } = useAdmin()
@@ -35,7 +36,7 @@ export function Navigation() {
 
   if (!user) {
     return (
-      <header className="sticky top-0 z-20 mb-2 bg-red-50 py-3 font-semibold text-white shadow-md">
+      <header className="bg-red-50 py-3 font-semibold text-white shadow-md">
         <div className="container mx-auto px-4">
           <div className="flex justify-center">
             <BrandLogo />
@@ -46,7 +47,7 @@ export function Navigation() {
   }
 
   return (
-    <header className="sticky top-0 z-20 mb-4 bg-red-50 py-3 font-semibold text-white shadow-md">
+    <header className="bg-red-50 py-3 font-semibold text-white shadow-md">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           <Link
@@ -56,14 +57,8 @@ export function Navigation() {
             <BrandLogo />
           </Link>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation — platform links only */}
           <nav className="hidden items-center gap-4 md:flex">
-            <Link
-              href="/matches"
-              className="transition-opacity hover:opacity-80"
-            >
-              Matches
-            </Link>
             <Link
               href="/profile"
               className="transition-opacity hover:opacity-80"
@@ -115,13 +110,6 @@ export function Navigation() {
         {/* Mobile Navigation Menu */}
         {isMenuOpen && (
           <nav className="mt-4 flex animate-slide-up-fade flex-col gap-2 border-t border-white/20 pt-4 md:hidden">
-            <Link
-              href="/matches"
-              onClick={() => setIsMenuOpen(false)}
-              className="py-2 transition-opacity hover:opacity-80"
-            >
-              Matches
-            </Link>
             <Link
               href="/profile"
               onClick={() => setIsMenuOpen(false)}
