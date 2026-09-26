@@ -10,25 +10,17 @@ import { Card, CardContent } from '@/components/ui/card'
 import { getAllMatches } from '@/lib/services/matchService'
 import { getMatchRsvpCount } from '@/lib/services/rsvpService'
 import { cn } from '@/lib/utils'
-import { isMatchPast } from '@/lib/utils/rsvpScheduler'
+import {
+  filterMatches,
+  type MatchFilter,
+} from '@/lib/utils/adminMatchFilters'
 import { useMatchStore } from '@/store/matchStore'
-import type { Match } from '@/types/match'
-
-type MatchFilter = 'all' | 'upcoming' | 'past'
 
 const FILTERS: { value: MatchFilter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'upcoming', label: 'Upcoming' },
   { value: 'past', label: 'Past' },
 ]
-
-function filterMatches(matches: Match[], filter: MatchFilter): Match[] {
-  if (filter === 'all') return matches
-  if (filter === 'past') {
-    return matches.filter(m => isMatchPast(m.date, m.time))
-  }
-  return matches.filter(m => !isMatchPast(m.date, m.time))
-}
 
 export default function AdminMatchesPage() {
   const { matches, setMatches } = useMatchStore()
