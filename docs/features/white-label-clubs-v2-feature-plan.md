@@ -179,7 +179,9 @@ Separate slice. Do not start it in the nav or branding PRs. It needs a host → 
 5. Do not put `club_admin` on `users.role`. Do not rename match-lineup `teams`. Do not re-run the founding-club backfill.
 6. Local work uses Firebase emulators only.
 
-## Files to touch
+## Likely files
+
+Starting map only. Touch any other files the work needs: tests, hooks, services, redirects, and call sites that still assume `/matches` or a single header.
 
 | Path | Change |
 |------|--------|
