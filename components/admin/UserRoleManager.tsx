@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import useSWR, { useSWRConfig } from 'swr'
 import CloseIcon from '@/components/icons/CloseIcon'
 import { CardLoadingSkeleton } from '@/components/LoadingSkeleton'
 import {
@@ -16,10 +17,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { ButtonSpinner } from '@/components/ui/button-spinner'
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/pagination'
 import {
@@ -45,11 +43,32 @@ const PAGE_SIZE = 10
 
 type UserRow = Pick<User, 'uid' | 'email' | 'displayName' | 'role'>
 
+type UsersPageData = {
+  users: UserRow[]
+  nextCursor: string | null
+}
+
+function adminUsersPageKey(
+  uid: string,
+  page: number,
+  cursor: string | null
+) {
+  return ['admin-users', uid, page, cursor] as const
+}
+
+function adminUsersCountKey(uid: string) {
+  return ['admin-users-count', uid] as const
+}
+
+function isAdminUsersPageKey(
+  key: unknown
+): key is ReturnType<typeof adminUsersPageKey> {
+  return Array.isArray(key) && key[0] === 'admin-users' && typeof key[1] === 'string'
+}
+
 export function UserRoleManager() {
   const { user: currentUser } = useAuth()
-  const [users, setUsers] = useState<UserRow[]>([])
-  const [totalCount, setTotalCount] = useState<number>(0)
-  const [loading, setLoading] = useState(true)
+  const { mutate: globalMutate } = useSWRConfig()
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchUsers, setSearchUsers] = useState<UserRow[] | null>(null)
   const [updating, setUpdating] = useState<string | null>(null)
@@ -64,52 +83,62 @@ export function UserRoleManager() {
   // cursors[i] = cursor to request page i+1 (cursors[0] = cursor for page 2)
   const [cursors, setCursors] = useState<(string | null)[]>([null])
 
-  const baseUsers = searchUsers ?? users
+  const browsing = query.trim() === ''
+  const adminUid = currentUser?.uid ?? null
+  const cursorForPage = page === 1 ? null : (cursors[page - 2] ?? null)
+  // Scope by admin uid so a later sign-in cannot reuse another session's cache
+  // (revalidateIfStale: false would otherwise serve stale pages/counts).
+  const pageKey =
+    browsing && adminUid
+      ? adminUsersPageKey(adminUid, page, cursorForPage)
+      : null
 
-  const visibleUsers = useMemo(() => {
-    if (!currentUser?.uid) return baseUsers
-    return baseUsers.filter(u => u.uid !== currentUser.uid)
-  }, [baseUsers, currentUser?.uid])
-
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
-
-  const fetchPage = async (pageNum: number, cursor: string | null) => {
-    setLoading(true)
-    try {
-      const [pageResult, count] = await Promise.all([
-        getUsersPaginated(PAGE_SIZE, cursor ?? undefined),
-        pageNum === 1 ? getUsersCount() : Promise.resolve(0),
-      ])
-      setUsers(
-        pageResult.users.map(u => ({
+  const {
+    data: pageData,
+    isLoading: pageLoading,
+  } = useSWR(
+    pageKey,
+    async ([, , , cursor]: readonly [
+      'admin-users',
+      string,
+      number,
+      string | null,
+    ]) => {
+      const result = await getUsersPaginated(PAGE_SIZE, cursor ?? undefined)
+      return {
+        users: result.users.map(u => ({
           uid: u.uid,
           email: u.email,
           displayName: u.displayName,
           role: u.role,
-        }))
-      )
-      if (pageNum === 1) {
-        setTotalCount(count)
-      }
-      setCursors(prev => {
-        const next = [...prev]
-        next[pageNum - 1] = pageResult.nextCursor
-        return next
-      })
-    } catch (err) {
-      console.error('Error fetching users:', err)
-      setUsers([])
-    } finally {
-      setLoading(false)
+        })),
+        nextCursor: result.nextCursor,
+      } satisfies UsersPageData
+    },
+    {
+      // Keep paged results until an explicit mutate (role/delete), so paging
+      // back does not refetch.
+      revalidateIfStale: false,
+      revalidateOnReconnect: false,
     }
-  }
+  )
 
-  // Load page when page number changes (only when not searching).
+  const { data: totalCount = 0, mutate: mutateCount } = useSWR(
+    browsing && adminUid ? adminUsersCountKey(adminUid) : null,
+    () => getUsersCount(),
+    { revalidateIfStale: false, revalidateOnReconnect: false }
+  )
+
+  // Remember forward cursors so page N+1 can be requested.
   useEffect(() => {
-    if (query.trim() !== '') return
-    const cursorForRequest = page === 1 ? null : (cursors[page - 2] ?? null)
-    fetchPage(page, cursorForRequest)
-  }, [page, query])
+    if (!pageData) return
+    setCursors(prev => {
+      const next = [...prev]
+      if (next[page - 1] === pageData.nextCursor) return prev
+      next[page - 1] = pageData.nextCursor
+      return next
+    })
+  }, [page, pageData])
 
   // Backend search (debounced) so we search the entire DB.
   useEffect(() => {
@@ -145,6 +174,64 @@ export function UserRoleManager() {
     }
   }, [query])
 
+  const baseUsers = searchUsers ?? pageData?.users ?? []
+
+  const visibleUsers = useMemo(() => {
+    if (!currentUser?.uid) return baseUsers
+    return baseUsers.filter(u => u.uid !== currentUser.uid)
+  }, [baseUsers, currentUser?.uid])
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+
+  const patchUserInSwrCache = (userId: string, patch: Partial<UserRow>) => {
+    setSearchUsers(prev =>
+      prev
+        ? prev.map(u => (u.uid === userId ? { ...u, ...patch } : u))
+        : prev
+    )
+    void globalMutate(
+      (key: unknown) =>
+        isAdminUsersPageKey(key) && (!adminUid || key[1] === adminUid),
+      (current: UsersPageData | undefined) => {
+        if (!current) return current
+        return {
+          ...current,
+          users: current.users.map(u =>
+            u.uid === userId ? { ...u, ...patch } : u
+          ),
+        }
+      },
+      { revalidate: false }
+    )
+  }
+
+  const removeUserFromSwrCache = (userId: string) => {
+    setSearchUsers(prev => (prev ? prev.filter(u => u.uid !== userId) : prev))
+    void globalMutate(
+      (key: unknown) =>
+        isAdminUsersPageKey(key) && (!adminUid || key[1] === adminUid),
+      (current: UsersPageData | undefined) => {
+        if (!current) return current
+        return {
+          ...current,
+          users: current.users.filter(u => u.uid !== userId),
+        }
+      },
+      { revalidate: false }
+    )
+    // Drop later page keys — cursors after a delete are stale.
+    void globalMutate(
+      (key: unknown) =>
+        isAdminUsersPageKey(key) &&
+        (!adminUid || key[1] === adminUid) &&
+        typeof key[2] === 'number' &&
+        key[2] > page,
+      undefined,
+      { revalidate: false }
+    )
+    setCursors(prev => prev.slice(0, page))
+  }
+
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     setUpdating(userId)
     setError('')
@@ -152,17 +239,7 @@ export function UserRoleManager() {
 
     try {
       await updateUserRoleAPI(userId, newRole)
-
-      // Update local state
-      setUsers(prevUsers =>
-        prevUsers.map(u => (u.uid === userId ? { ...u, role: newRole } : u))
-      )
-      setSearchUsers(prev =>
-        prev
-          ? prev.map(u => (u.uid === userId ? { ...u, role: newRole } : u))
-          : prev
-      )
-
+      patchUserInSwrCache(userId, { role: newRole })
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
@@ -180,12 +257,12 @@ export function UserRoleManager() {
     try {
       await deleteUserAPI(userId)
 
-      setUsers(prev => prev.filter(u => u.uid !== userId))
-      setSearchUsers(prev => (prev ? prev.filter(u => u.uid !== userId) : prev))
-      setTotalCount(prev => Math.max(0, prev - 1))
+      removeUserFromSwrCache(userId)
+      await mutateCount(prev => Math.max(0, (prev ?? 0) - 1), {
+        revalidate: false,
+      })
       setDeleteDialogUserId(null)
 
-      // If we just deleted the last visible row on this page, go back a page.
       if (visibleUsers.length <= 1 && page > 1) {
         setPage(p => Math.max(1, p - 1))
       }
@@ -199,7 +276,7 @@ export function UserRoleManager() {
     }
   }
 
-  if (loading) {
+  if (browsing && pageLoading && !pageData) {
     return <CardLoadingSkeleton />
   }
 
@@ -226,9 +303,9 @@ export function UserRoleManager() {
         />
 
         <div className="max-h-96 space-y-2 overflow-y-auto">
-          {searchLoading ? (
+          {searchLoading || (browsing && pageLoading && visibleUsers.length === 0) ? (
             <div className="rounded-md border p-4 text-sm text-zinc-600 dark:text-zinc-400">
-              Searching…
+              {searchLoading ? 'Searching…' : 'Loading…'}
             </div>
           ) : visibleUsers.length === 0 ? (
             <div className="rounded-md border p-4 text-sm text-zinc-600 dark:text-zinc-400">
@@ -259,7 +336,7 @@ export function UserRoleManager() {
                     }
                     disabled={updating === user.uid || deleting === user.uid}
                   >
-                    <SelectTrigger className="h-9 w-24">
+                    <SelectTrigger className="h-9 w-[8.5rem]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -319,14 +396,22 @@ export function UserRoleManager() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {query.trim() === '' && totalCount > PAGE_SIZE && (
+        {browsing && totalCount > PAGE_SIZE && (
           <Pagination
             page={page}
             totalPages={totalPages}
             totalCount={totalCount}
             pageSize={PAGE_SIZE}
             onPrevious={() => setPage(p => Math.max(1, p - 1))}
-            onNext={() => setPage(p => p + 1)}
+            onNext={() => {
+              setCursors(prev => {
+                const next = [...prev]
+                next[page - 1] =
+                  pageData?.nextCursor ?? next[page - 1] ?? null
+                return next
+              })
+              setPage(p => p + 1)
+            }}
             itemLabel="users"
           />
         )}

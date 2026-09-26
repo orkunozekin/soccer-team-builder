@@ -272,20 +272,37 @@ export async function listMembershipsForClub(
     .where('status', '==', 'active')
     .get()
 
-  const results: ClubMembershipWithUser[] = []
-  for (const doc of snap.docs) {
-    const membership = mapMembership(doc.id, doc.data())
-    const userSnap = await adminDb.collection('users').doc(membership.userId).get()
-    const userData = userSnap.exists ? userSnap.data() : null
-    results.push({
+  const memberships = snap.docs.map(doc =>
+    mapMembership(doc.id, doc.data())
+  )
+
+  // Batch-fetch user docs (sequential gets are too slow for large clubs).
+  // Firestore getAll caps around 100 refs per call.
+  const GET_ALL_CHUNK = 100
+  const usersById = new Map<string, Record<string, unknown> | null>()
+  for (let i = 0; i < memberships.length; i += GET_ALL_CHUNK) {
+    const chunk = memberships.slice(i, i + GET_ALL_CHUNK)
+    const refs = chunk.map(m => adminDb.collection('users').doc(m.userId))
+    const userSnaps = await adminDb.getAll(...refs)
+    for (const s of userSnaps) {
+      usersById.set(
+        s.id,
+        s.exists ? ((s.data() ?? null) as Record<string, unknown> | null) : null
+      )
+    }
+  }
+
+  const results: ClubMembershipWithUser[] = memberships.map(membership => {
+    const userData = usersById.get(membership.userId) ?? null
+    return {
       ...membership,
       displayName:
         (userData?.displayName as string | undefined)?.trim() ||
         (userData?.email as string | undefined) ||
         membership.userId,
       email: (userData?.email as string | undefined) ?? '',
-    })
-  }
+    }
+  })
 
   results.sort((a, b) => {
     if (a.role !== b.role) {
@@ -565,6 +582,20 @@ export async function findActiveInviteByCode(
     }
   }
   return null
+}
+
+/**
+ * Public preview for invite links: resolve an active code to the club name.
+ * Does not redeem or mutate invite state.
+ */
+export async function previewInviteByCode(
+  code: string
+): Promise<{ clubId: string; clubName: string } | null> {
+  const invite = await findActiveInviteByCode(code)
+  if (!invite) return null
+  const club = await getClub(invite.clubId)
+  if (!club) return null
+  return { clubId: club.id, clubName: club.name }
 }
 
 export type RedeemInviteResult =

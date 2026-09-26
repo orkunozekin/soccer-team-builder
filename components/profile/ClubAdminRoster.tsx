@@ -3,12 +3,23 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   listClubInvitesAPI,
   listClubMembersAPI,
   revokeClubInviteAPI,
   updateClubMemberRoleAPI,
 } from '@/lib/api/client'
-import type { ClubInvite, ClubMembershipWithUser } from '@/types/club'
+import type {
+  ClubInvite,
+  ClubMembershipRole,
+  ClubMembershipWithUser,
+} from '@/types/club'
 
 type InviteWithLink = ClubInvite & { link: string }
 
@@ -56,13 +67,22 @@ export function ClubAdminRoster({
 
   const handleRoleChange = async (
     userId: string,
-    role: 'player' | 'club_admin'
+    role: ClubMembershipRole
   ) => {
     setBusyKey(`role-${userId}`)
     setError('')
     try {
       await updateClubMemberRoleAPI(clubId, userId, role)
-      await load()
+      setMembers(prev =>
+        prev
+          .map(m => (m.userId === userId ? { ...m, role } : m))
+          .sort((a, b) => {
+            if (a.role !== b.role) {
+              return a.role === 'club_admin' ? -1 : 1
+            }
+            return a.displayName.localeCompare(b.displayName)
+          })
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update role')
     } finally {
@@ -75,7 +95,7 @@ export function ClubAdminRoster({
     setError('')
     try {
       await revokeClubInviteAPI(clubId, inviteId)
-      await load()
+      setInvites(prev => prev.filter(i => i.id !== inviteId))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to revoke invite')
     } finally {
@@ -122,6 +142,8 @@ export function ClubAdminRoster({
               const isLastAdmin =
                 member.role === 'club_admin' && adminCount <= 1
               const busy = busyKey === `role-${member.userId}`
+              const cannotDemoteSelf =
+                isSelf && member.role === 'club_admin'
               return (
                 <li
                   key={member.id}
@@ -138,41 +160,37 @@ export function ClubAdminRoster({
                       </div>
                     )}
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span className="rounded-md bg-zinc-200 px-2 py-0.5 text-xs font-medium capitalize text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                      {member.role === 'club_admin' ? 'club admin' : 'player'}
-                    </span>
-                    {member.role === 'player' ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={busy}
-                        onClick={() =>
-                          handleRoleChange(member.userId, 'club_admin')
-                        }
-                      >
-                        {busy ? '…' : 'Promote'}
-                      </Button>
-                    ) : isSelf ? null : (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={busy || isLastAdmin}
-                        title={
-                          isLastAdmin
+                  <Select
+                    value={member.role}
+                    onValueChange={(value: ClubMembershipRole) => {
+                      if (value === member.role) return
+                      void handleRoleChange(member.userId, value)
+                    }}
+                    disabled={busy || cannotDemoteSelf}
+                  >
+                    <SelectTrigger
+                      className="h-9 w-[8.5rem] shrink-0"
+                      aria-label={`Role for ${member.displayName}`}
+                      title={
+                        cannotDemoteSelf
+                          ? 'You cannot demote yourself'
+                          : isLastAdmin
                             ? 'Cannot demote the last club admin'
                             : undefined
-                        }
-                        onClick={() =>
-                          handleRoleChange(member.userId, 'player')
-                        }
+                      }
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem
+                        value="player"
+                        disabled={isLastAdmin || cannotDemoteSelf}
                       >
-                        {busy ? '…' : 'Demote'}
-                      </Button>
-                    )}
-                  </div>
+                        Player
+                      </SelectItem>
+                      <SelectItem value="club_admin">Club admin</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </li>
               )
             })}

@@ -8,14 +8,18 @@ import { Label } from '@/components/ui/label'
 import {
   createClubInviteAPI,
   updateClubAPI,
+  updateProfileAPI,
 } from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
+import { useAuthStore } from '@/store/authStore'
 
 export function ProfileClubsSection() {
-  const { user } = useAuth()
+  const { user, userData } = useAuth()
+  const setUserData = useAuthStore(state => state.setUserData)
   const { memberships, loading, error, refresh } = useClubMemberships()
   const [busyClubId, setBusyClubId] = useState<string | null>(null)
+  const [activeBusy, setActiveBusy] = useState(false)
   const [inviteInfo, setInviteInfo] = useState<{
     clubId: string
     code: string
@@ -27,6 +31,23 @@ export function ProfileClubsSection() {
 
   const adminClubs = memberships.filter(m => m.role === 'club_admin')
   const currentUserId = user?.uid ?? ''
+  const activeClubId = userData?.activeClubId ?? null
+
+  const handleSetActiveClub = async (clubId: string | null) => {
+    if (!userData) return
+    setActiveBusy(true)
+    setActionError('')
+    try {
+      await updateProfileAPI({ activeClubId: clubId })
+      setUserData({ ...userData, activeClubId: clubId })
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : 'Failed to set active club'
+      )
+    } finally {
+      setActiveBusy(false)
+    }
+  }
 
   const handleCreateInvite = async (clubId: string) => {
     setBusyClubId(clubId)
@@ -108,27 +129,54 @@ export function ProfileClubsSection() {
           </p>
         ) : (
           <ul className="mt-2 space-y-2">
-            {memberships.map(m => (
-              <li
-                key={m.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800"
-              >
-                <span className="truncate font-medium text-zinc-900 dark:text-zinc-100">
-                  {m.club.name}
-                </span>
-                <span className="shrink-0 rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium capitalize text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                  {m.role === 'club_admin' ? 'club admin' : 'player'}
-                </span>
-              </li>
-            ))}
+            {memberships.map(m => {
+              const isActive = activeClubId === m.clubId
+              return (
+                <li
+                  key={m.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800"
+                >
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="truncate font-medium text-zinc-900 dark:text-zinc-100">
+                      {m.club.name}
+                    </span>
+                    <span className="shrink-0 rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium capitalize text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                      {m.role === 'club_admin' ? 'club admin' : 'player'}
+                    </span>
+                    {isActive && (
+                      <span className="shrink-0 rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                        active
+                      </span>
+                    )}
+                  </div>
+                  {!isActive && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={activeBusy}
+                      onClick={() => handleSetActiveClub(m.clubId)}
+                    >
+                      {activeBusy ? 'Saving…' : 'Set as active'}
+                    </Button>
+                  )}
+                </li>
+              )
+            })}
           </ul>
+        )}
+        {memberships.length > 1 && activeClubId && (
+          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+            Match lists and new matches use your active club. You can switch
+            anytime.
+          </p>
         )}
       </div>
 
       {adminClubs.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            Clubs I admin
+            Clubs I manage
           </h3>
           <ul className="mt-2 space-y-4">
             {adminClubs.map(m => (
@@ -234,6 +282,7 @@ export function ProfileClubsSection() {
 
 /** Compact join-by-code form used on profile empty state and /join */
 export function JoinClubForm({ onJoined }: { onJoined?: () => void }) {
+  const { user } = useAuth()
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -251,7 +300,17 @@ export function JoinClubForm({ onJoined }: { onJoined?: () => void }) {
     setLoading(true)
     try {
       const { redeemInviteAPI } = await import('@/lib/api/client')
+      const { afterInviteRedeemed } = await import(
+        '@/lib/hooks/useClubMemberships'
+      )
       const res = await redeemInviteAPI(trimmed)
+      if (user?.uid) {
+        await afterInviteRedeemed({
+          uid: user.uid,
+          clubId: res.clubId,
+          alreadyMember: res.alreadyMember,
+        })
+      }
       setSuccess(
         res.alreadyMember
           ? 'You are already a member of this club.'

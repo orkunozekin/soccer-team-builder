@@ -7,7 +7,8 @@ import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { JoinClubForm } from '@/components/profile/ProfileClubsSection'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { redeemInviteAPI } from '@/lib/api/client'
+import { previewInviteAPI, redeemInviteAPI } from '@/lib/api/client'
+import { afterInviteRedeemed } from '@/lib/hooks/useClubMemberships'
 import { useAuth } from '@/lib/hooks/useAuth'
 
 export default function JoinPageClient() {
@@ -17,6 +18,9 @@ export default function JoinPageClient() {
   const { user, loading } = useAuth()
   const [autoStatus, setAutoStatus] = useState<string | null>(null)
   const [autoError, setAutoError] = useState('')
+  const [clubName, setClubName] = useState<string | null>(null)
+  const [previewError, setPreviewError] = useState('')
+  const [previewLoading, setPreviewLoading] = useState(Boolean(codeFromUrl))
 
   const joinPath = codeFromUrl
     ? `/join?code=${encodeURIComponent(codeFromUrl)}`
@@ -27,16 +31,59 @@ export default function JoinPageClient() {
   const loginHref = `/login?redirect=${encodeURIComponent(joinPath)}`
 
   useEffect(() => {
-    if (loading || !user || !codeFromUrl) return
+    if (!codeFromUrl) {
+      setClubName(null)
+      setPreviewError('')
+      setPreviewLoading(false)
+      return
+    }
+    let cancelled = false
+    setPreviewLoading(true)
+    setPreviewError('')
+    ;(async () => {
+      try {
+        const res = await previewInviteAPI(codeFromUrl)
+        if (cancelled) return
+        setClubName(res.clubName)
+      } catch (err) {
+        if (cancelled) return
+        setClubName(null)
+        setPreviewError(
+          err instanceof Error ? err.message : 'Invalid or expired invite'
+        )
+      } finally {
+        if (!cancelled) setPreviewLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [codeFromUrl])
+
+  useEffect(() => {
+    // Preview is cosmetic (club name). Do not block redeem on previewError.
+    if (loading || !user || !codeFromUrl || previewLoading) {
+      return
+    }
     let cancelled = false
     ;(async () => {
       try {
         const res = await redeemInviteAPI(codeFromUrl)
         if (cancelled) return
+        await afterInviteRedeemed({
+          uid: user.uid,
+          clubId: res.clubId,
+          alreadyMember: res.alreadyMember,
+        })
+        if (cancelled) return
         setAutoStatus(
           res.alreadyMember
-            ? 'You are already a member of this club.'
-            : 'Joined club successfully.'
+            ? clubName
+              ? `You are already a member of ${clubName}.`
+              : 'You are already a member of this club.'
+            : clubName
+              ? `Joined ${clubName} successfully.`
+              : 'Joined club successfully.'
         )
       } catch (err) {
         if (cancelled) return
@@ -48,9 +95,9 @@ export default function JoinPageClient() {
     return () => {
       cancelled = true
     }
-  }, [loading, user, codeFromUrl])
+  }, [loading, user, codeFromUrl, previewLoading, clubName])
 
-  if (loading) {
+  if (loading || (codeFromUrl && previewLoading)) {
     return <PageLoadingSkeleton variant="centered" />
   }
 
@@ -59,13 +106,22 @@ export default function JoinPageClient() {
       <div className="container mx-auto px-4 py-10">
         <Card className="mx-auto max-w-md">
           <CardHeader>
-            <CardTitle>Join a club</CardTitle>
+            <CardTitle>
+              {clubName ? `Join ${clubName}` : 'Join a club'}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {codeFromUrl ? (
+            {previewError ? (
+              <p className="text-sm text-amber-700 dark:text-amber-400">
+                {previewError}. You can still sign in and try the invite code.
+              </p>
+            ) : clubName ? (
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Sign in or create an account to redeem invite code{' '}
-                <span className="font-mono font-medium">{codeFromUrl}</span>.
+                Sign in or create an account to join{' '}
+                <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                  {clubName}
+                </span>
+                .
               </p>
             ) : (
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -80,6 +136,11 @@ export default function JoinPageClient() {
                 <Link href={loginHref}>Sign in</Link>
               </Button>
             </div>
+            {previewError && (
+              <Button asChild variant="outline">
+                <Link href="/join">Enter a different code</Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -90,13 +151,20 @@ export default function JoinPageClient() {
     <div className="container mx-auto px-4 py-10">
       <Card className="mx-auto max-w-md">
         <CardHeader>
-          <CardTitle>Join a club</CardTitle>
+          <CardTitle>
+            {clubName ? `Join ${clubName}` : 'Join a club'}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {autoError && (
             <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
               {autoError}
             </div>
+          )}
+          {!autoError && previewError && codeFromUrl && !autoStatus && (
+            <p className="text-sm text-amber-700 dark:text-amber-400">
+              Could not load the club name. Redeeming invite…
+            </p>
           )}
           {autoStatus && (
             <div className="space-y-3">
@@ -112,7 +180,11 @@ export default function JoinPageClient() {
             <JoinClubForm onJoined={() => router.push('/matches')} />
           )}
           {codeFromUrl && !autoStatus && !autoError && (
-            <p className="text-sm text-zinc-500">Redeeming invite…</p>
+            <p className="text-sm text-zinc-500">
+              {clubName
+                ? `Joining ${clubName}…`
+                : 'Redeeming invite…'}
+            </p>
           )}
           {autoError && (
             <JoinClubForm onJoined={() => router.push('/matches')} />

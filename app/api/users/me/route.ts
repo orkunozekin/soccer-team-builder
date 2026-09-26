@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/api/auth'
+import { getActiveClubMembership, verifyAuth } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { logUserError, userErrorResponse } from '@/lib/audit/logUserError'
 import { getAdminDb } from '@/lib/firebase/admin'
@@ -88,13 +88,45 @@ export async function PATCH(request: NextRequest) {
       changedFields.push('email')
     }
 
-    if (changedFields.length === 0) {
-      return profileUpdateFailed(uid, 400, 'No profile fields to update')
-    }
-
     const adminDb = getAdminDb()
     if (!adminDb) {
       return profileUpdateFailed(uid, 500, 'Server configuration error')
+    }
+
+    if (body?.activeClubId !== undefined) {
+      if (body.activeClubId === null || body.activeClubId === '') {
+        updates.activeClubId = null
+        changedFields.push('activeClubId')
+      } else if (typeof body.activeClubId === 'string') {
+        const clubId = body.activeClubId.trim()
+        if (!clubId) {
+          return profileUpdateFailed(uid, 400, 'Invalid activeClubId')
+        }
+        const clubSnap = await adminDb.collection('clubs').doc(clubId).get()
+        if (!clubSnap.exists) {
+          return profileUpdateFailed(uid, 404, 'Club not found', 'club_not_found')
+        }
+        const { membership, isSuperUser } = await getActiveClubMembership(
+          uid,
+          clubId
+        )
+        if (!isSuperUser && !membership) {
+          return profileUpdateFailed(
+            uid,
+            403,
+            'You are not a member of this club',
+            'not_club_member'
+          )
+        }
+        updates.activeClubId = clubId
+        changedFields.push('activeClubId')
+      } else {
+        return profileUpdateFailed(uid, 400, 'Invalid activeClubId')
+      }
+    }
+
+    if (changedFields.length === 0) {
+      return profileUpdateFailed(uid, 400, 'No profile fields to update')
     }
 
     const userRef = adminDb.collection('users').doc(uid)

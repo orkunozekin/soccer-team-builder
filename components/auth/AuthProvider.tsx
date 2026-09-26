@@ -8,6 +8,7 @@ import { timestampToDate } from '@/lib/firebase/firestore'
 import { createUser } from '@/lib/services/userService'
 import { recordAuditEventAPI, updateProfileAPI } from '@/lib/api/client'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
+import { resolveHydratedActiveClubId } from '@/lib/utils/resolveHydratedActiveClubId'
 import { useAuthStore } from '@/store/authStore'
 import { User, normalizeUserRole } from '@/types/user'
 
@@ -107,6 +108,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
               }
 
+              const prev = useAuthStore.getState().userData
+              const activeClubId = resolveHydratedActiveClubId({
+                fromDoc: userDoc.activeClubId as string | null | undefined,
+                prevUid: prev?.uid,
+                prevActiveClubId: prev?.activeClubId,
+                firebaseUid: firebaseUser.uid,
+              })
+
               const userData: User = {
                 uid: firebaseUser.uid,
                 email: authEmail || firestoreEmail,
@@ -117,6 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 jerseyNumber: normalizeJerseyNumber(userDoc.jerseyNumber),
                 position: userDoc.position ?? null,
                 role,
+                activeClubId,
                 createdAt: timestampToDate(userDoc.createdAt) || new Date(),
                 updatedAt: timestampToDate(userDoc.updatedAt) || new Date(),
               }

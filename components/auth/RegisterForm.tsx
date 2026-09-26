@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
 import { loginWithGoogle, registerUser, getAuthErrorMessage } from '@/lib/firebase/auth'
 import { recordAuditEventAPI, redeemInviteAPI } from '@/lib/api/client'
+import { afterInviteRedeemed } from '@/lib/hooks/useClubMemberships'
 import { createUser, getUser } from '@/lib/services/userService'
 import { useAuthStore } from '@/store/authStore'
 
@@ -42,10 +43,15 @@ export function RegisterForm({
 
   const destination = safeRedirectPath(redirectTo)
 
-  const finishAfterAuth = async () => {
+  const finishAfterAuth = async (uid: string) => {
     const trimmed = code.trim()
     if (trimmed) {
-      await redeemInviteAPI(trimmed)
+      const res = await redeemInviteAPI(trimmed)
+      await afterInviteRedeemed({
+        uid,
+        clubId: res.clubId,
+        alreadyMember: res.alreadyMember,
+      })
       // Prefer matches after a successful join; keep explicit non-join redirects.
       if (destination.startsWith('/join')) {
         router.push('/matches')
@@ -79,7 +85,7 @@ export function RegisterForm({
       await createUser(user.uid, email, displayName || email.split('@')[0])
       recordAuditEventAPI({ action: 'auth.register' })
 
-      await finishAfterAuth()
+      await finishAfterAuth(user.uid)
     } catch (err: unknown) {
       const message = getAuthErrorMessage(
         err,
@@ -112,7 +118,7 @@ export function RegisterForm({
         recordAuditEventAPI({ action: 'auth.login' })
       }
       setUser(user)
-      await finishAfterAuth()
+      await finishAfterAuth(user.uid)
     } catch (err: unknown) {
       const message = getAuthErrorMessage(
         err,

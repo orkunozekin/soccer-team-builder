@@ -4,6 +4,7 @@ import './globals.css'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 import { EmulatorAuthGate } from '@/components/auth/EmulatorAuthGate'
 import { LaunchDarklyProvider } from '@/components/flags/LaunchDarklyProvider'
+import { SwrProvider } from '@/components/providers/SwrProvider'
 import { AdminUiToggle } from '@/components/dev/AdminUiToggle'
 import { MobileViewportFix } from '@/components/layout/MobileViewportFix'
 import { Navigation } from '@/components/layout/Navigation'
@@ -45,12 +46,14 @@ export default function RootLayout({
       <body className={cn(inter.variable, 'font-sans antialiased')}>
         <EmulatorAuthGate>
           <AuthProvider>
-            <LaunchDarklyProvider>
-              <MobileViewportFix />
-              <Navigation />
-              {children}
-              <AdminUiToggle />
-            </LaunchDarklyProvider>
+            <SwrProvider>
+              <LaunchDarklyProvider>
+                <MobileViewportFix />
+                <Navigation />
+                {children}
+                <AdminUiToggle />
+              </LaunchDarklyProvider>
+            </SwrProvider>
           </AuthProvider>
         </EmulatorAuthGate>
       </body>

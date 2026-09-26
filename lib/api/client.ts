@@ -185,15 +185,31 @@ export async function createMatchAPI(
     address: string
     lat: number | null
     lng: number | null
-  } | null
+  } | null,
+  clubId?: string | null
 ): Promise<{ success: boolean; matchId: string }> {
+  const body: {
+    date: string
+    time: string
+    location: {
+      name: string
+      address: string
+      lat: number | null
+      lng: number | null
+    } | null
+    clubId?: string
+  } = {
+    date: date.toISOString(),
+    time,
+    location: location ?? null,
+  }
+  if (typeof clubId === 'string' && clubId.trim()) {
+    body.clubId = clubId.trim()
+  }
+
   const response = await apiRequest('/matches', {
     method: 'POST',
-    body: JSON.stringify({
-      date: date.toISOString(),
-      time,
-      location: location ?? null,
-    }),
+    body: JSON.stringify(body),
   })
 
   if (!response.ok) {
@@ -270,6 +286,8 @@ export async function updateProfileAPI(updates: {
   jerseyNumber?: number | null
   position?: string | null
   syncEmail?: boolean
+  /** Set the active club, or null to clear */
+  activeClubId?: string | null
 }): Promise<{ success: boolean }> {
   const response = await apiRequest('/users/me', {
     method: 'PATCH',
@@ -756,6 +774,23 @@ export async function redeemInviteAPI(
   if (!response.ok) {
     const error = await response.json()
     throw new Error(error.error || 'Failed to redeem invite')
+  }
+  return response.json()
+}
+
+/** Public preview: resolve invite code to club name (no auth required). */
+export async function previewInviteAPI(
+  code: string
+): Promise<{ success: boolean; clubId: string; clubName: string }> {
+  const response = await fetch(
+    `/api/invites/preview?code=${encodeURIComponent(code.trim())}`,
+    { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+  )
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(
+      (error as { error?: string }).error || 'Failed to preview invite'
+    )
   }
   return response.json()
 }
