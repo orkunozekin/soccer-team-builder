@@ -282,6 +282,7 @@ export function ProfileClubsSection() {
 
 /** Compact join-by-code form used on profile empty state and /join */
 export function JoinClubForm({ onJoined }: { onJoined?: () => void }) {
+  const { user } = useAuth()
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -299,7 +300,17 @@ export function JoinClubForm({ onJoined }: { onJoined?: () => void }) {
     setLoading(true)
     try {
       const { redeemInviteAPI } = await import('@/lib/api/client')
+      const { afterInviteRedeemed } = await import(
+        '@/lib/hooks/useClubMemberships'
+      )
       const res = await redeemInviteAPI(trimmed)
+      if (user?.uid) {
+        await afterInviteRedeemed({
+          uid: user.uid,
+          clubId: res.clubId,
+          alreadyMember: res.alreadyMember,
+        })
+      }
       setSuccess(
         res.alreadyMember
           ? 'You are already a member of this club.'

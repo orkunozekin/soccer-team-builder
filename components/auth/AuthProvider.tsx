@@ -117,6 +117,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 jerseyNumber: normalizeJerseyNumber(userDoc.jerseyNumber),
                 position: userDoc.position ?? null,
                 role,
+                activeClubId:
+                  (userDoc.activeClubId as string | null | undefined) ?? null,
                 createdAt: timestampToDate(userDoc.createdAt) || new Date(),
                 updatedAt: timestampToDate(userDoc.updatedAt) || new Date(),
               }

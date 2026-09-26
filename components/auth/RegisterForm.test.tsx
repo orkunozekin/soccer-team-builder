@@ -24,6 +24,11 @@ vi.mock('@/lib/firebase/auth', () => ({
 vi.mock('@/lib/api/client', () => ({
   recordAuditEventAPI: (...args: unknown[]) =>
     recordAuditEventAPIMock(...args),
+  redeemInviteAPI: vi.fn(),
+}))
+
+vi.mock('@/lib/hooks/useClubMemberships', () => ({
+  afterInviteRedeemed: vi.fn(),
 }))
 
 vi.mock('@/lib/services/userService', () => ({
@@ -32,8 +37,11 @@ vi.mock('@/lib/services/userService', () => ({
 }))
 
 vi.mock('@/store/authStore', () => ({
-  useAuthStore: (selector: (state: { setUser: () => void }) => unknown) =>
-    selector({ setUser: vi.fn() }),
+  useAuthStore: Object.assign(
+    (selector: (state: { setUser: () => void }) => unknown) =>
+      selector({ setUser: vi.fn() }),
+    { getState: () => ({ userData: null, setUserData: vi.fn() }) }
+  ),
 }))
 
 describe('RegisterForm', () => {
