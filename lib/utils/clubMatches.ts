@@ -27,7 +27,7 @@ export function resolveVisibleClubIds(input: {
   if (preferred && active.includes(preferred)) {
     return [preferred]
   }
-  return [...new Set(active)]
+  return Array.from(new Set(active))
 }
 
 /**
