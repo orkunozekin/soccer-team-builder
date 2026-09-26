@@ -3,6 +3,7 @@
   "commentTypes": ["logic", "syntax"],
   "autoReview": ["open"],
   "triggerOnDrafts": false,
+  "shouldUpdateDescription": true,
   "ignorePatterns": "yarn.lock\npackage-lock.json\n**/*.generated.*\n.next/**\nnode_modules/**\ncoverage/**\n*.tsbuildinfo",
   "instructions": "Follow docs/AGENT_CONTEXT.md and AGENTS.md. Prioritize authZ, tenancy, secret leakage, unsafe client errors, and emulator/production safety over style nits. Style is largely covered by Prettier and ESLint.",
   "rules": [
