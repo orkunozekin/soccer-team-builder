@@ -204,8 +204,8 @@ Starting map only. Touch any other files the work needs: tests, hooks, services,
 ## Acceptance criteria
 
 - [x] With `club-creation` off, super users do not see the create form and `POST /api/clubs` returns 403. With the flag on (or `NEXT_PUBLIC_FF_CLUB_CREATION=true`), create still works for a super user. Missing server SDK key fails closed.
-- [ ] Signed-in users see a Soccerville platform bar and a club sub-nav. The sub-nav shows the current club and switches clubs. Matches is on the sub-nav. Profile and super-user Admin stay on the platform bar.
-- [ ] Signed-out users still see the centered Soccerville header. Users with no club see a Join prompt on the sub-nav.
+- [x] Signed-in users see a Soccerville platform bar and a club sub-nav. The sub-nav shows the current club and switches clubs. Matches is on the sub-nav. Profile and super-user Admin stay on the platform bar.
+- [x] Signed-out users still see the centered Soccerville header. Users with no club see a Join prompt on the sub-nav.
 - [ ] `/c/[slug]/matches` is the match list for that club. `/matches` redirects there from `activeClubId` or the sole membership. A non-member slug 404s.
 - [ ] Switching clubs updates `activeClubId` and the URL. Two tabs can show two clubs.
 - [ ] Roster, invites, and settings are reachable from the sub-nav for the roles above, and the APIs still enforce `verifyClubAdmin` / the invite gate.
