@@ -8,6 +8,7 @@ import type { ClubMembershipRole } from '@/types/club'
 const CLIENT_SAFE_ERRORS = new Set([
   'Membership not found',
   'Cannot demote the last club admin',
+  'Cannot demote yourself',
 ])
 
 export async function PATCH(
@@ -43,6 +44,14 @@ export async function PATCH(
       )
     }
 
+    // Club admins manage others; they cannot strip their own admin role.
+    if (userId === uid && role === 'player') {
+      return NextResponse.json(
+        { error: 'Cannot demote yourself' },
+        { status: 400 }
+      )
+    }
+
     const membership = await updateMembershipRole({ clubId, userId, role })
 
     auditLog({
@@ -60,7 +69,8 @@ export async function PATCH(
     const status =
       raw === 'Membership not found'
         ? 404
-        : raw === 'Cannot demote the last club admin'
+        : raw === 'Cannot demote the last club admin' ||
+            raw === 'Cannot demote yourself'
           ? 400
           : 500
     console.error('Error updating membership role:', err)

@@ -17,13 +17,10 @@ export function ClubAdminRoster({
   currentUserId,
   /** Bump when parent creates an invite so the active list refreshes */
   refreshToken = '',
-  /** Refresh parent memberships (e.g. after self-demote) */
-  onMembershipsChanged,
 }: {
   clubId: string
   currentUserId: string
   refreshToken?: string
-  onMembershipsChanged?: () => void | Promise<void>
 }) {
   const [members, setMembers] = useState<ClubMembershipWithUser[]>([])
   const [invites, setInvites] = useState<InviteWithLink[]>([])
@@ -66,8 +63,6 @@ export function ClubAdminRoster({
     try {
       await updateClubMemberRoleAPI(clubId, userId, role)
       await load()
-      // Parent membership list drives “Clubs I admin”; refresh after any role change.
-      await onMembershipsChanged?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update role')
     } finally {
@@ -159,7 +154,7 @@ export function ClubAdminRoster({
                       >
                         {busy ? '…' : 'Promote'}
                       </Button>
-                    ) : (
+                    ) : isSelf ? null : (
                       <Button
                         type="button"
                         size="sm"

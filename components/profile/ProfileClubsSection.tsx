@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ClubAdminRoster } from '@/components/profile/ClubAdminRoster'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,15 +27,6 @@ export function ProfileClubsSection() {
 
   const adminClubs = memberships.filter(m => m.role === 'club_admin')
   const currentUserId = user?.uid ?? ''
-
-  useEffect(() => {
-    if (
-      rosterOpenFor &&
-      !adminClubs.some(m => m.clubId === rosterOpenFor)
-    ) {
-      setRosterOpenFor(null)
-    }
-  }, [adminClubs, rosterOpenFor])
 
   const handleCreateInvite = async (clubId: string) => {
     setBusyClubId(clubId)
@@ -224,7 +215,6 @@ export function ProfileClubsSection() {
                         ? inviteInfo.code
                         : ''
                     }
-                    onMembershipsChanged={refresh}
                   />
                 )}
               </li>
