@@ -2,7 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => {
   const store = new Map<string, Record<string, unknown>>()
-  return { store }
+  /** Optional hook fired at the start of runTransaction (after prior reads). */
+  let beforeTransaction: (() => void) | null = null
+  return {
+    store,
+    get beforeTransaction() {
+      return beforeTransaction
+    },
+    set beforeTransaction(fn: (() => void) | null) {
+      beforeTransaction = fn
+    },
+  }
 })
 
 function docsForCollection(name: string) {
@@ -121,6 +131,7 @@ vi.mock('@/lib/firebase/admin', () => ({
           ) => void
         }) => Promise<T>
       ): Promise<T> => {
+        mocks.beforeTransaction?.()
         const pending: Array<() => Promise<void>> = []
         const tx = {
           get: async (target: {
@@ -164,6 +175,7 @@ vi.mock('@/lib/firebase/admin', () => ({
 describe('clubService redeem + backfill', () => {
   beforeEach(() => {
     mocks.store.clear()
+    mocks.beforeTransaction = null
     vi.resetModules()
   })
 
@@ -357,7 +369,7 @@ describe('clubService redeem + backfill', () => {
     ).rejects.toThrow('Invite already revoked')
   })
 
-  it('redeemInvite fails when invite is revoked before membership write', async () => {
+  it('redeemInvite fails when invite is revoked after lookup but before tx write', async () => {
     const { Timestamp } = await import('firebase-admin/firestore')
     const now = Timestamp.now()
     mocks.store.set('clubs/c1', {
@@ -385,20 +397,24 @@ describe('clubService redeem + backfill', () => {
       displayName: 'User Two',
     })
 
+    // Invite stays active for findActiveInviteByCode; revoke runs when the
+    // redeem transaction starts so the in-tx re-read sees revokedAt.
+    mocks.beforeTransaction = () => {
+      mocks.store.set('clubInvites/inv1', {
+        ...mocks.store.get('clubInvites/inv1')!,
+        revokedAt: now,
+      })
+    }
+
     const { redeemInvite } = await import('@/lib/services/clubService')
-
-    // Simulate revoke after findActiveInviteByCode would have succeeded:
-    // mark revoked before redeem's transaction re-reads the invite.
-    mocks.store.set('clubInvites/inv1', {
-      ...mocks.store.get('clubInvites/inv1')!,
-      revokedAt: now,
-    })
-
     const result = await redeemInvite({ code: 'ABCD12', userId: 'u2' })
+
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.status).toBe(400)
+      expect(result.error).toMatch(/invalid or expired invite code/i)
     }
     expect(mocks.store.get('clubMemberships/c1_u2')).toBeUndefined()
+    expect(mocks.store.get('clubInvites/inv1')?.useCount).toBe(0)
   })
 })
