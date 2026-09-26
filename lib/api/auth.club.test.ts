@@ -13,8 +13,11 @@ vi.mock('@/lib/firebase/admin', () => ({
 
 describe('club helpers', () => {
   it('slugifyClubName produces URL-safe slugs', () => {
-    expect(slugifyClubName('Soccerville FC!')).toBe('soccerville-fc')
+    expect(slugifyClubName('Jax State Soccer Club')).toBe(
+      'jax-state-soccer-club'
+    )
     expect(slugifyClubName('  Hello World  ')).toBe('hello-world')
+    expect(slugifyClubName('!!!')).toBe('')
   })
 
   it('membershipDocId is deterministic', () => {

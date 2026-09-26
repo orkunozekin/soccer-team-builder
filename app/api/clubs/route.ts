@@ -18,7 +18,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => null)
     const name = typeof body?.name === 'string' ? body.name : ''
-    const slug = typeof body?.slug === 'string' ? body.slug : undefined
     const allowPlayerInvites =
       typeof body?.settings?.allowPlayerInvites === 'boolean'
         ? body.settings.allowPlayerInvites
@@ -33,7 +32,6 @@ export async function POST(request: NextRequest) {
 
     const club = await createClub({
       name,
-      slug,
       createdBy: uid,
       settings:
         allowPlayerInvites === undefined
@@ -53,7 +51,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, club }, { status: 201 })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Failed to create club'
-    const status = message.includes('already exists') ? 409 : 500
+    const status = message.includes('already exists')
+      ? 409
+      : message.includes('must include')
+        ? 400
+        : 500
     console.error('Error creating club:', err)
     return NextResponse.json({ error: message }, { status })
   }

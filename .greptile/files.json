@@ -1,0 +1,32 @@
+[
+  {
+    "path": "AGENTS.md",
+    "description": "Root agent entrypoint: non-negotiables and pointers to full context"
+  },
+  {
+    "path": "docs/AGENT_CONTEXT.md",
+    "description": "Canonical coding standards, architecture habits, and LLM safety prompts"
+  },
+  {
+    "path": "docs/ARCHITECTURE.md",
+    "description": "Hybrid API vs client Firebase boundary and why trusted logic is server-side"
+  },
+  {
+    "path": "docs/local-development.md",
+    "description": "Firebase emulator requirements for local development"
+  },
+  {
+    "path": "firestore.rules",
+    "description": "Firestore security rules; keep API/Admin SDK assumptions aligned"
+  },
+  {
+    "path": "lib/api/auth.ts",
+    "description": "Shared API authentication and club/super-user authorization helpers",
+    "scope": ["app/api/**", "lib/api/**", "lib/services/**"]
+  },
+  {
+    "path": "lib/api/sanitizeError.ts",
+    "description": "Client-safe error sanitization helper",
+    "scope": ["app/api/**", "lib/**"]
+  }
+]

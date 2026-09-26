@@ -6,10 +6,12 @@ Plan to move Soccerville from a single hard-coded club to multi-club tenancy: re
 
 | Field | Value |
 |-------|-------|
-| Status | in progress |
+| Status | in progress (foundation shipped; follow-ups open) |
 | Owner session | cloud agent (match scoping + invite register) |
 | Last updated | 2026-09-26 |
-| Related PR / branch | `cursor/white-label-clubs-next-7f02` |
+| Merged PRs | [#65](https://github.com/orkunozekin/soccer-team-builder/pull/65) (foundation); [#71](https://github.com/orkunozekin/soccer-team-builder/pull/71) (club create UX: name-only, auto slug, unique name/slug; no backfill panel) |
+| Open follow-up PR / branch | [#73](https://github.com/orkunozekin/soccer-team-builder/pull/73) on `cursor/white-label-clubs-next-7f02` (match scoping, club-admin UI gating, invite registration) |
+| Founding club | **Jax State Soccer Club** (`eJUFKpdHpRsO3vaisI6G`) — membership + resource `clubId` backfill already run in production |
 
 ## Goals (v1)
 
@@ -24,31 +26,32 @@ Plan to move Soccerville from a single hard-coded club to multi-club tenancy: re
 
 ## Todos
 
-1. Lock naming: **club** = tenant; membership role **`club_admin`**; keep match **teams** as lineup sides.
-2. Data model: `clubs`, `clubMemberships`, `clubInvites`; strip club-scoped meaning from `users.role` (only `user` | `super_user`).
-3. **Authorization layer:** `verifySuperUser`, `verifyClubMember(clubId)`, `verifyClubAdmin(clubId)`, invite-create gate; update [`firestore.rules`](../../firestore.rules) and client guards/hooks.
-4. Rename `admin` → `super_user` across types, [`lib/api/auth.ts`](../../lib/api/auth.ts), [`useAdmin`](../../lib/hooks/useAdmin.ts) (or rename hook), Admin UI labels, UserRoleManager, tests.
-5. Club CRUD APIs (super user creates clubs; club admin updates club settings including `allowPlayerInvites`).
-6. Invite APIs: create/revoke invite; redeem by code or link token on register/login; enforce `allowPlayerInvites`.
-7. Registration/login join path: accept `?invite=` / code entry; attach membership after auth.
-8. One-shot migration script/route (super-user gated): given `clubId`, create memberships for all existing users; set former `admin` → `super_user` + `club_admin` on that club.
-9. Profile UI: membership list + “clubs I admin” + invite share (copy link / code).
-10. Scope resource reads/writes (`matches`, schedules, locations, etc.) to `clubId` + membership checks (see Authorization → Data isolation).
-11. Migrate every `verifyAdmin` call site (Wave A platform / Wave B club ops); add tests for auth helpers, invite redeem, migration idempotency.
+1. [x] Lock naming: **club** = tenant; membership role **`club_admin`**; keep match **teams** as lineup sides.
+2. [x] Data model: `clubs`, `clubMemberships`, `clubInvites`; strip club-scoped meaning from `users.role` (only `user` | `super_user`).
+3. [x] **Authorization layer:** `verifySuperUser`, `verifyClubMember(clubId)`, `verifyClubAdmin(clubId)`, invite-create gate; update [`firestore.rules`](../../firestore.rules) and client guards/hooks.
+4. [x] Rename `admin` → `super_user` across types, [`lib/api/auth.ts`](../../lib/api/auth.ts), [`useAdmin`](../../lib/hooks/useAdmin.ts), Admin UI labels, UserRoleManager, tests.
+5. [x] Club CRUD APIs (super user creates clubs; club admin updates club settings including `allowPlayerInvites`). Create is **name-only**; slug auto-generated; name + slug unique.
+6. [x] Invite APIs: create invite; redeem by code or link token; enforce `allowPlayerInvites`. (Revoke API still thin / later.)
+7. [~] Registration/login join path: `/join?code=` + login redirect; full invite-aware register polish still open.
+8. [x] One-shot backfill route (super-user gated). **Production founding club already backfilled** (Jax State Soccer Club). Backfill admin UI removed; API kept for emergencies only.
+9. [x] Profile UI: membership list + “clubs I admin” + invite share (copy link / code).
+10. [~] Scope resource reads/writes to `clubId` + membership checks — APIs/rules largely done; tighter client match-list filtering by membership/`activeClubId` still open.
+11. [x] Migrate every `verifyAdmin` call site (Wave A / Wave B); tests for auth helpers + migration idempotency.
 
 ## Current state
 
-Single-tenant pickup app branded Soccerville. No club/tenant/membership/invite collections.
+Foundation from [#65](https://github.com/orkunozekin/soccer-team-builder/pull/65) is on `main`. Founding tenant **Jax State Soccer Club** exists; users/matches/schedules/locations were backfilled onto it.
 
 | Area | Today |
 |------|--------|
-| Global roles | [`types/user.ts`](../../types/user.ts): `UserRole = 'user' \| 'admin'` |
-| Role enforcement | [`lib/api/auth.ts`](../../lib/api/auth.ts) `verifyAdmin`; [`firestore.rules`](../../firestore.rules); [`useAdmin`](../../lib/hooks/useAdmin.ts); [`AdminRouteGuard`](../../components/admin/AdminRouteGuard.tsx) |
-| Role mutation | [`UserRoleManager`](../../components/admin/UserRoleManager.tsx), [`PATCH /api/users/[userId]`](../../app/api/users/[userId]/route.ts) |
-| “Team” | Match lineup only: [`types/team.ts`](../../types/team.ts), `matches/{matchId}/teams` |
-| Join | Open [`RegisterForm`](../../components/auth/RegisterForm.tsx) → always `role: 'user'` ([`userService.createUser`](../../lib/services/userService.ts)) |
-| Profile | [`app/profile/page.tsx`](../../app/profile/page.tsx): name, jersey, position, attendance — no clubs |
-| Branding | Hard-coded Soccerville strings/URLs; not configurable |
+| Global roles | [`types/user.ts`](../../types/user.ts): `UserRole = 'user' \| 'super_user'` (legacy `admin` normalized) |
+| Role enforcement | [`lib/api/auth.ts`](../../lib/api/auth.ts) `verifySuperUser` / `verifyClubAdmin` / `verifyClubMember`; [`firestore.rules`](../../firestore.rules); [`useAdmin`](../../lib/hooks/useAdmin.ts) for platform shell |
+| Club create | Super user; name required; slug from name; unique name + slug ([#71](https://github.com/orkunozekin/soccer-team-builder/pull/71) polish) |
+| Memberships / invites | Collections + APIs; profile invite share; `/join?code=` |
+| “Team” | Match lineup only: [`types/team.ts`](../../types/team.ts), `matches/{matchId}/teams` (unchanged) |
+| Join | `/join` redeem path; open register still creates orphan accounts without membership |
+| Profile | Clubs I’m in / clubs I admin + invite actions |
+| Branding | Still hard-coded Soccerville strings in places; not club-configurable (out of v1) |
 
 Related feature plans (`check-in`, pitch lineup, RSVP, QStash) assume global admin and a shared match universe. They do not block this plan but will need club-scoped auth once isolation lands.
 
@@ -288,31 +291,28 @@ flowchart TD
 
 ### Done so far
 
-- Plan drafted; naming revised to `club_admin`; Authorization section expanded (capability matrix, helpers, rules, client, Wave A/B).
-- Types: `types/club.ts`, `UserRole` → `user` | `super_user` (legacy `admin` normalized), `clubId` on match/schedule/location.
-- Auth helpers: `verifySuperUser`, `verifyClubMember`, `verifyClubAdmin`, `verifyCanCreateInvite`, `verifyClubAdminForMatch`, `resolveClubIdForWrite`.
-- Club APIs: create/patch club, mine, invites, redeem, backfill; Wave A/B `verifyAdmin` call sites migrated.
-- Firestore rules + membership indexes; profile clubs UI; `/join`; admin ClubAdminPanel; unit tests for auth helpers + backfill idempotency.
-- Client match scoping: `lib/utils/clubMatches.ts` filters list by `activeClubId` / memberships (keeps unscoped pre-backfill docs); orphan empty state + `/join` CTA on `app/matches/page.tsx`.
-- Match UI gates on club admin: `MatchDetailView` uses `useIsClubAdmin` (`canManageMatch`); `RSVPButton` post-start cancel override; create-match + `MatchCard` use club-admin helpers (not global `isAdmin` alone).
-- Invite-aware registration: `RegisterForm` code field + redeem after signup; `/register` reads `?code=` / `?redirect=`; `/join` offers Create account + Sign in when logged out.
+- Plan drafted; naming = `club` / `club_admin`; Authorization section (capability matrix, helpers, rules, Wave A/B).
+- **[#65 merged](https://github.com/orkunozekin/soccer-team-builder/pull/65):** types, auth helpers, club/invite/backfill APIs, Wave A/B auth migration, Firestore rules/indexes, profile clubs + `/join`, admin club tools, unit tests.
+- **Production backfill complete** for Jax State Soccer Club (`eJUFKpdHpRsO3vaisI6G`): 283 users, 3 admins → `super_user`, matches/schedules/locations stamped with `clubId`.
+- **[#71 merged](https://github.com/orkunozekin/soccer-team-builder/pull/71):** club create is name-only (no defaults, no slug field); slug auto from name; unique name + slug; backfill panel removed from admin UI (API remains).
+- **[#73 open](https://github.com/orkunozekin/soccer-team-builder/pull/73):** client match scoping (`lib/utils/clubMatches.ts` by `activeClubId` / memberships; orphan `/join` CTA); match UI gates on `useIsClubAdmin`; invite-aware registration (`RegisterForm` + `/register?code=` + `/join` Create account / Sign in).
 
 ### Remaining work
 
-1. Promote/demote `club_admin` from roster UI (members list API + profile/admin surface on top of `upsertMembership`).
-2. Deploy rules/indexes; run founding-club create + backfill in each environment.
-3. Spot-check player cannot hit club-admin APIs; confirm founding-club match list after backfill.
+1. Ensure founding club doc has `nameLower` set for case-insensitive uniqueness (`jax state soccer club`).
+2. Promote/demote `club_admin` from roster UI (members list API + profile/admin surface on top of `upsertMembership`); invite revoke.
+3. Spot-check player cannot hit club-admin APIs; confirm founding-club match list after #73 scopes client reads.
 4. Optional: club switcher writing `users.activeClubId`; pass explicit `clubId` into `createMatchAPI` from active club.
+5. Deploy rules/indexes in any non-prod environments that still lack them (prod backfill already done).
 
 ### Blockers / risks
 
-- Large blast radius: every `verifyAdmin` call site and Firestore rule assuming a single shared match universe.
-- Shipping memberships without `match.clubId` isolation + membership checks leaks data across clubs — backfill still required per environment.
-- Unscoped (`clubId` null) matches remain visible to members until stamped; tighten further only after environments are backfilled.
+- Unscoped (`clubId` null) matches remain visible to members until stamped; tighten further only after all environments are backfilled.
+- Hard-coded Soccerville branding remains until a later branding pass.
 
 ### Pointers for the next agent
 
-- Start at: `GET/PATCH /api/clubs/[clubId]/members` + roster promote/demote UI, or ops backfill via admin Users → Clubs panel.
-- Do not: put `club_admin` on the global `users.role` field; do not rename match lineup `teams`; do not use `team_admin`.
-- Verify with: `yarn vitest run lib/utils/clubMatches.test.ts app/matches/page.test.tsx components/matches/MatchDetailView.test.tsx`; manual profile invite copy → `/join?code=` → register → matches scoped to club; club_admin sees manage controls on match detail without global `super_user`.
+- Start at: `GET/PATCH /api/clubs/[clubId]/members` + roster promote/demote UI; confirm founding club `nameLower` if missing.
+- Do not: put `club_admin` on global `users.role`; do not rename match lineup `teams`; do not re-run founding backfill unless repairing data.
+- Verify with: `yarn vitest run lib/utils/clubMatches.test.ts app/matches/page.test.tsx components/matches/MatchDetailView.test.tsx`; profile invite → `/join?code=` → register → matches scoped to club; club_admin sees manage controls without global `super_user`; player blocked from club-admin APIs.
 - Next skills: `/feature-context` on this file before coding; `/handoff` when a session ends or status changes.
