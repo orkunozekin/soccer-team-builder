@@ -52,13 +52,14 @@ function makeQuery(name: string, filters: Array<[string, string, unknown]> = [])
 
 vi.mock('@/lib/firebase/admin', () => ({
   getAdminDb: () => {
-    return {
+    const db = {
       collection: (name: string) => ({
         doc: (id?: string) => {
           const docId = id ?? `auto_${mocks.store.size}`
           const path = `${name}/${docId}`
           return {
             id: docId,
+            _path: path,
             get: async () => {
               const data = mocks.store.get(path)
               return {
@@ -73,8 +74,16 @@ vi.mock('@/lib/firebase/admin', () => ({
                 },
               }
             },
-            set: async (data: Record<string, unknown>) => {
-              mocks.store.set(path, { ...data })
+            set: async (
+              data: Record<string, unknown>,
+              opts?: { merge?: boolean }
+            ) => {
+              if (opts?.merge) {
+                const cur = mocks.store.get(path) ?? {}
+                mocks.store.set(path, { ...cur, ...data })
+              } else {
+                mocks.store.set(path, { ...data })
+              }
             },
             update: async (patch: Record<string, unknown>) => {
               const cur = mocks.store.get(path) ?? {}
@@ -90,7 +99,65 @@ vi.mock('@/lib/firebase/admin', () => ({
           return { docs, size: docs.length, empty: docs.length === 0 }
         },
       }),
+      runTransaction: async <T>(
+        fn: (tx: {
+          get: (target: {
+            get?: () => Promise<unknown>
+            _path?: string
+          }) => Promise<unknown>
+          update: (
+            ref: { update: (patch: Record<string, unknown>) => Promise<void> },
+            patch: Record<string, unknown>
+          ) => void
+          set: (
+            ref: {
+              set: (
+                data: Record<string, unknown>,
+                opts?: { merge?: boolean }
+              ) => Promise<void>
+            },
+            data: Record<string, unknown>,
+            opts?: { merge?: boolean }
+          ) => void
+        }) => Promise<T>
+      ): Promise<T> => {
+        const pending: Array<() => Promise<void>> = []
+        const tx = {
+          get: async (target: {
+            get?: () => Promise<unknown>
+          }) => {
+            if (typeof target.get === 'function') {
+              return target.get()
+            }
+            throw new Error('Unsupported transaction get target')
+          },
+          update: (
+            ref: { update: (patch: Record<string, unknown>) => Promise<void> },
+            patch: Record<string, unknown>
+          ) => {
+            pending.push(() => ref.update(patch))
+          },
+          set: (
+            ref: {
+              set: (
+                data: Record<string, unknown>,
+                opts?: { merge?: boolean }
+              ) => Promise<void>
+            },
+            data: Record<string, unknown>,
+            opts?: { merge?: boolean }
+          ) => {
+            pending.push(() => ref.set(data, opts))
+          },
+        }
+        const result = await fn(tx)
+        for (const op of pending) {
+          await op()
+        }
+        return result
+      },
     }
+    return db
   },
 }))
 
@@ -288,5 +355,50 @@ describe('clubService redeem + backfill', () => {
     await expect(
       revokeInvite({ clubId: 'c1', inviteId: 'inv1' })
     ).rejects.toThrow('Invite already revoked')
+  })
+
+  it('redeemInvite fails when invite is revoked before membership write', async () => {
+    const { Timestamp } = await import('firebase-admin/firestore')
+    const now = Timestamp.now()
+    mocks.store.set('clubs/c1', {
+      name: 'Test Club',
+      slug: 'test',
+      createdBy: 'a1',
+      settings: { allowPlayerInvites: false },
+      createdAt: now,
+      updatedAt: now,
+    })
+    mocks.store.set('clubInvites/inv1', {
+      clubId: 'c1',
+      code: 'ABCD12',
+      createdBy: 'a1',
+      createdByRole: 'club_admin',
+      maxUses: null,
+      useCount: 0,
+      expiresAt: null,
+      revokedAt: null,
+      createdAt: now,
+    })
+    mocks.store.set('users/u2', {
+      role: 'user',
+      email: 'u2@test.com',
+      displayName: 'User Two',
+    })
+
+    const { redeemInvite } = await import('@/lib/services/clubService')
+
+    // Simulate revoke after findActiveInviteByCode would have succeeded:
+    // mark revoked before redeem's transaction re-reads the invite.
+    mocks.store.set('clubInvites/inv1', {
+      ...mocks.store.get('clubInvites/inv1')!,
+      revokedAt: now,
+    })
+
+    const result = await redeemInvite({ code: 'ABCD12', userId: 'u2' })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.status).toBe(400)
+    }
+    expect(mocks.store.get('clubMemberships/c1_u2')).toBeUndefined()
   })
 })

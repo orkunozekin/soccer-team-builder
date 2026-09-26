@@ -298,6 +298,8 @@ export async function listMembershipsForClub(
 
 /**
  * Update a member's club role. Prevents demoting the last club_admin.
+ * Last-admin check + role write run in a transaction so concurrent demotions
+ * cannot leave the club with zero admins.
  */
 export async function updateMembershipRole(input: {
   clubId: string
@@ -309,35 +311,38 @@ export async function updateMembershipRole(input: {
 
   const id = membershipDocId(input.clubId, input.userId)
   const ref = adminDb.collection('clubMemberships').doc(id)
-  const existing = await ref.get()
-  if (!existing.exists || existing.data()?.status !== 'active') {
-    throw new Error('Membership not found')
-  }
 
-  const currentRole = existing.data()?.role as ClubMembershipRole
-  if (currentRole === input.role) {
-    return mapMembership(id, existing.data()!)
-  }
-
-  if (currentRole === 'club_admin' && input.role === 'player') {
-    const admins = await adminDb
-      .collection('clubMemberships')
-      .where('clubId', '==', input.clubId)
-      .where('status', '==', 'active')
-      .where('role', '==', 'club_admin')
-      .limit(2)
-      .get()
-    if (admins.size <= 1) {
-      throw new Error('Cannot demote the last club admin')
+  return adminDb.runTransaction(async tx => {
+    const existing = await tx.get(ref)
+    if (!existing.exists || existing.data()?.status !== 'active') {
+      throw new Error('Membership not found')
     }
-  }
 
-  const now = Timestamp.now()
-  await ref.update({ role: input.role, updatedAt: now })
-  return mapMembership(id, {
-    ...existing.data(),
-    role: input.role,
-    updatedAt: now,
+    const currentRole = existing.data()?.role as ClubMembershipRole
+    if (currentRole === input.role) {
+      return mapMembership(id, existing.data()!)
+    }
+
+    if (currentRole === 'club_admin' && input.role === 'player') {
+      const adminsQuery = adminDb
+        .collection('clubMemberships')
+        .where('clubId', '==', input.clubId)
+        .where('status', '==', 'active')
+        .where('role', '==', 'club_admin')
+        .limit(2)
+      const admins = await tx.get(adminsQuery)
+      if (admins.size <= 1) {
+        throw new Error('Cannot demote the last club admin')
+      }
+    }
+
+    const now = Timestamp.now()
+    tx.update(ref, { role: input.role, updatedAt: now })
+    return mapMembership(id, {
+      ...existing.data(),
+      role: input.role,
+      updatedAt: now,
+    })
   })
 }
 
@@ -393,32 +398,35 @@ export async function revokeInvite(input: {
   if (!adminDb) throw new Error('Firebase Admin not configured')
 
   const ref = adminDb.collection('clubInvites').doc(input.inviteId)
-  const snap = await ref.get()
-  if (!snap.exists) throw new Error('Invite not found')
 
-  const data = snap.data()!
-  if (data.clubId !== input.clubId) {
-    throw new Error('Invite not found')
-  }
-  if (data.revokedAt) {
-    throw new Error('Invite already revoked')
-  }
+  return adminDb.runTransaction(async tx => {
+    const snap = await tx.get(ref)
+    if (!snap.exists) throw new Error('Invite not found')
 
-  const revokedAt = Timestamp.now()
-  await ref.update({ revokedAt })
+    const data = snap.data()!
+    if (data.clubId !== input.clubId) {
+      throw new Error('Invite not found')
+    }
+    if (data.revokedAt) {
+      throw new Error('Invite already revoked')
+    }
 
-  return {
-    id: snap.id,
-    clubId: data.clubId as string,
-    code: data.code as string,
-    createdBy: data.createdBy as string,
-    createdByRole: data.createdByRole as ClubInviteCreatorRole,
-    maxUses: (data.maxUses as number | null) ?? null,
-    useCount: (data.useCount as number) ?? 0,
-    expiresAt: data.expiresAt?.toDate?.() ?? null,
-    revokedAt: revokedAt.toDate(),
-    createdAt: data.createdAt?.toDate?.() ?? new Date(),
-  }
+    const revokedAt = Timestamp.now()
+    tx.update(ref, { revokedAt })
+
+    return {
+      id: snap.id,
+      clubId: data.clubId as string,
+      code: data.code as string,
+      createdBy: data.createdBy as string,
+      createdByRole: data.createdByRole as ClubInviteCreatorRole,
+      maxUses: (data.maxUses as number | null) ?? null,
+      useCount: (data.useCount as number) ?? 0,
+      expiresAt: data.expiresAt?.toDate?.() ?? null,
+      revokedAt: revokedAt.toDate(),
+      createdAt: data.createdAt?.toDate?.() ?? new Date(),
+    }
+  })
 }
 
 export async function listMembershipsForUser(
@@ -565,6 +573,8 @@ export type RedeemInviteResult =
 
 /**
  * Redeem invite by code. Idempotent if already an active member.
+ * Membership create + invite useCount update run in a transaction that
+ * re-reads revokedAt so a concurrent revoke cannot still grant membership.
  */
 export async function redeemInvite(input: {
   code: string
@@ -581,47 +591,102 @@ export async function redeemInvite(input: {
     return { ok: false, error: 'Firebase Admin not configured', status: 500 }
   }
 
-  const existing = await adminDb
-    .collection('clubMemberships')
-    .doc(existingId)
-    .get()
-  if (existing.exists && existing.data()?.status === 'active') {
-    return {
-      ok: true,
-      membership: mapMembership(existingId, existing.data()!),
-      alreadyMember: true,
-      clubId: invite.clubId,
+  try {
+    const result = await adminDb.runTransaction(async tx => {
+      const inviteRef = adminDb.collection('clubInvites').doc(invite.id)
+      const inviteSnap = await tx.get(inviteRef)
+      if (!inviteSnap.exists) {
+        throw Object.assign(new Error('Invalid or expired invite code'), {
+          status: 400,
+        })
+      }
+      const inviteData = inviteSnap.data()!
+      if (inviteData.revokedAt) {
+        throw Object.assign(new Error('Invalid or expired invite code'), {
+          status: 400,
+        })
+      }
+      const nowMs = Date.now()
+      if (
+        inviteData.expiresAt?.toDate &&
+        inviteData.expiresAt.toDate().getTime() < nowMs
+      ) {
+        throw Object.assign(new Error('Invalid or expired invite code'), {
+          status: 400,
+        })
+      }
+      const useCount = (inviteData.useCount as number) ?? 0
+      const maxUses = (inviteData.maxUses as number | null) ?? null
+      if (typeof maxUses === 'number' && maxUses > 0 && useCount >= maxUses) {
+        throw Object.assign(new Error('Invalid or expired invite code'), {
+          status: 400,
+        })
+      }
+
+      const membershipRef = adminDb
+        .collection('clubMemberships')
+        .doc(existingId)
+      const existing = await tx.get(membershipRef)
+      if (existing.exists && existing.data()?.status === 'active') {
+        return {
+          ok: true as const,
+          membership: mapMembership(existingId, existing.data()!),
+          alreadyMember: true,
+          clubId: invite.clubId,
+        }
+      }
+
+      const now = Timestamp.now()
+      const membershipData = {
+        clubId: invite.clubId,
+        userId: input.userId,
+        role: 'player' as const,
+        status: 'active' as const,
+        joinedAt: existing.exists
+          ? (existing.data()?.joinedAt ?? now)
+          : now,
+        updatedAt: now,
+      }
+      tx.set(membershipRef, membershipData, { merge: true })
+      tx.update(inviteRef, { useCount: useCount + 1 })
+
+      return {
+        ok: true as const,
+        membership: mapMembership(existingId, membershipData),
+        alreadyMember: false,
+        clubId: invite.clubId,
+      }
+    })
+
+    // Set activeClubId if unset (outside tx; best-effort UX preference)
+    if (!result.alreadyMember) {
+      const userRef = adminDb.collection('users').doc(input.userId)
+      const userSnap = await userRef.get()
+      if (userSnap.exists && !userSnap.data()?.activeClubId) {
+        await userRef.update({
+          activeClubId: invite.clubId,
+          updatedAt: Timestamp.now(),
+        })
+      }
     }
-  }
 
-  const { membership } = await upsertMembership({
-    clubId: invite.clubId,
-    userId: input.userId,
-    role: 'player',
-  })
-
-  await adminDb
-    .collection('clubInvites')
-    .doc(invite.id)
-    .update({
-      useCount: (invite.useCount ?? 0) + 1,
-    })
-
-  // Set activeClubId if unset
-  const userRef = adminDb.collection('users').doc(input.userId)
-  const userSnap = await userRef.get()
-  if (userSnap.exists && !userSnap.data()?.activeClubId) {
-    await userRef.update({
-      activeClubId: invite.clubId,
-      updatedAt: Timestamp.now(),
-    })
-  }
-
-  return {
-    ok: true,
-    membership,
-    alreadyMember: false,
-    clubId: invite.clubId,
+    return result
+  } catch (err: unknown) {
+    const status =
+      err && typeof err === 'object' && 'status' in err
+        ? Number((err as { status: number }).status)
+        : undefined
+    if (status === 400) {
+      return {
+        ok: false,
+        error:
+          err instanceof Error
+            ? err.message
+            : 'Invalid or expired invite code',
+        status: 400,
+      }
+    }
+    throw err
   }
 }
 
