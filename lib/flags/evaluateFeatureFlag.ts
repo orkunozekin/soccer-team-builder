@@ -32,12 +32,19 @@ function getServerLdClient(): Promise<LdClient | null> {
     promise: null,
   }
   attempt.promise = (async (): Promise<LdClient | null> => {
+    let client: LdClient | null = null
     try {
-      const client = LaunchDarkly.init(sdkKey)
+      client = LaunchDarkly.init(sdkKey)
       await client.waitForInitialization({ timeout: 3 }) // seconds
       return client
     } catch (err) {
       console.error('LaunchDarkly server SDK init failed:', err)
+      // Stop timers/connections from the failed client before allowing retry.
+      try {
+        client?.close()
+      } catch (closeErr) {
+        console.error('LaunchDarkly client close failed:', closeErr)
+      }
       // Allow the next caller to retry init after a transient failure.
       if (clientPromise === attempt.promise) {
         clientPromise = null

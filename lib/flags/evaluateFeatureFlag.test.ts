@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { initMock, boolVariationMock, waitForInitializationMock } = vi.hoisted(
-  () => ({
+const { initMock, boolVariationMock, waitForInitializationMock, closeMock } =
+  vi.hoisted(() => ({
     initMock: vi.fn(),
     boolVariationMock: vi.fn(),
     waitForInitializationMock: vi.fn(),
-  })
-)
+    closeMock: vi.fn(),
+  }))
 
 vi.mock('@launchdarkly/node-server-sdk', () => ({
   init: initMock,
@@ -33,9 +33,11 @@ describe('evaluateFeatureFlag', () => {
     vi.stubEnv('NODE_ENV', 'test')
     waitForInitializationMock.mockResolvedValue(undefined)
     boolVariationMock.mockResolvedValue(false)
+    closeMock.mockReturnValue(undefined)
     initMock.mockReturnValue({
       waitForInitialization: waitForInitializationMock,
       boolVariation: boolVariationMock,
+      close: closeMock,
     })
   })
 
@@ -65,7 +67,7 @@ describe('evaluateFeatureFlag', () => {
     expect(initMock).not.toHaveBeenCalled()
   })
 
-  it('fails closed when SDK init fails, then retries on the next call', async () => {
+  it('fails closed when SDK init fails, closes the client, then retries', async () => {
     process.env.LAUNCHDARKLY_SDK_KEY = 'sdk-test-key'
     waitForInitializationMock.mockRejectedValueOnce(new Error('init failed'))
     waitForInitializationMock.mockResolvedValueOnce(undefined)
@@ -73,6 +75,7 @@ describe('evaluateFeatureFlag', () => {
 
     await expect(evaluateFeatureFlag('club-creation')).resolves.toBe(false)
     expect(boolVariationMock).not.toHaveBeenCalled()
+    expect(closeMock).toHaveBeenCalledOnce()
 
     await expect(
       evaluateFeatureFlag('club-creation', { key: 'user-1' })
