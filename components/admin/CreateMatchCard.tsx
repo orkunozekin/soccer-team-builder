@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/card'
 import { DatePickerTime } from '@/components/ui/date-picker-time'
 import { createMatchAPI } from '@/lib/api/client'
+import { useAuth } from '@/lib/hooks/useAuth'
 import { getMatch } from '@/lib/services/matchService'
 import { useMatchStore } from '@/store/matchStore'
 
@@ -20,6 +21,7 @@ interface CreateMatchCardProps {
 }
 
 export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
+  const { userData } = useAuth()
   const { addMatch } = useMatchStore()
   const [expanded, setExpanded] = useState(false)
   const [date, setDate] = useState('')
@@ -61,7 +63,18 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
             }
           : null
 
-      const { matchId } = await createMatchAPI(matchDate, time, location)
+      const clubId =
+        typeof userData?.activeClubId === 'string' &&
+        userData.activeClubId.trim()
+          ? userData.activeClubId.trim()
+          : null
+
+      const { matchId } = await createMatchAPI(
+        matchDate,
+        time,
+        location,
+        clubId
+      )
       const newMatch = await getMatch(matchId)
 
       if (newMatch) {
@@ -92,6 +105,7 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
         <CardTitle>Create new match</CardTitle>
         <CardDescription>
           Create a new soccer match with date and time
+          {userData?.activeClubId ? ' for your active club' : ''}
         </CardDescription>
       </CardHeader>
       <CardContent>

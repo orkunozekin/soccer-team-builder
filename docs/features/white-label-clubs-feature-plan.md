@@ -7,10 +7,10 @@ Plan to move Soccerville from a single hard-coded club to multi-club tenancy: re
 | Field | Value |
 |-------|-------|
 | Status | in progress (foundation shipped; follow-ups open) |
-| Owner session | cloud agent (club roster + invite revoke) |
+| Owner session | cloud agent (active club switcher) |
 | Last updated | 2026-09-26 |
-| Merged PRs | [#65](https://github.com/orkunozekin/soccer-team-builder/pull/65); [#71](https://github.com/orkunozekin/soccer-team-builder/pull/71); [#73](https://github.com/orkunozekin/soccer-team-builder/pull/73) (match scoping, club-admin UI, invite registration) |
-| Open follow-up PR / branch | `cursor/white-label-club-roster-7f02` (roster promote/demote + invite revoke) |
+| Merged PRs | [#65](https://github.com/orkunozekin/soccer-team-builder/pull/65); [#71](https://github.com/orkunozekin/soccer-team-builder/pull/71); [#73](https://github.com/orkunozekin/soccer-team-builder/pull/73); [#74](https://github.com/orkunozekin/soccer-team-builder/pull/74) (roster promote/demote + invite revoke) |
+| Open follow-up PR / branch | `cursor/white-label-active-club-switcher-2ac8` (profile activeClubId switcher + createMatch clubId) |
 | Founding club | **Jax State Soccer Club** (`eJUFKpdHpRsO3vaisI6G`) — membership + resource `clubId` backfill already run in production |
 
 ## Goals (v1)
@@ -296,24 +296,24 @@ flowchart TD
 - **Production backfill complete** for Jax State Soccer Club (`eJUFKpdHpRsO3vaisI6G`): 283 users, 3 admins → `super_user`, matches/schedules/locations stamped with `clubId`.
 - **[#71 merged](https://github.com/orkunozekin/soccer-team-builder/pull/71):** club create is name-only (no defaults, no slug field); slug auto from name; unique name + slug; backfill panel removed from admin UI (API remains).
 - **[#73 merged](https://github.com/orkunozekin/soccer-team-builder/pull/73):** client match scoping; match UI gates on `useIsClubAdmin`; invite-aware registration.
-- **Roster + revoke (this branch):** `GET/PATCH /api/clubs/[clubId]/members`, `GET` invites + `POST …/invites/[inviteId]/revoke`; `ClubAdminRoster` on profile (promote/demote, revoke); `ensureClubNameLower` lazy repair on members list; new membership indexes.
+- **[#74 merged](https://github.com/orkunozekin/soccer-team-builder/pull/74):** `GET/PATCH /api/clubs/[clubId]/members`, invite list + revoke; `ClubAdminRoster` (promote/demote, revoke); `ensureClubNameLower`; membership indexes in `firestore.indexes.json`.
+- **Active club switcher (this branch):** `PATCH /api/users/me` accepts `activeClubId` (member or super_user; clears with `null`); profile “Set as active” on Clubs I’m in; `createMatchAPI` / `CreateMatchCard` pass explicit `clubId` from `userData.activeClubId`.
 
 ### Remaining work
 
 1. Deploy new `firestore.indexes.json` entries (`clubMemberships` by `clubId+status` and `clubId+status+role`) in each environment; confirm founding club `nameLower` was repaired (or open Manage roster once as club admin).
-2. Spot-check player cannot hit club-admin APIs (members/invites/revoke); club_admin can promote/demote and revoke.
-3. Optional: club switcher writing `users.activeClubId`; pass explicit `clubId` into `createMatchAPI` from active club.
-4. Deploy rules/indexes in any non-prod environments that still lack the original club rules (prod backfill already done).
+2. Spot-check player cannot hit club-admin APIs (members/invites/revoke); club_admin can promote/demote and revoke; profile active-club switch updates match list scoping.
+3. Deploy rules/indexes in any non-prod environments that still lack the original club rules (prod backfill already done).
 
 ### Blockers / risks
 
 - Unscoped (`clubId` null) matches remain visible to members until stamped; tighten further only after all environments are backfilled.
 - Hard-coded Soccerville branding remains until a later branding pass.
-- Roster list queries need the new composite indexes before production use.
+- Roster list queries need the new composite indexes before production use (Firebase login required to deploy; not done from this Cloud Agent).
 
 ### Pointers for the next agent
 
-- Start at: deploy indexes; manual profile → Clubs I admin → Manage roster; optional activeClubId switcher.
+- Start at: deploy indexes (`firebase deploy --only firestore:indexes`); manual profile → Set as active / Manage roster; player 403 spot-check.
 - Do not: put `club_admin` on global `users.role`; do not rename match lineup `teams`; do not re-run founding backfill unless repairing data.
-- Verify with: `yarn vitest run lib/services/clubService.test.ts`; profile promote/demote + revoke invite; player 403 on `/api/clubs/:id/members`.
+- Verify with: `yarn vitest run app/api/users/me/route.test.ts lib/services/clubService.test.ts`; profile switch active club → matches filter; create match stamps that `clubId`.
 - Next skills: `/feature-context` on this file before coding; `/handoff` when a session ends or status changes.
