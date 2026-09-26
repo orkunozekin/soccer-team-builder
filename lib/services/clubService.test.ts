@@ -302,6 +302,37 @@ describe('clubService redeem + backfill', () => {
     expect(await ensureClubNameLower('c1')).toBe(false)
   })
 
+  it('previewInviteByCode returns club name for an active invite', async () => {
+    const { Timestamp } = await import('firebase-admin/firestore')
+    const now = Timestamp.now()
+    mocks.store.set('clubs/c1', {
+      name: 'Jax State Soccer Club',
+      slug: 'jax-state-soccer-club',
+      createdBy: 'a1',
+      settings: { allowPlayerInvites: false },
+      createdAt: now,
+      updatedAt: now,
+    })
+    mocks.store.set('clubInvites/inv1', {
+      clubId: 'c1',
+      code: 'ABCD12',
+      createdBy: 'a1',
+      createdByRole: 'club_admin',
+      maxUses: null,
+      useCount: 0,
+      expiresAt: null,
+      revokedAt: null,
+      createdAt: now,
+    })
+
+    const { previewInviteByCode } = await import('@/lib/services/clubService')
+    await expect(previewInviteByCode('abcd12')).resolves.toEqual({
+      clubId: 'c1',
+      clubName: 'Jax State Soccer Club',
+    })
+    await expect(previewInviteByCode('NOPE')).resolves.toBeNull()
+  })
+
   it('updateMembershipRole blocks demoting the last club admin', async () => {
     const { Timestamp } = await import('firebase-admin/firestore')
     const now = Timestamp.now()

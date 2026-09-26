@@ -778,6 +778,23 @@ export async function redeemInviteAPI(
   return response.json()
 }
 
+/** Public preview: resolve invite code to club name (no auth required). */
+export async function previewInviteAPI(
+  code: string
+): Promise<{ success: boolean; clubId: string; clubName: string }> {
+  const response = await fetch(
+    `/api/invites/preview?code=${encodeURIComponent(code.trim())}`,
+    { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+  )
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(
+      (error as { error?: string }).error || 'Failed to preview invite'
+    )
+  }
+  return response.json()
+}
+
 export async function backfillClubMembershipsAPI(
   clubId: string
 ): Promise<Record<string, unknown>> {

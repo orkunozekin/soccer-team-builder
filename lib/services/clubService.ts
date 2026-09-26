@@ -567,6 +567,20 @@ export async function findActiveInviteByCode(
   return null
 }
 
+/**
+ * Public preview for invite links: resolve an active code to the club name.
+ * Does not redeem or mutate invite state.
+ */
+export async function previewInviteByCode(
+  code: string
+): Promise<{ clubId: string; clubName: string } | null> {
+  const invite = await findActiveInviteByCode(code)
+  if (!invite) return null
+  const club = await getClub(invite.clubId)
+  if (!club) return null
+  return { clubId: club.id, clubName: club.name }
+}
+
 export type RedeemInviteResult =
   | { ok: true; membership: ClubMembership; alreadyMember: boolean; clubId: string }
   | { ok: false; error: string; status: number }

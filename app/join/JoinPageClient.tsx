@@ -7,7 +7,7 @@ import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { JoinClubForm } from '@/components/profile/ProfileClubsSection'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { redeemInviteAPI } from '@/lib/api/client'
+import { previewInviteAPI, redeemInviteAPI } from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 
 export default function JoinPageClient() {
@@ -17,6 +17,9 @@ export default function JoinPageClient() {
   const { user, loading } = useAuth()
   const [autoStatus, setAutoStatus] = useState<string | null>(null)
   const [autoError, setAutoError] = useState('')
+  const [clubName, setClubName] = useState<string | null>(null)
+  const [previewError, setPreviewError] = useState('')
+  const [previewLoading, setPreviewLoading] = useState(Boolean(codeFromUrl))
 
   const joinPath = codeFromUrl
     ? `/join?code=${encodeURIComponent(codeFromUrl)}`
@@ -27,7 +30,39 @@ export default function JoinPageClient() {
   const loginHref = `/login?redirect=${encodeURIComponent(joinPath)}`
 
   useEffect(() => {
-    if (loading || !user || !codeFromUrl) return
+    if (!codeFromUrl) {
+      setClubName(null)
+      setPreviewError('')
+      setPreviewLoading(false)
+      return
+    }
+    let cancelled = false
+    setPreviewLoading(true)
+    setPreviewError('')
+    ;(async () => {
+      try {
+        const res = await previewInviteAPI(codeFromUrl)
+        if (cancelled) return
+        setClubName(res.clubName)
+      } catch (err) {
+        if (cancelled) return
+        setClubName(null)
+        setPreviewError(
+          err instanceof Error ? err.message : 'Invalid or expired invite'
+        )
+      } finally {
+        if (!cancelled) setPreviewLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [codeFromUrl])
+
+  useEffect(() => {
+    if (loading || !user || !codeFromUrl || previewLoading || previewError) {
+      return
+    }
     let cancelled = false
     ;(async () => {
       try {
@@ -35,8 +70,12 @@ export default function JoinPageClient() {
         if (cancelled) return
         setAutoStatus(
           res.alreadyMember
-            ? 'You are already a member of this club.'
-            : 'Joined club successfully.'
+            ? clubName
+              ? `You are already a member of ${clubName}.`
+              : 'You are already a member of this club.'
+            : clubName
+              ? `Joined ${clubName} successfully.`
+              : 'Joined club successfully.'
         )
       } catch (err) {
         if (cancelled) return
@@ -48,9 +87,16 @@ export default function JoinPageClient() {
     return () => {
       cancelled = true
     }
-  }, [loading, user, codeFromUrl])
+  }, [
+    loading,
+    user,
+    codeFromUrl,
+    previewLoading,
+    previewError,
+    clubName,
+  ])
 
-  if (loading) {
+  if (loading || (codeFromUrl && previewLoading)) {
     return <PageLoadingSkeleton variant="centered" />
   }
 
@@ -59,27 +105,43 @@ export default function JoinPageClient() {
       <div className="container mx-auto px-4 py-10">
         <Card className="mx-auto max-w-md">
           <CardHeader>
-            <CardTitle>Join a club</CardTitle>
+            <CardTitle>
+              {clubName ? `Join ${clubName}` : 'Join a club'}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {codeFromUrl ? (
+            {previewError ? (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {previewError}
+              </p>
+            ) : clubName ? (
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Sign in or create an account to redeem invite code{' '}
-                <span className="font-mono font-medium">{codeFromUrl}</span>.
+                Sign in or create an account to join{' '}
+                <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                  {clubName}
+                </span>
+                .
               </p>
             ) : (
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
                 Sign in or create an account, then enter your invite code.
               </p>
             )}
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button asChild className="flex-1">
-                <Link href={registerHref}>Create account</Link>
+            {!previewError && (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button asChild className="flex-1">
+                  <Link href={registerHref}>Create account</Link>
+                </Button>
+                <Button asChild variant="outline" className="flex-1">
+                  <Link href={loginHref}>Sign in</Link>
+                </Button>
+              </div>
+            )}
+            {previewError && (
+              <Button asChild variant="outline">
+                <Link href="/join">Enter a different code</Link>
               </Button>
-              <Button asChild variant="outline" className="flex-1">
-                <Link href={loginHref}>Sign in</Link>
-              </Button>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -90,12 +152,14 @@ export default function JoinPageClient() {
     <div className="container mx-auto px-4 py-10">
       <Card className="mx-auto max-w-md">
         <CardHeader>
-          <CardTitle>Join a club</CardTitle>
+          <CardTitle>
+            {clubName ? `Join ${clubName}` : 'Join a club'}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {autoError && (
+          {(autoError || previewError) && (
             <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
-              {autoError}
+              {autoError || previewError}
             </div>
           )}
           {autoStatus && (
@@ -111,10 +175,14 @@ export default function JoinPageClient() {
           {!codeFromUrl && !autoStatus && (
             <JoinClubForm onJoined={() => router.push('/matches')} />
           )}
-          {codeFromUrl && !autoStatus && !autoError && (
-            <p className="text-sm text-zinc-500">Redeeming invite…</p>
+          {codeFromUrl && !autoStatus && !autoError && !previewError && (
+            <p className="text-sm text-zinc-500">
+              {clubName
+                ? `Joining ${clubName}…`
+                : 'Redeeming invite…'}
+            </p>
           )}
-          {autoError && (
+          {(autoError || previewError) && (
             <JoinClubForm onJoined={() => router.push('/matches')} />
           )}
         </CardContent>

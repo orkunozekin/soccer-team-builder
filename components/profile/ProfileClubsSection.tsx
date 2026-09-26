@@ -176,7 +176,7 @@ export function ProfileClubsSection() {
       {adminClubs.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            Clubs I admin
+            Clubs I manage
           </h3>
           <ul className="mt-2 space-y-4">
             {adminClubs.map(m => (

@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { RegisterForm } from '@/components/auth/RegisterForm'
@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { previewInviteAPI } from '@/lib/api/client'
 
 function safeRedirectPath(raw: string | null): string | null {
   if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return null
@@ -48,6 +49,36 @@ function RegisterPageInner() {
       ? `/login?redirect=${encodeURIComponent(`/join?code=${encodeURIComponent(inviteCode)}`)}`
       : '/login'
 
+  const [clubName, setClubName] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(Boolean(inviteCode))
+
+  useEffect(() => {
+    if (!inviteCode) {
+      setClubName(null)
+      setPreviewLoading(false)
+      return
+    }
+    let cancelled = false
+    setPreviewLoading(true)
+    ;(async () => {
+      try {
+        const res = await previewInviteAPI(inviteCode)
+        if (!cancelled) setClubName(res.clubName)
+      } catch {
+        if (!cancelled) setClubName(null)
+      } finally {
+        if (!cancelled) setPreviewLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [inviteCode])
+
+  if (inviteCode && previewLoading) {
+    return <PageLoadingSkeleton variant="centered" />
+  }
+
   return (
     <div className="flex flex-col items-center px-4 py-10 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-6">
@@ -56,12 +87,14 @@ function RegisterPageInner() {
             <SoccerBallIcon className="h-16 w-16 animate-float text-red-50" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-red-50">
-            Join the Squad
+            {clubName ? `Join ${clubName}` : 'Join the Squad'}
           </h1>
           <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-            {inviteCode
-              ? 'Create your account to join this club'
-              : 'Create your account and start playing'}
+            {clubName
+              ? `Create your account to join ${clubName}`
+              : inviteCode
+                ? 'Create your account to join this club'
+                : 'Create your account and start playing'}
           </p>
         </div>
 
@@ -74,9 +107,11 @@ function RegisterPageInner() {
               Create Account
             </CardTitle>
             <CardDescription className="text-center">
-              {inviteCode
-                ? 'Your invite code is ready — finish signing up to join'
-                : 'Sign up to join soccer pickup matches'}
+              {clubName
+                ? `Finish signing up to join ${clubName}`
+                : inviteCode
+                  ? 'Your invite is ready — finish signing up to join'
+                  : 'Sign up to join soccer pickup matches'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -84,7 +119,9 @@ function RegisterPageInner() {
               inviteCode={inviteCode || null}
               redirectTo={
                 redirectTo ??
-                (inviteCode ? `/join?code=${encodeURIComponent(inviteCode)}` : null)
+                (inviteCode
+                  ? `/join?code=${encodeURIComponent(inviteCode)}`
+                  : null)
               }
             />
             <div className="mt-4 text-center text-sm">
