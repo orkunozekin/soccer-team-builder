@@ -131,8 +131,24 @@ describe('auth club helpers', () => {
       exists: true,
       data: () => ({ settings: { allowPlayerInvites } }),
     })
+    const membershipWhereCalls: Array<[string, string, unknown]> = []
+    const membershipWhere = vi.fn(
+      (field: string, op: string, value: unknown) => {
+        membershipWhereCalls.push([field, op, value])
+        return {
+          where: membershipWhere,
+          limit: () => ({ get: membershipGet }),
+        }
+      }
+    )
 
-    return { userGet, membershipGet, clubGet }
+    return {
+      userGet,
+      membershipGet,
+      clubGet,
+      membershipWhere,
+      membershipWhereCalls,
+    }
   }
 
   async function installAuthMocks(opts: {
@@ -145,29 +161,22 @@ describe('auth club helpers', () => {
       verifyIdToken: vi.fn().mockResolvedValue({ uid: 'u1', email: 'a@b.c' }),
     } as never)
 
-    const { userGet, membershipGet, clubGet } = mockAuthDb(opts)
+    const mocks = mockAuthDb(opts)
     vi.mocked(getAdminDb).mockReturnValue({
       collection: (name: string) => {
-        if (name === 'users') return { doc: () => ({ get: userGet }) }
-        if (name === 'clubs') return { doc: () => ({ get: clubGet }) }
+        if (name === 'users') return { doc: () => ({ get: mocks.userGet }) }
+        if (name === 'clubs') return { doc: () => ({ get: mocks.clubGet }) }
         if (name === 'clubMemberships') {
-          return {
-            where: () => ({
-              where: () => ({
-                where: () => ({
-                  limit: () => ({ get: membershipGet }),
-                }),
-              }),
-            }),
-          }
+          return { where: mocks.membershipWhere }
         }
         return { doc: () => ({ get: vi.fn() }) }
       },
     } as never)
+    return mocks
   }
 
   it('verifyClubAdmin allows club_admin membership', async () => {
-    await installAuthMocks({ membershipRole: 'club_admin' })
+    const mocks = await installAuthMocks({ membershipRole: 'club_admin' })
 
     const { verifyClubAdmin } = await import('@/lib/api/auth')
     const result = await verifyClubAdmin(
@@ -178,10 +187,15 @@ describe('auth club helpers', () => {
     )
     expect(result.isClubAdmin).toBe(true)
     expect(result.isSuperUser).toBe(false)
+    expect(mocks.membershipWhereCalls).toEqual([
+      ['clubId', '==', 'c1'],
+      ['userId', '==', 'u1'],
+      ['status', '==', 'active'],
+    ])
   })
 
   it('verifyClubAdmin rejects player membership', async () => {
-    await installAuthMocks({ membershipRole: 'player' })
+    const mocks = await installAuthMocks({ membershipRole: 'player' })
 
     const { verifyClubAdmin } = await import('@/lib/api/auth')
     const result = await verifyClubAdmin(
@@ -193,10 +207,15 @@ describe('auth club helpers', () => {
     expect(result.uid).toBe('u1')
     expect(result.isClubAdmin).toBe(false)
     expect(result.isSuperUser).toBe(false)
+    expect(mocks.membershipWhereCalls).toEqual([
+      ['clubId', '==', 'c1'],
+      ['userId', '==', 'u1'],
+      ['status', '==', 'active'],
+    ])
   })
 
   it('verifyCanCreateInvite blocks players when allowPlayerInvites is false', async () => {
-    await installAuthMocks({
+    const mocks = await installAuthMocks({
       membershipRole: 'player',
       allowPlayerInvites: false,
     })
@@ -209,10 +228,15 @@ describe('auth club helpers', () => {
       'c1'
     )
     expect(result.allowed).toBe(false)
+    expect(mocks.membershipWhereCalls).toEqual([
+      ['clubId', '==', 'c1'],
+      ['userId', '==', 'u1'],
+      ['status', '==', 'active'],
+    ])
   })
 
   it('verifyCanCreateInvite allows players when allowPlayerInvites is true', async () => {
-    await installAuthMocks({
+    const mocks = await installAuthMocks({
       membershipRole: 'player',
       allowPlayerInvites: true,
     })
@@ -226,5 +250,10 @@ describe('auth club helpers', () => {
     )
     expect(result.allowed).toBe(true)
     expect(result.createdByRole).toBe('player')
+    expect(mocks.membershipWhereCalls).toEqual([
+      ['clubId', '==', 'c1'],
+      ['userId', '==', 'u1'],
+      ['status', '==', 'active'],
+    ])
   })
 })
