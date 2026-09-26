@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { ClubAdminRoster } from '@/components/profile/ClubAdminRoster'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -8,9 +9,11 @@ import {
   createClubInviteAPI,
   updateClubAPI,
 } from '@/lib/api/client'
+import { useAuth } from '@/lib/hooks/useAuth'
 import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
 
 export function ProfileClubsSection() {
+  const { user } = useAuth()
   const { memberships, loading, error, refresh } = useClubMemberships()
   const [busyClubId, setBusyClubId] = useState<string | null>(null)
   const [inviteInfo, setInviteInfo] = useState<{
@@ -20,8 +23,10 @@ export function ProfileClubsSection() {
   } | null>(null)
   const [actionError, setActionError] = useState('')
   const [copied, setCopied] = useState<'code' | 'link' | null>(null)
+  const [rosterOpenFor, setRosterOpenFor] = useState<string | null>(null)
 
   const adminClubs = memberships.filter(m => m.role === 'club_admin')
+  const currentUserId = user?.uid ?? ''
 
   const handleCreateInvite = async (clubId: string) => {
     setBusyClubId(clubId)
@@ -145,14 +150,30 @@ export function ProfileClubsSection() {
                   />
                   Players can invite
                 </label>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={busyClubId === m.clubId}
-                  onClick={() => handleCreateInvite(m.clubId)}
-                >
-                  {busyClubId === m.clubId ? 'Working…' : 'Create invite'}
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={busyClubId === m.clubId}
+                    onClick={() => handleCreateInvite(m.clubId)}
+                  >
+                    {busyClubId === m.clubId ? 'Working…' : 'Create invite'}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setRosterOpenFor(prev =>
+                        prev === m.clubId ? null : m.clubId
+                      )
+                    }
+                  >
+                    {rosterOpenFor === m.clubId
+                      ? 'Hide roster'
+                      : 'Manage roster'}
+                  </Button>
+                </div>
                 {inviteInfo?.clubId === m.clubId && (
                   <div className="space-y-2 rounded-md bg-zinc-50 p-3 text-sm dark:bg-zinc-900">
                     <div className="flex flex-wrap items-center gap-2">
@@ -184,6 +205,17 @@ export function ProfileClubsSection() {
                       </Button>
                     </div>
                   </div>
+                )}
+                {rosterOpenFor === m.clubId && currentUserId && (
+                  <ClubAdminRoster
+                    clubId={m.clubId}
+                    currentUserId={currentUserId}
+                    refreshToken={
+                      inviteInfo?.clubId === m.clubId
+                        ? inviteInfo.code
+                        : ''
+                    }
+                  />
                 )}
               </li>
             ))}

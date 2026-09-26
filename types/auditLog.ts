@@ -34,7 +34,9 @@ export type AuditAction =
   | 'club.created'
   | 'club.updated'
   | 'club.invite_created'
+  | 'club.invite_revoked'
   | 'club.invite_redeemed'
+  | 'club.membership_role_updated'
   | 'club.memberships_backfilled'
   | 'cron.rsvp_auto_opened'
   | 'cron.rsvp_auto_closed'
@@ -130,7 +132,9 @@ export const ALL_AUDIT_ACTIONS: readonly AuditAction[] = [
   'club.created',
   'club.updated',
   'club.invite_created',
+  'club.invite_revoked',
   'club.invite_redeemed',
+  'club.membership_role_updated',
   'club.memberships_backfilled',
   'cron.rsvp_auto_opened',
   'cron.rsvp_auto_closed',

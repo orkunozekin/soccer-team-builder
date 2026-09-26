@@ -12,7 +12,13 @@ import type {
   AuditLog,
   AuditSource,
 } from '@/types/auditLog'
-import type { Club, ClubInvite, ClubMembershipWithClub } from '@/types/club'
+import type {
+  Club,
+  ClubInvite,
+  ClubMembershipRole,
+  ClubMembershipWithClub,
+  ClubMembershipWithUser,
+} from '@/types/club'
 
 const API_BASE = '/api'
 
@@ -676,6 +682,62 @@ export async function createClubInviteAPI(
   if (!response.ok) {
     const error = await response.json()
     throw new Error(error.error || 'Failed to create invite')
+  }
+  return response.json()
+}
+
+export async function listClubMembersAPI(
+  clubId: string
+): Promise<{ success: boolean; members: ClubMembershipWithUser[] }> {
+  const response = await apiRequest(`/clubs/${clubId}/members`)
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to list members')
+  }
+  return response.json()
+}
+
+export async function updateClubMemberRoleAPI(
+  clubId: string,
+  userId: string,
+  role: ClubMembershipRole
+): Promise<{ success: boolean; membership: { id: string; role: ClubMembershipRole } }> {
+  const response = await apiRequest(`/clubs/${clubId}/members/${userId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to update member role')
+  }
+  return response.json()
+}
+
+export async function listClubInvitesAPI(
+  clubId: string
+): Promise<{
+  success: boolean
+  invites: Array<ClubInvite & { link: string }>
+}> {
+  const response = await apiRequest(`/clubs/${clubId}/invites`)
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to list invites')
+  }
+  return response.json()
+}
+
+export async function revokeClubInviteAPI(
+  clubId: string,
+  inviteId: string
+): Promise<{ success: boolean; invite: ClubInvite }> {
+  const response = await apiRequest(
+    `/clubs/${clubId}/invites/${inviteId}/revoke`,
+    { method: 'POST' }
+  )
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to revoke invite')
   }
   return response.json()
 }
