@@ -19,6 +19,16 @@ vi.mock('@/lib/hooks/useAdmin', () => ({
   useAdmin: () => useAdminMock(),
 }))
 
+const useClubMembershipsMock = vi.fn()
+vi.mock('@/lib/hooks/useClubMemberships', () => ({
+  useClubMemberships: () => useClubMembershipsMock(),
+  useIsClubAdmin: () => ({
+    isClubAdmin: false,
+    isSuperUser: false,
+    loading: false,
+  }),
+}))
+
 const matchStoreState = {
   matches: [] as any[],
   setMatches: vi.fn((matches: any[]) => {
@@ -71,9 +81,16 @@ describe('MatchesPage', () => {
     matchStoreState.matches = []
     useAuthMock.mockReturnValue({
       user: { uid: 'user1' },
+      userData: { uid: 'user1', activeClubId: null },
       loading: false,
     })
     useAdminMock.mockReturnValue({ isAdmin: false })
+    useClubMembershipsMock.mockReturnValue({
+      memberships: [],
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    })
     getMatchRsvpCountMock.mockResolvedValue(0)
   })
 
@@ -126,6 +143,7 @@ describe('MatchesPage', () => {
     // Bump effect generation via userId change (e.g. auth object churn)
     useAuthMock.mockReturnValue({
       user: { uid: 'user2' },
+      userData: { uid: 'user2', activeClubId: null },
       loading: false,
     })
     rerender(<MatchesPage />)
@@ -153,5 +171,56 @@ describe('MatchesPage', () => {
     await waitFor(() => {
       expect(screen.getByText('MatchCard:m3')).toBeInTheDocument()
     })
+  })
+
+  it('filters matches to the user active club membership', async () => {
+    useAuthMock.mockReturnValue({
+      user: { uid: 'user1' },
+      userData: { uid: 'user1', activeClubId: 'club-a' },
+      loading: false,
+    })
+    useClubMembershipsMock.mockReturnValue({
+      memberships: [
+        {
+          id: 'mem1',
+          clubId: 'club-a',
+          userId: 'user1',
+          role: 'player',
+          status: 'active',
+          joinedAt: new Date(),
+          updatedAt: new Date(),
+          club: { id: 'club-a', name: 'A', slug: 'a' },
+        },
+      ],
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    })
+    getAllMatchesMock.mockResolvedValueOnce([
+      { ...mockMatch('m-a'), clubId: 'club-a' },
+      { ...mockMatch('m-b'), clubId: 'club-b' },
+      { ...mockMatch('m-null'), clubId: null },
+    ])
+
+    render(<MatchesPage />)
+
+    expect(await screen.findByText('MatchCard:m-a')).toBeInTheDocument()
+    expect(screen.getByText('MatchCard:m-null')).toBeInTheDocument()
+    expect(screen.queryByText('MatchCard:m-b')).not.toBeInTheDocument()
+  })
+
+  it('prompts orphans to join a club', async () => {
+    getAllMatchesMock.mockResolvedValueOnce([
+      { ...mockMatch('m-stamped'), clubId: 'club-a' },
+    ])
+
+    render(<MatchesPage />)
+
+    expect(await screen.findByText('Join a club')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /enter invite code/i })).toHaveAttribute(
+      'href',
+      '/join'
+    )
+    expect(screen.queryByText('MatchCard:m-stamped')).not.toBeInTheDocument()
   })
 })

@@ -23,8 +23,9 @@ vi.mock('@/lib/hooks/useAdmin', () => ({
   useAdmin: () => useAdminMock(),
 }))
 
+const useIsClubAdminMock = vi.fn()
 vi.mock('@/lib/hooks/useClubMemberships', () => ({
-  useIsClubAdmin: () => ({ isClubAdmin: false, isSuperUser: false, loading: false }),
+  useIsClubAdmin: (...args: unknown[]) => useIsClubAdminMock(...args),
   useClubMemberships: () => ({
     memberships: [],
     loading: false,
@@ -155,6 +156,11 @@ describe('MatchDetailView', () => {
       userData: { uid: 'user1', position: 'ST' },
     })
     useAdminMock.mockReturnValue({ isAdmin: false })
+    useIsClubAdminMock.mockReturnValue({
+      isClubAdmin: false,
+      isSuperUser: false,
+      loading: false,
+    })
   })
 
   it('renders match and teams details for regular user', async () => {
@@ -170,8 +176,12 @@ describe('MatchDetailView', () => {
     expect(screen.queryByText('EditMatchCardMock')).not.toBeInTheDocument()
   })
 
-  it('shows admin controls when user is admin', async () => {
-    useAdminMock.mockReturnValue({ isAdmin: true })
+  it('shows admin controls when user is club admin or super user', async () => {
+    useIsClubAdminMock.mockReturnValue({
+      isClubAdmin: true,
+      isSuperUser: true,
+      loading: false,
+    })
 
     getMatchMock.mockResolvedValueOnce(mockMatch())
     getMatchRSVPsMock.mockResolvedValueOnce([])

@@ -9,20 +9,51 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
 import { loginWithGoogle, registerUser, getAuthErrorMessage } from '@/lib/firebase/auth'
-import { recordAuditEventAPI } from '@/lib/api/client'
+import { recordAuditEventAPI, redeemInviteAPI } from '@/lib/api/client'
 import { createUser, getUser } from '@/lib/services/userService'
 import { useAuthStore } from '@/store/authStore'
 
-export function RegisterForm() {
+function safeRedirectPath(raw: string | null | undefined): string {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/matches'
+  return raw
+}
+
+export type RegisterFormProps = {
+  /** Invite code to redeem after account creation */
+  inviteCode?: string | null
+  /** Post-auth destination (e.g. /join?code=… or /matches) */
+  redirectTo?: string | null
+}
+
+export function RegisterForm({
+  inviteCode = null,
+  redirectTo = null,
+}: RegisterFormProps) {
   const router = useRouter()
   const setUser = useAuthStore(state => state.setUser)
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [code, setCode] = useState(inviteCode?.trim() ?? '')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+
+  const destination = safeRedirectPath(redirectTo)
+
+  const finishAfterAuth = async () => {
+    const trimmed = code.trim()
+    if (trimmed) {
+      await redeemInviteAPI(trimmed)
+      // Prefer matches after a successful join; keep explicit non-join redirects.
+      if (destination.startsWith('/join')) {
+        router.push('/matches')
+        return
+      }
+    }
+    router.push(destination)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,7 +79,7 @@ export function RegisterForm() {
       await createUser(user.uid, email, displayName || email.split('@')[0])
       recordAuditEventAPI({ action: 'auth.register' })
 
-      router.push('/matches')
+      await finishAfterAuth()
     } catch (err: unknown) {
       const message = getAuthErrorMessage(
         err,
@@ -81,7 +112,7 @@ export function RegisterForm() {
         recordAuditEventAPI({ action: 'auth.login' })
       }
       setUser(user)
-      router.push('/matches')
+      await finishAfterAuth()
     } catch (err: unknown) {
       const message = getAuthErrorMessage(
         err,
@@ -155,6 +186,20 @@ export function RegisterForm() {
           disabled={loading || googleLoading}
           className="h-11 text-base sm:h-9 sm:text-sm"
           autoComplete="new-password"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="inviteCode">Club invite code (optional)</Label>
+        <Input
+          id="inviteCode"
+          type="text"
+          placeholder="Enter invite code"
+          value={code}
+          onChange={e => setCode(e.target.value)}
+          disabled={loading || googleLoading}
+          className="h-11 text-base sm:h-9 sm:text-sm"
+          autoComplete="off"
         />
       </div>
 

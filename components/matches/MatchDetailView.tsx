@@ -11,7 +11,6 @@ import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { MatchDetails } from '@/components/matches/MatchDetails'
 import { TeamsDisplay } from '@/components/teams/TeamsDisplay'
 import { BackLink } from '@/components/ui/back-link'
-import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useIsClubAdmin } from '@/lib/hooks/useClubMemberships'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getMatch } from '@/lib/services/matchService'
@@ -53,13 +52,12 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
   const matchId = paramToString(params?.matchId)
   const { user, userData } = useAuth()
   const userId = user?.uid
-  const { isAdmin } = useAdmin()
   const { currentMatch, setCurrentMatch, matchRSVPs, setMatchRSVPs } =
     useMatchStore()
   const match =
     currentMatch && matchId && currentMatch.id === matchId ? currentMatch : null
-  const { isClubAdmin } = useIsClubAdmin(match?.clubId)
-  const canManageMatch = isAdmin || isClubAdmin
+  // Super users and club_admins for this match's club; not global isAdmin alone.
+  const { isClubAdmin: canManageMatch } = useIsClubAdmin(match?.clubId)
   const userRsvp = userId
     ? (matchRSVPs.find(r => r.userId === userId) ?? null)
     : null
@@ -222,7 +220,7 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
               currentUserId={userId}
             />
 
-            {isAdmin && (
+            {canManageMatch && (
               <>
                 <EditMatchCard
                   matchId={matchId}
@@ -245,14 +243,14 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
                 matchId={matchId}
                 teams={teams}
                 users={usersWithMatchPosition}
-                isAdmin={isAdmin ?? false}
+                isAdmin={canManageMatch}
                 onTeamsChanged={refetchMatchRoster}
                 currentUserId={userId}
                 matchRSVPs={matchRSVPs}
                 matchDate={match.date}
                 matchTime={match.time}
                 headerActions={
-                  isAdmin && teams.length >= 2 ? (
+                  canManageMatch && teams.length >= 2 ? (
                     <RebalanceTeamsButton
                       matchId={matchId}
                       onDone={refetchMatchRoster}
@@ -262,7 +260,7 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
                   ) : null
                 }
               />
-              {isAdmin && (
+              {canManageMatch && (
                 <PlayerTransfer
                   matchId={matchId}
                   teams={teams}
@@ -274,7 +272,7 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
           )}
         </div>
 
-        {isAdmin && (
+        {canManageMatch && (
           <div className="mt-4">
             <RsvpOrderCard matchRSVPs={matchRSVPs} users={rosterUsers} />
           </div>
