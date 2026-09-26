@@ -88,13 +88,29 @@ export function canManageMatchClub(input: {
   )
 }
 
-/** True if the user can create matches for at least one club. */
+/**
+ * True if the user can create matches for the club currently in view.
+ * Super users always; otherwise must be club_admin of activeClubId
+ * (or of the sole active membership when activeClubId is unset).
+ */
 export function canCreateClubMatches(input: {
-  memberships: Pick<ClubMembershipWithClub, 'role' | 'status'>[]
+  memberships: Pick<ClubMembershipWithClub, 'clubId' | 'role' | 'status'>[]
+  activeClubId?: string | null
   isSuperUser?: boolean
 }): boolean {
   if (input.isSuperUser) return true
-  return input.memberships.some(
-    m => m.status === 'active' && m.role === 'club_admin'
-  )
+
+  const active = input.memberships.filter(m => m.status === 'active')
+  if (active.length === 0) return false
+
+  const preferred =
+    typeof input.activeClubId === 'string' ? input.activeClubId.trim() : ''
+  const targetId = preferred
+    ? preferred
+    : active.length === 1
+      ? active[0].clubId
+      : ''
+  if (!targetId) return false
+
+  return active.some(m => m.clubId === targetId && m.role === 'club_admin')
 }

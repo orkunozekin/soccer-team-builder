@@ -131,7 +131,53 @@ describe('canManageMatchClub / canCreateClubMatches', () => {
       canManageMatchClub({ matchClubId: 'club-b', memberships })
     ).toBe(false)
     expect(canManageMatchClub({ matchClubId: null, memberships })).toBe(false)
-    expect(canCreateClubMatches({ memberships })).toBe(true)
+    expect(
+      canCreateClubMatches({ memberships, activeClubId: 'club-a' })
+    ).toBe(true)
+    expect(
+      canCreateClubMatches({ memberships, activeClubId: 'club-b' })
+    ).toBe(false)
+  })
+
+  it('hides create when the user is only a player on the selected club', () => {
+    const memberships = [
+      { clubId: 'club-a', role: 'player' as const, status: 'active' as const },
+      {
+        clubId: 'club-b',
+        role: 'club_admin' as const,
+        status: 'active' as const,
+      },
+    ]
+    expect(
+      canCreateClubMatches({ memberships, activeClubId: 'club-a' })
+    ).toBe(false)
+  })
+
+  it('uses the sole membership when activeClubId is unset', () => {
+    expect(
+      canCreateClubMatches({
+        memberships: [
+          {
+            clubId: 'only',
+            role: 'club_admin' as const,
+            status: 'active' as const,
+          },
+        ],
+        activeClubId: null,
+      })
+    ).toBe(true)
+    expect(
+      canCreateClubMatches({
+        memberships: [
+          {
+            clubId: 'only',
+            role: 'player' as const,
+            status: 'active' as const,
+          },
+        ],
+        activeClubId: null,
+      })
+    ).toBe(false)
   })
 
   it('allows super user everywhere', () => {

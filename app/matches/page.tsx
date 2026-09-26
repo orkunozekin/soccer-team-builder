@@ -50,6 +50,7 @@ export default function MatchesPage() {
 
   const canCreateMatch = canCreateClubMatches({
     memberships,
+    activeClubId: userData?.activeClubId,
     isSuperUser: !!isSuperUser,
   })
 
