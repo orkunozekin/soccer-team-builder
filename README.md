@@ -7,6 +7,12 @@
 
 **Do not skip step 3.** Running `yarn dev` without the emulator and with production credentials will connect to the **production** database and can affect live data. Local development must use the emulators only.
 
+## LLM agents and AI review
+
+- Start every agent session with **`/start`** (loads [AGENTS.md](AGENTS.md) and [docs/AGENT_CONTEXT.md](docs/AGENT_CONTEXT.md)).
+- Feature planning/handoff: `/plan-feature`, `/feature-context`, `/handoff`.
+- Greptile config: [`.greptile/`](.greptile/).
+
 ## RSVP schedule (cron)
 
 RSVP opens automatically at 6:00 AM CT and the match gets deleted at 10:00 PM CT on match day. See [docs/rsvp-cron.md](docs/rsvp-cron.md) for cron setup.

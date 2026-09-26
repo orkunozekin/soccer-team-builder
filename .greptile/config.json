@@ -1,0 +1,57 @@
+{
+  "strictness": 2,
+  "commentTypes": ["logic", "syntax"],
+  "autoReview": ["open"],
+  "triggerOnDrafts": false,
+  "ignorePatterns": "yarn.lock\npackage-lock.json\n**/*.generated.*\n.next/**\nnode_modules/**\ncoverage/**\n*.tsbuildinfo",
+  "instructions": "Follow docs/AGENT_CONTEXT.md and AGENTS.md. Prioritize authZ, tenancy, secret leakage, unsafe client errors, and emulator/production safety over style nits. Style is largely covered by Prettier and ESLint.",
+  "rules": [
+    {
+      "id": "no-prod-firebase-local",
+      "rule": "Local and everyday agent work must use Firebase emulators (NEXT_PUBLIC_USE_FIREBASE_EMULATOR and emulator host env vars). Do not introduce defaults that point the app at production Firebase for local development.",
+      "severity": "high",
+      "scope": ["**/*.{ts,tsx,js,mjs,md}", ".env*", "README.md", "docs/**"]
+    },
+    {
+      "id": "no-secrets-in-repo",
+      "rule": "Never commit secrets (.env, .env.local, service account JSON, API keys, QStash/Plunk/OAuth/SEED/CRON secrets). Flag any added credential material or hardcoded secret values.",
+      "severity": "high"
+    },
+    {
+      "id": "api-auth-helpers",
+      "rule": "Privileged or mutating API routes must authenticate with lib/api/auth.ts helpers (verifyAuth, verifySuperUser, verifyClubAdmin, verifyClubAdminForMatch, or membership helpers). Do not invent ad-hoc token parsing or skip auth for convenience.",
+      "severity": "high",
+      "scope": ["app/api/**"]
+    },
+    {
+      "id": "sanitize-client-errors",
+      "rule": "API error responses shown to clients must use sanitizeErrorForClient (lib/api/sanitizeError.ts) or an equivalent safe fallback. Never return raw Firebase/Firestore messages or stack traces to the client.",
+      "severity": "high",
+      "scope": ["app/api/**", "lib/**"]
+    },
+    {
+      "id": "club-tenancy",
+      "rule": "Club-scoped data must not become readable or writable across clubs without an explicit super_user (or equivalent) gate. Prefer club_admin / membership checks when a resource has clubId.",
+      "severity": "high",
+      "scope": ["app/api/**", "lib/**", "firestore.rules"]
+    },
+    {
+      "id": "cron-and-seed-gates",
+      "rule": "Cron handlers must verify QStash signatures and/or CRON_SECRET. Seed and destructive debug endpoints must remain gated (verifySuperUser and/or SEED_SECRET) and must not become publicly callable.",
+      "severity": "high",
+      "scope": ["app/api/cron/**", "app/api/seed*/**", "scripts/**"]
+    },
+    {
+      "id": "firestore-lite-client",
+      "rule": "Client Firestore uses the Lite SDK by design. Do not switch to the full client SDK or add onSnapshot Listen streams without an explicit product decision and mobile regression plan.",
+      "severity": "medium",
+      "scope": ["lib/firebase/**", "components/**", "app/**"]
+    },
+    {
+      "id": "trusted-logic-server-side",
+      "rule": "Team generation, transfers, and other trusted business rules belong in API routes / server lib, not reimplemented as sole authority on the client. See docs/ARCHITECTURE.md.",
+      "severity": "medium",
+      "scope": ["app/api/**", "lib/teams/**", "lib/utils/teamGenerator.ts", "components/**"]
+    }
+  ]
+}
