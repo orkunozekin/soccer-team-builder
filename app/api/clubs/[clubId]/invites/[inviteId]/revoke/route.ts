@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { verifyClubAdmin } from '@/lib/api/auth'
 import { revokeInvite } from '@/lib/services/clubService'
 import { auditLog } from '@/lib/services/auditService'
+
+const CLIENT_SAFE_ERRORS = new Set([
+  'Invite not found',
+  'Invite already revoked',
+])
 
 export async function POST(
   request: NextRequest,
@@ -40,15 +46,17 @@ export async function POST(
 
     return NextResponse.json({ success: true, invite })
   } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : 'Failed to revoke invite'
+    const raw = err instanceof Error ? err.message : ''
     const status =
-      message === 'Invite not found'
+      raw === 'Invite not found'
         ? 404
-        : message === 'Invite already revoked'
+        : raw === 'Invite already revoked'
           ? 400
           : 500
     console.error('Error revoking invite:', err)
-    return NextResponse.json({ error: message }, { status })
+    const safeMessage = CLIENT_SAFE_ERRORS.has(raw)
+      ? raw
+      : sanitizeErrorForClient(err, 'Failed to revoke invite')
+    return NextResponse.json({ error: safeMessage }, { status })
   }
 }

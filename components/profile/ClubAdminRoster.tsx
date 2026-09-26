@@ -154,7 +154,7 @@ export function ClubAdminRoster({
                       >
                         {busy ? '…' : 'Promote'}
                       </Button>
-                    ) : (
+                    ) : isSelf ? null : (
                       <Button
                         type="button"
                         size="sm"

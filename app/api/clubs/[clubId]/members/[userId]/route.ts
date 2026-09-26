@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { verifyClubAdmin } from '@/lib/api/auth'
 import { updateMembershipRole } from '@/lib/services/clubService'
 import { auditLog } from '@/lib/services/auditService'
 import type { ClubMembershipRole } from '@/types/club'
+
+const CLIENT_SAFE_ERRORS = new Set([
+  'Membership not found',
+  'Cannot demote the last club admin',
+  'Cannot demote yourself',
+])
 
 export async function PATCH(
   request: NextRequest,
@@ -37,6 +44,14 @@ export async function PATCH(
       )
     }
 
+    // Club admins manage others; they cannot strip their own admin role.
+    if (userId === uid && role === 'player') {
+      return NextResponse.json(
+        { error: 'Cannot demote yourself' },
+        { status: 400 }
+      )
+    }
+
     const membership = await updateMembershipRole({ clubId, userId, role })
 
     auditLog({
@@ -50,15 +65,18 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, membership })
   } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : 'Failed to update membership'
+    const raw = err instanceof Error ? err.message : ''
     const status =
-      message === 'Membership not found'
+      raw === 'Membership not found'
         ? 404
-        : message === 'Cannot demote the last club admin'
+        : raw === 'Cannot demote the last club admin' ||
+            raw === 'Cannot demote yourself'
           ? 400
           : 500
     console.error('Error updating membership role:', err)
-    return NextResponse.json({ error: message }, { status })
+    const safeMessage = CLIENT_SAFE_ERRORS.has(raw)
+      ? raw
+      : sanitizeErrorForClient(err, 'Failed to update membership')
+    return NextResponse.json({ error: safeMessage }, { status })
   }
 }
