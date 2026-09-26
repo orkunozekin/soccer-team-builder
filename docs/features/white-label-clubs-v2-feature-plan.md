@@ -9,7 +9,7 @@ Plan for the follow-ups listed under Later in the [v1 white-label plan](./white-
 | Status | in progress |
 | Owner session | cloud agent (`club-creation` flag) |
 | Last updated | 2026-09-26 |
-| Related PR / branch | `cursor/club-creation-flag-d335` (this session). Continues [v1 plan](./white-label-clubs-feature-plan.md) (merged [#65](https://github.com/orkunozekin/soccer-team-builder/pull/65), [#71](https://github.com/orkunozekin/soccer-team-builder/pull/71), [#73](https://github.com/orkunozekin/soccer-team-builder/pull/73), [#74](https://github.com/orkunozekin/soccer-team-builder/pull/74), [#76](https://github.com/orkunozekin/soccer-team-builder/pull/76)) |
+| Related PR / branch | [#79](https://github.com/orkunozekin/soccer-team-builder/pull/79) `cursor/club-creation-flag-d335`. Continues [v1 plan](./white-label-clubs-feature-plan.md) (merged [#65](https://github.com/orkunozekin/soccer-team-builder/pull/65), [#71](https://github.com/orkunozekin/soccer-team-builder/pull/71), [#73](https://github.com/orkunozekin/soccer-team-builder/pull/73), [#74](https://github.com/orkunozekin/soccer-team-builder/pull/74), [#76](https://github.com/orkunozekin/soccer-team-builder/pull/76)) |
 
 ## Goals (v1 of this plan)
 
