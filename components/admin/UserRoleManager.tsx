@@ -48,16 +48,22 @@ type UsersPageData = {
   nextCursor: string | null
 }
 
-function adminUsersPageKey(page: number, cursor: string | null) {
-  return ['admin-users', page, cursor] as const
+function adminUsersPageKey(
+  uid: string,
+  page: number,
+  cursor: string | null
+) {
+  return ['admin-users', uid, page, cursor] as const
 }
 
-const ADMIN_USERS_COUNT_KEY = 'admin-users-count'
+function adminUsersCountKey(uid: string) {
+  return ['admin-users-count', uid] as const
+}
 
 function isAdminUsersPageKey(
   key: unknown
 ): key is ReturnType<typeof adminUsersPageKey> {
-  return Array.isArray(key) && key[0] === 'admin-users'
+  return Array.isArray(key) && key[0] === 'admin-users' && typeof key[1] === 'string'
 }
 
 export function UserRoleManager() {
@@ -78,17 +84,26 @@ export function UserRoleManager() {
   const [cursors, setCursors] = useState<(string | null)[]>([null])
 
   const browsing = query.trim() === ''
+  const adminUid = currentUser?.uid ?? null
   const cursorForPage = page === 1 ? null : (cursors[page - 2] ?? null)
-  const pageKey = browsing
-    ? adminUsersPageKey(page, cursorForPage)
-    : null
+  // Scope by admin uid so a later sign-in cannot reuse another session's cache
+  // (revalidateIfStale: false would otherwise serve stale pages/counts).
+  const pageKey =
+    browsing && adminUid
+      ? adminUsersPageKey(adminUid, page, cursorForPage)
+      : null
 
   const {
     data: pageData,
     isLoading: pageLoading,
   } = useSWR(
     pageKey,
-    async ([, , cursor]: readonly ['admin-users', number, string | null]) => {
+    async ([, , , cursor]: readonly [
+      'admin-users',
+      string,
+      number,
+      string | null,
+    ]) => {
       const result = await getUsersPaginated(PAGE_SIZE, cursor ?? undefined)
       return {
         users: result.users.map(u => ({
@@ -109,7 +124,7 @@ export function UserRoleManager() {
   )
 
   const { data: totalCount = 0, mutate: mutateCount } = useSWR(
-    browsing ? ADMIN_USERS_COUNT_KEY : null,
+    browsing && adminUid ? adminUsersCountKey(adminUid) : null,
     () => getUsersCount(),
     { revalidateIfStale: false, revalidateOnReconnect: false }
   )
@@ -175,7 +190,8 @@ export function UserRoleManager() {
         : prev
     )
     void globalMutate(
-      isAdminUsersPageKey,
+      (key: unknown) =>
+        isAdminUsersPageKey(key) && (!adminUid || key[1] === adminUid),
       (current: UsersPageData | undefined) => {
         if (!current) return current
         return {
@@ -192,7 +208,8 @@ export function UserRoleManager() {
   const removeUserFromSwrCache = (userId: string) => {
     setSearchUsers(prev => (prev ? prev.filter(u => u.uid !== userId) : prev))
     void globalMutate(
-      isAdminUsersPageKey,
+      (key: unknown) =>
+        isAdminUsersPageKey(key) && (!adminUid || key[1] === adminUid),
       (current: UsersPageData | undefined) => {
         if (!current) return current
         return {
@@ -205,7 +222,10 @@ export function UserRoleManager() {
     // Drop later page keys — cursors after a delete are stale.
     void globalMutate(
       (key: unknown) =>
-        isAdminUsersPageKey(key) && typeof key[1] === 'number' && key[1] > page,
+        isAdminUsersPageKey(key) &&
+        (!adminUid || key[1] === adminUid) &&
+        typeof key[2] === 'number' &&
+        key[2] > page,
       undefined,
       { revalidate: false }
     )
