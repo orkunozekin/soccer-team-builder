@@ -5,6 +5,51 @@ const mocks = vi.hoisted(() => {
   return { store }
 })
 
+function docsForCollection(name: string) {
+  return Array.from(mocks.store.entries())
+    .filter(([k]) => k.startsWith(`${name}/`))
+    .map(([k, data]) => {
+      const id = k.slice(name.length + 1)
+      return {
+        id,
+        data: () => data,
+        ref: {
+          update: async (patch: Record<string, unknown>) => {
+            const cur = mocks.store.get(k) ?? {}
+            mocks.store.set(k, { ...cur, ...patch })
+          },
+        },
+      }
+    })
+}
+
+function makeQuery(name: string, filters: Array<[string, string, unknown]> = []) {
+  const query = {
+    where: (field: string, op: string, value: unknown) =>
+      makeQuery(name, [...filters, [field, op, value]]),
+    limit: (_n: number) => ({
+      get: async () => {
+        const result = await query.get()
+        return {
+          ...result,
+          docs: result.docs.slice(0, _n),
+          size: Math.min(result.size, _n),
+          empty: Math.min(result.size, _n) === 0,
+        }
+      },
+    }),
+    get: async () => {
+      let docs = docsForCollection(name)
+      for (const [field, op, value] of filters) {
+        if (op !== '==') continue
+        docs = docs.filter(d => d.data()?.[field] === value)
+      }
+      return { docs, size: docs.length, empty: docs.length === 0 }
+    },
+  }
+  return query
+}
+
 vi.mock('@/lib/firebase/admin', () => ({
   getAdminDb: () => {
     return {
@@ -37,31 +82,11 @@ vi.mock('@/lib/firebase/admin', () => ({
             },
           }
         },
-        where: () => ({
-          limit: () => ({
-            get: async () => ({ empty: true, docs: [], size: 0 }),
-          }),
-          get: async () => ({ empty: true, docs: [], size: 0 }),
-        }),
-        limit: () => ({
-          get: async () => ({ empty: true, docs: [], size: 0 }),
-        }),
+        where: (field: string, op: string, value: unknown) =>
+          makeQuery(name, [[field, op, value]]),
+        limit: (n: number) => makeQuery(name).limit(n),
         get: async () => {
-          const docs = Array.from(mocks.store.entries())
-            .filter(([k]) => k.startsWith(`${name}/`))
-            .map(([k, data]) => {
-              const id = k.slice(name.length + 1)
-              return {
-                id,
-                data: () => data,
-                ref: {
-                  update: async (patch: Record<string, unknown>) => {
-                    const cur = mocks.store.get(k) ?? {}
-                    mocks.store.set(k, { ...cur, ...patch })
-                  },
-                },
-              }
-            })
+          const docs = docsForCollection(name)
           return { docs, size: docs.length, empty: docs.length === 0 }
         },
       }),
@@ -87,17 +112,6 @@ describe('clubService redeem + backfill', () => {
       createdAt: now,
       updatedAt: now,
     })
-    mocks.store.set('clubInvites/inv1', {
-      clubId: 'c1',
-      code: 'ABCD12',
-      createdBy: 'admin1',
-      createdByRole: 'club_admin',
-      maxUses: null,
-      useCount: 0,
-      expiresAt: null,
-      revokedAt: null,
-      createdAt: now,
-    })
     mocks.store.set('clubMemberships/c1_u1', {
       clubId: 'c1',
       userId: 'u1',
@@ -106,14 +120,7 @@ describe('clubService redeem + backfill', () => {
       joinedAt: now,
       updatedAt: now,
     })
-    mocks.store.set('users/u1', {
-      role: 'user',
-      activeClubId: 'c1',
-    })
 
-    // findActiveInviteByCode queries where code ==
-    // Our mock where().limit().get returns empty — need a smarter mock for redeem.
-    // Instead test upsertMembership idempotency directly.
     const { upsertMembership, membershipDocId } = await import(
       '@/lib/services/clubService'
     )
@@ -189,11 +196,97 @@ describe('clubService redeem + backfill', () => {
     expect(mocks.store.get('clubMemberships/c1_p1')?.role).toBe('player')
     expect(mocks.store.get('matches/m1')?.clubId).toBe('c1')
 
-    // Idempotent second run
     const second = await backfillClubMemberships('c1')
     expect(second.membershipsCreated).toBe(0)
     expect(second.membershipsUpdated).toBe(2)
     expect(second.rolesPromotedToSuperUser).toBe(0)
     expect(second.matchesUpdated).toBe(0)
+  })
+
+  it('ensureClubNameLower sets missing nameLower idempotently', async () => {
+    const { Timestamp } = await import('firebase-admin/firestore')
+    const now = Timestamp.now()
+    mocks.store.set('clubs/c1', {
+      name: 'Jax State Soccer Club',
+      slug: 'jax-state-soccer-club',
+      createdBy: 'a1',
+      settings: { allowPlayerInvites: false },
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    const { ensureClubNameLower } = await import('@/lib/services/clubService')
+    expect(await ensureClubNameLower('c1')).toBe(true)
+    expect(mocks.store.get('clubs/c1')?.nameLower).toBe(
+      'jax state soccer club'
+    )
+    expect(await ensureClubNameLower('c1')).toBe(false)
+  })
+
+  it('updateMembershipRole blocks demoting the last club admin', async () => {
+    const { Timestamp } = await import('firebase-admin/firestore')
+    const now = Timestamp.now()
+    mocks.store.set('clubMemberships/c1_a1', {
+      clubId: 'c1',
+      userId: 'a1',
+      role: 'club_admin',
+      status: 'active',
+      joinedAt: now,
+      updatedAt: now,
+    })
+    mocks.store.set('clubMemberships/c1_p1', {
+      clubId: 'c1',
+      userId: 'p1',
+      role: 'player',
+      status: 'active',
+      joinedAt: now,
+      updatedAt: now,
+    })
+
+    const { updateMembershipRole } = await import('@/lib/services/clubService')
+
+    await expect(
+      updateMembershipRole({ clubId: 'c1', userId: 'a1', role: 'player' })
+    ).rejects.toThrow('Cannot demote the last club admin')
+
+    // Promote player first, then demote is allowed
+    await updateMembershipRole({
+      clubId: 'c1',
+      userId: 'p1',
+      role: 'club_admin',
+    })
+    expect(mocks.store.get('clubMemberships/c1_p1')?.role).toBe('club_admin')
+
+    await updateMembershipRole({
+      clubId: 'c1',
+      userId: 'a1',
+      role: 'player',
+    })
+    expect(mocks.store.get('clubMemberships/c1_a1')?.role).toBe('player')
+  })
+
+  it('revokeInvite sets revokedAt and rejects second revoke', async () => {
+    const { Timestamp } = await import('firebase-admin/firestore')
+    const now = Timestamp.now()
+    mocks.store.set('clubInvites/inv1', {
+      clubId: 'c1',
+      code: 'ABCD12',
+      createdBy: 'a1',
+      createdByRole: 'club_admin',
+      maxUses: null,
+      useCount: 0,
+      expiresAt: null,
+      revokedAt: null,
+      createdAt: now,
+    })
+
+    const { revokeInvite } = await import('@/lib/services/clubService')
+    const first = await revokeInvite({ clubId: 'c1', inviteId: 'inv1' })
+    expect(first.revokedAt).toBeInstanceOf(Date)
+    expect(mocks.store.get('clubInvites/inv1')?.revokedAt).toBeTruthy()
+
+    await expect(
+      revokeInvite({ clubId: 'c1', inviteId: 'inv1' })
+    ).rejects.toThrow('Invite already revoked')
   })
 })

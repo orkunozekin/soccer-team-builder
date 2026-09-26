@@ -48,3 +48,9 @@ export interface ClubInvite {
 export interface ClubMembershipWithClub extends ClubMembership {
   club: Pick<Club, 'id' | 'name' | 'slug' | 'settings'>
 }
+
+/** Membership row with user display fields for club roster */
+export interface ClubMembershipWithUser extends ClubMembership {
+  displayName: string
+  email: string
+}

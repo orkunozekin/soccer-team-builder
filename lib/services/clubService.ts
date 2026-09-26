@@ -7,6 +7,7 @@ import type {
   ClubMembership,
   ClubMembershipRole,
   ClubMembershipWithClub,
+  ClubMembershipWithUser,
   ClubSettings,
 } from '@/types/club'
 
@@ -230,6 +231,194 @@ export async function upsertMembership(input: {
   }
   await ref.set(data)
   return { membership: mapMembership(id, data), created: true }
+}
+
+/**
+ * Idempotent: set nameLower from name when missing (founding clubs created
+ * before uniqueness indexing).
+ */
+export async function ensureClubNameLower(clubId: string): Promise<boolean> {
+  const adminDb = getAdminDb()
+  if (!adminDb) throw new Error('Firebase Admin not configured')
+
+  const ref = adminDb.collection('clubs').doc(clubId)
+  const snap = await ref.get()
+  if (!snap.exists) throw new Error('Club not found')
+
+  const data = snap.data()!
+  const name = typeof data.name === 'string' ? data.name.trim() : ''
+  if (!name) return false
+  const existing =
+    typeof data.nameLower === 'string' ? data.nameLower.trim() : ''
+  const expected = name.toLowerCase()
+  if (existing === expected) return false
+
+  await ref.update({
+    nameLower: expected,
+    updatedAt: Timestamp.now(),
+  })
+  return true
+}
+
+export async function listMembershipsForClub(
+  clubId: string
+): Promise<ClubMembershipWithUser[]> {
+  const adminDb = getAdminDb()
+  if (!adminDb) throw new Error('Firebase Admin not configured')
+
+  const snap = await adminDb
+    .collection('clubMemberships')
+    .where('clubId', '==', clubId)
+    .where('status', '==', 'active')
+    .get()
+
+  const results: ClubMembershipWithUser[] = []
+  for (const doc of snap.docs) {
+    const membership = mapMembership(doc.id, doc.data())
+    const userSnap = await adminDb.collection('users').doc(membership.userId).get()
+    const userData = userSnap.exists ? userSnap.data() : null
+    results.push({
+      ...membership,
+      displayName:
+        (userData?.displayName as string | undefined)?.trim() ||
+        (userData?.email as string | undefined) ||
+        membership.userId,
+      email: (userData?.email as string | undefined) ?? '',
+    })
+  }
+
+  results.sort((a, b) => {
+    if (a.role !== b.role) {
+      return a.role === 'club_admin' ? -1 : 1
+    }
+    return a.displayName.localeCompare(b.displayName)
+  })
+  return results
+}
+
+/**
+ * Update a member's club role. Prevents demoting the last club_admin.
+ */
+export async function updateMembershipRole(input: {
+  clubId: string
+  userId: string
+  role: ClubMembershipRole
+}): Promise<ClubMembership> {
+  const adminDb = getAdminDb()
+  if (!adminDb) throw new Error('Firebase Admin not configured')
+
+  const id = membershipDocId(input.clubId, input.userId)
+  const ref = adminDb.collection('clubMemberships').doc(id)
+  const existing = await ref.get()
+  if (!existing.exists || existing.data()?.status !== 'active') {
+    throw new Error('Membership not found')
+  }
+
+  const currentRole = existing.data()?.role as ClubMembershipRole
+  if (currentRole === input.role) {
+    return mapMembership(id, existing.data()!)
+  }
+
+  if (currentRole === 'club_admin' && input.role === 'player') {
+    const admins = await adminDb
+      .collection('clubMemberships')
+      .where('clubId', '==', input.clubId)
+      .where('status', '==', 'active')
+      .where('role', '==', 'club_admin')
+      .limit(2)
+      .get()
+    if (admins.size <= 1) {
+      throw new Error('Cannot demote the last club admin')
+    }
+  }
+
+  const now = Timestamp.now()
+  await ref.update({ role: input.role, updatedAt: now })
+  return mapMembership(id, {
+    ...existing.data(),
+    role: input.role,
+    updatedAt: now,
+  })
+}
+
+export async function listActiveInvitesForClub(
+  clubId: string
+): Promise<ClubInvite[]> {
+  const adminDb = getAdminDb()
+  if (!adminDb) throw new Error('Firebase Admin not configured')
+
+  const snap = await adminDb
+    .collection('clubInvites')
+    .where('clubId', '==', clubId)
+    .get()
+
+  const now = Date.now()
+  const invites: ClubInvite[] = []
+  for (const doc of snap.docs) {
+    const data = doc.data()
+    if (data.revokedAt) continue
+    if (data.expiresAt?.toDate && data.expiresAt.toDate().getTime() < now) {
+      continue
+    }
+    if (
+      typeof data.maxUses === 'number' &&
+      data.maxUses > 0 &&
+      (data.useCount ?? 0) >= data.maxUses
+    ) {
+      continue
+    }
+    invites.push({
+      id: doc.id,
+      clubId: data.clubId as string,
+      code: data.code as string,
+      createdBy: data.createdBy as string,
+      createdByRole: data.createdByRole as ClubInviteCreatorRole,
+      maxUses: (data.maxUses as number | null) ?? null,
+      useCount: (data.useCount as number) ?? 0,
+      expiresAt: data.expiresAt?.toDate?.() ?? null,
+      revokedAt: null,
+      createdAt: data.createdAt?.toDate?.() ?? new Date(),
+    })
+  }
+
+  invites.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+  return invites
+}
+
+export async function revokeInvite(input: {
+  clubId: string
+  inviteId: string
+}): Promise<ClubInvite> {
+  const adminDb = getAdminDb()
+  if (!adminDb) throw new Error('Firebase Admin not configured')
+
+  const ref = adminDb.collection('clubInvites').doc(input.inviteId)
+  const snap = await ref.get()
+  if (!snap.exists) throw new Error('Invite not found')
+
+  const data = snap.data()!
+  if (data.clubId !== input.clubId) {
+    throw new Error('Invite not found')
+  }
+  if (data.revokedAt) {
+    throw new Error('Invite already revoked')
+  }
+
+  const revokedAt = Timestamp.now()
+  await ref.update({ revokedAt })
+
+  return {
+    id: snap.id,
+    clubId: data.clubId as string,
+    code: data.code as string,
+    createdBy: data.createdBy as string,
+    createdByRole: data.createdByRole as ClubInviteCreatorRole,
+    maxUses: (data.maxUses as number | null) ?? null,
+    useCount: (data.useCount as number) ?? 0,
+    expiresAt: data.expiresAt?.toDate?.() ?? null,
+    revokedAt: revokedAt.toDate(),
+    createdAt: data.createdAt?.toDate?.() ?? new Date(),
+  }
 }
 
 export async function listMembershipsForUser(
