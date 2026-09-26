@@ -8,6 +8,8 @@ disable-model-invocation: true
 
 Load project context so coding and review work follows repo standards and safety rules.
 
+Works in Cursor, Claude Code, and other Agent Skills–compatible tools via `/start`. Canonical project path: `.claude/skills/start/SKILL.md` (`.cursor/skills/start` is a symlink).
+
 ## When to run
 
 - User invokes `/start`
@@ -92,6 +94,18 @@ After acknowledgment:
 /plan-feature       → write docs/features/<slug>-feature-plan.md
 /feature-context    → implement from Handoff
 /handoff            → refresh Status + Handoff
+/address-pr-feedback → fix PR review threads + docs/AGENT_LESSONS.md
 ```
 
 Greptile and similar review bots should use root `AGENTS.md`, `docs/AGENT_CONTEXT.md`, and `.greptile/` rather than this skill file.
+
+## Skill locations (keep in sync)
+
+| Location | Role |
+|----------|------|
+| `.claude/skills/` | Canonical project skills (Claude Code + Agent Skills) |
+| `.cursor/skills/` | Symlinks to `.claude/skills/` (Cursor) |
+| Personal Cursor Agent Store `skills/` | Operator-wide Cursor mirror |
+| `~/.claude/skills/` | Operator-wide Claude Code mirror |
+
+Edit the `.claude/skills/` copy in git, then refresh personal mirrors when a skill changes.

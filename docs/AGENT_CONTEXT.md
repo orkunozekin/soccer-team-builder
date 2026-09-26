@@ -2,7 +2,7 @@
 
 Canonical instructions for LLM coding agents (Cursor, Greptile, and similar). Keep this file accurate; prefer updating it over scattering one-off rules in chat.
 
-**Session bootstrap:** run `/start` (see [`.cursor/skills/start/SKILL.md`](../.cursor/skills/start/SKILL.md)).  
+**Session bootstrap:** run `/start` (see [`.claude/skills/start/SKILL.md`](../.claude/skills/start/SKILL.md); Cursor resolves the same skill via `.cursor/skills/start`).  
 **Root pointer:** [`AGENTS.md`](../AGENTS.md).
 
 ---
@@ -168,7 +168,24 @@ Never run `yarn dev` against production credentials by accident. See README and 
 | `/plan-feature` | Write `docs/features/<slug>-feature-plan.md` |
 | `/handoff` | Refresh Status + Handoff on a plan |
 | `/feature-context` | Resume implementation from a plan’s Handoff |
+| `/address-pr-feedback` | Fix PR review threads (bots first); append durable lessons |
+
+### Skill locations (Cursor + Claude Code + personal mirrors)
+
+Project skills follow the [Agent Skills](https://agentskills.io) `SKILL.md` format so Cursor, Claude Code, and similar clients share one workflow:
+
+| Location | Role |
+|----------|------|
+| [`.claude/skills/`](../.claude/skills/) | **Canonical** project skills (Claude Code discovers these natively) |
+| [`.cursor/skills/`](../.cursor/skills/) | Symlinks → `.claude/skills/` (Cursor) |
+| Personal Cursor Agent Store `skills/` | Operator-wide Cursor mirror |
+| `~/.claude/skills/` | Operator-wide Claude Code mirror |
+
+Edit the `.claude/skills/` copy in git, then refresh personal mirrors when a skill changes.
 
 ```
 /start → (optional) /plan-feature → /feature-context → … → /handoff
+                 ↘ /address-pr-feedback → docs/AGENT_LESSONS.md
 ```
+
+**Lessons log:** [`AGENT_LESSONS.md`](./AGENT_LESSONS.md) — append when review feedback reveals a lasting gap; promote standing rules into this file + `.greptile/` when appropriate.

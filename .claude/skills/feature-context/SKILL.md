@@ -8,6 +8,8 @@ disable-model-invocation: true
 
 Load feature context from `docs/features/` and continue implementation from the latest handoff.
 
+Works in Cursor, Claude Code, and other Agent Skills–compatible tools via `/feature-context`. Canonical path: `.claude/skills/feature-context/`.
+
 ## When to run
 
 - User invokes `/feature-context`
