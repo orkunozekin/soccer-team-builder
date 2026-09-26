@@ -72,8 +72,9 @@ When deploying to Vercel, add these environment variables in Vercel Dashboard:
 
 **LaunchDarkly (optional):**
 
-- `NEXT_PUBLIC_LAUNCHDARKLY_CLIENT_ID` - Client-side ID for feature flags (e.g. `pitch-lineup-view`)
-- Create the boolean flag `pitch-lineup-view` (default off) in the LD dashboard for production
+- `NEXT_PUBLIC_LAUNCHDARKLY_CLIENT_ID` - Client-side ID for feature flags (e.g. `pitch-lineup-view`, `club-creation`)
+- `LAUNCHDARKLY_SDK_KEY` - Server SDK key for API flag checks (e.g. `POST /api/clubs`); missing key fails closed
+- Create boolean flags `pitch-lineup-view` and `club-creation` (default off) in the LD dashboard for production
 
 ### Deploy Steps
 

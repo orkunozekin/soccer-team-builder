@@ -12,13 +12,19 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createClubAPI } from '@/lib/api/client'
+import { useFeatureFlag } from '@/lib/flags/useFeatureFlag'
 
 /** Super-user tool to create a new club. Slug is derived from the name. */
 export function ClubAdminPanel() {
+  const clubCreationEnabled = useFeatureFlag('club-creation')
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState('')
+
+  if (!clubCreationEnabled) {
+    return null
+  }
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
