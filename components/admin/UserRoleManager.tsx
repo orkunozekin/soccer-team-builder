@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import CloseIcon from '@/components/icons/CloseIcon'
 import { CardLoadingSkeleton } from '@/components/LoadingSkeleton'
@@ -16,10 +16,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { ButtonSpinner } from '@/components/ui/button-spinner'
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/pagination'
 import {
@@ -48,6 +45,7 @@ type UserRow = Pick<User, 'uid' | 'email' | 'displayName' | 'role'>
 export function UserRoleManager() {
   const { user: currentUser } = useAuth()
   const [users, setUsers] = useState<UserRow[]>([])
+  const [pageCache, setPageCache] = useState<Record<number, UserRow[]>>({})
   const [totalCount, setTotalCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [searchLoading, setSearchLoading] = useState(false)
@@ -63,6 +61,10 @@ export function UserRoleManager() {
   const [query, setQuery] = useState('')
   // cursors[i] = cursor to request page i+1 (cursors[0] = cursor for page 2)
   const [cursors, setCursors] = useState<(string | null)[]>([null])
+  const pageCacheRef = useRef(pageCache)
+  pageCacheRef.current = pageCache
+  const totalCountRef = useRef(totalCount)
+  totalCountRef.current = totalCount
 
   const baseUsers = searchUsers ?? users
 
@@ -73,22 +75,38 @@ export function UserRoleManager() {
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
-  const fetchPage = async (pageNum: number, cursor: string | null) => {
+  const applyPageUsers = (pageNum: number, rows: UserRow[]) => {
+    setUsers(rows)
+    setPageCache(prev => ({ ...prev, [pageNum]: rows }))
+  }
+
+  const fetchPage = async (
+    pageNum: number,
+    cursor: string | null,
+    options?: { force?: boolean }
+  ) => {
+    const cached = pageCacheRef.current[pageNum]
+    if (!options?.force && cached) {
+      setUsers(cached)
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     try {
+      const needCount = pageNum === 1 && totalCountRef.current === 0
       const [pageResult, count] = await Promise.all([
         getUsersPaginated(PAGE_SIZE, cursor ?? undefined),
-        pageNum === 1 ? getUsersCount() : Promise.resolve(0),
+        needCount ? getUsersCount() : Promise.resolve(totalCountRef.current),
       ])
-      setUsers(
-        pageResult.users.map(u => ({
-          uid: u.uid,
-          email: u.email,
-          displayName: u.displayName,
-          role: u.role,
-        }))
-      )
-      if (pageNum === 1) {
+      const rows = pageResult.users.map(u => ({
+        uid: u.uid,
+        email: u.email,
+        displayName: u.displayName,
+        role: u.role,
+      }))
+      applyPageUsers(pageNum, rows)
+      if (needCount) {
         setTotalCount(count)
       }
       setCursors(prev => {
@@ -108,7 +126,9 @@ export function UserRoleManager() {
   useEffect(() => {
     if (query.trim() !== '') return
     const cursorForRequest = page === 1 ? null : (cursors[page - 2] ?? null)
-    fetchPage(page, cursorForRequest)
+    void fetchPage(page, cursorForRequest)
+    // Cache hits handled inside fetchPage; omit pageCache/cursors from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, query])
 
   // Backend search (debounced) so we search the entire DB.
@@ -145,6 +165,42 @@ export function UserRoleManager() {
     }
   }, [query])
 
+  const patchUserInCaches = (userId: string, patch: Partial<UserRow>) => {
+    setUsers(prev =>
+      prev.map(u => (u.uid === userId ? { ...u, ...patch } : u))
+    )
+    setSearchUsers(prev =>
+      prev
+        ? prev.map(u => (u.uid === userId ? { ...u, ...patch } : u))
+        : prev
+    )
+    setPageCache(prev => {
+      const next: Record<number, UserRow[]> = {}
+      for (const [key, rows] of Object.entries(prev)) {
+        next[Number(key)] = rows.map(u =>
+          u.uid === userId ? { ...u, ...patch } : u
+        )
+      }
+      return next
+    })
+  }
+
+  const removeUserFromCaches = (userId: string) => {
+    setUsers(prev => prev.filter(u => u.uid !== userId))
+    setSearchUsers(prev => (prev ? prev.filter(u => u.uid !== userId) : prev))
+    // Drop later pages — cursors after a delete are stale.
+    setPageCache(prev => {
+      const next: Record<number, UserRow[]> = {}
+      for (const [key, rows] of Object.entries(prev)) {
+        const pageNum = Number(key)
+        if (pageNum > page) continue
+        next[pageNum] = rows.filter(u => u.uid !== userId)
+      }
+      return next
+    })
+    setCursors(prev => prev.slice(0, page))
+  }
+
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     setUpdating(userId)
     setError('')
@@ -152,17 +208,7 @@ export function UserRoleManager() {
 
     try {
       await updateUserRoleAPI(userId, newRole)
-
-      // Update local state
-      setUsers(prevUsers =>
-        prevUsers.map(u => (u.uid === userId ? { ...u, role: newRole } : u))
-      )
-      setSearchUsers(prev =>
-        prev
-          ? prev.map(u => (u.uid === userId ? { ...u, role: newRole } : u))
-          : prev
-      )
-
+      patchUserInCaches(userId, { role: newRole })
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
@@ -180,12 +226,10 @@ export function UserRoleManager() {
     try {
       await deleteUserAPI(userId)
 
-      setUsers(prev => prev.filter(u => u.uid !== userId))
-      setSearchUsers(prev => (prev ? prev.filter(u => u.uid !== userId) : prev))
+      removeUserFromCaches(userId)
       setTotalCount(prev => Math.max(0, prev - 1))
       setDeleteDialogUserId(null)
 
-      // If we just deleted the last visible row on this page, go back a page.
       if (visibleUsers.length <= 1 && page > 1) {
         setPage(p => Math.max(1, p - 1))
       }
@@ -199,7 +243,7 @@ export function UserRoleManager() {
     }
   }
 
-  if (loading) {
+  if (loading && users.length === 0 && !pageCache[page]) {
     return <CardLoadingSkeleton />
   }
 
@@ -226,9 +270,9 @@ export function UserRoleManager() {
         />
 
         <div className="max-h-96 space-y-2 overflow-y-auto">
-          {searchLoading ? (
+          {searchLoading || (loading && visibleUsers.length === 0) ? (
             <div className="rounded-md border p-4 text-sm text-zinc-600 dark:text-zinc-400">
-              Searching…
+              {searchLoading ? 'Searching…' : 'Loading…'}
             </div>
           ) : visibleUsers.length === 0 ? (
             <div className="rounded-md border p-4 text-sm text-zinc-600 dark:text-zinc-400">
@@ -259,7 +303,7 @@ export function UserRoleManager() {
                     }
                     disabled={updating === user.uid || deleting === user.uid}
                   >
-                    <SelectTrigger className="h-9 w-24">
+                    <SelectTrigger className="h-9 w-[8.5rem]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

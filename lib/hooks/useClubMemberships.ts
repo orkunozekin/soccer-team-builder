@@ -1,42 +1,63 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect } from 'react'
 import { getMyClubsAPI } from '@/lib/api/client'
 import { useAuth } from './useAuth'
+import { useClubMembershipsStore } from '@/store/clubMembershipsStore'
 import type { ClubMembershipWithClub } from '@/types/club'
 import { normalizeUserRole } from '@/types/user'
 
+/**
+ * Club memberships for the signed-in user.
+ * Cached in a session store so navigating between pages does not refetch;
+ * call `refresh()` after join / settings changes. Cleared on logout.
+ */
 export function useClubMemberships() {
   const { user } = useAuth()
-  const [memberships, setMemberships] = useState<ClubMembershipWithClub[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const uid = user?.uid ?? null
+  const memberships = useClubMembershipsStore(s => s.memberships)
+  const loading = useClubMembershipsStore(s => s.loading)
+  const error = useClubMembershipsStore(s => s.error)
+  const loaded = useClubMembershipsStore(s => s.loaded)
+  const cachedUid = useClubMembershipsStore(s => s.uid)
+  const setLoading = useClubMembershipsStore(s => s.setLoading)
+  const setError = useClubMembershipsStore(s => s.setError)
+  const setMemberships = useClubMembershipsStore(s => s.setMemberships)
+  const clear = useClubMembershipsStore(s => s.clear)
 
   const refresh = useCallback(async () => {
-    if (!user) {
-      setMemberships([])
-      setLoading(false)
+    if (!uid) {
+      clear()
       return
     }
     setLoading(true)
     setError(null)
     try {
       const res = await getMyClubsAPI()
-      setMemberships(res.memberships)
+      setMemberships(uid, res.memberships)
     } catch (err) {
       console.error('Failed to load club memberships:', err)
       setError(err instanceof Error ? err.message : 'Failed to load clubs')
-      setMemberships([])
-    } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [uid, clear, setLoading, setError, setMemberships])
 
   useEffect(() => {
+    if (!uid) {
+      clear()
+      return
+    }
+    // Reuse cached list for this user across route changes.
+    if (loaded && cachedUid === uid) return
     void refresh()
-  }, [refresh])
+  }, [uid, loaded, cachedUid, refresh, clear])
 
-  return { memberships, loading, error, refresh }
+  return {
+    memberships: memberships as ClubMembershipWithClub[],
+    loading: Boolean(uid) && (loading || (!loaded && cachedUid !== uid)),
+    error,
+    refresh,
+  }
 }
 
 /**

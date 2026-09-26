@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { UserRoleManager } from './UserRoleManager'
 
 const useAuthMock = vi.fn()
@@ -37,6 +37,10 @@ vi.mock('@/lib/api/client', () => ({
 }))
 
 describe('UserRoleManager', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('hides the current user from the list', async () => {
     useAuthMock.mockReturnValue({
       user: { uid: 'u1' },
@@ -69,6 +73,55 @@ describe('UserRoleManager', () => {
 
     expect(await screen.findByText(/user two/i)).toBeInTheDocument()
     expect(screen.queryByText(/user one/i)).not.toBeInTheDocument()
+  })
+
+  it('caches paginated pages when navigating back', async () => {
+    useAuthMock.mockReturnValue({
+      user: { uid: 'current' },
+    })
+
+    mocks.getUsersPaginatedMock
+      .mockResolvedValueOnce({
+        users: [
+          {
+            uid: 'u1',
+            email: 'u1@example.com',
+            displayName: 'Page One User',
+            role: 'user',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        nextCursor: 'cursor-page-2',
+      })
+      .mockResolvedValueOnce({
+        users: [
+          {
+            uid: 'u2',
+            email: 'u2@example.com',
+            displayName: 'Page Two User',
+            role: 'user',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        nextCursor: null,
+      })
+    mocks.getUsersCountMock.mockResolvedValue(11)
+
+    const user = userEvent.setup()
+    render(<UserRoleManager />)
+
+    expect(await screen.findByText(/page one user/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /next/i }))
+    expect(await screen.findByText(/page two user/i)).toBeInTheDocument()
+    expect(mocks.getUsersPaginatedMock).toHaveBeenCalledTimes(2)
+
+    await user.click(screen.getByRole('button', { name: /previous/i }))
+    expect(await screen.findByText(/page one user/i)).toBeInTheDocument()
+    // Cached — no third fetch
+    expect(mocks.getUsersPaginatedMock).toHaveBeenCalledTimes(2)
   })
 
   it('deletes a user via the dialog and updates the list', async () => {
