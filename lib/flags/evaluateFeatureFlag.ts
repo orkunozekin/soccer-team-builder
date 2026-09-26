@@ -15,29 +15,36 @@ function getSdkKey(): string {
 
 /**
  * Lazily init a shared server LD client. Returns null when the SDK key is
- * missing or initialization fails (fail-closed).
+ * missing or initialization fails (fail-closed). Failed init is not cached
+ * so a later request can retry once LaunchDarkly recovers.
  */
 function getServerLdClient(): Promise<LdClient | null> {
   if (clientPromise) return clientPromise
 
   const sdkKey = getSdkKey()
   if (!sdkKey) {
+    // Missing key is stable for the process lifetime; cache the closed result.
     clientPromise = Promise.resolve(null)
     return clientPromise
   }
 
-  clientPromise = (async () => {
+  const pending = (async (): Promise<LdClient | null> => {
     try {
       const client = LaunchDarkly.init(sdkKey)
       await client.waitForInitialization({ timeout: 3 }) // seconds
       return client
     } catch (err) {
       console.error('LaunchDarkly server SDK init failed:', err)
+      // Allow the next caller to retry init after a transient failure.
+      if (clientPromise === pending) {
+        clientPromise = null
+      }
       return null
     }
   })()
 
-  return clientPromise
+  clientPromise = pending
+  return pending
 }
 
 /** Reset cached client (tests only). */

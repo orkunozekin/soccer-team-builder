@@ -16,12 +16,27 @@ export const FEATURE_FLAG_DEFAULTS: Record<FeatureFlagKey, boolean> = {
 }
 
 /**
+ * Whether NEXT_PUBLIC_FF_* overrides may apply.
+ * Dev/demo only: never honor them in production builds or Vercel production.
+ */
+export function allowLocalFeatureFlagOverrides(): boolean {
+  if (process.env.VERCEL_ENV === 'production') return false
+  if (process.env.NODE_ENV === 'production') return false
+  return true
+}
+
+/**
  * Optional local overrides (no LD client required).
  * Set NEXT_PUBLIC_FF_* =true in .env.local for local demos.
+ * Ignored in production (and Vercel production) so a leaked env cannot bypass LD.
  */
 export function getLocalFeatureFlagOverrides(): Partial<
   Record<FeatureFlagKey, boolean>
 > {
+  if (!allowLocalFeatureFlagOverrides()) {
+    return {}
+  }
+
   const overrides: Partial<Record<FeatureFlagKey, boolean>> = {}
   if (process.env.NEXT_PUBLIC_FF_PITCH_LINEUP_VIEW === 'true') {
     overrides['pitch-lineup-view'] = true

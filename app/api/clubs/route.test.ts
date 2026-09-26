@@ -27,6 +27,7 @@ describe('POST /api/clubs', () => {
     vi.clearAllMocks()
     vi.mocked(verifySuperUser).mockResolvedValue({
       uid: 'su1',
+      email: 'su@example.com',
       isSuperUser: true,
       error: null,
     })
@@ -49,6 +50,7 @@ describe('POST /api/clubs', () => {
     expect(createClub).not.toHaveBeenCalled()
     expect(evaluateFeatureFlag).toHaveBeenCalledWith('club-creation', {
       key: 'su1',
+      email: 'su@example.com',
     })
   })
 

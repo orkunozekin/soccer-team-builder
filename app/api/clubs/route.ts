@@ -7,7 +7,7 @@ import { auditLog } from '@/lib/services/auditService'
 
 export async function POST(request: NextRequest) {
   try {
-    const { uid, isSuperUser, error } = await verifySuperUser(request)
+    const { uid, email, isSuperUser, error } = await verifySuperUser(request)
     if (error || !uid) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
 
     const clubCreationEnabled = await evaluateFeatureFlag('club-creation', {
       key: uid,
+      email,
     })
     if (!clubCreationEnabled) {
       return NextResponse.json(
