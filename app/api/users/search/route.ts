@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdmin } from '@/lib/api/auth'
+import { verifySuperUser } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { normalizeUserRole, type UserRole } from '@/types/user'
 
 type UserSearchRow = {
   uid: string
   email: string
   displayName: string
-  role: 'user' | 'admin'
+  role: UserRole
 }
 
 function normalizeRole(raw: unknown): UserSearchRow['role'] {
-  return typeof raw === 'string' && raw.trim() === 'admin' ? 'admin' : 'user'
+  return normalizeUserRole(raw)
 }
 
 function uniqByUid(rows: UserSearchRow[]): UserSearchRow[] {
@@ -25,13 +26,13 @@ function uniqByUid(rows: UserSearchRow[]): UserSearchRow[] {
 }
 
 export async function GET(request: NextRequest) {
-  const { uid, isAdmin, error: authError } = await verifyAdmin(request)
+  const { uid, isSuperUser, error: authError } = await verifySuperUser(request)
   if (authError || !uid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  if (!isAdmin) {
+  if (!isSuperUser) {
     return NextResponse.json(
-      { error: 'Admin privileges required' },
+      { error: 'Super user privileges required' },
       { status: 403 }
     )
   }

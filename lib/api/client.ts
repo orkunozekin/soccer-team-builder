@@ -12,6 +12,7 @@ import type {
   AuditLog,
   AuditSource,
 } from '@/types/auditLog'
+import type { Club, ClubInvite, ClubMembershipWithClub } from '@/types/club'
 
 const API_BASE = '/api'
 
@@ -280,8 +281,8 @@ export async function updateProfileAPI(updates: {
 
 export async function updateUserRoleAPI(
   userId: string,
-  role: 'user' | 'admin'
-): Promise<{ success: boolean; role: 'user' | 'admin' }> {
+  role: 'user' | 'super_user'
+): Promise<{ success: boolean; role: 'user' | 'super_user' }> {
   const response = await apiRequest(`/users/${userId}`, {
     method: 'PATCH',
     body: JSON.stringify({ role }),
@@ -304,7 +305,7 @@ export async function searchUsersAPI(
     uid: string
     email: string
     displayName: string
-    role: 'user' | 'admin'
+    role: 'user' | 'super_user'
   }>
 }> {
   const params = new URLSearchParams({
@@ -621,3 +622,94 @@ export function recordAuditEventAPI(input: {
     }
   })
 }
+
+export async function getMyClubsAPI(): Promise<{
+  success: boolean
+  memberships: ClubMembershipWithClub[]
+}> {
+  const response = await apiRequest('/clubs/mine', { method: 'GET' })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to load clubs')
+  }
+  return response.json()
+}
+
+export async function createClubAPI(input: {
+  name: string
+  slug?: string
+  settings?: { allowPlayerInvites?: boolean }
+}): Promise<{ success: boolean; club: Club }> {
+  const response = await apiRequest('/clubs', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to create club')
+  }
+  return response.json()
+}
+
+export async function updateClubAPI(
+  clubId: string,
+  updates: { name?: string; settings?: { allowPlayerInvites?: boolean } }
+): Promise<{ success: boolean; club: Club }> {
+  const response = await apiRequest(`/clubs/${clubId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to update club')
+  }
+  return response.json()
+}
+
+export async function createClubInviteAPI(
+  clubId: string,
+  options?: { maxUses?: number | null; expiresAt?: string | null }
+): Promise<{ success: boolean; invite: ClubInvite; link: string }> {
+  const response = await apiRequest(`/clubs/${clubId}/invites`, {
+    method: 'POST',
+    body: JSON.stringify(options ?? {}),
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to create invite')
+  }
+  return response.json()
+}
+
+export async function redeemInviteAPI(
+  code: string
+): Promise<{
+  success: boolean
+  alreadyMember: boolean
+  clubId: string
+}> {
+  const response = await apiRequest('/invites/redeem', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to redeem invite')
+  }
+  return response.json()
+}
+
+export async function backfillClubMembershipsAPI(
+  clubId: string
+): Promise<Record<string, unknown>> {
+  const response = await apiRequest('/admin/backfill-club-memberships', {
+    method: 'POST',
+    body: JSON.stringify({ clubId }),
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to backfill memberships')
+  }
+  return response.json()
+}
+

@@ -1,13 +1,13 @@
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { GET } from './route'
-import { verifyAdmin } from '@/lib/api/auth'
+import { verifySuperUser } from '@/lib/api/auth'
 import { enrichAuditLogsWithDisplayNames } from '@/lib/audit/enrichAuditLogNames'
 import { countAuditLogs, queryAuditLogs } from '@/lib/audit/queryAuditLogs'
 import { getAdminDb } from '@/lib/firebase/admin'
 
 vi.mock('@/lib/api/auth', () => ({
-  verifyAdmin: vi.fn(),
+  verifySuperUser: vi.fn(),
   verifyAuth: vi.fn(),
 }))
 
@@ -36,9 +36,9 @@ describe('GET /api/audit', () => {
   })
 
   it('requires admin', async () => {
-    vi.mocked(verifyAdmin).mockResolvedValue({
+    vi.mocked(verifySuperUser).mockResolvedValue({
       uid: 'user1',
-      isAdmin: false,
+      isSuperUser: false,
       error: null,
     })
 
@@ -50,9 +50,9 @@ describe('GET /api/audit', () => {
   })
 
   it('returns paginated audit logs for admins', async () => {
-    vi.mocked(verifyAdmin).mockResolvedValue({
+    vi.mocked(verifySuperUser).mockResolvedValue({
       uid: 'admin1',
-      isAdmin: true,
+      isSuperUser: true,
       error: null,
     })
     vi.mocked(queryAuditLogs).mockResolvedValue({

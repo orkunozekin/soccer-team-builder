@@ -1,25 +1,17 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdmin } from '@/lib/api/auth'
+import { verifyClubAdminForMatch } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { auditLog } from '@/lib/services/auditService'
 
 /**
  * POST /api/check-in/host
- * Admin marks a player present (or clears attendance).
+ * Club admin (or super user) marks a player present (or clears attendance).
  * Body: { matchId, userId, attended: boolean }
  */
 export async function POST(request: NextRequest) {
   try {
-    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
-    if (authError || !uid || !isAdmin) {
-      return NextResponse.json(
-        { error: 'Admin privileges required' },
-        { status: 403 }
-      )
-    }
-
     const body = await request.json()
     const matchId = typeof body?.matchId === 'string' ? body.matchId : null
     const userId = typeof body?.userId === 'string' ? body.userId : null
@@ -32,6 +24,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const {
+      uid,
+      isClubAdmin,
+      error: authError,
+      matchExists,
+    } = await verifyClubAdminForMatch(request, matchId)
+    if (authError || !uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!matchExists) {
+      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+    }
+    if (!isClubAdmin) {
+      return NextResponse.json(
+        { error: 'Club admin privileges required' },
+        { status: 403 }
+      )
+    }
+
     const adminDb = getAdminDb()
     if (!adminDb) {
       return NextResponse.json(
@@ -40,15 +51,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const matchSnap = await adminDb.collection('matches').doc(matchId).get()
-    if (!matchSnap.exists) {
-      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
-    }
-
-    const matchData = matchSnap.data()!
-    if (matchData.deletedAt != null) {
-      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
-    }
     const rsvpSnap = await adminDb
       .collection('rsvps')
       .where('matchId', '==', matchId)

@@ -6,10 +6,10 @@ Plan to move Soccerville from a single hard-coded club to multi-club tenancy: re
 
 | Field | Value |
 |-------|-------|
-| Status | planned |
-| Owner session | plan-feature (revised naming + auth) |
-| Last updated | 2026-09-16 |
-| Related PR / branch | `cursor/white-label-clubs-plan-8b9d` |
+| Status | in progress |
+| Owner session | cloud agent (implementation start) |
+| Last updated | 2026-09-20 |
+| Related PR / branch | `cursor/white-label-clubs-8675` |
 
 ## Goals (v1)
 
@@ -289,11 +289,17 @@ flowchart TD
 ### Done so far
 
 - Plan drafted; naming revised to `club_admin`; Authorization section expanded (capability matrix, helpers, rules, client, Wave A/B).
+- Types: `types/club.ts`, `UserRole` → `user` | `super_user` (legacy `admin` normalized), `clubId` on match/schedule/location.
+- Auth helpers: `verifySuperUser`, `verifyClubMember`, `verifyClubAdmin`, `verifyCanCreateInvite`, `verifyClubAdminForMatch`, `resolveClubIdForWrite`.
+- Club APIs: create/patch club, mine, invites, redeem, backfill; Wave A/B `verifyAdmin` call sites migrated.
+- Firestore rules + membership indexes; profile clubs UI; `/join`; admin ClubAdminPanel; unit tests for auth helpers + backfill idempotency.
 
 ### Remaining work
 
-- Mirror open Todos; start with types/`users.role` rename + auth helpers, then schema, then Wave A/B call sites, then UI.
-- Product may still confirm whether orphan accounts (no membership) are allowed at register.
+- Tighter client match-list filtering by membership/`activeClubId` (reads still broad for pre-backfill docs).
+- Invite-aware registration UX polish; promote/demote club_admin from roster UI.
+- Deploy rules/indexes; run founding-club create + backfill in each environment.
+- Spot-check player cannot hit club-admin APIs; confirm founding-club match list after backfill.
 
 ### Blockers / risks
 
@@ -303,7 +309,7 @@ flowchart TD
 
 ### Pointers for the next agent
 
-- Start at: this doc → implement `types/club.ts` + `UserRole` rename in [`types/user.ts`](../../types/user.ts) + auth helpers in [`lib/api/auth.ts`](../../lib/api/auth.ts).
+- Start at: run create club + backfill in admin Users → Clubs panel; verify profile invite copy + `/join?code=`.
 - Do not: put `club_admin` on the global `users.role` field; do not rename match lineup `teams`; do not use `team_admin`.
 - Verify with: unit tests for auth helpers + invite redeem + migration idempotency; manual profile invite copy + join flow; confirm founding-club match list still works after `clubId` backfill; spot-check that a player cannot hit club-admin APIs.
 - Next skills: `/feature-context` on this file before coding; `/handoff` when a session ends or status changes.

@@ -4,6 +4,8 @@ export interface SavedLocation {
   address: string
   lat: number | null
   lng: number | null
+  /** Owning club (tenant). Required for new locations; backfilled for existing. */
+  clubId?: string | null
   createdAt: Date
   updatedAt: Date
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { AdminNav } from '@/components/admin/AdminNav'
+import { ClubAdminPanel } from '@/components/admin/ClubAdminPanel'
 import { UserRoleManager } from '@/components/admin/UserRoleManager'
 
 export default function AdminUsersPage() {
@@ -18,6 +19,10 @@ export default function AdminUsersPage() {
       </div>
 
       <UserRoleManager />
+
+      <div className="mt-8">
+        <ClubAdminPanel />
+      </div>
     </div>
   )
 }

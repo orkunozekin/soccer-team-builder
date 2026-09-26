@@ -8,7 +8,7 @@ import {
   updateDocument,
 } from '@/lib/firebase/firestore'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
-import { User, UserFirestore } from '@/types/user'
+import { User, UserFirestore, normalizeUserRole } from '@/types/user'
 
 export const createUser = async (
   uid: string,
@@ -78,7 +78,8 @@ const mapDocToUser = (user: Record<string, unknown>): User => ({
   displayName: user.displayName as string,
   jerseyNumber: normalizeJerseyNumber(user.jerseyNumber),
   position: (user.position as string | null) ?? null,
-  role: (user.role as User['role']) || 'user',
+  role: normalizeUserRole(user.role),
+  activeClubId: (user.activeClubId as string | null | undefined) ?? null,
   createdAt: timestampToDate(user.createdAt as never) || new Date(),
   updatedAt: timestampToDate(user.updatedAt as never) || new Date(),
 })

@@ -264,7 +264,7 @@ export function UserRoleManager() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="super_user">Super user</SelectItem>
                     </SelectContent>
                   </Select>
 

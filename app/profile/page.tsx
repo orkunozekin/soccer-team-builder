@@ -6,6 +6,7 @@ import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { AttendanceStatsCard } from '@/components/profile/AttendanceStatsCard'
 import { EmailUpdateForm } from '@/components/profile/EmailUpdateForm'
 import { PasswordUpdateForm } from '@/components/profile/PasswordUpdateForm'
+import { ProfileClubsSection } from '@/components/profile/ProfileClubsSection'
 import { ProfileForm } from '@/components/profile/ProfileForm'
 import {
   Accordion,
@@ -108,6 +109,14 @@ export default function ProfilePage() {
         </div>
 
         <AttendanceStatsCard userId={user.uid} />
+
+        <ProfileSection
+          value="clubs"
+          title="Clubs"
+          description="Memberships, invites, and clubs you admin"
+        >
+          <ProfileClubsSection />
+        </ProfileSection>
 
         <ProfileSection
           value="edit-profile"

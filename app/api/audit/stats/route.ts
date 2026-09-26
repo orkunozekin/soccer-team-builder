@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { startOfDay } from 'date-fns'
-import { verifyAdmin } from '@/lib/api/auth'
+import { verifySuperUser } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import {
   computeAuditStats,
@@ -18,13 +18,13 @@ const STATS_FETCH_LIMIT = 500
  */
 export async function GET(request: NextRequest) {
   try {
-    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
+    const { uid, isSuperUser, error: authError } = await verifySuperUser(request)
     if (authError || !uid) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    if (!isAdmin) {
+    if (!isSuperUser) {
       return NextResponse.json(
-        { error: 'Admin privileges required' },
+        { error: 'Super user privileges required' },
         { status: 403 }
       )
     }

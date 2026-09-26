@@ -1,72 +1,123 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isSuperUser() {
+      return isSignedIn() &&
+        (userDoc().role == 'super_user' || userDoc().role == 'admin');
+    }
+
+    function hasActiveMembership(clubId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/clubMemberships/$(clubId + '_' + request.auth.uid)) &&
+        get(/databases/$(database)/documents/clubMemberships/$(clubId + '_' + request.auth.uid)).data.status == 'active';
+    }
+
+    function isClubAdmin(clubId) {
+      return isSuperUser() ||
+        (hasActiveMembership(clubId) &&
+          get(/databases/$(database)/documents/clubMemberships/$(clubId + '_' + request.auth.uid)).data.role == 'club_admin');
+    }
+
+    function isClubMember(clubId) {
+      return isSuperUser() || hasActiveMembership(clubId);
+    }
+
     // Any authenticated user can read users (needed for match page team rosters); only own write
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
-      // Allow admins to update roles (for UserRoleManager)
-      allow update: if request.auth != null && 
-        (request.auth.uid == userId || 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId;
+      // Allow super users to update roles (for UserRoleManager)
+      allow update: if isSignedIn() &&
+        (request.auth.uid == userId || isSuperUser());
+    }
+
+    match /clubs/{clubId} {
+      allow read: if isClubMember(clubId);
+      allow write: if false; // API / Admin SDK only
+    }
+
+    match /clubMemberships/{membershipId} {
+      allow read: if isSignedIn() &&
+        (resource.data.userId == request.auth.uid ||
+         isClubMember(resource.data.clubId));
+      allow write: if false;
+    }
+
+    match /clubInvites/{inviteId} {
+      allow read: if isClubAdmin(resource.data.clubId);
+      allow write: if false;
     }
 
     // RSVPs (top-level collection used by client): same policy as subcollection
     match /rsvps/{rsvpId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null &&
-        (resource.data.userId == request.auth.uid ||
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() &&
+        (resource.data.userId == request.auth.uid || isSuperUser());
     }
 
-    // Saved locations: all authenticated users can read, only admins can write
+    // Saved locations: members can read; club admins / super users write via API preferred
     match /savedLocations/{locationId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow read: if isSignedIn() &&
+        (resource.data.keys().hasAny(['clubId']) == false ||
+         resource.data.clubId == null ||
+         isClubMember(resource.data.clubId));
+      allow write: if isSignedIn() &&
+        (request.resource.data.keys().hasAny(['clubId']) == false ||
+         request.resource.data.clubId == null ||
+         isClubAdmin(request.resource.data.clubId));
     }
 
-    // Matches: all authenticated users can read, only admins can write
+    // Matches: members of resource.clubId can read; club admins write
+    // Pre-backfill docs without clubId remain readable by any signed-in user.
     match /matches/{matchId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      
-      // RSVPs: users can create/update their own, admins can manage all
+      allow read: if isSignedIn() &&
+        (resource.data.keys().hasAny(['clubId']) == false ||
+         resource.data.clubId == null ||
+         isClubMember(resource.data.clubId));
+      allow write: if isSignedIn() &&
+        (request.resource.data.keys().hasAny(['clubId']) == false ||
+         request.resource.data.clubId == null ||
+         isClubAdmin(request.resource.data.clubId));
+
       match /rsvps/{rsvpId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-        allow update, delete: if request.auth != null && 
-          (request.resource.data.userId == request.auth.uid ||
-           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        allow update, delete: if isSignedIn() &&
+          (request.resource.data.userId == request.auth.uid || isSuperUser());
       }
-      
-      // Teams: all can read, only admins can write
+
       match /teams/{teamId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null && 
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        allow read: if isSignedIn();
+        allow write: if isSuperUser();
       }
-      
-      // Bench: all can read, only admins can write
+
       match /bench/{benchId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null && 
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        allow read: if isSignedIn();
+        allow write: if isSuperUser();
       }
     }
 
-    // Recurring schedules: admin-only (CRUD goes through Admin SDK API routes)
+    // Recurring schedules: club admin / super user
     match /schedules/{scheduleId} {
-      allow read, write: if request.auth != null &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow read, write: if isSignedIn() &&
+        (resource == null ||
+         resource.data.keys().hasAny(['clubId']) == false ||
+         resource.data.clubId == null ||
+         isClubAdmin(resource.data.clubId));
     }
 
-    // Audit logs: admin read-only; writes via Firebase Admin SDK only
+    // Audit logs: super user read-only; writes via Firebase Admin SDK only
     match /auditLogs/{logId} {
-      allow read: if request.auth != null &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow read: if isSuperUser();
       allow write: if false;
     }
   }

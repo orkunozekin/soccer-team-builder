@@ -56,7 +56,7 @@ describe('UserRoleManager', () => {
           uid: 'u2',
           email: 'u2@example.com',
           displayName: 'User Two',
-          role: 'admin',
+          role: 'super_user',
           createdAt: new Date(),
           updatedAt: new Date(),
         },

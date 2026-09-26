@@ -1,6 +1,6 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdmin, verifyAuth } from '@/lib/api/auth'
+import { verifyClubAdminForMatch, verifyAuth } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { acquireMatchLock } from '@/lib/locks/matchLock'
@@ -72,9 +72,9 @@ export async function POST(request: NextRequest) {
         : null
     let effectiveUid: string = uid
     if (impersonateUserId) {
-      const { isAdmin } = await verifyAdmin(request)
-      if (!isAdmin) {
-        return rsvpFailed(uid, 403, 'Admin required to RSVP on behalf of another user', {
+      const { isClubAdmin } = await verifyClubAdminForMatch(request, matchId)
+      if (!isClubAdmin) {
+        return rsvpFailed(uid, 403, 'Club admin required to RSVP on behalf of another user', {
           matchId,
         })
       }
@@ -330,9 +330,13 @@ export async function PATCH(request: NextRequest) {
     const isOwner = data.userId === uid
     let requesterIsAdmin = false
     if (!isOwner) {
-      const { isAdmin } = await verifyAdmin(request)
-      requesterIsAdmin = isAdmin
-      if (!isAdmin) {
+      const matchIdForAuth = data.matchId as string
+      const { isClubAdmin } = await verifyClubAdminForMatch(
+        request,
+        matchIdForAuth
+      )
+      requesterIsAdmin = isClubAdmin
+      if (!isClubAdmin) {
         return rsvpFailed(uid, 403, 'Forbidden', {
           entityId: rsvpId,
           targetUid: data.userId as string,
@@ -579,8 +583,8 @@ export async function PATCH(request: NextRequest) {
         : null
     if (hasMatchStarted(matchDateForCancel, matchTimeForCancel)) {
       if (!requesterIsAdmin) {
-        const { isAdmin } = await verifyAdmin(request)
-        requesterIsAdmin = isAdmin
+        const { isClubAdmin } = await verifyClubAdminForMatch(request, matchId)
+        requesterIsAdmin = isClubAdmin
       }
       if (!requesterIsAdmin) {
         return rsvpFailed(

@@ -1,11 +1,11 @@
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { POST } from './route'
-import { verifyAdmin } from '@/lib/api/auth'
+import { verifyClubAdminForMatch } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 
 vi.mock('@/lib/api/auth', () => ({
-  verifyAdmin: vi.fn(),
+  verifyClubAdminForMatch: vi.fn(),
 }))
 
 vi.mock('@/lib/firebase/admin', () => ({
@@ -179,17 +179,23 @@ function makeRequest(body: Record<string, unknown>) {
 describe('POST /api/teams/transfer', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(verifyAdmin).mockResolvedValue({
+    vi.mocked(verifyClubAdminForMatch).mockResolvedValue({
       uid: 'admin1',
-      isAdmin: true,
+      isClubAdmin: true,
+      matchExists: true,
+      isSuperUser: true,
+      clubId: null,
       error: null,
     } as never)
   })
 
   it('returns 401 when unauthenticated', async () => {
-    vi.mocked(verifyAdmin).mockResolvedValue({
+    vi.mocked(verifyClubAdminForMatch).mockResolvedValue({
       uid: null,
-      isAdmin: false,
+      isClubAdmin: false,
+      matchExists: true,
+      isSuperUser: false,
+      clubId: null,
       error: 'Unauthorized',
     } as never)
 

@@ -31,6 +31,11 @@ export type AuditAction =
   | 'location.created'
   | 'location.updated'
   | 'location.deleted'
+  | 'club.created'
+  | 'club.updated'
+  | 'club.invite_created'
+  | 'club.invite_redeemed'
+  | 'club.memberships_backfilled'
   | 'cron.rsvp_auto_opened'
   | 'cron.rsvp_auto_closed'
   | 'cron.audit_retention'
@@ -43,6 +48,7 @@ export type AuditEntityType =
   | 'rsvp'
   | 'team'
   | 'location'
+  | 'club'
 
 export interface AuditLogInput {
   action: AuditAction
@@ -121,6 +127,11 @@ export const ALL_AUDIT_ACTIONS: readonly AuditAction[] = [
   'location.created',
   'location.updated',
   'location.deleted',
+  'club.created',
+  'club.updated',
+  'club.invite_created',
+  'club.invite_redeemed',
+  'club.memberships_backfilled',
   'cron.rsvp_auto_opened',
   'cron.rsvp_auto_closed',
   'cron.audit_retention',

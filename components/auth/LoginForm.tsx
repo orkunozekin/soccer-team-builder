@@ -14,7 +14,11 @@ import { recordAuditEventAPI } from '@/lib/api/client'
 import { createUser, getUser } from '@/lib/services/userService'
 import { useAuthStore } from '@/store/authStore'
 
-export function LoginForm() {
+export function LoginForm({
+  redirectTo = '/matches',
+}: {
+  redirectTo?: string
+}) {
   const router = useRouter()
   const setUser = useAuthStore(state => state.setUser)
   const [email, setEmail] = useState('')
@@ -32,7 +36,7 @@ export function LoginForm() {
       const userCredential = await loginUser(email, password)
       setUser(userCredential.user)
       recordAuditEventAPI({ action: 'auth.login' })
-      router.push('/matches')
+      router.push(redirectTo)
     } catch (err: unknown) {
       const message = getAuthErrorMessage(
         err,
@@ -65,7 +69,7 @@ export function LoginForm() {
         recordAuditEventAPI({ action: 'auth.login' })
       }
       setUser(user)
-      router.push('/matches')
+      router.push(redirectTo)
     } catch (err: unknown) {
       const message = getAuthErrorMessage(
         err,

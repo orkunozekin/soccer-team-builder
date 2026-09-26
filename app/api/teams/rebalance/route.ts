@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdmin } from '@/lib/api/auth'
+import { verifyClubAdminForMatch } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { auditLog } from '@/lib/services/auditService'
 import {
@@ -8,6 +8,7 @@ import {
   isGoalkeeper,
 } from '@/lib/utils/teamGenerator'
 import type { User } from '@/types/user'
+import { normalizeUserRole } from '@/types/user'
 
 function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
   if (!t) return null
@@ -38,23 +39,31 @@ function computeTargetSizes(
 
 export async function POST(request: NextRequest) {
   try {
-    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
-    if (authError || !uid) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Admin privileges required' },
-        { status: 403 }
-      )
-    }
-
     const body = await request.json().catch(() => ({}))
     const matchId = body?.matchId as string | undefined
     if (!matchId) {
       return NextResponse.json(
         { error: 'matchId is required' },
         { status: 400 }
+      )
+    }
+
+    const {
+      uid,
+      isClubAdmin,
+      error: authError,
+      matchExists,
+    } = await verifyClubAdminForMatch(request, matchId)
+    if (authError || !uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!matchExists) {
+      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+    }
+    if (!isClubAdmin) {
+      return NextResponse.json(
+        { error: 'Club admin privileges required' },
+        { status: 403 }
       )
     }
 
@@ -125,7 +134,7 @@ export async function POST(request: NextRequest) {
         displayName: (data.displayName as string) ?? '',
         jerseyNumber: (data.jerseyNumber as number | null) ?? null,
         position: (data.position as string | null) ?? null,
-        role: (data.role as 'user' | 'admin') ?? 'user',
+        role: normalizeUserRole(data.role),
         createdAt: timestampToDate(data.createdAt) || new Date(),
         updatedAt: timestampToDate(data.updatedAt) || new Date(),
       }

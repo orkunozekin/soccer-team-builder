@@ -9,7 +9,7 @@ import { createUser } from '@/lib/services/userService'
 import { recordAuditEventAPI, updateProfileAPI } from '@/lib/api/client'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import { useAuthStore } from '@/store/authStore'
-import { User } from '@/types/user'
+import { User, normalizeUserRole } from '@/types/user'
 
 /** If auth/user fetch takes longer than this, stop showing loading so the app is still usable. */
 const AUTH_LOADING_TIMEOUT_MS = 8_000
@@ -89,9 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             if (userDoc) {
-              const roleRaw =
-                typeof userDoc.role === 'string' ? userDoc.role.trim() : ''
-              const role: User['role'] = roleRaw === 'admin' ? 'admin' : 'user'
+              const role = normalizeUserRole(userDoc.role)
               const authEmail = firebaseUser.email ?? ''
               const firestoreEmail =
                 typeof userDoc.email === 'string' ? userDoc.email : ''

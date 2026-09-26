@@ -8,6 +8,7 @@ export type CreateMatchInput = {
   date: Date
   time: string
   location?: MatchLocation | null
+  clubId?: string | null
   scheduleId?: string | null
   scheduleSlotId?: string | null
   scheduleOccurrenceKey?: string | null
@@ -36,6 +37,7 @@ export async function createMatchDoc(
       date: Timestamp.fromDate(input.date),
       time: input.time,
       location: locationValue,
+      clubId: input.clubId ?? null,
       rsvpOpen: false,
       rsvpOpenAt: openAt ? Timestamp.fromDate(openAt) : null,
       rsvpCloseAt: closeAt ? Timestamp.fromDate(closeAt) : null,

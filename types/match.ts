@@ -13,6 +13,8 @@ export interface Match {
   date: Date
   time: string // HH:mm format
   location: MatchLocation | null
+  /** Owning club (tenant). Required for new matches; backfilled for existing. */
+  clubId?: string | null
   rsvpOpen: boolean
   rsvpOpenAt: Date | null
   rsvpCloseAt: Date | null

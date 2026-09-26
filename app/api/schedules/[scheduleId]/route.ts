@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdmin } from '@/lib/api/auth'
+import { verifyClubAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import {
   mapScheduleDoc,
@@ -13,35 +13,76 @@ import {
 
 type RouteContext = { params: { scheduleId: string } }
 
-export async function GET(request: NextRequest, context: RouteContext) {
-  try {
-    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
-    if (authError || !uid) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+async function authorizeSchedule(
+  request: NextRequest,
+  scheduleId: string
+): Promise<
+  | {
+      ok: true
+      uid: string
+      adminDb: NonNullable<ReturnType<typeof getAdminDb>>
+      data: Record<string, unknown>
     }
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Admin privileges required' },
-        { status: 403 }
-      )
-    }
-
-    const adminDb = getAdminDb()
-    if (!adminDb) {
-      return NextResponse.json(
+  | { ok: false; response: NextResponse }
+> {
+  const adminDb = getAdminDb()
+  if (!adminDb) {
+    return {
+      ok: false,
+      response: NextResponse.json(
         { error: 'Server configuration error' },
         { status: 500 }
-      )
+      ),
     }
+  }
 
-    const { scheduleId } = context.params
-    const snap = await adminDb.collection('schedules').doc(scheduleId).get()
-    if (!snap.exists) {
-      return NextResponse.json({ error: 'Schedule not found' }, { status: 404 })
+  const snap = await adminDb.collection('schedules').doc(scheduleId).get()
+  if (!snap.exists) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: 'Schedule not found' },
+        { status: 404 }
+      ),
     }
+  }
+
+  const clubId =
+    typeof snap.data()?.clubId === 'string' ? snap.data()!.clubId : null
+  const { uid, isClubAdmin, error: authError } = await verifyClubAdmin(
+    request,
+    clubId
+  )
+  if (authError || !uid) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+    }
+  }
+  if (!isClubAdmin) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: 'Club admin privileges required' },
+        { status: 403 }
+      ),
+    }
+  }
+
+  return { ok: true, uid, adminDb, data: snap.data()! as Record<string, unknown> }
+}
+
+export async function GET(request: NextRequest, context: RouteContext) {
+  try {
+    const { scheduleId } = context.params
+    const auth = await authorizeSchedule(request, scheduleId)
+    if (!auth.ok) return auth.response
 
     return NextResponse.json({
-      schedule: mapScheduleDoc(scheduleId, snap.data() as Record<string, unknown>),
+      schedule: mapScheduleDoc(
+        scheduleId,
+        auth.data as Record<string, unknown>
+      ),
     })
   } catch (error: unknown) {
     console.error('Error getting schedule:', error)
@@ -55,36 +96,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
-    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
-    if (authError || !uid) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Admin privileges required' },
-        { status: 403 }
-      )
-    }
-
-    const adminDb = getAdminDb()
-    if (!adminDb) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      )
-    }
-
     const { scheduleId } = context.params
-    const ref = adminDb.collection('schedules').doc(scheduleId)
-    const existing = await ref.get()
-    if (!existing.exists) {
-      return NextResponse.json({ error: 'Schedule not found' }, { status: 404 })
-    }
+    const auth = await authorizeSchedule(request, scheduleId)
+    if (!auth.ok) return auth.response
 
+    const ref = auth.adminDb.collection('schedules').doc(scheduleId)
     const body = await request.json()
     const current = mapScheduleDoc(
       scheduleId,
-      existing.data() as Record<string, unknown>
+      auth.data as Record<string, unknown>
     )
 
     const validated = validateScheduleInput(
@@ -142,33 +162,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
-    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
-    if (authError || !uid) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Admin privileges required' },
-        { status: 403 }
-      )
-    }
-
-    const adminDb = getAdminDb()
-    if (!adminDb) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      )
-    }
-
     const { scheduleId } = context.params
-    const ref = adminDb.collection('schedules').doc(scheduleId)
-    const existing = await ref.get()
-    if (!existing.exists) {
-      return NextResponse.json({ error: 'Schedule not found' }, { status: 404 })
-    }
+    const auth = await authorizeSchedule(request, scheduleId)
+    if (!auth.ok) return auth.response
 
-    await ref.delete()
+    await auth.adminDb.collection('schedules').doc(scheduleId).delete()
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     console.error('Error deleting schedule:', error)

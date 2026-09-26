@@ -1,7 +1,7 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import { formatInTimeZone } from 'date-fns-tz'
 import { NextResponse } from 'next/server'
-import { verifyAdmin } from '@/lib/api/auth'
+import { verifySuperUser } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { expandTeamsForMatch } from '@/lib/teams/expandTeamsForMatch'
 import { TEST_USERS } from '@/lib/testData/testUsers'
@@ -29,8 +29,8 @@ async function requireSeedAuth(
   const useSecret =
     process.env.SEED_SECRET && seedSecret === process.env.SEED_SECRET
   if (useSecret) return { ok: true }
-  const { isAdmin, error } = await verifyAdmin(request)
-  if (error || !isAdmin) {
+  const { isSuperUser, error } = await verifySuperUser(request)
+  if (error || !isSuperUser) {
     return {
       ok: false,
       status: 403,

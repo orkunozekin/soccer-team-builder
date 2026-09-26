@@ -1,24 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdmin } from '@/lib/api/auth'
+import { resolveClubIdForWrite, verifyClubAdmin } from '@/lib/api/auth'
 import { createMatchDoc } from '@/lib/matches/createMatch'
 import { auditLog } from '@/lib/services/auditService'
 import type { MatchLocation } from '@/types/match'
 
 export async function POST(request: NextRequest) {
   try {
-    const { uid, isAdmin, error: authError } = await verifyAdmin(request)
+    const body = await request.json()
+    const { date, time, location, clubId: clubIdRaw } = body
+
+    const provisionalClubId =
+      typeof clubIdRaw === 'string' ? clubIdRaw.trim() : ''
+    const provisional = await verifyClubAdmin(
+      request,
+      provisionalClubId || null
+    )
+    if (provisional.error || !provisional.uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const resolved = await resolveClubIdForWrite(
+      provisional.uid,
+      provisionalClubId || null
+    )
+    if (!resolved.clubId) {
+      return NextResponse.json(
+        { error: resolved.error || 'clubId is required' },
+        { status: 400 }
+      )
+    }
+
+    const { uid, isClubAdmin, error: authError } = await verifyClubAdmin(
+      request,
+      resolved.clubId
+    )
     if (authError || !uid) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (!isAdmin) {
+    if (!isClubAdmin) {
       return NextResponse.json(
-        { error: 'Admin privileges required' },
+        { error: 'Club admin privileges required' },
         { status: 403 }
       )
     }
-
-    const { date, time, location } = await request.json()
 
     if (!date || !time) {
       return NextResponse.json(
@@ -45,6 +70,7 @@ export async function POST(request: NextRequest) {
       date: matchDate,
       time,
       location: locationValue,
+      clubId: resolved.clubId,
     })
 
     auditLog({
@@ -54,7 +80,12 @@ export async function POST(request: NextRequest) {
       entityType: 'match',
       entityId: matchId,
       source: 'api',
-      metadata: { date, time, location: locationValue },
+      metadata: {
+        date,
+        time,
+        location: locationValue,
+        clubId: resolved.clubId,
+      },
     })
 
     return NextResponse.json({ success: true, matchId })

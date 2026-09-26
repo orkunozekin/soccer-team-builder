@@ -43,7 +43,7 @@ export function AdminRouteGuard({ children }: AdminRouteGuardProps) {
         <div className="text-center">
           <h1 className="text-2xl font-bold">Access Denied</h1>
           <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-            You need admin privileges to access this page.
+            You need super user privileges to access this page.
           </p>
         </div>
       </div>
