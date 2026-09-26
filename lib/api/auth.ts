@@ -74,28 +74,30 @@ async function isGlobalSuperUser(uid: string): Promise<boolean | null> {
  */
 export async function verifySuperUser(request: Request): Promise<{
   uid: string | null
+  email: string | null
   isSuperUser: boolean
   error: string | null
 }> {
-  const { uid, error } = await verifyAuth(request)
+  const { uid, email, error } = await verifyAuth(request)
   if (error || !uid) {
-    return { uid: null, isSuperUser: false, error }
+    return { uid: null, email: null, isSuperUser: false, error }
   }
 
   if (uid === 'fallback') {
-    return { uid, isSuperUser: false, error: null }
+    return { uid, email, isSuperUser: false, error: null }
   }
 
   try {
     const result = await isGlobalSuperUser(uid)
     if (result === null) {
-      return { uid, isSuperUser: false, error: null }
+      return { uid, email, isSuperUser: false, error: null }
     }
-    return { uid, isSuperUser: result, error: null }
+    return { uid, email, isSuperUser: result, error: null }
   } catch (err: any) {
     console.error('Super user verification error:', err)
     return {
       uid,
+      email,
       isSuperUser: false,
       error: 'Failed to verify super user status',
     }

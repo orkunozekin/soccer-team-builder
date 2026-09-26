@@ -1,17 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifySuperUser } from '@/lib/api/auth'
+import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
+import { evaluateFeatureFlag } from '@/lib/flags/evaluateFeatureFlag'
 import { createClub } from '@/lib/services/clubService'
 import { auditLog } from '@/lib/services/auditService'
 
 export async function POST(request: NextRequest) {
   try {
-    const { uid, isSuperUser, error } = await verifySuperUser(request)
+    const { uid, email, isSuperUser, error } = await verifySuperUser(request)
     if (error || !uid) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     if (!isSuperUser) {
       return NextResponse.json(
         { error: 'Super user privileges required' },
+        { status: 403 }
+      )
+    }
+
+    const clubCreationEnabled = await evaluateFeatureFlag('club-creation', {
+      key: uid,
+      email,
+    })
+    if (!clubCreationEnabled) {
+      return NextResponse.json(
+        { error: 'Club creation is unavailable' },
         { status: 403 }
       )
     }
@@ -57,6 +70,9 @@ export async function POST(request: NextRequest) {
         ? 400
         : 500
     console.error('Error creating club:', err)
-    return NextResponse.json({ error: message }, { status })
+    return NextResponse.json(
+      { error: sanitizeErrorForClient(err, 'Failed to create club') },
+      { status }
+    )
   }
 }

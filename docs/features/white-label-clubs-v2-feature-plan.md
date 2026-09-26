@@ -6,10 +6,10 @@ Plan for the follow-ups listed under Later in the [v1 white-label plan](./white-
 
 | Field | Value |
 |-------|-------|
-| Status | planned |
-| Owner session | not started |
+| Status | in progress |
+| Owner session | cloud agent (`club-creation` flag) |
 | Last updated | 2026-09-26 |
-| Related PR / branch | none yet. Continues [v1 plan](./white-label-clubs-feature-plan.md) (merged [#65](https://github.com/orkunozekin/soccer-team-builder/pull/65), [#71](https://github.com/orkunozekin/soccer-team-builder/pull/71), [#73](https://github.com/orkunozekin/soccer-team-builder/pull/73), [#74](https://github.com/orkunozekin/soccer-team-builder/pull/74), [#76](https://github.com/orkunozekin/soccer-team-builder/pull/76)) |
+| Related PR / branch | [#79](https://github.com/orkunozekin/soccer-team-builder/pull/79) `cursor/club-creation-flag-d335`. Continues [v1 plan](./white-label-clubs-feature-plan.md) (merged [#65](https://github.com/orkunozekin/soccer-team-builder/pull/65), [#71](https://github.com/orkunozekin/soccer-team-builder/pull/71), [#73](https://github.com/orkunozekin/soccer-team-builder/pull/73), [#74](https://github.com/orkunozekin/soccer-team-builder/pull/74), [#76](https://github.com/orkunozekin/soccer-team-builder/pull/76)) |
 
 ## Goals (v1 of this plan)
 
@@ -25,7 +25,7 @@ Ship in this order. Later numbers wait until the nav shell exists.
 
 ## Todos
 
-1. [ ] Feature-flag club creation (`club-creation`, default off) on the admin form and on `POST /api/clubs`.
+1. [x] Feature-flag club creation (`club-creation`, default off) on the admin form and on `POST /api/clubs`.
 2. [ ] Split the shell into a Soccerville platform bar and a club sub-nav with a club switcher.
 3. [ ] Move member match pages to `/c/[slug]/…` and redirect legacy `/matches` URLs.
 4. [ ] Move roster, invites, and club settings onto the club sub-nav (club-admin console).
@@ -45,8 +45,8 @@ v1 tenancy is on `main`. Founding club is Jax State Soccer Club. Promote/demote 
 |------|--------|
 | Shell | One sticky Soccerville header in [`components/layout/Navigation.tsx`](../../components/layout/Navigation.tsx): wordmark, Matches, Profile, Admin for `super_user`, Sign out. Signed-out header is the centered wordmark. Mounted from [`app/layout.tsx`](../../app/layout.tsx). |
 | Selected club | `users.activeClubId`, set from profile “Set as active” in [`components/profile/ProfileClubsSection.tsx`](../../components/profile/ProfileClubsSection.tsx) via `PATCH /api/users/me`. Match lists in [`app/matches/page.tsx`](../../app/matches/page.tsx) filter with [`lib/utils/clubMatches.ts`](../../lib/utils/clubMatches.ts). |
-| Club create | Super-user form [`components/admin/ClubAdminPanel.tsx`](../../components/admin/ClubAdminPanel.tsx) on [`app/admin/users/page.tsx`](../../app/admin/users/page.tsx). `POST` [`app/api/clubs/route.ts`](../../app/api/clubs/route.ts) uses `verifySuperUser`. No feature flag. |
-| Flags | Client LaunchDarkly only (`launchdarkly-react-client-sdk`). Keys live in [`lib/flags/featureFlags.ts`](../../lib/flags/featureFlags.ts) (`pitch-lineup-view`, default false). [`useFeatureFlag`](../../lib/flags/useFeatureFlag.ts) is fail-closed. `.env.sample` comments `LAUNCHDARKLY_SDK_KEY` for a server SDK that is not installed. |
+| Club create | Super-user form [`components/admin/ClubAdminPanel.tsx`](../../components/admin/ClubAdminPanel.tsx) on [`app/admin/users/page.tsx`](../../app/admin/users/page.tsx). Hidden unless `club-creation` is on. `POST` [`app/api/clubs/route.ts`](../../app/api/clubs/route.ts) uses `verifySuperUser` then `evaluateFeatureFlag('club-creation')` (403 when off). |
+| Flags | Client: `launchdarkly-react-client-sdk` + [`useFeatureFlag`](../../lib/flags/useFeatureFlag.ts). Server: `@launchdarkly/node-server-sdk` via [`lib/flags/evaluateFeatureFlag.ts`](../../lib/flags/evaluateFeatureFlag.ts). Keys in [`lib/flags/featureFlags.ts`](../../lib/flags/featureFlags.ts): `pitch-lineup-view`, `club-creation` (both default false). Local overrides: `NEXT_PUBLIC_FF_PITCH_LINEUP_VIEW`, `NEXT_PUBLIC_FF_CLUB_CREATION`. |
 | Club admin UI | Roster, invites, and `allowPlayerInvites` live on the profile page ([`ClubAdminRoster`](../../components/profile/ClubAdminRoster.tsx), [`ProfileClubsSection`](../../components/profile/ProfileClubsSection.tsx)). Platform admin stays [`/admin/*`](../../app/admin/layout.tsx) with [`AdminNav`](../../components/admin/AdminNav.tsx). |
 | Club fields | [`types/club.ts`](../../types/club.ts): `name`, `slug`, `settings.allowPlayerInvites`. Patch: [`app/api/clubs/[clubId]/route.ts`](../../app/api/clubs/[clubId]/route.ts) (`verifyClubAdmin`). |
 | Attendance | [`components/profile/AttendanceStatsCard.tsx`](../../components/profile/AttendanceStatsCard.tsx) loads every match for the user. |
@@ -203,7 +203,7 @@ Starting map only. Touch any other files the work needs: tests, hooks, services,
 
 ## Acceptance criteria
 
-- [ ] With `club-creation` off, super users do not see the create form and `POST /api/clubs` returns 403. With the flag on (or `NEXT_PUBLIC_FF_CLUB_CREATION=true`), create still works for a super user. Missing server SDK key fails closed.
+- [x] With `club-creation` off, super users do not see the create form and `POST /api/clubs` returns 403. With the flag on (or `NEXT_PUBLIC_FF_CLUB_CREATION=true`), create still works for a super user. Missing server SDK key fails closed.
 - [ ] Signed-in users see a Soccerville platform bar and a club sub-nav. The sub-nav shows the current club and switches clubs. Matches is on the sub-nav. Profile and super-user Admin stay on the platform bar.
 - [ ] Signed-out users still see the centered Soccerville header. Users with no club see a Join prompt on the sub-nav.
 - [ ] `/c/[slug]/matches` is the match list for that club. `/matches` redirects there from `activeClubId` or the sole membership. A non-member slug 404s.
@@ -225,31 +225,37 @@ Starting map only. Touch any other files the work needs: tests, hooks, services,
 
 ## Handoff
 
-> Updated by `/plan-feature`. `/feature-context` reads this first.
+> Updated by `/handoff`. `/feature-context` reads this first.
 
 ### Done so far
 
-- Plan drafted. No product code in this change.
-- v1 plan left unchanged.
+- Plan drafted; v1 sibling unchanged.
+- **`club-creation` flag shipped on this branch:**
+  - [`lib/flags/featureFlags.ts`](../../lib/flags/featureFlags.ts): key + default `false` + `NEXT_PUBLIC_FF_CLUB_CREATION` local override.
+  - [`lib/flags/evaluateFeatureFlag.ts`](../../lib/flags/evaluateFeatureFlag.ts): `@launchdarkly/node-server-sdk` helper, fail-closed without key / on init or eval errors; local override wins.
+  - [`app/api/clubs/route.ts`](../../app/api/clubs/route.ts): after `verifySuperUser`, 403 with `Club creation is unavailable` when flag off; errors via `sanitizeErrorForClient`.
+  - [`components/admin/ClubAdminPanel.tsx`](../../components/admin/ClubAdminPanel.tsx): returns `null` when `useFeatureFlag('club-creation')` is false.
+  - `.env.sample`, `docs/SETUP.md`, `docs/DEPLOYMENT.md` document client override + `LAUNCHDARKLY_SDK_KEY`.
+  - Tests: `lib/flags/evaluateFeatureFlag.test.ts`, `app/api/clubs/route.test.ts`, `components/admin/ClubAdminPanel.test.tsx`.
 
 ### Remaining work
 
-1. Flag `club-creation` (client hide + server 403 + tests + `.env.sample`). This is the first implementation step.
-2. Platform bar + club sub-nav, then `/c/[slug]` routes and redirects.
-3. Move roster, invites, and settings onto the sub-nav.
-4. Branding fields and sub-nav paint.
-5. QR, invite-only flag, ownership transfer, club-scoped attendance, club-context copy.
-6. Custom domain only after the above, as its own slice.
+1. Platform bar + club sub-nav with club switcher (todo 2).
+2. `/c/[slug]/…` match routes and legacy `/matches` redirects (todo 3).
+3. Move roster, invites, and settings onto the sub-nav (todo 4).
+4. Branding fields and sub-nav paint (todo 5).
+5. QR, invite-only flag, ownership transfer, club-scoped attendance, club-context copy (todos 6–10).
+6. Custom domain only after the above, as its own slice (todo 11).
 
 ### Blockers / risks
 
-- None for planning. Implementation needs a LaunchDarkly `club-creation` flag (default off) and `LAUNCHDARKLY_SDK_KEY` in deployed environments. Missing key must keep creation off.
+- Create the LaunchDarkly `club-creation` boolean (default off) in each environment dashboard, and set `LAUNCHDARKLY_SDK_KEY` in deployed server env. Until then, creation stays off unless `NEXT_PUBLIC_FF_CLUB_CREATION=true` (dev/demo).
 - Path move will touch every in-app `/matches` link. API routes stay put.
 - Multi-tab safety depends on the slug in the URL. Writing `activeClubId` on switch is for legacy redirects, not the only source of truth.
 
 ### Pointers for the next agent
 
-- Start at: [`lib/flags/featureFlags.ts`](../../lib/flags/featureFlags.ts) and [`app/api/clubs/route.ts`](../../app/api/clubs/route.ts).
-- Do not: edit this file’s v1 sibling beyond a link if needed; put `club_admin` on `users.role`; rename match `teams`; paint the Soccerville bar with club colors; point local Firebase at production; start custom domains in the nav PR.
-- Verify with: `yarn vitest run` on the new flag helper and `app/api/clubs/route` tests; with the flag off, confirm the users admin page has no create form and `POST /api/clubs` is 403.
+- Start at: [`components/layout/Navigation.tsx`](../../components/layout/Navigation.tsx) and Design §2 (two-level navigation) in this plan.
+- Do not: put `club_admin` on `users.role`; rename match `teams`; paint the Soccerville bar with club colors; point local Firebase at production; start custom domains in the nav PR; re-open club creation without the flag.
+- Verify with: `yarn vitest run lib/flags/evaluateFeatureFlag.test.ts app/api/clubs/route.test.ts components/admin/ClubAdminPanel.test.tsx`; then build the platform + club sub-nav.
 - Next skills: `/feature-context` on this file before coding; `/handoff` when a session ends or status changes.

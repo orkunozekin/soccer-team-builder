@@ -54,7 +54,7 @@ To enable gradual rollouts (for example the pitch lineup view), add a client-sid
 NEXT_PUBLIC_LAUNCHDARKLY_CLIENT_ID=your_client_side_id
 ```
 
-Create a boolean flag named `pitch-lineup-view` (default `false`) in the LaunchDarkly dashboard for each environment. When the env var is unset or the flag is off, the match teams UI stays on the list view.
+Create boolean flags (default `false`) in the LaunchDarkly dashboard for each environment: `pitch-lineup-view` (match teams pitch UI) and `club-creation` (super-user club create form + `POST /api/clubs`). When the client ID / SDK key is unset or a flag is off, those features stay off. For server checks set `LAUNCHDARKLY_SDK_KEY`; missing key fails closed.
 
 ## Quick Start
 
