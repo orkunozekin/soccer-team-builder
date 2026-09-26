@@ -119,14 +119,17 @@ export function ProfileClubsSection() {
           Clubs I&apos;m in
         </h3>
         {memberships.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-            You are not a member of any club yet. Ask for an invite link or enter
-            a code on the{' '}
-            <a href="/join" className="underline underline-offset-2">
-              join page
-            </a>
-            .
-          </p>
+          <div className="mt-2 space-y-3">
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              You are not a member of any club yet. Enter an invite code below,
+              or open the{' '}
+              <a href="/join" className="underline underline-offset-2">
+                join page
+              </a>
+              .
+            </p>
+            <JoinClubForm onJoined={() => void refresh()} />
+          </div>
         ) : (
           <ul className="mt-2 space-y-2">
             {memberships.map(m => {
