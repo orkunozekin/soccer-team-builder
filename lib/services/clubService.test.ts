@@ -63,6 +63,19 @@ function makeQuery(name: string, filters: Array<[string, string, unknown]> = [])
 vi.mock('@/lib/firebase/admin', () => ({
   getAdminDb: () => {
     const db = {
+      getAll: async (
+        ...refs: Array<{ _path?: string; id: string }>
+      ) => {
+        return refs.map(ref => {
+          const path = ref._path ?? `users/${ref.id}`
+          const data = mocks.store.get(path)
+          return {
+            exists: Boolean(data),
+            id: ref.id,
+            data: () => data,
+          }
+        })
+      },
       collection: (name: string) => ({
         doc: (id?: string) => {
           const docId = id ?? `auto_${mocks.store.size}`
@@ -331,6 +344,46 @@ describe('clubService redeem + backfill', () => {
       clubName: 'Jax State Soccer Club',
     })
     await expect(previewInviteByCode('NOPE')).resolves.toBeNull()
+  })
+
+  it('listMembershipsForClub batch-loads display names', async () => {
+    const { Timestamp } = await import('firebase-admin/firestore')
+    const now = Timestamp.now()
+    mocks.store.set('clubMemberships/c1_p1', {
+      clubId: 'c1',
+      userId: 'p1',
+      role: 'player',
+      status: 'active',
+      joinedAt: now,
+      updatedAt: now,
+    })
+    mocks.store.set('clubMemberships/c1_a1', {
+      clubId: 'c1',
+      userId: 'a1',
+      role: 'club_admin',
+      status: 'active',
+      joinedAt: now,
+      updatedAt: now,
+    })
+    mocks.store.set('users/p1', {
+      displayName: 'Pat Player',
+      email: 'pat@example.com',
+    })
+    mocks.store.set('users/a1', {
+      displayName: 'Alex Admin',
+      email: 'alex@example.com',
+    })
+
+    const { listMembershipsForClub } = await import(
+      '@/lib/services/clubService'
+    )
+    const members = await listMembershipsForClub('c1')
+    expect(members.map(m => m.displayName)).toEqual([
+      'Alex Admin',
+      'Pat Player',
+    ])
+    expect(members[0].role).toBe('club_admin')
+    expect(members[1].email).toBe('pat@example.com')
   })
 
   it('updateMembershipRole blocks demoting the last club admin', async () => {
