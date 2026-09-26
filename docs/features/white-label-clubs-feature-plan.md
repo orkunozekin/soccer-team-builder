@@ -31,11 +31,11 @@ Plan to move Soccerville from a single hard-coded club to multi-club tenancy: re
 3. [x] **Authorization layer:** `verifySuperUser`, `verifyClubMember(clubId)`, `verifyClubAdmin(clubId)`, invite-create gate; update [`firestore.rules`](../../firestore.rules) and client guards/hooks.
 4. [x] Rename `admin` → `super_user` across types, [`lib/api/auth.ts`](../../lib/api/auth.ts), [`useAdmin`](../../lib/hooks/useAdmin.ts), Admin UI labels, UserRoleManager, tests.
 5. [x] Club CRUD APIs (super user creates clubs; club admin updates club settings including `allowPlayerInvites`). Create is **name-only**; slug auto-generated; name + slug unique.
-6. [x] Invite APIs: create invite; redeem by code or link token; enforce `allowPlayerInvites`. (Revoke API still thin / later.)
-7. [~] Registration/login join path: `/join?code=` + login redirect; full invite-aware register polish still open.
+6. [x] Invite APIs: create, list, revoke; redeem by code or link token; enforce `allowPlayerInvites`.
+7. [x] Registration/login join path: `/join?code=` + register `?code=` redeem + login redirect (from #73).
 8. [x] One-shot backfill route (super-user gated). **Production founding club already backfilled** (Jax State Soccer Club). Backfill admin UI removed; API kept for emergencies only.
-9. [x] Profile UI: membership list + “clubs I admin” + invite share (copy link / code).
-10. [~] Scope resource reads/writes to `clubId` + membership checks — APIs/rules largely done; tighter client match-list filtering by membership/`activeClubId` still open.
+9. [x] Profile UI: membership list + “clubs I admin” + invite share + roster promote/demote.
+10. [x] Scope resource reads/writes to `clubId` + membership checks; client match-list filtering by membership/`activeClubId` (from #73).
 11. [x] Migrate every `verifyAdmin` call site (Wave A / Wave B); tests for auth helpers + migration idempotency.
 
 ## Current state
