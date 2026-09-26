@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { SWRConfig } from 'swr'
 import { UserRoleManager } from './UserRoleManager'
 
 const useAuthMock = vi.fn()
@@ -36,9 +37,21 @@ vi.mock('@/lib/api/client', () => ({
   updateUserRoleAPI: (...args: unknown[]) => mocks.updateUserMock(...args),
 }))
 
+function renderUserRoleManager() {
+  return render(
+    <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+      <UserRoleManager />
+    </SWRConfig>
+  )
+}
+
 describe('UserRoleManager', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    mocks.getUsersPaginatedMock.mockReset()
+    mocks.getUsersCountMock.mockReset()
+    mocks.updateUserMock.mockReset()
+    mocks.searchUsersAPIMock.mockReset()
+    mocks.deleteUserAPIMock.mockReset()
   })
 
   it('hides the current user from the list', async () => {
@@ -46,7 +59,7 @@ describe('UserRoleManager', () => {
       user: { uid: 'u1' },
     })
 
-    mocks.getUsersPaginatedMock.mockResolvedValueOnce({
+    mocks.getUsersPaginatedMock.mockResolvedValue({
       users: [
         {
           uid: 'u1',
@@ -67,9 +80,9 @@ describe('UserRoleManager', () => {
       ],
       nextCursor: null,
     })
-    mocks.getUsersCountMock.mockResolvedValueOnce(2)
+    mocks.getUsersCountMock.mockResolvedValue(2)
 
-    render(<UserRoleManager />)
+    renderUserRoleManager()
 
     expect(await screen.findByText(/user two/i)).toBeInTheDocument()
     expect(screen.queryByText(/user one/i)).not.toBeInTheDocument()
@@ -110,7 +123,7 @@ describe('UserRoleManager', () => {
     mocks.getUsersCountMock.mockResolvedValue(11)
 
     const user = userEvent.setup()
-    render(<UserRoleManager />)
+    renderUserRoleManager()
 
     expect(await screen.findByText(/page one user/i)).toBeInTheDocument()
 
@@ -120,7 +133,7 @@ describe('UserRoleManager', () => {
 
     await user.click(screen.getByRole('button', { name: /previous/i }))
     expect(await screen.findByText(/page one user/i)).toBeInTheDocument()
-    // Cached — no third fetch
+    // SWR cache — no third fetch
     expect(mocks.getUsersPaginatedMock).toHaveBeenCalledTimes(2)
   })
 
@@ -129,7 +142,7 @@ describe('UserRoleManager', () => {
       user: { uid: 'current' },
     })
 
-    mocks.getUsersPaginatedMock.mockResolvedValueOnce({
+    mocks.getUsersPaginatedMock.mockResolvedValue({
       users: [
         {
           uid: 'u-del',
@@ -142,12 +155,12 @@ describe('UserRoleManager', () => {
       ],
       nextCursor: null,
     })
-    mocks.getUsersCountMock.mockResolvedValueOnce(1)
-    mocks.deleteUserAPIMock.mockResolvedValueOnce(undefined)
+    mocks.getUsersCountMock.mockResolvedValue(1)
+    mocks.deleteUserAPIMock.mockResolvedValue(undefined)
 
     const user = userEvent.setup()
 
-    render(<UserRoleManager />)
+    renderUserRoleManager()
 
     await screen.findByText(/delete me/i)
 
