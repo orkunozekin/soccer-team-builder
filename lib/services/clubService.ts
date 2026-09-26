@@ -59,9 +59,47 @@ function mapMembership(
   }
 }
 
+async function assertUniqueClubName(
+  name: string,
+  excludeClubId?: string
+): Promise<void> {
+  const adminDb = getAdminDb()
+  if (!adminDb) throw new Error('Firebase Admin not configured')
+
+  const trimmed = name.trim()
+  const nameLower = trimmed.toLowerCase()
+  const [byLower, byExact] = await Promise.all([
+    adminDb.collection('clubs').where('nameLower', '==', nameLower).limit(5).get(),
+    adminDb.collection('clubs').where('name', '==', trimmed).limit(5).get(),
+  ])
+  const seen = new Set<string>()
+  for (const doc of [...byLower.docs, ...byExact.docs]) {
+    if (doc.id === excludeClubId || seen.has(doc.id)) continue
+    seen.add(doc.id)
+    throw new Error('Club name already exists')
+  }
+}
+
+async function assertUniqueClubSlug(
+  slug: string,
+  excludeClubId?: string
+): Promise<void> {
+  const adminDb = getAdminDb()
+  if (!adminDb) throw new Error('Firebase Admin not configured')
+
+  const existing = await adminDb
+    .collection('clubs')
+    .where('slug', '==', slug)
+    .limit(5)
+    .get()
+  const clash = existing.docs.find(d => d.id !== excludeClubId)
+  if (clash) {
+    throw new Error('Club slug already exists')
+  }
+}
+
 export async function createClub(input: {
   name: string
-  slug?: string
   createdBy: string
   settings?: Partial<ClubSettings>
 }): Promise<Club> {
@@ -71,17 +109,13 @@ export async function createClub(input: {
   const name = input.name.trim()
   if (!name) throw new Error('Club name is required')
 
-  const slug = (input.slug?.trim() || slugifyClubName(name)).toLowerCase()
-  if (!slug) throw new Error('Club slug is required')
-
-  const existing = await adminDb
-    .collection('clubs')
-    .where('slug', '==', slug)
-    .limit(1)
-    .get()
-  if (!existing.empty) {
-    throw new Error('Club slug already exists')
+  const slug = slugifyClubName(name)
+  if (!slug) {
+    throw new Error('Club name must include letters or numbers')
   }
+
+  await assertUniqueClubName(name)
+  await assertUniqueClubSlug(slug)
 
   const clubRef = adminDb.collection('clubs').doc()
   const now = Timestamp.now()
@@ -92,6 +126,7 @@ export async function createClub(input: {
 
   await clubRef.set({
     name,
+    nameLower: name.toLowerCase(),
     slug,
     createdBy: input.createdBy,
     settings,
@@ -137,7 +172,16 @@ export async function updateClub(
 
   const patch: Record<string, unknown> = { updatedAt: Timestamp.now() }
   if (typeof updates.name === 'string' && updates.name.trim()) {
-    patch.name = updates.name.trim()
+    const name = updates.name.trim()
+    const slug = slugifyClubName(name)
+    if (!slug) {
+      throw new Error('Club name must include letters or numbers')
+    }
+    await assertUniqueClubName(name, clubId)
+    await assertUniqueClubSlug(slug, clubId)
+    patch.name = name
+    patch.nameLower = name.toLowerCase()
+    patch.slug = slug
   }
   if (updates.settings) {
     const current = snap.data()?.settings ?? DEFAULT_SETTINGS

@@ -637,7 +637,6 @@ export async function getMyClubsAPI(): Promise<{
 
 export async function createClubAPI(input: {
   name: string
-  slug?: string
   settings?: { allowPlayerInvites?: boolean }
 }): Promise<{ success: boolean; club: Club }> {
   const response = await apiRequest('/clubs', {
