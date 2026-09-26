@@ -156,7 +156,7 @@ branding?: {
 - Apply logo, display name, and primary color on the **club sub-nav** only (CSS variables on that bar). Platform bar, auth screens, and password-reset mail stay Soccerville red / Soccerville copy.
 - Settings page is where a club admin edits these fields.
 
-### 6–10. Remaining v1 Later items
+### Todos 6 to 10. Remaining v1 Later items
 
 Do these after the nav shell and the branding fields exist.
 
