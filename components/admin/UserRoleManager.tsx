@@ -99,12 +99,19 @@ export function UserRoleManager() {
         })),
         nextCursor: result.nextCursor,
       } satisfies UsersPageData
+    },
+    {
+      // Keep paged results until an explicit mutate (role/delete), so paging
+      // back does not refetch.
+      revalidateIfStale: false,
+      revalidateOnReconnect: false,
     }
   )
 
   const { data: totalCount = 0, mutate: mutateCount } = useSWR(
     browsing ? ADMIN_USERS_COUNT_KEY : null,
-    () => getUsersCount()
+    () => getUsersCount(),
+    { revalidateIfStale: false, revalidateOnReconnect: false }
   )
 
   // Remember forward cursors so page N+1 can be requested.

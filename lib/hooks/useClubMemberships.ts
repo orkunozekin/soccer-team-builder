@@ -24,6 +24,11 @@ export function useClubMemberships() {
     async () => {
       const res = await getMyClubsAPI()
       return res.memberships
+    },
+    {
+      // Shared across routes; refresh() / mutate after join or settings changes.
+      revalidateIfStale: false,
+      revalidateOnReconnect: false,
     }
   )
 
