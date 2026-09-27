@@ -8,6 +8,8 @@ disable-model-invocation: true
 
 Plan a feature by gathering context, inspecting the repo, and writing a markdown plan to `docs/features/`.
 
+Works in Cursor, Claude Code, and other Agent Skills–compatible tools via `/plan-feature`. Canonical path: `.claude/skills/plan-feature/`.
+
 ## When to run
 
 - User invokes `/plan-feature`

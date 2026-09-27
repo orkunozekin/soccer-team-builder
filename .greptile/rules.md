@@ -1,6 +1,6 @@
 # Greptile review rules (Soccerville)
 
-Companion to [`docs/AGENT_CONTEXT.md`](../docs/AGENT_CONTEXT.md) and root [`AGENTS.md`](../AGENTS.md). Prefer those docs when this summary conflicts with newer detail.
+Companion to [`docs/AGENT_CONTEXT.md`](../docs/AGENT_CONTEXT.md), root [`AGENTS.md`](../AGENTS.md), and the lessons log [`docs/AGENT_LESSONS.md`](../docs/AGENT_LESSONS.md). Prefer those docs when this summary conflicts with newer detail.
 
 ## Priority
 

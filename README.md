@@ -9,8 +9,9 @@
 
 ## LLM agents and AI review
 
-- Start every agent session with **`/start`** (loads [AGENTS.md](AGENTS.md) and [docs/AGENT_CONTEXT.md](docs/AGENT_CONTEXT.md)).
+- Start every agent session with **`/start`** (loads [AGENTS.md](AGENTS.md) and [docs/AGENT_CONTEXT.md](docs/AGENT_CONTEXT.md)). Skills live under [`.claude/skills/`](.claude/skills/) (Claude Code) with [`.cursor/skills/`](.cursor/skills/) symlinked for Cursor.
 - Feature planning/handoff: `/plan-feature`, `/feature-context`, `/handoff`.
+- PR review feedback: `/address-pr-feedback` (lessons log: [docs/AGENT_LESSONS.md](docs/AGENT_LESSONS.md)).
 - Greptile config: [`.greptile/`](.greptile/).
 
 ## RSVP schedule (cron)
