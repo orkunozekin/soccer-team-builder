@@ -1,16 +1,8 @@
 'use client'
 
-import { CheckIcon, ChevronDownIcon } from '@radix-ui/react-icons'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { ClubContextSwitcher } from '@/components/layout/ClubContextSwitcher'
 import {
   Select,
   SelectContent,
@@ -32,6 +24,7 @@ export function ClubSubNav() {
   const {
     status,
     displayClub,
+    displayRole,
     activeMemberships,
     sections,
     activeSectionHref,
@@ -98,11 +91,6 @@ export function ClubSubNav() {
     )
   }
 
-  const displayClubId = displayClub.id
-
-  const roleLabel = (role: string) =>
-    role === 'club_admin' ? 'club_admin' : 'player'
-
   return (
     <nav
       aria-label="Club"
@@ -118,130 +106,48 @@ export function ClubSubNav() {
           </p>
         )}
 
-        {/* Mobile: club select + section select */}
-        <div className="flex flex-col gap-2 sm:hidden">
-          <Select
-            value={
-              activeMemberships.some(m => m.clubId === displayClubId)
-                ? displayClubId
-                : undefined
-            }
-            disabled={switching}
-            onValueChange={value => {
-              void switchClub(value)
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+          <ClubContextSwitcher
+            clubName={displayClub.name}
+            role={displayRole}
+            clubId={displayClub.id}
+            memberships={activeMemberships}
+            switching={switching}
+            showCreateClub={showCreateClub}
+            onSwitch={clubId => {
+              void switchClub(clubId)
             }}
-          >
-            <SelectTrigger
-              aria-label="Current club"
-              className="h-11 w-full rounded-lg border-zinc-200 bg-white font-semibold dark:border-zinc-800 dark:bg-zinc-950"
-            >
-              <SelectValue placeholder={displayClub.name} />
-            </SelectTrigger>
-            <SelectContent>
-              {activeMemberships.map(m => (
-                <SelectItem key={m.clubId} value={m.clubId}>
-                  {m.club.name} ({roleLabel(m.role)})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            className="min-h-11 sm:min-h-0 sm:w-56"
+          />
 
+          {/* Mobile: section select */}
           {sections.length > 0 && (
-            <Select
-              value={activeSectionHref}
-              onValueChange={href => {
-                if (href !== activeSectionHref) router.push(href)
-              }}
-            >
-              <SelectTrigger
-                aria-label="Club sections"
-                className="h-11 w-full rounded-lg border-zinc-200 bg-white font-semibold dark:border-zinc-800 dark:bg-zinc-950"
+            <div className="sm:hidden">
+              <Select
+                value={activeSectionHref}
+                onValueChange={href => {
+                  if (href !== activeSectionHref) router.push(href)
+                }}
               >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {sections.map(section => (
-                  <SelectItem key={section.id} value={section.href}>
-                    {section.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <SelectTrigger
+                  aria-label="Club sections"
+                  className="h-11 w-full rounded-lg border-zinc-200 bg-white font-semibold dark:border-zinc-800 dark:bg-zinc-950"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {sections.map(section => (
+                    <SelectItem key={section.id} value={section.href}>
+                      {section.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
 
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
-            <Link
-              href="/join"
-              className="font-medium text-zinc-600 underline-offset-2 hover:underline dark:text-zinc-300"
-            >
-              Join a club
-            </Link>
-            {showCreateClub && (
-              <Link
-                href="/admin/users"
-                className="font-medium text-zinc-600 underline-offset-2 hover:underline dark:text-zinc-300"
-              >
-                Create club
-              </Link>
-            )}
-          </div>
-        </div>
-
-        {/* Desktop: switcher + section links */}
-        <div className="hidden items-center gap-4 sm:flex">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              disabled={switching}
-              className="inline-flex h-9 max-w-[14rem] items-center gap-1 rounded-md px-2 text-sm font-semibold text-zinc-900 outline-none hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 disabled:opacity-60 dark:text-zinc-100 dark:hover:bg-zinc-800"
-              aria-label="Switch club"
-            >
-              <span className="truncate">{displayClub.name}</span>
-              <ChevronDownIcon className="h-4 w-4 shrink-0 opacity-70" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-[14rem]">
-              <DropdownMenuLabel>Your clubs</DropdownMenuLabel>
-              {activeMemberships.map(m => {
-                const current = m.clubId === displayClubId
-                return (
-                  <DropdownMenuItem
-                    key={m.clubId}
-                    disabled={switching}
-                    onSelect={() => {
-                      void switchClub(m.clubId)
-                    }}
-                    className="cursor-pointer"
-                  >
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate font-medium">
-                        {m.club.name}
-                      </span>
-                      <span className="text-xs text-zinc-500">
-                        {roleLabel(m.role)}
-                      </span>
-                    </span>
-                    {current && <CheckIcon className="ml-2 h-4 w-4 shrink-0" />}
-                  </DropdownMenuItem>
-                )
-              })}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onSelect={() => router.push('/join')}
-              >
-                Join a club
-              </DropdownMenuItem>
-              {showCreateClub && (
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onSelect={() => router.push('/admin/users')}
-                >
-                  Create club
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+          {/* Desktop: section links */}
+          <div className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto sm:flex">
             {sections.map(section => {
               const active = section.href === activeSectionHref
               return (
