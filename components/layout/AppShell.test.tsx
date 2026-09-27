@@ -3,9 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppShell } from './AppShell'
 import { updateProfileAPI } from '@/lib/api/client'
+import { logoutUser } from '@/lib/firebase/auth'
 import type { ClubMembershipWithClub } from '@/types/club'
 
 const pushMock = vi.fn()
+const replaceMock = vi.fn()
 const setUserDataMock = vi.fn()
 const useAuthMock = vi.fn()
 const useAdminMock = vi.fn()
@@ -14,7 +16,7 @@ const useFeatureFlagMock = vi.fn()
 const usePathnameMock = vi.fn()
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: pushMock }),
+  useRouter: () => ({ push: pushMock, replace: replaceMock }),
   usePathname: () => usePathnameMock(),
 }))
 
@@ -258,6 +260,43 @@ describe('AppShell', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
+  })
+
+  it('closes the mobile sheet on sign-out and clears its page lock', async () => {
+    const user = userEvent.setup()
+    let releaseLogout: () => void = () => {}
+    vi.mocked(logoutUser).mockImplementation(
+      () =>
+        new Promise<void>(resolve => {
+          releaseLogout = resolve
+        })
+    )
+    render(<AppShell />)
+    await user.click(screen.getByLabelText('Open club menu'))
+    const sheet = within(screen.getByRole('dialog'))
+
+    const signOut = user.click(sheet.getByRole('button', { name: 'Sign out' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+    // The sheet (a Radix dialog) locks the page while open. Closing it from
+    // sign-out must not leave that lock after logout finishes.
+    document.body.style.pointerEvents = 'none'
+    document.body.setAttribute('data-scroll-locked', '1')
+    document.body.classList.add('block-interactivity-1')
+
+    releaseLogout()
+    await signOut
+
+    await waitFor(() => {
+      expect(logoutUser).toHaveBeenCalledOnce()
+      expect(replaceMock).toHaveBeenCalledWith('/login')
+    })
+    expect(document.body.style.pointerEvents).toBe('')
+    expect(document.body.hasAttribute('data-scroll-locked')).toBe(false)
+    expect(document.body.classList.contains('block-interactivity-1')).toBe(
+      false
+    )
   })
 
   it('closes the mobile sheet when joining a club from the empty state', async () => {
