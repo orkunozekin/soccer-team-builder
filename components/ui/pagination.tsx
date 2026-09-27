@@ -66,7 +66,7 @@ export function Pagination({
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         Showing {start}–{end} of {totalCount} {itemLabel}
       </p>
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-1">
         <Button
           type="button"
           variant="ghost"
@@ -80,39 +80,44 @@ export function Pagination({
           <span className="hidden sm:inline">Previous</span>
         </Button>
         {onPageChange ? (
-          <ul className="flex items-center gap-1">
-            {getPageItems(page, totalPages).map(item =>
-              typeof item === 'number' ? (
-                <li key={item}>
-                  <Button
-                    type="button"
-                    variant={item === page ? 'outline' : 'ghost'}
-                    size="icon"
-                    className={cn(
-                      'h-8 w-8',
-                      item === page &&
-                        'border-zinc-300 font-semibold dark:border-zinc-700'
-                    )}
-                    onClick={() => {
-                      if (item !== page) onPageChange(item)
-                    }}
-                    aria-label={`Go to page ${item}`}
-                    aria-current={item === page ? 'page' : undefined}
+          <>
+            <span className="px-2 text-sm text-zinc-600 dark:text-zinc-400 sm:hidden">
+              Page {page} of {totalPages}
+            </span>
+            <ul className="hidden items-center gap-1 sm:flex">
+              {getPageItems(page, totalPages).map(item =>
+                typeof item === 'number' ? (
+                  <li key={item}>
+                    <Button
+                      type="button"
+                      variant={item === page ? 'outline' : 'ghost'}
+                      size="icon"
+                      className={cn(
+                        'h-8 w-8',
+                        item === page &&
+                          'border-zinc-300 font-semibold dark:border-zinc-700'
+                      )}
+                      onClick={() => {
+                        if (item !== page) onPageChange(item)
+                      }}
+                      aria-label={`Go to page ${item}`}
+                      aria-current={item === page ? 'page' : undefined}
+                    >
+                      {item}
+                    </Button>
+                  </li>
+                ) : (
+                  <li
+                    key={item}
+                    aria-hidden
+                    className="flex h-8 w-8 items-center justify-center text-zinc-400"
                   >
-                    {item}
-                  </Button>
-                </li>
-              ) : (
-                <li
-                  key={item}
-                  aria-hidden
-                  className="flex h-8 w-8 items-center justify-center text-zinc-400"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </li>
-              )
-            )}
-          </ul>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </li>
+                )
+              )}
+            </ul>
+          </>
         ) : (
           <span className="px-2 text-sm text-zinc-600 dark:text-zinc-400">
             Page {page} of {totalPages}

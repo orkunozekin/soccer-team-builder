@@ -308,19 +308,21 @@ export function UserRoleManager() {
               {visibleUsers.map(user => (
                 <li
                   key={user.uid}
-                  className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
+                  className="flex flex-col gap-3 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60 sm:flex-row sm:items-center"
                 >
-                  <InitialsAvatar name={user.displayName || user.email} />
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={`/admin/players/${user.uid}`}
-                      className="block truncate text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
-                    >
-                      {user.displayName}
-                    </Link>
-                    <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                      {user.email}
-                    </p>
+                  <div className="flex min-w-0 items-center gap-3 sm:flex-1">
+                    <InitialsAvatar name={user.displayName || user.email} />
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/admin/players/${user.uid}`}
+                        className="block truncate text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
+                      >
+                        {user.displayName}
+                      </Link>
+                      <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                        {user.email}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <Select

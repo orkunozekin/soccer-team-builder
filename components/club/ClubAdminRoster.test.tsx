@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ClubAdminRoster } from './ClubAdminRoster'
-import { listClubMembersAPI } from '@/lib/api/client'
+import { listClubMembersAPI, updateClubMemberRoleAPI } from '@/lib/api/client'
 
 vi.mock('@/lib/api/client', () => ({
   listClubMembersAPI: vi.fn(),
@@ -9,6 +10,15 @@ vi.mock('@/lib/api/client', () => ({
 }))
 
 describe('ClubAdminRoster', () => {
+  beforeAll(() => {
+    Object.assign(HTMLElement.prototype, {
+      hasPointerCapture: () => false,
+      setPointerCapture: () => {},
+      releasePointerCapture: () => {},
+      scrollIntoView: () => {},
+    })
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(listClubMembersAPI).mockResolvedValue({
@@ -128,6 +138,43 @@ describe('ClubAdminRoster', () => {
     expect(
       screen.getByRole('button', { name: 'Go to next page' })
     ).toBeDisabled()
+  })
+
+  it('follows a member onto their new page after a role change', async () => {
+    const user = userEvent.setup()
+    vi.mocked(updateClubMemberRoleAPI).mockResolvedValue({
+      success: true,
+      membership: { id: 'm22', role: 'club_admin' },
+    })
+    vi.mocked(listClubMembersAPI).mockResolvedValue({
+      success: true,
+      members: Array.from({ length: 23 }, (_, i) => ({
+        id: `m${i}`,
+        clubId: 'c1',
+        userId: `u${i}`,
+        role: i === 0 ? ('club_admin' as const) : ('player' as const),
+        status: 'active' as const,
+        joinedAt: new Date(),
+        updatedAt: new Date(),
+        displayName: `Member ${String(i + 1).padStart(2, '0')}`,
+        email: `m${i}@example.com`,
+      })),
+    })
+    render(<ClubAdminRoster clubId="c1" currentUserId="u0" />)
+
+    expect(await screen.findByText('Member 01')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Go to page 3' }))
+    expect(screen.getByText('Member 23')).toBeInTheDocument()
+
+    await user.click(screen.getByLabelText('Role for Member 23'))
+    await user.click(await screen.findByRole('option', { name: 'Club admin' }))
+
+    expect(await screen.findByText('Member 23')).toBeInTheDocument()
+    expect(screen.getByText('Member 01')).toBeInTheDocument()
+    expect(screen.queryByText('Member 21')).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Go to page 1' })
+    ).toHaveAttribute('aria-current', 'page')
   })
 
   it('hides pagination when the roster fits on one page', async () => {

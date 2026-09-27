@@ -70,8 +70,8 @@ export function ClubAdminRoster({
     try {
       await updateClubMemberRoleAPI(targetClubId, userId, role)
       if (clubIdRef.current !== targetClubId) return
-      setMembers(prev =>
-        prev
+      setMembers(prev => {
+        const next = prev
           .map(m => (m.userId === userId ? { ...m, role } : m))
           .sort((a, b) => {
             if (a.role !== b.role) {
@@ -79,7 +79,12 @@ export function ClubAdminRoster({
             }
             return a.displayName.localeCompare(b.displayName)
           })
-      )
+        const index = next.findIndex(m => m.userId === userId)
+        if (index >= 0) {
+          setPage(Math.floor(index / PAGE_SIZE) + 1)
+        }
+        return next
+      })
     } catch (err) {
       if (clubIdRef.current !== targetClubId) return
       setError(err instanceof Error ? err.message : 'Failed to update role')
