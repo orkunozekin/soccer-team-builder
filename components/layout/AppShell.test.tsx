@@ -194,16 +194,29 @@ describe('AppShell', () => {
     expect(
       within(clubNav).queryByRole('link', { name: 'Profile' })
     ).not.toBeInTheDocument()
+    const adminNav = rail().getByRole('navigation', { name: 'Admin sections' })
+    expect(
+      within(adminNav).getByRole('link', { name: 'Analytics' })
+    ).toHaveAttribute('href', '/admin/analytics')
+    expect(
+      within(adminNav).getByRole('link', { name: 'Users' })
+    ).toHaveAttribute('href', '/admin/users')
+    expect(within(adminNav).queryByText('Admin')).not.toBeInTheDocument()
+    expect(
+      within(clubNav).queryByRole('link', { name: 'Analytics' })
+    ).not.toBeInTheDocument()
 
     await user.click(rail().getByLabelText('Account'))
     expect(screen.getByRole('menuitem', { name: 'Profile' })).toHaveAttribute(
       'href',
       '/profile'
     )
-    expect(screen.getByRole('menuitem', { name: 'Admin' })).toHaveAttribute(
-      'href',
-      '/admin/matches'
-    )
+    expect(
+      screen.queryByRole('menuitem', { name: 'Analytics' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('menuitem', { name: 'Schedules' })
+    ).not.toBeInTheDocument()
     expect(
       screen.getByRole('menuitem', { name: 'Sign out' })
     ).toBeInTheDocument()
@@ -212,9 +225,12 @@ describe('AppShell', () => {
   it('hides Admin in the account menu for non super users', async () => {
     const user = userEvent.setup()
     render(<AppShell />)
+    expect(
+      rail().queryByRole('navigation', { name: 'Admin sections' })
+    ).not.toBeInTheDocument()
     await user.click(rail().getByLabelText('Account'))
     expect(
-      screen.queryByRole('menuitem', { name: 'Admin' })
+      screen.queryByRole('menuitem', { name: 'Analytics' })
     ).not.toBeInTheDocument()
   })
 
@@ -228,6 +244,7 @@ describe('AppShell', () => {
       'href',
       '/c/beta/roster'
     )
+    expect(sheet.getByLabelText('Account')).toBeInTheDocument()
     await user.click(sheet.getByRole('link', { name: 'Roster' }))
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()

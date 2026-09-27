@@ -11,14 +11,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { logoutUser } from '@/lib/firebase/auth'
-import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { cn } from '@/lib/utils'
 
 /** Platform account links. Kept out of club section nav. */
-export function AccountMenu({ className }: { className?: string }) {
+export function AccountMenu({
+  className,
+  onNavigate,
+}: {
+  className?: string
+  onNavigate?: () => void
+}) {
   const { user, userData } = useAuth()
-  const { isAdmin } = useAdmin()
   const router = useRouter()
   const label = userData?.displayName?.trim() || user?.email || 'Account'
 
@@ -36,7 +40,7 @@ export function AccountMenu({ className }: { className?: string }) {
       <DropdownMenuTrigger
         aria-label="Account"
         className={cn(
-          'inline-flex h-9 max-w-[10rem] items-center gap-1 rounded-md px-2 text-sm font-medium text-zinc-900 outline-none hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-100 dark:hover:bg-zinc-800 md:max-w-full',
+          'inline-flex h-9 w-full max-w-full items-center justify-between gap-1 rounded-md px-2 text-sm font-medium text-zinc-900 outline-none hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-100 dark:hover:bg-zinc-800',
           className
         )}
       >
@@ -45,17 +49,15 @@ export function AccountMenu({ className }: { className?: string }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[10rem]">
         <DropdownMenuItem asChild className="cursor-pointer">
-          <Link href="/profile">Profile</Link>
+          <Link href="/profile" onClick={onNavigate}>
+            Profile
+          </Link>
         </DropdownMenuItem>
-        {isAdmin ? (
-          <DropdownMenuItem asChild className="cursor-pointer">
-            <Link href="/admin/matches">Admin</Link>
-          </DropdownMenuItem>
-        ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="cursor-pointer"
           onSelect={() => {
+            onNavigate?.()
             void handleLogout()
           }}
         >

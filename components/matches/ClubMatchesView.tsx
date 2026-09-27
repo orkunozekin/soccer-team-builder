@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { AdminMatchCard } from '@/components/admin/AdminMatchCard'
 import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
 import { SoccerBallIcon } from '@/components/icons/SoccerBallIcon'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { MatchCard } from '@/components/matches/MatchCard'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -12,13 +14,16 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
-import { getMatchRsvpCount } from '@/lib/services/rsvpService'
 import { listMatchesForViewer } from '@/lib/services/matchService'
+import { getMatchRsvpCount } from '@/lib/services/rsvpService'
 import { cn } from '@/lib/utils'
+import {
+  type MatchFilter,
+  filterMatches,
+} from '@/lib/utils/adminMatchFilters'
 import {
   canCreateClubMatches,
   canManageMatchClub,
@@ -27,6 +32,12 @@ import {
 import { clubMatchPath } from '@/lib/utils/clubPaths'
 import { isMatchPast } from '@/lib/utils/rsvpScheduler'
 import { useMatchStore } from '@/store/matchStore'
+
+const ADMIN_FILTERS: { value: MatchFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'upcoming', label: 'Upcoming' },
+  { value: 'past', label: 'Past' },
+]
 
 export type ClubMatchesViewProps = {
   /** Club to scope the list. `null` = all clubs (super_user legacy `/matches`). */
@@ -46,6 +57,7 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
   const { memberships, loading: membershipsLoading } = useClubMemberships()
   const { matches, setMatches } = useMatchStore()
   const [rsvpCounts, setRsvpCounts] = useState<Record<string, number>>({})
+  const [filter, setFilter] = useState<MatchFilter>('upcoming')
   const [listStatus, setListStatus] = useState<'loading' | 'ready' | 'error'>(
     'loading'
   )
@@ -58,6 +70,8 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
       activeClubId: clubId,
       isSuperUser: !!isSuperUser,
     })
+  /** Super users and club admins get the manage list (past matches, delete). */
+  const showAdminList = !!isSuperUser || canCreateMatch
 
   const matchHref = (matchId: string) =>
     clubSlug ? clubMatchPath(clubSlug, matchId) : `/matches/${matchId}`
@@ -75,15 +89,17 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
         activeClubId: clubId,
         isSuperUser: !!isSuperUser,
       })
-      const upcoming = scoped.filter(m => !isMatchPast(m.date, m.time))
-      setMatches(upcoming)
+      const listed = showAdminList
+        ? scoped
+        : scoped.filter(m => !isMatchPast(m.date, m.time))
+      setMatches(listed)
       // Match list is usable without counts; do not fail the page if RSVP
       // queries error (e.g. missing composite index).
       setListStatus('ready')
       try {
         const counts: Record<string, number> = {}
         await Promise.all(
-          upcoming.map(async m => {
+          listed.map(async m => {
             counts[m.id] = await getMatchRsvpCount(m.id)
           })
         )
@@ -136,6 +152,11 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     await loadMatchesAndCounts(gen)
   }
 
+  const visibleMatches = useMemo(() => {
+    if (!showAdminList) return matches
+    return filterMatches(matches, filter)
+  }, [matches, filter, showAdminList])
+
   const manageFlags = useMemo(() => {
     const flags: Record<string, boolean> = {}
     for (const match of matches) {
@@ -187,7 +208,9 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
           <div>
             <h1 className="text-3xl font-bold text-red-50">Matches</h1>
             <p className="text-zinc-600 dark:text-zinc-400">
-              View and RSVP to upcoming matches
+              {showAdminList
+                ? 'Create matches and manage RSVPs, teams, and attendance'
+                : 'View and RSVP to upcoming matches'}
             </p>
           </div>
         </div>
@@ -202,7 +225,36 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
         </div>
       )}
 
-      {matches.length === 0 ? (
+      {showAdminList ? (
+        <div
+          role="tablist"
+          aria-label="Filter matches"
+          className="mb-4 flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900/50"
+        >
+          {ADMIN_FILTERS.map(option => {
+            const active = filter === option.value
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setFilter(option.value)}
+                className={cn(
+                  'rounded-md px-3 py-1.5 text-sm font-semibold transition-colors',
+                  active
+                    ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100'
+                    : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+                )}
+              >
+                {option.label}
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
+
+      {visibleMatches.length === 0 ? (
         <Card>
           <CardHeader>
             <CardTitle>No Matches</CardTitle>
@@ -212,8 +264,12 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              {canCreateMatch
-                ? 'Create a match using the form above.'
+              {showAdminList
+                ? filter === 'past'
+                  ? 'No past matches.'
+                  : filter === 'upcoming'
+                    ? 'No upcoming matches.'
+                    : 'Create a match using the form above.'
                 : 'Check back soon for upcoming matches!'}
             </p>
           </CardContent>
@@ -222,20 +278,30 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
         <div
           className={cn(
             'grid gap-4',
-            matches.length > 1 && 'sm:grid-cols-2',
-            matches.length > 2 && 'lg:grid-cols-3'
+            visibleMatches.length > 1 && 'sm:grid-cols-2',
+            visibleMatches.length > 2 && 'lg:grid-cols-3'
           )}
         >
-          {matches.map((match, index) => (
-            <MatchCard
-              key={match.id}
-              match={match}
-              href={matchHref(match.id)}
-              rsvpCount={rsvpCounts[match.id]}
-              isAdmin={manageFlags[match.id] ?? false}
-              index={index}
-            />
-          ))}
+          {visibleMatches.map((match, index) =>
+            showAdminList ? (
+              <AdminMatchCard
+                key={match.id}
+                match={match}
+                href={matchHref(match.id)}
+                rsvpCount={rsvpCounts[match.id]}
+                onDeleted={refetchMatchesAndCounts}
+              />
+            ) : (
+              <MatchCard
+                key={match.id}
+                match={match}
+                href={matchHref(match.id)}
+                rsvpCount={rsvpCounts[match.id]}
+                isAdmin={manageFlags[match.id] ?? false}
+                index={index}
+              />
+            )
+          )}
         </div>
       )}
     </div>

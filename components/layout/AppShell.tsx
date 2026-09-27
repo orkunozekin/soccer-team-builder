@@ -8,6 +8,7 @@ import { ClubContextSwitcher } from '@/components/layout/ClubContextSwitcher'
 import { ClubNav } from '@/components/layout/ClubNav'
 import { ClubWorkspaceStatus } from '@/components/layout/ClubWorkspaceStatus'
 import { Navigation } from '@/components/layout/Navigation'
+import { PlatformAdminNav } from '@/components/layout/PlatformAdminNav'
 import { NavLoadingSkeleton } from '@/components/LoadingSkeleton'
 import {
   Sheet,
@@ -17,6 +18,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
+import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useClubWorkspace } from '@/lib/hooks/useClubWorkspace'
 import { clubMatchesPath } from '@/lib/utils/clubPaths'
@@ -27,6 +29,7 @@ import { clubMatchesPath } from '@/lib/utils/clubPaths'
  */
 export function AppShell({ children }: { children?: React.ReactNode }) {
   const { user, loading } = useAuth()
+  const { isAdmin } = useAdmin()
   const workspace = useClubWorkspace()
   const [sheetOpen, setSheetOpen] = useState(false)
 
@@ -87,6 +90,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
               activeHref={workspace.activeSectionHref}
             />
           ) : null}
+          {isAdmin ? <PlatformAdminNav /> : null}
         </div>
         <div className="mt-auto border-t border-zinc-200 p-3 dark:border-zinc-800">
           <AccountMenu className="w-full max-w-none justify-between" />
@@ -128,11 +132,16 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                     <ClubWorkspaceStatus status={workspace.status} />
                   </div>
                 )}
+                {isAdmin ? (
+                  <PlatformAdminNav onNavigate={() => setSheetOpen(false)} />
+                ) : null}
+              </div>
+              <div className="mt-auto border-t border-zinc-200 p-3 dark:border-zinc-800">
+                <AccountMenu onNavigate={() => setSheetOpen(false)} />
               </div>
             </SheetContent>
           </Sheet>
           <div className="min-w-0 flex-1">{switcher}</div>
-          <AccountMenu className="shrink-0" />
         </header>
         {workspace.switchError ? (
           <p

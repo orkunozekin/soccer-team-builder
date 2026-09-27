@@ -63,6 +63,16 @@ vi.mock('@/components/admin/CreateMatchCard', () => ({
   CreateMatchCard: () => <div>CreateMatchCardMock</div>,
 }))
 
+vi.mock('@/components/admin/AdminMatchCard', () => ({
+  AdminMatchCard: ({
+    match,
+    href,
+  }: {
+    match: { id: string }
+    href?: string
+  }) => <div>AdminMatchCard:{match.id}:{href}</div>,
+}))
+
 function mockMatch(id: string, hoursFromNow = 24) {
   const date = new Date(Date.now() + hoursFromNow * 60 * 60 * 1000)
   return {
@@ -332,5 +342,58 @@ describe('ClubMatchesView', () => {
     renderView('club-b', 'beta')
 
     expect(await screen.findByText('CreateMatchCardMock')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Upcoming' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    expect(
+      screen.queryByText(/^MatchCard:/)
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows past matches on the admin list for club admins', async () => {
+    useClubMembershipsMock.mockReturnValue({
+      memberships: [
+        {
+          id: 'mem1',
+          clubId: 'club-a',
+          userId: 'user1',
+          role: 'club_admin',
+          status: 'active',
+          joinedAt: new Date(),
+          updatedAt: new Date(),
+          club: {
+            id: 'club-a',
+            name: 'A',
+            slug: 'alpha',
+            settings: { allowPlayerInvites: false },
+          },
+        },
+      ],
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    })
+    listMatchesForViewerMock.mockResolvedValueOnce([
+      mockMatch('upcoming', 24),
+      mockMatch('past', -48),
+    ])
+
+    renderView('club-a', 'alpha')
+
+    expect(
+      await screen.findByText('AdminMatchCard:upcoming:/c/alpha/matches/upcoming')
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText('AdminMatchCard:past:/c/alpha/matches/past')
+    ).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Past' }))
+    expect(
+      screen.getByText('AdminMatchCard:past:/c/alpha/matches/past')
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText('AdminMatchCard:upcoming:/c/alpha/matches/upcoming')
+    ).not.toBeInTheDocument()
   })
 })

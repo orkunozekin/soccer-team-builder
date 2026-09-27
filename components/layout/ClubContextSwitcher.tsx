@@ -10,14 +10,11 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
+import { formatMembershipRole } from '@/lib/utils/roleLabels'
 import type { ClubMembershipRole, ClubMembershipWithClub } from '@/types/club'
 
 /** Show the find field once the membership list is long enough to scan. */
 const CLUB_SEARCH_MIN = 5
-
-function roleLabel(role: string) {
-  return role === 'club_admin' ? 'club_admin' : 'player'
-}
 
 export function ClubContextSwitcher({
   clubName,
@@ -66,7 +63,7 @@ export function ClubContextSwitcher({
         <span className="min-w-0 flex-1">
           <span className="block truncate">{clubName}</span>
           <span className="block truncate text-xs font-normal text-zinc-500 dark:text-zinc-400">
-            {roleLabel(role)}
+            {formatMembershipRole(role)}
           </span>
         </span>
         <ChevronDownIcon className="h-4 w-4 shrink-0 opacity-70" />
@@ -107,7 +104,7 @@ export function ClubContextSwitcher({
                         {membership.club.name}
                       </span>
                       <span className="text-xs text-zinc-500">
-                        {roleLabel(membership.role)}
+                        {formatMembershipRole(membership.role)}
                       </span>
                     </span>
                     {current ? (

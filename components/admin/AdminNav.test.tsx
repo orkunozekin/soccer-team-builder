@@ -4,7 +4,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdminNav } from './AdminNav'
 
 const navMocks = vi.hoisted(() => ({
-  pathname: '/admin/matches',
+  pathname: '/admin/schedules',
   push: vi.fn(),
 }))
 
@@ -41,12 +41,12 @@ beforeAll(() => {
 
 describe('AdminNav', () => {
   beforeEach(() => {
-    navMocks.pathname = '/admin/matches'
+    navMocks.pathname = '/admin/schedules'
     navMocks.push.mockReset()
   })
 
   it('renders a compact section picker and all section links', () => {
-    navMocks.pathname = '/admin/matches'
+    navMocks.pathname = '/admin/schedules'
     render(<AdminNav />)
 
     expect(
@@ -54,13 +54,12 @@ describe('AdminNav', () => {
     ).toBeInTheDocument()
     expect(
       screen.getByRole('combobox', { name: 'Admin sections' })
-    ).toHaveTextContent('Matches')
+    ).toHaveTextContent('Schedules')
 
     const nav = screen.getByRole('navigation', { name: 'Admin sections' })
-    expect(within(nav).getByRole('link', { name: 'Matches' })).toHaveAttribute(
-      'href',
-      '/admin/matches'
-    )
+    expect(
+      within(nav).queryByRole('link', { name: 'Matches' })
+    ).not.toBeInTheDocument()
     expect(
       within(nav).getByRole('link', { name: 'Schedules' })
     ).toHaveAttribute('href', '/admin/schedules')
@@ -82,9 +81,9 @@ describe('AdminNav', () => {
 
     const locations = screen.getByRole('link', { name: 'Locations' })
     expect(locations).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('link', { name: 'Matches' })).not.toHaveAttribute(
-      'aria-current'
-    )
+    expect(
+      screen.queryByRole('link', { name: 'Matches' })
+    ).not.toBeInTheDocument()
     expect(
       screen.getByRole('combobox', { name: 'Admin sections' })
     ).toHaveTextContent('Locations')
@@ -104,7 +103,7 @@ describe('AdminNav', () => {
   })
 
   it('navigates when a section is chosen in the compact picker', async () => {
-    navMocks.pathname = '/admin/matches'
+    navMocks.pathname = '/admin/schedules'
     const user = userEvent.setup()
     render(<AdminNav />)
 
@@ -115,12 +114,12 @@ describe('AdminNav', () => {
   })
 
   it('does not navigate when the compact picker reselects the current section', async () => {
-    navMocks.pathname = '/admin/matches'
+    navMocks.pathname = '/admin/schedules'
     const user = userEvent.setup()
     render(<AdminNav />)
 
     await user.click(screen.getByRole('combobox', { name: 'Admin sections' }))
-    await user.click(await screen.findByRole('option', { name: 'Matches' }))
+    await user.click(await screen.findByRole('option', { name: 'Schedules' }))
 
     expect(navMocks.push).not.toHaveBeenCalled()
   })
