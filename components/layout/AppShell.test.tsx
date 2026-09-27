@@ -196,6 +196,9 @@ describe('AppShell', () => {
     ).not.toBeInTheDocument()
     const adminNav = rail().getByRole('navigation', { name: 'Admin sections' })
     expect(
+      within(adminNav).getByRole('link', { name: 'All matches' })
+    ).toHaveAttribute('href', '/admin/matches')
+    expect(
       within(adminNav).getByRole('link', { name: 'Analytics' })
     ).toHaveAttribute('href', '/admin/analytics')
     expect(

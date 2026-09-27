@@ -33,6 +33,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-27 — Super-user all-clubs matches, sheet close, absolute invite links
+
+- **Source:** PR #88 · Greptile | Macroscope
+- **Gap:** (1) Redirecting `/admin/matches` through `/matches` sent member super users to their club list, so the all-clubs match view was unreachable. (2) The empty-state “Join a club” link inside the persistent `AppShell` sheet did not clear `sheetOpen`, so the overlay stayed on `/join`. (3) Invite list links can be a relative `/join?code=…` path when the request has no Origin and `NEXT_PUBLIC_APP_URL` is unset; copying that path is not a shareable URL.
+- **Going forward:** Keep a distinct all-clubs route (`/admin/matches`, labeled “All matches”) for super users even when they have a membership. Do not send that route through the club redirect. Every control inside a layout sheet that navigates must call the sheet’s close callback. When copying an invite link in the browser, prefix relative paths with `window.location.origin`.
+- **Pointers:** `app/admin/matches/page.tsx`, `lib/utils/adminNavLinks.ts`, `components/layout/ClubWorkspaceStatus.tsx`, `components/club/ClubInvitesPanel.tsx` (`shareableInviteLink`)
+
 ### 2026-09-27 — Controlled popover close does not clear local filter state
 
 - **Source:** PR #87 · Greptile
