@@ -31,13 +31,25 @@ export function ClubSettingsPanel({
       await updateClubAPI(clubId, {
         settings: { allowPlayerInvites: next },
       })
-      await refresh()
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
     } catch (err) {
       setAllowPlayerInvites(previous)
       setError(
         err instanceof Error ? err.message : 'Failed to update settings'
+      )
+      setBusy(false)
+      return
+    }
+
+    try {
+      await refresh()
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (err) {
+      // Setting is already saved; keep the new checkbox value.
+      setError(
+        err instanceof Error
+          ? `Saved, but failed to refresh clubs: ${err.message}`
+          : 'Saved, but failed to refresh clubs'
       )
     } finally {
       setBusy(false)

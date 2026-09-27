@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Select,
   SelectContent,
@@ -28,24 +28,35 @@ export function ClubAdminRoster({
   const [loading, setLoading] = useState(true)
   const [busyUserId, setBusyUserId] = useState<string | null>(null)
   const [error, setError] = useState('')
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const membersRes = await listClubMembersAPI(clubId)
-      setMembers(membersRes.members)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load roster')
-      setMembers([])
-    } finally {
-      setLoading(false)
-    }
-  }, [clubId])
+  const clubIdRef = useRef(clubId)
+  clubIdRef.current = clubId
 
   useEffect(() => {
-    void load()
-  }, [load])
+    let cancelled = false
+    setLoading(true)
+    setError('')
+    setMembers([])
+    setBusyUserId(null)
+
+    void listClubMembersAPI(clubId)
+      .then(membersRes => {
+        if (cancelled || clubIdRef.current !== clubId) return
+        setMembers(membersRes.members)
+      })
+      .catch((err: unknown) => {
+        if (cancelled || clubIdRef.current !== clubId) return
+        setError(err instanceof Error ? err.message : 'Failed to load roster')
+        setMembers([])
+      })
+      .finally(() => {
+        if (cancelled || clubIdRef.current !== clubId) return
+        setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [clubId])
 
   const adminCount = members.filter(m => m.role === 'club_admin').length
 
@@ -53,10 +64,12 @@ export function ClubAdminRoster({
     userId: string,
     role: ClubMembershipRole
   ) => {
+    const targetClubId = clubId
     setBusyUserId(userId)
     setError('')
     try {
-      await updateClubMemberRoleAPI(clubId, userId, role)
+      await updateClubMemberRoleAPI(targetClubId, userId, role)
+      if (clubIdRef.current !== targetClubId) return
       setMembers(prev =>
         prev
           .map(m => (m.userId === userId ? { ...m, role } : m))
@@ -68,9 +81,12 @@ export function ClubAdminRoster({
           })
       )
     } catch (err) {
+      if (clubIdRef.current !== targetClubId) return
       setError(err instanceof Error ? err.message : 'Failed to update role')
     } finally {
-      setBusyUserId(null)
+      if (clubIdRef.current === targetClubId) {
+        setBusyUserId(null)
+      }
     }
   }
 

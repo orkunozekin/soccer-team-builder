@@ -44,4 +44,28 @@ describe('ClubSettingsPanel', () => {
     expect(refreshMock).toHaveBeenCalled()
     expect(await screen.findByText('Saved.')).toBeInTheDocument()
   })
+
+  it('keeps the new value when refresh fails after a successful save', async () => {
+    const user = userEvent.setup()
+    vi.mocked(updateClubAPI).mockResolvedValue({
+      success: true,
+      club: {} as never,
+    })
+    refreshMock.mockRejectedValue(new Error('Network down'))
+
+    render(
+      <ClubSettingsPanel
+        clubId="c1"
+        clubName="Alpha FC"
+        initialAllowPlayerInvites={false}
+      />
+    )
+
+    await user.click(screen.getByRole('checkbox'))
+
+    expect(
+      await screen.findByText(/Saved, but failed to refresh clubs/i)
+    ).toBeInTheDocument()
+    expect(screen.getByRole('checkbox')).toBeChecked()
+  })
 })

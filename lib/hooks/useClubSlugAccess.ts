@@ -34,7 +34,12 @@ type RemoteState = {
 export function useClubSlugAccess(slug: string | undefined): ResolvedClubAccess {
   const { user, loading: authLoading } = useAuth()
   const { isAdmin: isSuperUser } = useAdmin()
-  const { memberships, loading: membershipsLoading } = useClubMemberships()
+  const {
+    memberships,
+    loading: membershipsLoading,
+    error: membershipsError,
+    refresh: refreshMemberships,
+  } = useClubMemberships()
   const [remote, setRemote] = useState<RemoteState | null>(null)
   const [attempt, setAttempt] = useState(0)
 
@@ -50,14 +55,20 @@ export function useClubSlugAccess(slug: string | undefined): ResolvedClubAccess 
     : undefined
 
   const retry = useCallback(() => {
+    void refreshMemberships()
     setAttempt(n => n + 1)
-  }, [])
+  }, [refreshMemberships])
 
   useEffect(() => {
     if (!normalized || authLoading || !user || membershipsLoading) {
       return
     }
     if (membershipClubId) {
+      setRemote(null)
+      return
+    }
+    // Membership fetch failed with an empty list — do not treat as "not a member".
+    if (membershipsError) {
       setRemote(null)
       return
     }
@@ -112,6 +123,7 @@ export function useClubSlugAccess(slug: string | undefined): ResolvedClubAccess 
     authLoading,
     user,
     membershipsLoading,
+    membershipsError,
     membershipClubId,
     isSuperUser,
     attempt,
@@ -131,6 +143,15 @@ export function useClubSlugAccess(slug: string | undefined): ResolvedClubAccess 
         slug: fromMembership.club.slug,
         settings: fromMembership.club.settings,
       },
+    }
+  }
+
+  // Empty memberships after a fetch error must not look like a 404.
+  if (membershipsError) {
+    return {
+      status: 'error',
+      message: membershipsError,
+      retry,
     }
   }
 

@@ -234,7 +234,7 @@ Starting map only. Touch any other files the work needs: tests, hooks, services,
 - **`club-creation` flag** merged in [#79](https://github.com/orkunozekin/soccer-team-builder/pull/79).
 - **Platform bar + club sub-nav (todo 2)** merged in [#80](https://github.com/orkunozekin/soccer-team-builder/pull/80).
 - **Club slug match routes (todo 3)** merged in [#82](https://github.com/orkunozekin/soccer-team-builder/pull/82).
-- **Club-admin console (todo 4) on `cursor/club-admin-console-6473`:**
+- **Club-admin console (todo 4) on `cursor/club-admin-console-6473` ([#83](https://github.com/orkunozekin/soccer-team-builder/pull/83)):**
   - Pages: [`app/c/[slug]/roster`](../../app/c/[slug]/roster/page.tsx), [`invites`](../../app/c/[slug]/invites/page.tsx), [`settings`](../../app/c/[slug]/settings/page.tsx).
   - UI: [`ClubAdminRoster`](../../components/club/ClubAdminRoster.tsx) (members only), [`ClubInvitesPanel`](../../components/club/ClubInvitesPanel.tsx), [`ClubSettingsPanel`](../../components/club/ClubSettingsPanel.tsx), shared [`ClubSectionPage`](../../components/club/ClubSectionPage.tsx).
   - Gate: [`useClubSectionAccess`](../../lib/hooks/useClubSectionAccess.ts) + [`canAccessClubSection`](../../lib/utils/resolveSelectedClub.ts). Non-members → 404; members without role → redirect to matches.

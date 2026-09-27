@@ -80,4 +80,41 @@ describe('ClubInvitesPanel', () => {
       expect(revokeClubInviteAPI).toHaveBeenCalledWith('c1', 'i1')
     })
   })
+
+  it('keeps a created invite when the list refresh fails', async () => {
+    const user = userEvent.setup()
+    vi.mocked(listClubInvitesAPI).mockResolvedValue({
+      success: true,
+      invites: [],
+    })
+    vi.mocked(createClubInviteAPI).mockResolvedValue({
+      success: true,
+      invite: {
+        id: 'i2',
+        clubId: 'c1',
+        code: 'NEW123',
+        createdBy: 'u1',
+        createdByRole: 'club_admin',
+        useCount: 0,
+        maxUses: null,
+        expiresAt: null,
+        revokedAt: null,
+        createdAt: new Date(),
+      },
+      link: '/join?code=NEW123',
+    })
+
+    render(<ClubInvitesPanel clubId="c1" canManageInvites />)
+    await screen.findByText(/no active invites/i)
+
+    vi.mocked(listClubInvitesAPI).mockRejectedValueOnce(
+      new Error('List failed')
+    )
+    await user.click(screen.getByRole('button', { name: 'Create invite' }))
+
+    expect(await screen.findByText('NEW123')).toBeInTheDocument()
+    expect(
+      await screen.findByText(/Invite created, but failed to refresh the list/i)
+    ).toBeInTheDocument()
+  })
 })

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   createClubInviteAPI,
@@ -29,55 +29,108 @@ export function ClubInvitesPanel({
     link: string
   } | null>(null)
   const [copied, setCopied] = useState<'code' | 'link' | string | null>(null)
+  const clubIdRef = useRef(clubId)
+  clubIdRef.current = clubId
 
   const load = useCallback(async () => {
     if (!canManageInvites) {
       setLoading(false)
       return
     }
+    const requestClubId = clubId
     setLoading(true)
     setError('')
     try {
-      const res = await listClubInvitesAPI(clubId)
+      const res = await listClubInvitesAPI(requestClubId)
+      if (clubIdRef.current !== requestClubId) return
       setInvites(res.invites)
     } catch (err) {
+      if (clubIdRef.current !== requestClubId) return
       setError(err instanceof Error ? err.message : 'Failed to load invites')
       setInvites([])
+      throw err
     } finally {
-      setLoading(false)
+      if (clubIdRef.current === requestClubId) {
+        setLoading(false)
+      }
     }
   }, [clubId, canManageInvites])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    let cancelled = false
+    setCreated(null)
+    setBusy(false)
+    setBusyInviteId(null)
+    setInvites([])
+    setError('')
+
+    if (!canManageInvites) {
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    void listClubInvitesAPI(clubId)
+      .then(res => {
+        if (cancelled || clubIdRef.current !== clubId) return
+        setInvites(res.invites)
+      })
+      .catch((err: unknown) => {
+        if (cancelled || clubIdRef.current !== clubId) return
+        setError(err instanceof Error ? err.message : 'Failed to load invites')
+        setInvites([])
+      })
+      .finally(() => {
+        if (cancelled || clubIdRef.current !== clubId) return
+        setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [clubId, canManageInvites])
 
   const handleCreate = async () => {
+    const requestClubId = clubId
     setBusy(true)
     setError('')
     try {
-      const res = await createClubInviteAPI(clubId)
+      const res = await createClubInviteAPI(requestClubId)
+      if (clubIdRef.current !== requestClubId) return
       setCreated({ code: res.invite.code, link: res.link })
       if (canManageInvites) {
-        await load()
+        try {
+          await load()
+        } catch {
+          if (clubIdRef.current !== requestClubId) return
+          setError('Invite created, but failed to refresh the list')
+        }
       }
     } catch (err) {
+      if (clubIdRef.current !== requestClubId) return
       setError(err instanceof Error ? err.message : 'Failed to create invite')
     } finally {
-      setBusy(false)
+      if (clubIdRef.current === requestClubId) {
+        setBusy(false)
+      }
     }
   }
 
   const handleRevoke = async (inviteId: string) => {
+    const requestClubId = clubId
     setBusyInviteId(inviteId)
     setError('')
     try {
-      await revokeClubInviteAPI(clubId, inviteId)
+      await revokeClubInviteAPI(requestClubId, inviteId)
+      if (clubIdRef.current !== requestClubId) return
       setInvites(prev => prev.filter(i => i.id !== inviteId))
     } catch (err) {
+      if (clubIdRef.current !== requestClubId) return
       setError(err instanceof Error ? err.message : 'Failed to revoke invite')
     } finally {
-      setBusyInviteId(null)
+      if (clubIdRef.current === requestClubId) {
+        setBusyInviteId(null)
+      }
     }
   }
 
@@ -90,6 +143,8 @@ export function ClubInvitesPanel({
       setError('Could not copy to clipboard')
     }
   }
+
+  const actionsLocked = busy || loading
 
   return (
     <div className="space-y-6">
@@ -109,7 +164,11 @@ export function ClubInvitesPanel({
       )}
 
       <div>
-        <Button type="button" disabled={busy} onClick={() => void handleCreate()}>
+        <Button
+          type="button"
+          disabled={busy}
+          onClick={() => void handleCreate()}
+        >
           {busy ? 'Creating…' : 'Create invite'}
         </Button>
       </div>
@@ -193,7 +252,7 @@ export function ClubInvitesPanel({
                         type="button"
                         size="sm"
                         variant="outline"
-                        disabled={revokeBusy}
+                        disabled={revokeBusy || actionsLocked}
                         onClick={() => void handleRevoke(invite.id)}
                       >
                         {revokeBusy ? '…' : 'Revoke'}
