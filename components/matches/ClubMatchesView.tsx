@@ -291,8 +291,11 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
             visibleMatches.length > 2 && 'lg:grid-cols-3'
           )}
         >
-          {visibleMatches.map((match, index) =>
-            showAdminList ? (
+          {visibleMatches.map((match, index) => {
+            const canManage = manageFlags[match.id] ?? false
+            // Page-level admin list still includes unstamped matches a club
+            // admin cannot delete. Those stay on the player card.
+            return showAdminList && canManage ? (
               <AdminMatchCard
                 key={match.id}
                 match={match}
@@ -306,11 +309,11 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
                 match={match}
                 href={matchHref(match.id)}
                 rsvpCount={rsvpCounts[match.id]}
-                isAdmin={manageFlags[match.id] ?? false}
+                isAdmin={canManage}
                 index={index}
               />
             )
-          )}
+          })}
         </div>
       )}
     </div>

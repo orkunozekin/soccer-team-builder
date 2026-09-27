@@ -21,7 +21,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async firebaseUser => {
+      const nextUid = firebaseUser?.uid ?? null
+      const prevUid = useAuthStore.getState().user?.uid ?? null
+      // Token refresh reuses the same uid. A new sign-in must not inherit
+      // profileReady from the previous signed-out (or other-user) callback.
+      const identityChanged = nextUid !== prevUid
+
       setUser(firebaseUser)
+      if (identityChanged) {
+        setUserData(null)
+        setProfileReady(false)
+      }
 
       // Auth store starts with loading: true. Do not flip loading back to true
       // on later auth callbacks (token refresh, user doc re-fetch, etc.). That

@@ -316,6 +316,47 @@ describe('ClubMatchesView', () => {
     expect(screen.queryByText('CreateMatchCardMock')).not.toBeInTheDocument()
   })
 
+  it('keeps delete off unstamped matches for a club admin', async () => {
+    useClubMembershipsMock.mockReturnValue({
+      memberships: [
+        {
+          id: 'mem1',
+          clubId: 'club-a',
+          userId: 'user1',
+          role: 'club_admin',
+          status: 'active',
+          joinedAt: new Date(),
+          updatedAt: new Date(),
+          club: {
+            id: 'club-a',
+            name: 'A',
+            slug: 'alpha',
+            settings: { allowPlayerInvites: false },
+          },
+        },
+      ],
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    })
+    listMatchesForViewerMock.mockResolvedValueOnce([
+      { ...mockMatch('owned'), clubId: 'club-a' },
+      { ...mockMatch('legacy'), clubId: null },
+    ])
+
+    renderView('club-a', 'alpha')
+
+    expect(
+      await screen.findByText('AdminMatchCard:owned:/c/alpha/matches/owned')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('MatchCard:legacy:/c/alpha/matches/legacy')
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/AdminMatchCard:legacy:/)
+    ).not.toBeInTheDocument()
+  })
+
   it('shows create match when the user is club_admin of this club', async () => {
     useClubMembershipsMock.mockReturnValue({
       memberships: [
@@ -392,8 +433,8 @@ describe('ClubMatchesView', () => {
       refresh: vi.fn(),
     })
     listMatchesForViewerMock.mockResolvedValueOnce([
-      mockMatch('upcoming', 24),
-      mockMatch('past', -48),
+      { ...mockMatch('upcoming', 24), clubId: 'club-a' },
+      { ...mockMatch('past', -48), clubId: 'club-a' },
     ])
 
     renderView('club-a', 'alpha')

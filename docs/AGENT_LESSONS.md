@@ -33,6 +33,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-27 — Profile ready must follow the user; delete follows the match
+
+- **Source:** PR #88 · Macroscope | Greptile
+- **Gap:** (1) `profileReady` stayed true after sign-out, so the next sign-in looked role-settled while `userData` was still null and a super user was sent to `/matches`. (2) The club-admin match list rendered `AdminMatchCard` (with Delete) for every row, including unstamped matches `canManageMatchClub` already treats as super-user-only.
+- **Going forward:** Reset `profileReady` and clear `userData` when the auth uid changes. Do not reset them on a same-uid token refresh. Choose `AdminMatchCard` per match from `manageFlags`, not from the page-level admin list.
+- **Pointers:** `components/auth/AuthProvider.tsx`, `lib/hooks/useAdmin.ts` (`rolePending`), `components/matches/ClubMatchesView.tsx`, `lib/utils/clubMatches.ts` (`canManageMatchClub`)
+
 ### 2026-09-27 — Admin role race and all-clubs match links
 
 - **Source:** PR #88 · Macroscope | Greptile
