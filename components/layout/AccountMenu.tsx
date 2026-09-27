@@ -1,20 +1,14 @@
 'use client'
 
-import { ChevronDownIcon } from '@radix-ui/react-icons'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { logoutUser } from '@/lib/firebase/auth'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { cn } from '@/lib/utils'
 
-/** Platform account links. Kept out of club section nav. */
+/**
+ * Account footer for the workspace rail / mobile sheet.
+ * Profile and My clubs live in AccountNav; this only signs out.
+ */
 export function AccountMenu({
   className,
   onNavigate,
@@ -28,6 +22,7 @@ export function AccountMenu({
 
   const handleLogout = async () => {
     try {
+      onNavigate?.()
       await logoutUser()
       router.push('/')
     } catch (error) {
@@ -36,39 +31,18 @@ export function AccountMenu({
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        aria-label="Account"
-        className={cn(
-          'inline-flex h-9 w-full max-w-full items-center justify-between gap-1 rounded-md border border-white px-2 text-sm font-medium text-white outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white',
-          className
-        )}
+    <div className={cn('flex w-full flex-col gap-2', className)}>
+      <p className="truncate px-1 text-xs font-medium text-white/80">{label}</p>
+      <button
+        type="button"
+        aria-label="Sign out"
+        onClick={() => {
+          void handleLogout()
+        }}
+        className="inline-flex h-9 w-full items-center justify-center rounded-md border border-white px-2 text-sm font-medium text-white outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white"
       >
-        <span className="truncate">{label}</span>
-        <ChevronDownIcon className="h-4 w-4 shrink-0" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[10rem]">
-        <DropdownMenuItem asChild className="cursor-pointer">
-          <Link href="/profile" onClick={onNavigate}>
-            Profile
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild className="cursor-pointer">
-          <Link href="/clubs" onClick={onNavigate}>
-            My clubs
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="cursor-pointer"
-          onSelect={() => {
-            onNavigate?.()
-            void handleLogout()
-          }}
-        >
-          Sign out
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        Sign out
+      </button>
+    </div>
   )
 }

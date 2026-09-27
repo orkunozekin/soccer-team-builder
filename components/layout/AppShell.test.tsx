@@ -186,9 +186,9 @@ describe('AppShell', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('keeps account links out of club sections', async () => {
-    const user = userEvent.setup()
+  it('keeps account links out of club sections and in the account nav', () => {
     useAdminMock.mockReturnValue({ isSuperUser: true, isAdmin: true })
+    usePathnameMock.mockReturnValue('/profile')
     render(<AppShell />)
     const clubNav = rail().getByRole('navigation', { name: 'Club sections' })
     expect(
@@ -209,35 +209,34 @@ describe('AppShell', () => {
       within(clubNav).queryByRole('link', { name: 'Analytics' })
     ).not.toBeInTheDocument()
 
-    await user.click(rail().getByLabelText('Account'))
-    expect(screen.getByRole('menuitem', { name: 'Profile' })).toHaveAttribute(
-      'href',
-      '/profile'
-    )
-    expect(screen.getByRole('menuitem', { name: 'My clubs' })).toHaveAttribute(
-      'href',
-      '/clubs'
-    )
+    const accountNav = rail().getByRole('navigation', {
+      name: 'Account sections',
+    })
     expect(
-      screen.queryByRole('menuitem', { name: 'Analytics' })
+      within(accountNav).getByRole('link', { name: 'Profile' })
+    ).toHaveAttribute('href', '/profile')
+    expect(
+      within(accountNav).getByRole('link', { name: 'Profile' })
+    ).toHaveAttribute('aria-current', 'page')
+    expect(
+      within(accountNav).getByRole('link', { name: 'My clubs' })
+    ).toHaveAttribute('href', '/clubs')
+    expect(
+      within(accountNav).queryByRole('link', { name: 'Analytics' })
     ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('menuitem', { name: 'Schedules' })
-    ).not.toBeInTheDocument()
-    expect(
-      screen.getByRole('menuitem', { name: 'Sign out' })
-    ).toBeInTheDocument()
+    expect(rail().getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
   })
 
-  it('hides Admin in the account menu for non super users', async () => {
-    const user = userEvent.setup()
+  it('hides admin sections for non super users', () => {
     render(<AppShell />)
     expect(
       rail().queryByRole('navigation', { name: 'Admin sections' })
     ).not.toBeInTheDocument()
-    await user.click(rail().getByLabelText('Account'))
     expect(
-      screen.queryByRole('menuitem', { name: 'Analytics' })
+      rail().getByRole('navigation', { name: 'Account sections' })
+    ).toBeInTheDocument()
+    expect(
+      rail().queryByRole('link', { name: 'Analytics' })
     ).not.toBeInTheDocument()
   })
 
@@ -251,7 +250,10 @@ describe('AppShell', () => {
       'href',
       '/c/beta/roster'
     )
-    expect(sheet.getByLabelText('Account')).toBeInTheDocument()
+    expect(
+      sheet.getByRole('navigation', { name: 'Account sections' })
+    ).toBeInTheDocument()
+    expect(sheet.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
     await user.click(sheet.getByRole('link', { name: 'Roster' }))
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
