@@ -287,6 +287,18 @@ export function ClubInvitesPanel({
                         type="button"
                         size="sm"
                         variant="outline"
+                        onClick={() =>
+                          void copyText(invite.link, `link-${invite.id}`)
+                        }
+                      >
+                        {copied === `link-${invite.id}`
+                          ? 'Copied'
+                          : 'Copy link'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
                         disabled={revokeBusy || actionsLocked}
                         onClick={() => void handleRevoke(invite.id)}
                       >
