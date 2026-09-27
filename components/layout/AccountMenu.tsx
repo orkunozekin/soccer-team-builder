@@ -40,7 +40,7 @@ export function AccountMenu({
       <DropdownMenuTrigger
         aria-label="Account"
         className={cn(
-          'inline-flex h-9 w-full max-w-full items-center justify-between gap-1 rounded-md px-2 text-sm font-medium text-zinc-900 outline-none hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-100 dark:hover:bg-zinc-800',
+          'inline-flex h-9 w-full max-w-full items-center justify-between gap-1 rounded-md px-2 text-sm font-medium text-white outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/70',
           className
         )}
       >

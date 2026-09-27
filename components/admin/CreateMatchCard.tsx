@@ -111,8 +111,7 @@ export function CreateMatchCard({
       <CardHeader>
         <CardTitle>Create new match</CardTitle>
         <CardDescription>
-          Create a new soccer match with date and time
-          {userData?.activeClubId ? ' for your active club' : ''}
+          Create a new match with date, time, and location for your active club
         </CardDescription>
       </CardHeader>
       <CardContent>

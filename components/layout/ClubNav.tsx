@@ -26,10 +26,10 @@ export function ClubNav({
             aria-current={active ? 'page' : undefined}
             onClick={onNavigate}
             className={cn(
-              'rounded-md px-3 py-2 text-sm font-semibold transition-colors',
+              'rounded-md border-l-[6px] px-3 py-2 text-sm font-semibold transition-colors',
               active
-                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100'
-                : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100'
+                ? 'border-white bg-white/20 text-white'
+                : 'border-transparent text-white/80 hover:bg-white/10 hover:text-white'
             )}
           >
             {section.label}

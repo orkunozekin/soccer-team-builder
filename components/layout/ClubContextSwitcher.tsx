@@ -56,13 +56,13 @@ export function ClubContextSwitcher({
         disabled={switching}
         aria-label="Switch club"
         className={cn(
-          'inline-flex w-full min-w-0 items-center gap-2 rounded-md border border-zinc-200 bg-white px-2.5 py-2 text-left text-sm font-semibold text-zinc-900 outline-none hover:bg-zinc-50 focus-visible:ring-2 focus-visible:ring-zinc-400 disabled:opacity-60 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900',
+          'inline-flex w-full min-w-0 items-center gap-2 rounded-md border border-white/30 bg-white/10 px-2.5 py-2 text-left text-sm font-semibold text-white outline-none hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white/70 disabled:opacity-60',
           className
         )}
       >
         <span className="min-w-0 flex-1">
           <span className="block truncate">{clubName}</span>
-          <span className="block truncate text-xs font-normal text-zinc-500 dark:text-zinc-400">
+          <span className="block truncate text-xs font-normal text-white/70">
             {formatMembershipRole(role)}
           </span>
         </span>

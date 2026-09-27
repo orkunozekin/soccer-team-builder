@@ -137,7 +137,7 @@ export function useClubWorkspace() {
         )
       }
       return pathname === s.href || pathname.startsWith(`${s.href}/`)
-    })?.href ?? sections[0]?.href
+    })?.href
 
   const activeMemberships = useMemo(
     () => memberships.filter(m => m.status === 'active'),
