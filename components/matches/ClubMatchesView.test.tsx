@@ -203,6 +203,18 @@ describe('ClubMatchesView', () => {
     })
   })
 
+  it('still shows matches when RSVP count fetch fails', async () => {
+    listMatchesForViewerMock.mockResolvedValueOnce([mockMatch('m-ok')])
+    getMatchRsvpCountMock.mockRejectedValueOnce(new Error('index missing'))
+
+    renderView()
+
+    expect(
+      await screen.findByText('MatchCard:m-ok:/c/alpha/matches/m-ok')
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Could not load matches')).not.toBeInTheDocument()
+  })
+
   it('filters matches to the club from the URL', async () => {
     listMatchesForViewerMock.mockResolvedValueOnce([
       { ...mockMatch('m-a'), clubId: 'club-a' },

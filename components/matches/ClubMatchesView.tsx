@@ -62,29 +62,25 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
   const matchHref = (matchId: string) =>
     clubSlug ? clubMatchPath(clubSlug, matchId) : `/matches/${matchId}`
 
-  useEffect(() => {
-    if (authLoading || !userId || membershipsLoading) return
-
-    const gen = ++fetchGen.current
-    setListStatus('loading')
-    setMatches([])
-    setRsvpCounts({})
-
-    const fetchMatches = async () => {
+  const loadMatchesAndCounts = async (gen: number) => {
+    try {
+      const allMatches = await listMatchesForViewer({
+        clubId,
+        isSuperUser: !!isSuperUser,
+      })
+      if (gen !== fetchGen.current) return
+      const scoped = filterMatchesForClubScope({
+        matches: allMatches,
+        memberships,
+        activeClubId: clubId,
+        isSuperUser: !!isSuperUser,
+      })
+      const upcoming = scoped.filter(m => !isMatchPast(m.date, m.time))
+      setMatches(upcoming)
+      // Match list is usable without counts; do not fail the page if RSVP
+      // queries error (e.g. missing composite index).
+      setListStatus('ready')
       try {
-        const allMatches = await listMatchesForViewer({
-          clubId,
-          isSuperUser: !!isSuperUser,
-        })
-        if (gen !== fetchGen.current) return
-        const scoped = filterMatchesForClubScope({
-          matches: allMatches,
-          memberships,
-          activeClubId: clubId,
-          isSuperUser: !!isSuperUser,
-        })
-        const upcoming = scoped.filter(m => !isMatchPast(m.date, m.time))
-        setMatches(upcoming)
         const counts: Record<string, number> = {}
         await Promise.all(
           upcoming.map(async m => {
@@ -93,21 +89,35 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
         )
         if (gen !== fetchGen.current) return
         setRsvpCounts(counts)
-        setListStatus('ready')
-      } catch (error) {
-        console.error('Error fetching matches:', error)
+      } catch (countError) {
+        console.error('Error fetching RSVP counts:', countError)
         if (gen !== fetchGen.current) return
-        setMatches([])
         setRsvpCounts({})
-        setListStatus('error')
       }
+    } catch (error) {
+      console.error('Error fetching matches:', error)
+      if (gen !== fetchGen.current) return
+      setMatches([])
+      setRsvpCounts({})
+      setListStatus('error')
     }
+  }
 
-    void fetchMatches()
+  useEffect(() => {
+    if (authLoading || !userId || membershipsLoading) return
+
+    const gen = ++fetchGen.current
+    setListStatus('loading')
+    setMatches([])
+    setRsvpCounts({})
+
+    void loadMatchesAndCounts(gen)
     return () => {
       // Invalidate in-flight work so unmount cannot overwrite the shared store.
       fetchGen.current++
     }
+    // loadMatchesAndCounts closes over latest club/membership state each effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional gen-gated fetch
   }, [
     userId,
     authLoading,
@@ -123,36 +133,7 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     setListStatus('loading')
     setMatches([])
     setRsvpCounts({})
-    try {
-      const allMatches = await listMatchesForViewer({
-        clubId,
-        isSuperUser: !!isSuperUser,
-      })
-      if (gen !== fetchGen.current) return
-      const scoped = filterMatchesForClubScope({
-        matches: allMatches,
-        memberships,
-        activeClubId: clubId,
-        isSuperUser: !!isSuperUser,
-      })
-      const upcoming = scoped.filter(m => !isMatchPast(m.date, m.time))
-      setMatches(upcoming)
-      const counts: Record<string, number> = {}
-      await Promise.all(
-        upcoming.map(async m => {
-          counts[m.id] = await getMatchRsvpCount(m.id)
-        })
-      )
-      if (gen !== fetchGen.current) return
-      setRsvpCounts(counts)
-      setListStatus('ready')
-    } catch (error) {
-      console.error('Error fetching matches:', error)
-      if (gen !== fetchGen.current) return
-      setMatches([])
-      setRsvpCounts({})
-      setListStatus('error')
-    }
+    await loadMatchesAndCounts(gen)
   }
 
   const manageFlags = useMemo(() => {
