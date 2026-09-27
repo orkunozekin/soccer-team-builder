@@ -7,11 +7,11 @@ app's jurisdictional obligations require review by qualified counsel.
 
 ## Status
 
-| Field | Value |
-|-------|-------|
-| Status | planned |
-| Owner session | Cursor Cloud planning session |
-| Last updated | 2026-09-27 |
+| Field               | Value                             |
+| ------------------- | --------------------------------- |
+| Status              | planned                           |
+| Owner session       | Cursor Cloud planning session     |
+| Last updated        | 2026-09-27                        |
 | Related PR / branch | `cursor/privacy-notice-plan-2304` |
 
 ## Problem
@@ -50,31 +50,31 @@ been changed to make those statements true.
 
 ## Product decisions required before implementation
 
-| Decision | Recommended v1 default | Owner |
-|----------|------------------------|-------|
-| Legal operator name, address, and privacy email | Use real operator details; do not ship placeholders | Product/legal |
-| Applicable jurisdictions and minimum user age | Confirm where users are offered the app and whether minors may register | Product/legal |
-| Privacy notice vs. separate Terms | Ship the privacy notice now; plan Terms separately if counsel requires contract acceptance | Product/legal |
-| Signup interaction | Clear linked acknowledgement text for both signup methods; do not call it "consent" | Product/legal |
-| Acceptance record | Do not store one for an informational privacy notice unless counsel identifies a legal need | Product/legal |
-| Cookie/SDK consent | Inventory actual production SDK storage first; add a banner only if required for non-essential technology in served jurisdictions | Product/legal/engineering |
-| Material policy changes | Show the new effective date and notify users; require re-acceptance only if the legal basis or Terms require it | Product/legal |
-| Privacy request fulfillment | Support through the published privacy email with a documented identity-verification runbook | Operations |
+| Decision                                        | Recommended v1 default                                                                                                            | Owner                     |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| Legal operator name, address, and privacy email | Use real operator details; do not ship placeholders                                                                               | Product/legal             |
+| Applicable jurisdictions and minimum user age   | Confirm where users are offered the app and whether minors may register                                                           | Product/legal             |
+| Privacy notice vs. separate Terms               | Ship the privacy notice now; plan Terms separately if counsel requires contract acceptance                                        | Product/legal             |
+| Signup interaction                              | Clear linked acknowledgement text for both signup methods; do not call it "consent"                                               | Product/legal             |
+| Acceptance record                               | Do not store one for an informational privacy notice unless counsel identifies a legal need                                       | Product/legal             |
+| Cookie/SDK consent                              | Inventory actual production SDK storage first; add a banner only if required for non-essential technology in served jurisdictions | Product/legal/engineering |
+| Material policy changes                         | Show the new effective date and notify users; require re-acceptance only if the legal basis or Terms require it                   | Product/legal             |
+| Privacy request fulfillment                     | Support through the published privacy email with a documented identity-verification runbook                                       | Operations                |
 
 ## Current state
 
 ### Data and visibility
 
-| Category | Confirmed data and purpose | Storage / processing |
-|----------|----------------------------|----------------------|
-| Account | Email, Firebase UID, password authentication or Google sign-in | Firebase Auth; account creation in [`components/auth/RegisterForm.tsx`](../../components/auth/RegisterForm.tsx) |
-| Profile | Display name, email, jersey number, preferred position, role, active club | Firestore `users`; schema in [`types/user.ts`](../../types/user.ts) |
-| Club access | Club membership, role, invite use, creator and timestamps | Firestore `clubs`, `clubMemberships`, `clubInvites` |
-| Match participation | RSVP state, position/jersey snapshot, attendance, check-in method and timestamps | Firestore `rsvps`; schema in [`types/rsvp.ts`](../../types/rsvp.ts) |
-| Team and venue | Team assignments, match details, venue address and venue coordinates | Firestore match/team/location documents |
-| Device location | Latitude, longitude, and accuracy used to validate proximity on check-in | Sent to [`app/api/check-in/route.ts`](../../app/api/check-in/route.ts); raw user coordinates are validated but not persisted by that route |
-| Operations/security | Actor/target IDs, action, entity references, selected metadata, timestamp | Firestore `auditLogs`; schema in [`types/auditLog.ts`](../../types/auditLog.ts) |
-| Browser state | Firebase authentication persistence and limited development/legacy local storage | Firebase client SDK and local browser storage |
+| Category            | Confirmed data and purpose                                                       | Storage / processing                                                                                                                       |
+| ------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Account             | Email, Firebase UID, password authentication or Google sign-in                   | Firebase Auth; account creation in [`components/auth/RegisterForm.tsx`](../../components/auth/RegisterForm.tsx)                            |
+| Profile             | Display name, email, jersey number, preferred position, role, active club        | Firestore `users`; schema in [`types/user.ts`](../../types/user.ts)                                                                        |
+| Club access         | Club membership, role, invite use, creator and timestamps                        | Firestore `clubs`, `clubMemberships`, `clubInvites`                                                                                        |
+| Match participation | RSVP state, position/jersey snapshot, attendance, check-in method and timestamps | Firestore `rsvps`; schema in [`types/rsvp.ts`](../../types/rsvp.ts)                                                                        |
+| Team and venue      | Team assignments, match details, venue address and venue coordinates             | Firestore match/team/location documents                                                                                                    |
+| Device location     | Latitude, longitude, and accuracy used to validate proximity on check-in         | Sent to [`app/api/check-in/route.ts`](../../app/api/check-in/route.ts); raw user coordinates are validated but not persisted by that route |
+| Operations/security | Actor/target IDs, action, entity references, selected metadata, timestamp        | Firestore `auditLogs`; schema in [`types/auditLog.ts`](../../types/auditLog.ts)                                                            |
+| Browser state       | Firebase authentication persistence and limited development/legacy local storage | Firebase client SDK and local browser storage                                                                                              |
 
 Important gaps to resolve or disclose:
 
@@ -94,15 +94,15 @@ Important gaps to resolve or disclose:
 
 ### Service providers to verify
 
-| Provider | Confirmed app use | Items to confirm for approved copy |
-|----------|-------------------|------------------------------------|
-| Google Firebase | Authentication and Firestore database | Contracting entity, region, retention, subprocessors |
-| Google OAuth | Optional Google account sign-in | Data returned/scopes and mobile flow |
-| Vercel | Web/API hosting | Access-log contents and retention |
-| LaunchDarkly | Feature evaluation using UID/email or anonymous context | SDK/browser storage, retention, whether email is necessary |
-| Mapbox | Admin venue address search/map selection | Search data, device/network data, retention |
-| Plunk | Transactional password-reset email | Message/recipient retention and subprocessor terms |
-| Upstash QStash | Signed calls to scheduled API routes | Log contents and retention; no user payload is intentionally sent |
+| Provider        | Confirmed app use                                       | Items to confirm for approved copy                                |
+| --------------- | ------------------------------------------------------- | ----------------------------------------------------------------- |
+| Google Firebase | Authentication and Firestore database                   | Contracting entity, region, retention, subprocessors              |
+| Google OAuth    | Optional Google account sign-in                         | Data returned/scopes and mobile flow                              |
+| Vercel          | Web/API hosting                                         | Access-log contents and retention                                 |
+| LaunchDarkly    | Feature evaluation using UID/email or anonymous context | SDK/browser storage, retention, whether email is necessary        |
+| Mapbox          | Admin venue address search/map selection                | Search data, device/network data, retention                       |
+| Plunk           | Transactional password-reset email                      | Message/recipient retention and subprocessor terms                |
+| Upstash QStash  | Signed calls to scheduled API routes                    | Log contents and retention; no user payload is intentionally sent |
 
 The inventory must be checked against production configuration, vendor
 contracts, the native/mobile client if separately deployed, and operational
@@ -214,81 +214,81 @@ details or vendor credentials.
 
 1. **Confirm scope with product/legal**
    - [ ] Supply operator legal name, address/contact, service region, age policy,
-     and privacy inbox.
+         and privacy inbox.
    - [ ] Decide whether separate Terms, SDK consent, or a cookie notice is
-     required.
+         required.
    - [ ] Obtain approval for notice, acknowledgement, location, and update copy.
 2. **Validate the production data map**
    - [ ] Confirm enabled vendors, regions, retention, browser storage, server
-     logs, and native/mobile behavior.
+         logs, and native/mobile behavior.
    - [ ] Confirm the production `AUDIT_LOG_RETENTION_DAYS` value and match the
-     policy to deployed behavior.
+         policy to deployed behavior.
    - [ ] Remove unnecessary personal fields from LaunchDarkly context where
-     practical.
+         practical.
 3. **Close privacy/security mismatches**
    - [ ] Replace globally readable full user/RSVP records with club-scoped or
-     data-minimized read models/rules; add Firestore rules tests.
+         data-minimized read models/rules; add Firestore rules tests.
    - [ ] Define and test complete deletion/anonymization behavior for
-     memberships, invite ownership, attendance/history, teams, and audit logs.
+         memberships, invite ownership, attendance/history, teams, and audit logs.
    - [ ] Decide whether these changes land in this feature or linked prerequisite
-     plans; do not publish narrower visibility/deletion claims before they land.
+         plans; do not publish narrower visibility/deletion claims before they land.
 4. **Implement the policy surface**
    - [ ] Add versioned approved content and the public `/privacy` route.
    - [ ] Add signup acknowledgement, signed-out legal link, signed-in account
-     link, and platform-path handling.
+         link, and platform-path handling.
    - [ ] Add the just-in-time check-in location notice and fallback wording.
 5. **Operationalize requests and updates**
    - [ ] Write the private request-handling runbook and assign an owner.
    - [ ] Record release date/version and define the material-change notification
-     procedure.
+         procedure.
 6. **Verify**
    - [ ] Run focused component/unit tests, lint, format check, and build.
    - [ ] Manually verify public access, all navigation links, signup methods,
-     mobile/desktop layout, keyboard navigation, and check-in disclosure against
-     Firebase emulators only.
+         mobile/desktop layout, keyboard navigation, and check-in disclosure against
+         Firebase emulators only.
    - [ ] Have product/legal compare final copy against the validated data map
-     before release.
+         before release.
 
 ## Files to touch
 
-| Path | Change |
-|------|--------|
-| `app/privacy/page.tsx` | New public policy route, metadata, and semantic page layout |
-| `lib/legal/privacyNotice.tsx` | New approved content and version/effective-date source |
-| `components/legal/LegalLinks.tsx` | New reusable compact privacy link/footer |
-| `components/auth/RegisterForm.tsx` | Add linked acknowledgement covering both signup methods |
-| `components/matches/CheckInButton.tsx` | Add just-in-time location disclosure and privacy link |
-| `components/layout/AppShell.tsx` | Render legal links in signed-out and signed-in shells |
-| `components/layout/AccountNav.tsx` | Add signed-in Privacy destination |
-| `lib/hooks/useClubWorkspace.ts` | Classify `/privacy` as a platform path |
-| `firestore.rules` and rules tests | Scope/minimize user and RSVP reads if included in this feature |
-| `app/api/users/[userId]/route.ts` and tests | Complete or intentionally anonymize account-related deletion if included |
-| `components/auth/RegisterForm.test.tsx` | Assert accessible notice text and link for signup |
-| `components/layout/AccountNav.test.tsx` | Assert destination and active state |
-| `components/layout/AppShell.test.tsx` | Assert legal-link discovery signed in/out |
-| `components/matches/CheckInButton.test.tsx` | Assert disclosure precedes geolocation and host fallback remains |
-| `.env.sample` | Add a public privacy-contact variable only if product chooses configuration over a reviewed constant |
+| Path                                        | Change                                                                                               |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `app/privacy/page.tsx`                      | New public policy route, metadata, and semantic page layout                                          |
+| `lib/legal/privacyNotice.tsx`               | New approved content and version/effective-date source                                               |
+| `components/legal/LegalLinks.tsx`           | New reusable compact privacy link/footer                                                             |
+| `components/auth/RegisterForm.tsx`          | Add linked acknowledgement covering both signup methods                                              |
+| `components/matches/CheckInButton.tsx`      | Add just-in-time location disclosure and privacy link                                                |
+| `components/layout/AppShell.tsx`            | Render legal links in signed-out and signed-in shells                                                |
+| `components/layout/AccountNav.tsx`          | Add signed-in Privacy destination                                                                    |
+| `lib/hooks/useClubWorkspace.ts`             | Classify `/privacy` as a platform path                                                               |
+| `firestore.rules` and rules tests           | Scope/minimize user and RSVP reads if included in this feature                                       |
+| `app/api/users/[userId]/route.ts` and tests | Complete or intentionally anonymize account-related deletion if included                             |
+| `components/auth/RegisterForm.test.tsx`     | Assert accessible notice text and link for signup                                                    |
+| `components/layout/AccountNav.test.tsx`     | Assert destination and active state                                                                  |
+| `components/layout/AppShell.test.tsx`       | Assert legal-link discovery signed in/out                                                            |
+| `components/matches/CheckInButton.test.tsx` | Assert disclosure precedes geolocation and host fallback remains                                     |
+| `.env.sample`                               | Add a public privacy-contact variable only if product chooses configuration over a reviewed constant |
 
 ## Acceptance criteria
 
 - [ ] `/privacy` is public, indexable as intended, mobile-friendly, keyboard
-  accessible, and displays approved operator/contact, version, and effective date.
+      accessible, and displays approved operator/contact, version, and effective date.
 - [ ] Policy content matches the production data map and names all active
-  processor categories, one-time location handling, visibility, and retention
-  without unsupported promises.
+      processor categories, one-time location handling, visibility, and retention
+      without unsupported promises.
 - [ ] Email/password and Google account creation show the same linked notice
-  before the action; no unrelated processing is mislabeled as consent.
+      before the action; no unrelated processing is mislabeled as consent.
 - [ ] Signed-out users and signed-in users can reach `/privacy` from persistent
-  navigation, and club switching does not redirect the policy route.
+      navigation, and club switching does not redirect the policy route.
 - [ ] Check-in presents concise purpose, transmission, retention, and host
-  fallback information before invoking browser geolocation.
+      fallback information before invoking browser geolocation.
 - [ ] Cross-club profile/RSVP access and account-deletion leftovers are either
-  corrected and tested or accurately called out in approved policy and the
-  request runbook.
+      corrected and tested or accurately called out in approved policy and the
+      request runbook.
 - [ ] The published privacy email is monitored and a documented, secure request
-  workflow has an accountable owner.
+      workflow has an accountable owner.
 - [ ] Focused tests, `yarn lint`, `yarn format:check`, and `yarn build` pass; UI
-  is manually verified on phone and desktop against local emulators.
+      is manually verified on phone and desktop against local emulators.
 - [ ] Qualified legal review is recorded before production publication.
 
 ## Risks and later work
