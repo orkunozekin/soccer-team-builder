@@ -135,7 +135,10 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                   />
                 ) : (
                   <div className="px-1">
-                    <ClubWorkspaceStatus status={workspace.status} />
+                    <ClubWorkspaceStatus
+                      status={workspace.status}
+                      onNavigate={() => setSheetOpen(false)}
+                    />
                   </div>
                 )}
                 {isAdmin ? (

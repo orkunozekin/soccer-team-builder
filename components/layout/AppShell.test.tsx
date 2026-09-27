@@ -255,6 +255,23 @@ describe('AppShell', () => {
     })
   })
 
+  it('closes the mobile sheet when joining a club from the empty state', async () => {
+    const user = userEvent.setup()
+    useClubMembershipsMock.mockReturnValue({
+      memberships: [],
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    })
+    render(<AppShell />)
+    await user.click(screen.getByLabelText('Open club menu'))
+    const sheet = within(screen.getByRole('dialog'))
+    await user.click(sheet.getByRole('link', { name: /join a club/i }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+  })
+
   it('shows a Join prompt when the user has no memberships', () => {
     useClubMembershipsMock.mockReturnValue({
       memberships: [],
