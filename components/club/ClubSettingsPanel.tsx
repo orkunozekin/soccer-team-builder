@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { updateClubAPI } from '@/lib/api/client'
 import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
 
@@ -20,6 +20,13 @@ export function ClubSettingsPanel({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    setAllowPlayerInvites(initialAllowPlayerInvites)
+    setBusy(false)
+    setError('')
+    setSaved(false)
+  }, [clubId, initialAllowPlayerInvites])
 
   const handleToggle = async (next: boolean) => {
     setBusy(true)

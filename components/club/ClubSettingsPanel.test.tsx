@@ -68,4 +68,24 @@ describe('ClubSettingsPanel', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('checkbox')).toBeChecked()
   })
+
+  it('resets the checkbox when clubId or initial value changes', () => {
+    const { rerender } = render(
+      <ClubSettingsPanel
+        clubId="c1"
+        clubName="Alpha FC"
+        initialAllowPlayerInvites={false}
+      />
+    )
+    expect(screen.getByRole('checkbox')).not.toBeChecked()
+
+    rerender(
+      <ClubSettingsPanel
+        clubId="c2"
+        clubName="Beta FC"
+        initialAllowPlayerInvites={true}
+      />
+    )
+    expect(screen.getByRole('checkbox')).toBeChecked()
+  })
 })

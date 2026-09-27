@@ -31,6 +31,23 @@ export function ClubInvitesPanel({
   const [copied, setCopied] = useState<'code' | 'link' | string | null>(null)
   const clubIdRef = useRef(clubId)
   clubIdRef.current = clubId
+  /** Bumped on each list request so older responses cannot overwrite newer ones. */
+  const listGenRef = useRef(0)
+
+  const applyInvitesIfCurrent = useCallback(
+    (
+      requestClubId: string,
+      gen: number,
+      next: InviteWithLink[] | ((prev: InviteWithLink[]) => InviteWithLink[])
+    ) => {
+      if (clubIdRef.current !== requestClubId || listGenRef.current !== gen) {
+        return false
+      }
+      setInvites(next)
+      return true
+    },
+    []
+  )
 
   const load = useCallback(async () => {
     if (!canManageInvites) {
@@ -38,26 +55,33 @@ export function ClubInvitesPanel({
       return
     }
     const requestClubId = clubId
+    const gen = ++listGenRef.current
     setLoading(true)
     setError('')
     try {
       const res = await listClubInvitesAPI(requestClubId)
-      if (clubIdRef.current !== requestClubId) return
-      setInvites(res.invites)
+      applyInvitesIfCurrent(requestClubId, gen, res.invites)
     } catch (err) {
-      if (clubIdRef.current !== requestClubId) return
+      if (clubIdRef.current !== requestClubId || listGenRef.current !== gen) {
+        return
+      }
+      // Keep the existing list so a failed refresh does not hide revoke controls.
       setError(err instanceof Error ? err.message : 'Failed to load invites')
-      setInvites([])
       throw err
     } finally {
-      if (clubIdRef.current === requestClubId) {
+      if (
+        clubIdRef.current === requestClubId &&
+        listGenRef.current === gen
+      ) {
         setLoading(false)
       }
     }
-  }, [clubId, canManageInvites])
+  }, [clubId, canManageInvites, applyInvitesIfCurrent])
 
   useEffect(() => {
     let cancelled = false
+    const requestClubId = clubId
+    const gen = ++listGenRef.current
     setCreated(null)
     setBusy(false)
     setBusyInviteId(null)
@@ -70,25 +94,36 @@ export function ClubInvitesPanel({
     }
 
     setLoading(true)
-    void listClubInvitesAPI(clubId)
+    void listClubInvitesAPI(requestClubId)
       .then(res => {
-        if (cancelled || clubIdRef.current !== clubId) return
-        setInvites(res.invites)
+        if (cancelled) return
+        applyInvitesIfCurrent(requestClubId, gen, res.invites)
       })
       .catch((err: unknown) => {
-        if (cancelled || clubIdRef.current !== clubId) return
+        if (
+          cancelled ||
+          clubIdRef.current !== requestClubId ||
+          listGenRef.current !== gen
+        ) {
+          return
+        }
         setError(err instanceof Error ? err.message : 'Failed to load invites')
-        setInvites([])
       })
       .finally(() => {
-        if (cancelled || clubIdRef.current !== clubId) return
+        if (
+          cancelled ||
+          clubIdRef.current !== requestClubId ||
+          listGenRef.current !== gen
+        ) {
+          return
+        }
         setLoading(false)
       })
 
     return () => {
       cancelled = true
     }
-  }, [clubId, canManageInvites])
+  }, [clubId, canManageInvites, applyInvitesIfCurrent])
 
   const handleCreate = async () => {
     const requestClubId = clubId
