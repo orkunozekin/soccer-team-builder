@@ -92,6 +92,19 @@ describe('ClubContextSwitcher', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('clears the search after a club is selected', async () => {
+    const user = userEvent.setup()
+    renderSwitcher({ memberships: many })
+    await user.click(screen.getByLabelText('Switch club'))
+    await user.type(screen.getByLabelText('Find club'), 'gam')
+    await user.click(screen.getByRole('button', { name: /gamma rovers/i }))
+    await user.click(screen.getByLabelText('Switch club'))
+    expect(screen.getByLabelText('Find club')).toHaveValue('')
+    expect(
+      screen.getByRole('button', { name: /beta united/i })
+    ).toBeInTheDocument()
+  })
+
   it('shows an empty result when nothing matches', async () => {
     const user = userEvent.setup()
     renderSwitcher({ memberships: many })

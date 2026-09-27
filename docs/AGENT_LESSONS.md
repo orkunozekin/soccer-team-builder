@@ -33,6 +33,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-27 — Controlled popover close does not clear local filter state
+
+- **Source:** PR #87 · Greptile
+- **Gap:** `ClubContextSwitcher` cleared the search only in `onOpenChange`. Selecting a club called `setOpen(false)` directly, which does not fire `onOpenChange`, so reopening the popover kept the filter (visible when a switch does not remount the shell, such as a platform page).
+- **Going forward:** When a controlled Radix popover/dialog is closed from an in-content handler, reset local query/form state in that handler. Do not rely on `onOpenChange` for programmatic `setOpen(false)`.
+- **Pointers:** `components/layout/ClubContextSwitcher.tsx`
+
 ### 2026-09-27 — Club console: membership errors, stale clubId, mutation vs refresh
 
 - **Source:** PR #83 · Macroscope | Greptile
