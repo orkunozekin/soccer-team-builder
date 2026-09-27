@@ -13,6 +13,24 @@ function BrandLogo({ className }: { className?: string }) {
   return <span className={className}>Soccerville</span>
 }
 
+/**
+ * Radix Select/Dropdown in the club bar sets `pointer-events: none` on body
+ * while open. Signing out unmounts that bar before the lock is released, which
+ * leaves the login page visible but unable to take clicks or typing.
+ */
+function releasePageInteractionLock() {
+  const { body } = document
+  if (body.style.pointerEvents === 'none') {
+    body.style.pointerEvents = ''
+  }
+  body.removeAttribute('data-scroll-locked')
+  for (const className of [...body.classList]) {
+    if (className.startsWith('block-interactivity-')) {
+      body.classList.remove(className)
+    }
+  }
+}
+
 /** Soccerville platform bar. Club links live on ClubSubNav. */
 export function Navigation() {
   const { user, loading } = useAuth()
@@ -21,12 +39,18 @@ export function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   const handleLogout = async () => {
+    setIsMenuOpen(false)
     try {
       await logoutUser()
-      router.push('/')
-      setIsMenuOpen(false)
+      // Go straight to the login route. `/` only server-redirects there, and
+      // that hop races the signed-out page's own redirect and can leave a
+      // non-interactive skeleton on screen.
+      router.replace('/login')
     } catch (error) {
       console.error('Error logging out:', error)
+    } finally {
+      releasePageInteractionLock()
+      window.setTimeout(releasePageInteractionLock, 0)
     }
   }
 
