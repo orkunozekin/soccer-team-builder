@@ -50,6 +50,31 @@ After deploying, you can verify in Firebase Console:
 - You should see your deployed rules
 - The timestamp will show when they were last updated
 
+## Firestore Composite Indexes Deployment
+
+**Why this matters:** Client/Admin queries that combine filters and `orderBy` (e.g. `matches` where `clubId == …` orderBy `date`) need a composite index. Adding the definition to `firestore.indexes.json` does **not** create it in production. Shipping the query first yields `FAILED_PRECONDITION` in the browser and broken UX (example: “Could not load matches” after club-scoped matches). Emulators often do not enforce composite indexes, so local success is not enough.
+
+### Deploy indexes (CLI)
+
+```bash
+firebase deploy --only firestore:indexes
+```
+
+Wait until each new index shows **Enabled** in Firebase Console → Firestore → Indexes before relying on the matching query in production.
+
+### Or create from the error link
+
+If production already failed, the `FAILED_PRECONDITION` response includes a Console URL (`create_composite=…`). Opening it creates the exact index; wait for **Enabled**, then reload.
+
+### PR checklist when changing query shapes
+
+1. Update `firestore.indexes.json` in the same PR as the compound query.
+2. Call out the required index deploy / Enabled gate in the PR body.
+3. Prefer equality-only + in-memory sort for small lists when resilience matters more than server-side ordering.
+4. Keep useful composite indexes; do not remove them solely to avoid deploy steps.
+
+See also [`AGENT_CONTEXT.md`](./AGENT_CONTEXT.md) (Client Firebase) and [`AGENT_LESSONS.md`](./AGENT_LESSONS.md).
+
 ## Vercel Deployment
 
 ### Environment Variables Setup

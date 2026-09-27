@@ -20,6 +20,7 @@ Companion to [`docs/AGENT_CONTEXT.md`](../docs/AGENT_CONTEXT.md), root [`AGENTS.
 - New secrets, service accounts, or `.env` files in the diff
 - Unauthenticated cron or publicly callable seed/destructive routes
 - Broadening Firestore client write rules that should stay Admin SDK / API-only
+- New or changed Firestore compound queries (`where` + `orderBy`, multi-field filters) without a matching entry in `firestore.indexes.json`, or without an explicit note that production indexes must be deployed/`Enabled` before traffic uses that query (emulators often skip this check)
 
 ## Do not nitpick
 
