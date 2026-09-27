@@ -33,6 +33,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-27 — Admin role race and all-clubs match links
+
+- **Source:** PR #88 · Macroscope | Greptile
+- **Gap:** (1) Admin pages treated `loading === false` as “role known.” The 8-second auth timeout clears `loading` while the user doc is still in flight, so `isAdmin` is briefly false and a super user is sent to `/matches`. (2) All-clubs cards linked to `/matches/[id]`, which redirects to the club detail page, so Back returned to one club instead of All matches.
+- **Going forward:** Gate admin redirects on `rolePending` (`user` set and `profileReady` still false), not on `loading` alone. Set `profileReady` only when the user-doc fetch finishes. All-clubs cards (`clubId` null) must link to `/admin/matches/[id]`. Keep create-match off that list: a null club id cannot create, and creating for `activeClubId` while showing every club misstates the target.
+- **Pointers:** `components/auth/AuthProvider.tsx`, `components/admin/AdminRouteGuard.tsx`, `lib/hooks/useAdmin.ts` (`rolePending`), `components/matches/ClubMatchesView.tsx` (`matchHref`)
+
 ### 2026-09-27 — Super-user all-clubs matches, sheet close, absolute invite links
 
 - **Source:** PR #88 · Greptile | Macroscope

@@ -243,6 +243,17 @@ describe('ClubMatchesView', () => {
     expect(screen.queryByText(/MatchCard:m-b/)).not.toBeInTheDocument()
   })
 
+  it('links all-clubs cards back to the admin list', async () => {
+    useAdminMock.mockReturnValue({ isAdmin: true })
+    listMatchesForViewerMock.mockResolvedValueOnce([mockMatch('m-all')])
+
+    render(<ClubMatchesView clubId={null} clubSlug={null} />)
+
+    expect(
+      await screen.findByText('AdminMatchCard:m-all:/admin/matches/m-all')
+    ).toBeInTheDocument()
+  })
+
   it('hides create match on the all-clubs list when clubId is null', async () => {
     useAdminMock.mockReturnValue({ isAdmin: true })
     listMatchesForViewerMock.mockResolvedValueOnce([])
@@ -251,6 +262,12 @@ describe('ClubMatchesView', () => {
 
     expect(await screen.findByText('No Matches')).toBeInTheDocument()
     expect(screen.queryByText('CreateMatchCardMock')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('tab', { name: 'All' }))
+    expect(screen.getByText('No matches yet.')).toBeInTheDocument()
+    expect(
+      screen.queryByText('Create a match using the form above.')
+    ).not.toBeInTheDocument()
   })
 
   it('hides create match when the user is only a player on this club', async () => {

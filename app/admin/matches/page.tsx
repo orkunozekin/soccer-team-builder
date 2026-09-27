@@ -15,10 +15,11 @@ import { useAuth } from '@/lib/hooks/useAuth'
 export default function AdminMatchesPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
-  const { isAdmin } = useAdmin()
+  const { isAdmin, rolePending } = useAdmin()
+  const pending = authLoading || rolePending
 
   useEffect(() => {
-    if (authLoading) return
+    if (pending) return
     if (!user) {
       router.replace('/login')
       return
@@ -26,9 +27,9 @@ export default function AdminMatchesPage() {
     if (!isAdmin) {
       router.replace('/matches')
     }
-  }, [authLoading, user, isAdmin, router])
+  }, [pending, user, isAdmin, router])
 
-  if (authLoading || !user || !isAdmin) {
+  if (pending || !user || !isAdmin) {
     return <PageLoadingSkeleton variant="container" />
   }
 

@@ -42,7 +42,11 @@ const ADMIN_FILTERS: { value: MatchFilter; label: string }[] = [
 export type ClubMatchesViewProps = {
   /** Club to scope the list. `null` = all clubs (super_user legacy `/matches`). */
   clubId: string | null
-  /** Slug for match detail links. `null` uses legacy `/matches/[id]` hrefs. */
+  /**
+   * Slug for match detail links. `null` with a club id uses legacy
+   * `/matches/[id]`. All-clubs (`clubId` null) stays on `/admin/matches/[id]`
+   * so Back returns to the cross-club list.
+   */
   clubSlug: string | null
 }
 
@@ -73,8 +77,11 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
   /** Super users and club admins get the manage list (past matches, delete). */
   const showAdminList = !!isSuperUser || canCreateMatch
 
-  const matchHref = (matchId: string) =>
-    clubSlug ? clubMatchPath(clubSlug, matchId) : `/matches/${matchId}`
+  const matchHref = (matchId: string) => {
+    if (clubSlug) return clubMatchPath(clubSlug, matchId)
+    if (!clubId) return `/admin/matches/${matchId}`
+    return `/matches/${matchId}`
+  }
 
   const loadMatchesAndCounts = async (gen: number) => {
     try {
@@ -269,7 +276,9 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
                   ? 'No past matches.'
                   : filter === 'upcoming'
                     ? 'No upcoming matches.'
-                    : 'Create a match using the form above.'
+                    : canCreateMatch
+                      ? 'Create a match using the form above.'
+                      : 'No matches yet.'
                 : 'Check back soon for upcoming matches!'}
             </p>
           </CardContent>

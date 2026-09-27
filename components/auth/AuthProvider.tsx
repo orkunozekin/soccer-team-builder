@@ -2,11 +2,11 @@
 
 import { useEffect, useRef } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
+import { recordAuditEventAPI, updateProfileAPI } from '@/lib/api/client'
 import { auth } from '@/lib/firebase/config'
 import { getDocument } from '@/lib/firebase/firestore'
 import { timestampToDate } from '@/lib/firebase/firestore'
 import { createUser } from '@/lib/services/userService'
-import { recordAuditEventAPI, updateProfileAPI } from '@/lib/api/client'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import { resolveHydratedActiveClubId } from '@/lib/utils/resolveHydratedActiveClubId'
 import { useAuthStore } from '@/store/authStore'
@@ -16,7 +16,7 @@ import { User, normalizeUserRole } from '@/types/user'
 const AUTH_LOADING_TIMEOUT_MS = 8_000
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { setUser, setUserData, setLoading } = useAuthStore()
+  const { setUser, setUserData, setLoading, setProfileReady } = useAuthStore()
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -144,6 +144,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } finally {
         clearLoadingTimeout()
         setLoading(false)
+        // Separate from `loading`: the 8s timeout clears loading while this
+        // fetch is still in flight. Admin guards must wait for this flag.
+        setProfileReady(true)
       }
     })
 
@@ -151,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
       unsubscribe()
     }
-  }, [setUser, setUserData, setLoading])
+  }, [setUser, setUserData, setLoading, setProfileReady])
 
   return <>{children}</>
 }

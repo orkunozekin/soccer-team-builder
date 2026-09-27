@@ -11,11 +11,13 @@ export const useAuth = () => {
   const user = useAuthStore(state => state.user)
   const userData = useAuthStore(state => state.userData)
   const loading = useAuthStore(state => state.loading)
+  const profileReady = useAuthStore(state => state.profileReady)
 
   return {
     user,
     userData,
     loading,
+    profileReady,
     isAuthenticated: !!user,
   }
 }

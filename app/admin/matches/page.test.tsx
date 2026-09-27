@@ -31,7 +31,7 @@ describe('AdminMatchesPage', () => {
       user: { uid: 'user1' },
       loading: false,
     })
-    useAdminMock.mockReturnValue({ isAdmin: true })
+    useAdminMock.mockReturnValue({ isAdmin: true, rolePending: false })
   })
 
   it('keeps the all-clubs list for super users', async () => {
@@ -40,8 +40,15 @@ describe('AdminMatchesPage', () => {
     expect(replaceMock).not.toHaveBeenCalled()
   })
 
+  it('waits for the user role before sending someone away', async () => {
+    useAdminMock.mockReturnValue({ isAdmin: false, rolePending: true })
+    render(<AdminMatchesPage />)
+    expect(screen.queryByText('AllClubsMatches:null')).not.toBeInTheDocument()
+    expect(replaceMock).not.toHaveBeenCalled()
+  })
+
   it('sends non-admins to /matches', async () => {
-    useAdminMock.mockReturnValue({ isAdmin: false })
+    useAdminMock.mockReturnValue({ isAdmin: false, rolePending: false })
     render(<AdminMatchesPage />)
     await waitFor(() => {
       expect(replaceMock).toHaveBeenCalledWith('/matches')
