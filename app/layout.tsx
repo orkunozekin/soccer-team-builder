@@ -7,7 +7,7 @@ import { LaunchDarklyProvider } from '@/components/flags/LaunchDarklyProvider'
 import { SwrProvider } from '@/components/providers/SwrProvider'
 import { AdminUiToggle } from '@/components/dev/AdminUiToggle'
 import { MobileViewportFix } from '@/components/layout/MobileViewportFix'
-import { Navigation } from '@/components/layout/Navigation'
+import { AppShell } from '@/components/layout/AppShell'
 import { cn } from '@/lib/utils'
 
 // Use the Google Inter font from next/font
@@ -49,7 +49,7 @@ export default function RootLayout({
             <SwrProvider>
               <LaunchDarklyProvider>
                 <MobileViewportFix />
-                <Navigation />
+                <AppShell />
                 {children}
                 <AdminUiToggle />
               </LaunchDarklyProvider>

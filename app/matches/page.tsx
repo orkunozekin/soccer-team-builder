@@ -26,6 +26,7 @@ import {
   canManageMatchClub,
   filterMatchesForClubScope,
 } from '@/lib/utils/clubMatches'
+import { resolveEffectiveActiveClubId } from '@/lib/utils/resolveSelectedClub'
 import { isMatchPast } from '@/lib/utils/rsvpScheduler'
 import { useMatchStore } from '@/store/matchStore'
 
@@ -48,8 +49,25 @@ export default function MatchesPage() {
   >('loading')
   const fetchGen = useRef(0)
 
+  // Same club as ClubSubNav. Super users keep raw activeClubId so an unset
+  // preference still means "all clubs" on the match list.
+  const scopedClubId = useMemo(() => {
+    if (isSuperUser) {
+      const preferred =
+        typeof userData?.activeClubId === 'string'
+          ? userData.activeClubId.trim()
+          : ''
+      return preferred || null
+    }
+    return resolveEffectiveActiveClubId({
+      memberships,
+      activeClubId: userData?.activeClubId,
+    })
+  }, [isSuperUser, memberships, userData?.activeClubId])
+
   const canCreateMatch = canCreateClubMatches({
     memberships,
+    activeClubId: scopedClubId,
     isSuperUser: !!isSuperUser,
   })
 
@@ -72,7 +90,7 @@ export default function MatchesPage() {
         const scoped = filterMatchesForClubScope({
           matches: allMatches,
           memberships,
-          activeClubId: userData?.activeClubId,
+          activeClubId: scopedClubId,
           isSuperUser: !!isSuperUser,
         })
         const upcoming = scoped.filter(m => !isMatchPast(m.date, m.time))
@@ -99,7 +117,7 @@ export default function MatchesPage() {
     authLoading,
     membershipsLoading,
     memberships,
-    userData?.activeClubId,
+    scopedClubId,
     isSuperUser,
     router,
     setMatches,
@@ -114,7 +132,7 @@ export default function MatchesPage() {
       const scoped = filterMatchesForClubScope({
         matches: allMatches,
         memberships,
-        activeClubId: userData?.activeClubId,
+        activeClubId: scopedClubId,
         isSuperUser: !!isSuperUser,
       })
       const upcoming = scoped.filter(m => !isMatchPast(m.date, m.time))
@@ -208,7 +226,10 @@ export default function MatchesPage() {
 
       {canCreateMatch && (
         <div className="mb-6">
-          <CreateMatchCard onMatchCreated={refetchMatchesAndCounts} />
+          <CreateMatchCard
+            clubId={scopedClubId}
+            onMatchCreated={refetchMatchesAndCounts}
+          />
         </div>
       )}
 

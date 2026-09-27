@@ -17,10 +17,15 @@ import { getMatch } from '@/lib/services/matchService'
 import { useMatchStore } from '@/store/matchStore'
 
 interface CreateMatchCardProps {
+  /** Club to stamp on the match; falls back to users.activeClubId when omitted. */
+  clubId?: string | null
   onMatchCreated?: () => void
 }
 
-export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
+export function CreateMatchCard({
+  clubId: clubIdProp,
+  onMatchCreated,
+}: CreateMatchCardProps) {
   const { userData } = useAuth()
   const { addMatch } = useMatchStore()
   const [expanded, setExpanded] = useState(false)
@@ -63,11 +68,13 @@ export function CreateMatchCard({ onMatchCreated }: CreateMatchCardProps) {
             }
           : null
 
-      const clubId =
-        typeof userData?.activeClubId === 'string' &&
-        userData.activeClubId.trim()
+      const fromProp =
+        typeof clubIdProp === 'string' ? clubIdProp.trim() : ''
+      const fromProfile =
+        typeof userData?.activeClubId === 'string'
           ? userData.activeClubId.trim()
-          : null
+          : ''
+      const clubId = fromProp || fromProfile || null
 
       const { matchId } = await createMatchAPI(
         matchDate,

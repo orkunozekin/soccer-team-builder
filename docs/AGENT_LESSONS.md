@@ -32,3 +32,10 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 ## Lessons
 
 <!-- Append newest entries at the top of this section. -->
+
+### 2026-09-27 — Keep club selection consistent across chrome and pages
+
+- **Source:** PR #80 · Greptile
+- **Gap:** ClubSubNav fell back to a stable club when `activeClubId` was missing, but the matches page still listed every membership and create-match gating used a different rule. Load/switch failures also lacked user-facing recovery.
+- **Going forward:** Any UI that depends on “current club” (sub-nav, match list, create eligibility, create API `clubId`) must share one resolver (`resolveEffectiveActiveClubId` / `resolveSelectedClubMembership`). Show membership load and switch errors with retry/alert; do not redirect away from platform pages (`/profile`, `/admin`, auth) when switching clubs.
+- **Pointers:** `lib/utils/resolveSelectedClub.ts`, `app/matches/page.tsx`, `components/layout/ClubSubNav.tsx`
