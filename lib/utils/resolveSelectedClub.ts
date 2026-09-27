@@ -1,9 +1,11 @@
 import type { ClubMembershipWithClub } from '@/types/club'
 
 /**
- * Pick the membership for the club sub-nav / switcher.
+ * Pick the membership for the club sub-nav / switcher / match scope.
  * Prefers activeClubId when it is an active membership; otherwise the sole
- * active membership; otherwise null (caller shows Join).
+ * active membership; with multiple memberships and no valid activeClubId,
+ * picks a stable club (name, then id) so UI stays consistent.
+ * Returns null when there are no active memberships (caller shows Join).
  */
 export function resolveSelectedClubMembership(input: {
   memberships: ClubMembershipWithClub[]
@@ -27,6 +29,14 @@ export function resolveSelectedClubMembership(input: {
     if (byName !== 0) return byName
     return a.clubId.localeCompare(b.clubId)
   })[0]
+}
+
+/** Club id for the membership chosen by {@link resolveSelectedClubMembership}. */
+export function resolveEffectiveActiveClubId(input: {
+  memberships: ClubMembershipWithClub[]
+  activeClubId?: string | null
+}): string | null {
+  return resolveSelectedClubMembership(input)?.clubId ?? null
 }
 
 export type ClubSubNavSection = 'matches' | 'roster' | 'invites' | 'settings'

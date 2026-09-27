@@ -112,6 +112,22 @@ describe('ClubSubNav', () => {
     )
   })
 
+  it('shows a load failure with retry instead of Join when memberships fail', async () => {
+    const user = userEvent.setup()
+    const refresh = vi.fn()
+    useClubMembershipsMock.mockReturnValue({
+      memberships: [],
+      loading: false,
+      error: 'Failed to load clubs',
+      refresh,
+    })
+    render(<ClubSubNav />)
+    expect(screen.getByText(/could not load clubs/i)).toBeInTheDocument()
+    expect(screen.queryByText(/not in a club yet/i)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /try again/i }))
+    expect(refresh).toHaveBeenCalled()
+  })
+
   it('shows the current club and Matches on the sub-nav', () => {
     render(<ClubSubNav />)
     expect(screen.getByLabelText('Switch club')).toHaveTextContent('Alpha FC')
@@ -153,5 +169,32 @@ describe('ClubSubNav', () => {
     expect(setUserDataMock).toHaveBeenCalledWith(
       expect.objectContaining({ activeClubId: 'beta' })
     )
+  })
+
+  it('shows a user-facing error when club switch fails', async () => {
+    const user = userEvent.setup()
+    vi.mocked(updateProfileAPI).mockRejectedValue(new Error('Network down'))
+
+    render(<ClubSubNav />)
+    await user.click(screen.getByLabelText('Switch club'))
+    await user.click(screen.getByText('Beta United'))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Network down')
+    expect(pushMock).not.toHaveBeenCalled()
+  })
+
+  it('stays on profile when switching clubs from a platform page', async () => {
+    const user = userEvent.setup()
+    usePathnameMock.mockReturnValue('/profile')
+    vi.mocked(updateProfileAPI).mockResolvedValue({ success: true })
+
+    render(<ClubSubNav />)
+    await user.click(screen.getByLabelText('Switch club'))
+    await user.click(screen.getByText('Beta United'))
+
+    await waitFor(() => {
+      expect(updateProfileAPI).toHaveBeenCalledWith({ activeClubId: 'beta' })
+    })
+    expect(pushMock).not.toHaveBeenCalled()
   })
 })

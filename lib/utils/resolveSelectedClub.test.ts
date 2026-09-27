@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   clubSubNavSections,
+  resolveEffectiveActiveClubId,
   resolveSelectedClubMembership,
 } from './resolveSelectedClub'
 import type { ClubMembershipWithClub } from '@/types/club'
@@ -70,6 +71,17 @@ describe('resolveSelectedClubMembership', () => {
       activeClubId: 'other',
     })
     expect(selected?.clubId).toBe('a')
+  })
+
+  it('resolveEffectiveActiveClubId matches the selected membership club', () => {
+    const z = membership({ clubId: 'z', name: 'Zulu' })
+    const a = membership({ clubId: 'a', name: 'Alpha', role: 'club_admin' })
+    expect(
+      resolveEffectiveActiveClubId({
+        memberships: [z, a],
+        activeClubId: null,
+      })
+    ).toBe('a')
   })
 })
 

@@ -224,6 +224,52 @@ describe('MatchesPage', () => {
     expect(screen.queryByText('MatchCard:m-stamped')).not.toBeInTheDocument()
   })
 
+  it('scopes matches to the same fallback club as the sub-nav when activeClubId is unset', async () => {
+    useAuthMock.mockReturnValue({
+      user: { uid: 'user1' },
+      userData: { uid: 'user1', activeClubId: null },
+      loading: false,
+    })
+    useClubMembershipsMock.mockReturnValue({
+      memberships: [
+        {
+          id: 'mem-z',
+          clubId: 'club-z',
+          userId: 'user1',
+          role: 'player',
+          status: 'active',
+          joinedAt: new Date(),
+          updatedAt: new Date(),
+          club: { id: 'club-z', name: 'Zulu FC', slug: 'zulu' },
+        },
+        {
+          id: 'mem-a',
+          clubId: 'club-a',
+          userId: 'user1',
+          role: 'club_admin',
+          status: 'active',
+          joinedAt: new Date(),
+          updatedAt: new Date(),
+          club: { id: 'club-a', name: 'Alpha FC', slug: 'alpha' },
+        },
+      ],
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    })
+    getAllMatchesMock.mockResolvedValueOnce([
+      { ...mockMatch('m-a'), clubId: 'club-a' },
+      { ...mockMatch('m-z'), clubId: 'club-z' },
+    ])
+
+    render(<MatchesPage />)
+
+    // Alphabetical fallback is Alpha FC — same as ClubSubNav.
+    expect(await screen.findByText('MatchCard:m-a')).toBeInTheDocument()
+    expect(screen.queryByText('MatchCard:m-z')).not.toBeInTheDocument()
+    expect(screen.getByText('CreateMatchCardMock')).toBeInTheDocument()
+  })
+
   it('hides create match when the user is only a player on the active club', async () => {
     useAuthMock.mockReturnValue({
       user: { uid: 'user1' },

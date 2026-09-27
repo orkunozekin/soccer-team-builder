@@ -31,6 +31,18 @@ import {
 } from '@/lib/utils/resolveSelectedClub'
 import { cn } from '@/lib/utils'
 
+function isPlatformPath(pathname: string): boolean {
+  return (
+    pathname === '/' ||
+    pathname.startsWith('/profile') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/join') ||
+    pathname.startsWith('/forgot-password')
+  )
+}
+
 /**
  * Club-scoped sub-nav under the Soccerville platform bar.
  * Signed-in only; parent layout should not mount this when logged out.
@@ -39,11 +51,17 @@ export function ClubSubNav() {
   const { user, userData, loading: authLoading } = useAuth()
   const { isSuperUser } = useAdmin()
   const setUserData = useAuthStore(state => state.setUserData)
-  const { memberships, loading: membershipsLoading } = useClubMemberships()
+  const {
+    memberships,
+    loading: membershipsLoading,
+    error: membershipsError,
+    refresh,
+  } = useClubMemberships()
   const clubCreationEnabled = useFeatureFlag('club-creation')
   const pathname = usePathname() ?? ''
   const router = useRouter()
   const [switching, setSwitching] = useState(false)
+  const [switchError, setSwitchError] = useState('')
 
   const selected = useMemo(
     () =>
@@ -86,6 +104,30 @@ export function ClubSubNav() {
     )
   }
 
+  if (membershipsError && memberships.length === 0) {
+    return (
+      <nav
+        aria-label="Club"
+        className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/40"
+      >
+        <div className="container mx-auto flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+          <p className="text-sm text-red-700 dark:text-red-400">
+            Could not load clubs. {membershipsError}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              void refresh()
+            }}
+            className="text-sm font-semibold text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
+          >
+            Try again
+          </button>
+        </div>
+      </nav>
+    )
+  }
+
   if (!selected) {
     return (
       <nav
@@ -115,12 +157,17 @@ export function ClubSubNav() {
     if (!next) return
 
     setSwitching(true)
+    setSwitchError('')
     try {
       await updateProfileAPI({ activeClubId: clubId })
       setUserData({ ...userData, activeClubId: clubId })
 
-      // Until slug routes exist, keep the user on Matches after a switch when
-      // they were on a club-admin section they may no longer open.
+      // Stay on platform pages (profile/admin/auth). On club sections, keep
+      // the same section when the new role allows it; otherwise land on Matches.
+      if (isPlatformPath(pathname)) {
+        return
+      }
+
       const nextSections = clubSubNavSections({
         slug: next.club.slug,
         role: next.role,
@@ -129,7 +176,8 @@ export function ClubSubNav() {
       })
       const currentId = sections.find(s => s.href === activeSectionHref)?.id
       const canStay =
-        currentId && nextSections.some(s => s.id === currentId && s.id !== 'matches')
+        currentId &&
+        nextSections.some(s => s.id === currentId && s.id !== 'matches')
       if (canStay && currentId) {
         const href = nextSections.find(s => s.id === currentId)?.href
         if (href) {
@@ -137,11 +185,14 @@ export function ClubSubNav() {
           return
         }
       }
-      if (pathname !== '/matches') {
+      if (pathname !== '/matches' && !pathname.startsWith('/matches/')) {
         router.push('/matches')
       }
     } catch (err) {
       console.error('Failed to switch club:', err)
+      setSwitchError(
+        err instanceof Error ? err.message : 'Failed to switch club'
+      )
     } finally {
       setSwitching(false)
     }
@@ -156,6 +207,15 @@ export function ClubSubNav() {
       className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/40"
     >
       <div className="container mx-auto px-4 py-2">
+        {switchError && (
+          <p
+            role="alert"
+            className="mb-2 text-sm text-red-700 dark:text-red-400"
+          >
+            {switchError}
+          </p>
+        )}
+
         {/* Mobile: club select + section select */}
         <div className="flex flex-col gap-2 sm:hidden">
           <Select

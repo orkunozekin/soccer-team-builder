@@ -153,7 +153,7 @@ describe('canManageMatchClub / canCreateClubMatches', () => {
     ).toBe(false)
   })
 
-  it('uses the sole membership when activeClubId is unset', () => {
+  it('requires an effective activeClubId for non-super-users', () => {
     expect(
       canCreateClubMatches({
         memberships: [
@@ -165,19 +165,19 @@ describe('canManageMatchClub / canCreateClubMatches', () => {
         ],
         activeClubId: null,
       })
-    ).toBe(true)
+    ).toBe(false)
     expect(
       canCreateClubMatches({
         memberships: [
           {
             clubId: 'only',
-            role: 'player' as const,
+            role: 'club_admin' as const,
             status: 'active' as const,
           },
         ],
-        activeClubId: null,
+        activeClubId: 'only',
       })
-    ).toBe(false)
+    ).toBe(true)
   })
 
   it('allows super user everywhere', () => {
