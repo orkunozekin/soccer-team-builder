@@ -306,7 +306,7 @@ export function ClubSubNav() {
             value={
               memberships.some(m => m.clubId === displayClubId)
                 ? displayClubId
-                : membershipSelected?.clubId
+                : undefined
             }
             disabled={switching}
             onValueChange={value => {

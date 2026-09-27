@@ -65,6 +65,8 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
 
     const gen = ++fetchGen.current
     setListStatus('loading')
+    setMatches([])
+    setRsvpCounts({})
 
     const fetchMatches = async () => {
       try {
@@ -90,6 +92,8 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
       } catch (error) {
         console.error('Error fetching matches:', error)
         if (gen !== fetchGen.current) return
+        setMatches([])
+        setRsvpCounts({})
         setListStatus('error')
       }
     }
@@ -108,6 +112,8 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
   const refetchMatchesAndCounts = async () => {
     const gen = ++fetchGen.current
     setListStatus('loading')
+    setMatches([])
+    setRsvpCounts({})
     try {
       const allMatches = await getAllMatches()
       if (gen !== fetchGen.current) return
@@ -131,6 +137,8 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     } catch (error) {
       console.error('Error fetching matches:', error)
       if (gen !== fetchGen.current) return
+      setMatches([])
+      setRsvpCounts({})
       setListStatus('error')
     }
   }
@@ -155,7 +163,7 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     return null
   }
 
-  if (listStatus === 'error' && matches.length === 0) {
+  if (listStatus === 'error') {
     return (
       <div className="container mx-auto max-w-5xl px-4 py-8">
         <Card>

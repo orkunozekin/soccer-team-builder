@@ -27,9 +27,9 @@ function paramToString(
 
 /**
  * Legacy `/matches/[matchId]` → `/c/{slug}/matches/[matchId]`.
- * Prefers the match's club slug when the caller may open it; otherwise the
- * active/sole membership slug. Super users without memberships resolve the
- * match club via API. Membership load errors show retry (not `/join`).
+ * Prefers the match's own club slug (membership or API for super users).
+ * Only falls back to active/sole membership when the match has no clubId.
+ * Membership load errors show retry (not `/join`).
  */
 export default function MatchDetailsRedirectPage() {
   const router = useRouter()
@@ -74,26 +74,39 @@ export default function MatchDetailsRedirectPage() {
             )
           : null
 
-        let slug =
-          matchClubMembership?.club.slug ??
-          resolveLegacyMatchesRedirectSlug({
-            memberships,
-            activeClubId: userData?.activeClubId,
-          })
+        let slug: string | null = matchClubMembership?.club.slug ?? null
 
-        if (!slug && isSuperUser && matchClubId) {
+        // Prefer the match's club over the caller's active membership so a
+        // super user in club A opening club B's match does not land under A.
+        if (!slug && matchClubId && isSuperUser) {
           try {
             const res = await getClubByIdAPI(matchClubId)
+            if (cancelled) return
             slug = res.club.slug
           } catch (err) {
             console.error('Failed to resolve match club slug:', err)
+            if (cancelled) return
           }
         }
+
+        if (!slug && !matchClubId) {
+          slug = resolveLegacyMatchesRedirectSlug({
+            memberships,
+            activeClubId: userData?.activeClubId,
+          })
+        }
+
+        if (cancelled) return
 
         if (!slug) {
           if (isSuperUser) {
             // Pre-backfill / unresolved club: keep legacy detail for operators.
             setStayOnLegacy(true)
+            return
+          }
+          // Member who cannot open the match's club: do not invent another club URL.
+          if (matchClubId && !matchClubMembership) {
+            setFailed(true)
             return
           }
           router.replace('/join')
