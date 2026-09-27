@@ -100,12 +100,11 @@ function finalizeMatchList(
 
 /**
  * Club-scoped match list for members (and super users viewing one club).
- * Queries `clubId == clubId` so Firestore rules allow the read.
+ * Queries `clubId == clubId` only (no orderBy) so it works without a composite
+ * index; sorting is done client-side in {@link finalizeMatchList}.
  *
- * Does not attempt to load unscoped / missing-`clubId` docs: `where('clubId','==',null)`
- * only matches explicit null, not absent fields, and cannot be combined into a
- * rules-safe member collection query. Pre-backfill docs remain visible to
- * super users via {@link getAllMatches} / the all-clubs list.
+ * Does not attempt to load unscoped / missing-`clubId` docs: those remain
+ * visible to super users via {@link getAllMatches} / the all-clubs list.
  */
 export const getMatchesForClub = async (
   clubId: string,
@@ -114,9 +113,10 @@ export const getMatchesForClub = async (
   const trimmed = clubId.trim()
   if (!trimmed) return []
 
+  // Equality-only query: avoids requiring a clubId+date composite index that
+  // may not be deployed yet. finalizeMatchList sorts by date/time.
   const clubDocs = await queryDocuments('matches', [
     where('clubId', '==', trimmed),
-    orderBy('date', 'asc'),
   ])
 
   return finalizeMatchList(clubDocs, options)
