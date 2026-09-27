@@ -1,7 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyClubAdmin } from '@/lib/api/auth'
-import { updateClub } from '@/lib/services/clubService'
+import { verifyAuth, verifyClubAdmin, verifyClubMember } from '@/lib/api/auth'
+import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
+import { getClub, updateClub } from '@/lib/services/clubService'
 import { auditLog } from '@/lib/services/auditService'
+
+/**
+ * Load a club by id for members / super_users.
+ * Missing club and unauthorized callers both get 404.
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ clubId: string }> }
+) {
+  try {
+    const { clubId } = await params
+    if (!clubId) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
+    const { uid, error: authError } = await verifyAuth(request)
+    if (authError || !uid) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
+    const club = await getClub(clubId)
+    if (!club) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
+    const { isMember } = await verifyClubMember(request, clubId)
+    if (!isMember) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      club: {
+        id: club.id,
+        name: club.name,
+        slug: club.slug,
+        settings: club.settings,
+      },
+    })
+  } catch (err: unknown) {
+    console.error('Error loading club:', err)
+    return NextResponse.json(
+      {
+        error: sanitizeErrorForClient(err, 'Failed to load club'),
+      },
+      { status: 500 }
+    )
+  }
+}
 
 export async function PATCH(
   request: NextRequest,
@@ -61,6 +111,14 @@ export async function PATCH(
       err instanceof Error ? err.message : 'Failed to update club'
     const status = message === 'Club not found' ? 404 : 500
     console.error('Error updating club:', err)
-    return NextResponse.json({ error: message }, { status })
+    return NextResponse.json(
+      {
+        error:
+          status === 404
+            ? message
+            : sanitizeErrorForClient(err, 'Failed to update club'),
+      },
+      { status }
+    )
   }
 }

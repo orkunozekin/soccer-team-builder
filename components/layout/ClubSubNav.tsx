@@ -22,13 +22,16 @@ import {
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
+import { useClubSlugAccess } from '@/lib/hooks/useClubSlugAccess'
 import { useFeatureFlag } from '@/lib/flags/useFeatureFlag'
 import { updateProfileAPI } from '@/lib/api/client'
 import { useAuthStore } from '@/store/authStore'
 import {
-  clubSubNavSections,
-  resolveSelectedClubMembership,
-} from '@/lib/utils/resolveSelectedClub'
+  clubMatchesPath,
+  parseClubSlugFromPathname,
+  resolveClubMembershipForPath,
+} from '@/lib/utils/clubPaths'
+import { clubSubNavSections } from '@/lib/utils/resolveSelectedClub'
 import { cn } from '@/lib/utils'
 
 function isPlatformPath(pathname: string): boolean {
@@ -63,29 +66,74 @@ export function ClubSubNav() {
   const [switching, setSwitching] = useState(false)
   const [switchError, setSwitchError] = useState('')
 
-  const selected = useMemo(
+  const pathSlug = parseClubSlugFromPathname(pathname)
+
+  const membershipSelected = useMemo(
     () =>
-      resolveSelectedClubMembership({
+      resolveClubMembershipForPath({
         memberships,
         activeClubId: userData?.activeClubId,
+        pathSlug,
       }),
-    [memberships, userData?.activeClubId]
+    [memberships, userData?.activeClubId, pathSlug]
   )
 
+  const pathMembership = useMemo(() => {
+    if (!pathSlug) return null
+    return (
+      memberships.find(
+        m => m.status === 'active' && m.club.slug === pathSlug
+      ) ?? null
+    )
+  }, [memberships, pathSlug])
+
+  // Super users can open a club they are not a member of; resolve that path
+  // club so the sub-nav matches the URL instead of another membership.
+  const needsPathClub = Boolean(
+    isSuperUser && pathSlug && !pathMembership
+  )
+  const pathAccess = useClubSlugAccess(
+    needsPathClub ? pathSlug ?? undefined : undefined
+  )
+
+  const displayClub =
+    pathMembership?.club ??
+    (pathAccess.status === 'ok' ? pathAccess.club : null) ??
+    membershipSelected?.club ??
+    null
+
+  const displayClubId =
+    pathMembership?.clubId ??
+    (pathAccess.status === 'ok' ? pathAccess.club.id : null) ??
+    membershipSelected?.clubId ??
+    null
+
+  const displayRole =
+    pathMembership?.role ??
+    (pathAccess.status === 'ok'
+      ? ('club_admin' as const)
+      : membershipSelected?.role) ??
+    'player'
+
   const sections = useMemo(() => {
-    if (!selected) return []
+    if (!displayClub) return []
     return clubSubNavSections({
-      slug: selected.club.slug,
-      role: selected.role,
-      allowPlayerInvites: selected.club.settings.allowPlayerInvites,
+      slug: displayClub.slug,
+      role: displayRole,
+      allowPlayerInvites: displayClub.settings.allowPlayerInvites,
       isSuperUser: !!isSuperUser,
     })
-  }, [selected, isSuperUser])
+  }, [displayClub, displayRole, isSuperUser])
 
   const activeSectionHref =
     sections.find(s => {
       if (s.id === 'matches') {
-        return pathname === '/matches' || pathname.startsWith('/matches/')
+        return (
+          pathname === s.href ||
+          pathname.startsWith(`${s.href}/`) ||
+          pathname === '/matches' ||
+          pathname.startsWith('/matches/')
+        )
       }
       return pathname === s.href || pathname.startsWith(`${s.href}/`)
     })?.href ?? sections[0]?.href
@@ -104,7 +152,7 @@ export function ClubSubNav() {
     )
   }
 
-  if (membershipsError && memberships.length === 0) {
+  if (membershipsError && memberships.length === 0 && !needsPathClub) {
     return (
       <nav
         aria-label="Club"
@@ -128,7 +176,41 @@ export function ClubSubNav() {
     )
   }
 
-  if (!selected) {
+  if (needsPathClub && pathAccess.status === 'loading') {
+    return (
+      <div className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/40">
+        <div className="container mx-auto px-4 py-2.5">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Loading clubs…
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (needsPathClub && pathAccess.status === 'error') {
+    return (
+      <nav
+        aria-label="Club"
+        className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/40"
+      >
+        <div className="container mx-auto flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+          <p className="text-sm text-red-700 dark:text-red-400">
+            Could not load club. {pathAccess.message}
+          </p>
+          <button
+            type="button"
+            onClick={() => pathAccess.retry()}
+            className="text-sm font-semibold text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
+          >
+            Try again
+          </button>
+        </div>
+      </nav>
+    )
+  }
+
+  if (!displayClub || !displayClubId) {
     return (
       <nav
         aria-label="Club"
@@ -150,7 +232,7 @@ export function ClubSubNav() {
   }
 
   const switchClub = async (clubId: string) => {
-    if (!userData || clubId === selected.clubId || switching) return
+    if (!userData || clubId === displayClubId || switching) return
     const next = memberships.find(
       m => m.clubId === clubId && m.status === 'active'
     )
@@ -185,8 +267,10 @@ export function ClubSubNav() {
           return
         }
       }
-      if (pathname !== '/matches' && !pathname.startsWith('/matches/')) {
-        router.push('/matches')
+
+      const nextMatches = clubMatchesPath(next.club.slug)
+      if (pathname !== nextMatches) {
+        router.push(nextMatches)
       }
     } catch (err) {
       console.error('Failed to switch club:', err)
@@ -219,7 +303,11 @@ export function ClubSubNav() {
         {/* Mobile: club select + section select */}
         <div className="flex flex-col gap-2 sm:hidden">
           <Select
-            value={selected.clubId}
+            value={
+              memberships.some(m => m.clubId === displayClubId)
+                ? displayClubId
+                : undefined
+            }
             disabled={switching}
             onValueChange={value => {
               void switchClub(value)
@@ -229,7 +317,7 @@ export function ClubSubNav() {
               aria-label="Current club"
               className="h-11 w-full rounded-lg border-zinc-200 bg-white font-semibold dark:border-zinc-800 dark:bg-zinc-950"
             >
-              <SelectValue />
+              <SelectValue placeholder={displayClub.name} />
             </SelectTrigger>
             <SelectContent>
               {memberships
@@ -291,7 +379,7 @@ export function ClubSubNav() {
               className="inline-flex h-9 max-w-[14rem] items-center gap-1 rounded-md px-2 text-sm font-semibold text-zinc-900 outline-none hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 disabled:opacity-60 dark:text-zinc-100 dark:hover:bg-zinc-800"
               aria-label="Switch club"
             >
-              <span className="truncate">{selected.club.name}</span>
+              <span className="truncate">{displayClub.name}</span>
               <ChevronDownIcon className="h-4 w-4 shrink-0 opacity-70" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[14rem]">
@@ -299,7 +387,7 @@ export function ClubSubNav() {
               {memberships
                 .filter(m => m.status === 'active')
                 .map(m => {
-                  const current = m.clubId === selected.clubId
+                  const current = m.clubId === displayClubId
                   return (
                     <DropdownMenuItem
                       key={m.clubId}

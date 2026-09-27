@@ -33,6 +33,27 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-27 — Club match list: scoped queries, no create without clubId, invalidate on unmount
+
+- **Source:** PR #82 · Macroscope
+- **Gap:** (1) Super-user all-clubs view showed CreateMatchCard with `clubId: null` so creates always failed. (2) `where('clubId','==',null)` does not return docs missing the field, so “unscoped” fetches were incomplete. (3) Unmount did not bump `fetchGen`, so a late response could overwrite the shared match store for the next club page.
+- **Going forward:** Only show create-match UI when a concrete `clubId` is in context. Club-scoped client lists query `clubId == <id>` only; do not rely on null-equality for absent fields (super users use full-collection `getAllMatches` for legacy/unscoped). Always invalidate in-flight list fetches on effect cleanup when writing a shared store.
+- **Pointers:** `components/matches/ClubMatchesView.tsx`, `lib/services/matchService.ts` (`listMatchesForViewer` / `getMatchesForClub`)
+
+### 2026-09-27 — Club-scoped Firestore queries for member match lists
+
+- **Source:** PR #82 · Macroscope
+- **Gap:** `ClubMatchesView` called `getAllMatches()` (unqualified `matches` query). Once any other club had a match, Firestore rejected the query for members because rules cannot prove every result is readable.
+- **Going forward:** Client match lists for members must query with `where('clubId', '==', clubId)` (plus optional unscoped `clubId == null`). Super users may keep the collection query when viewing all clubs. Add composite indexes when combining `clubId` + `orderBy`.
+- **Pointers:** `lib/services/matchService.ts` (`listMatchesForViewer` / `getMatchesForClub`), `components/matches/ClubMatchesView.tsx`, `firestore.indexes.json`, `firestore.rules` matches read
+
+### 2026-09-27 — Club slug routes: no existence leaks; preserve super-user paths
+
+- **Source:** PR #82 · Macroscope | Greptile
+- **Gap:** By-slug API returned 401 vs 404 (enumerable). Legacy `/matches` redirects treated membership load failures and super users with no membership as `/join`. Club match detail did not enforce match.`clubId` vs URL club. Sub-nav ignored path club for super users without membership. Transient by-slug errors looked like 404. Follow-ups: mobile switcher fell back to another membership; shared match store showed stale club list on error; legacy match redirect preferred active membership over the match’s club for super users; cancelled `getClubByIdAPI` could still redirect.
+- **Going forward:** Auth before club lookup; unauthorized/missing both 404. Never redirect to `/join` on membership `error` (retry UI). Super users without membership keep all-clubs `/matches`. Resolve legacy match detail via the match’s club (membership or by-id API) before any active-club fallback; check `cancelled` after every await. Clear shared match store when starting/failing a club-scoped fetch. Mobile club `Select` must stay unselected when `displayClubId` is not a membership. Club-scoped match detail must check `expectedClubId`. Path slug drives sub-nav display when it differs from memberships.
+- **Pointers:** `app/api/clubs/by-slug/[slug]/route.ts`, `app/matches/page.tsx`, `app/matches/[matchId]/page.tsx`, `components/matches/MatchDetailView.tsx`, `components/matches/ClubMatchesView.tsx`, `components/layout/ClubSubNav.tsx`, `lib/hooks/useClubSlugAccess.ts`
+
 ### 2026-09-27 — Keep club selection consistent across chrome and pages
 
 - **Source:** PR #80 · Greptile

@@ -116,7 +116,7 @@ describe('clubSubNavSections', () => {
         includeClubAdminSections: true,
       }).map(s => ({ id: s.id, href: s.href }))
     ).toEqual([
-      { id: 'matches', href: '/matches' },
+      { id: 'matches', href: '/c/jax/matches' },
       { id: 'roster', href: '/c/jax/roster' },
       { id: 'invites', href: '/c/jax/invites' },
       { id: 'settings', href: '/c/jax/settings' },

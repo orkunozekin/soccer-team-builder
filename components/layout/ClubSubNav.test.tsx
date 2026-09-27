@@ -30,6 +30,10 @@ vi.mock('@/lib/hooks/useClubMemberships', () => ({
   useClubMemberships: () => useClubMembershipsMock(),
 }))
 
+vi.mock('@/lib/hooks/useClubSlugAccess', () => ({
+  useClubSlugAccess: () => ({ status: 'forbidden' }),
+}))
+
 vi.mock('@/lib/flags/useFeatureFlag', () => ({
   useFeatureFlag: (key: string) => useFeatureFlagMock(key),
 }))
@@ -133,7 +137,26 @@ describe('ClubSubNav', () => {
     expect(screen.getByLabelText('Switch club')).toHaveTextContent('Alpha FC')
     expect(screen.getAllByRole('link', { name: 'Matches' })[0]).toHaveAttribute(
       'href',
-      '/matches'
+      '/c/alpha/matches'
+    )
+  })
+
+  it('highlights Matches from the club slug path', () => {
+    usePathnameMock.mockReturnValue('/c/alpha/matches')
+    render(<ClubSubNav />)
+    expect(screen.getAllByRole('link', { name: 'Matches' })[0]).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
+  })
+
+  it('uses the path slug club when it differs from activeClubId', () => {
+    usePathnameMock.mockReturnValue('/c/beta/matches')
+    render(<ClubSubNav />)
+    expect(screen.getByLabelText('Switch club')).toHaveTextContent('Beta United')
+    expect(screen.getAllByRole('link', { name: 'Matches' })[0]).toHaveAttribute(
+      'href',
+      '/c/beta/matches'
     )
   })
 
@@ -181,6 +204,21 @@ describe('ClubSubNav', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Network down')
     expect(pushMock).not.toHaveBeenCalled()
+  })
+
+  it('navigates to the new club matches path when switching off a club route', async () => {
+    const user = userEvent.setup()
+    usePathnameMock.mockReturnValue('/c/alpha/matches')
+    vi.mocked(updateProfileAPI).mockResolvedValue({ success: true })
+
+    render(<ClubSubNav />)
+    await user.click(screen.getByLabelText('Switch club'))
+    await user.click(screen.getByText('Beta United'))
+
+    await waitFor(() => {
+      expect(updateProfileAPI).toHaveBeenCalledWith({ activeClubId: 'beta' })
+    })
+    expect(pushMock).toHaveBeenCalledWith('/c/beta/matches')
   })
 
   it('stays on profile when switching clubs from a platform page', async () => {

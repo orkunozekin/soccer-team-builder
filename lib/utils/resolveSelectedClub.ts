@@ -43,8 +43,8 @@ export type ClubSubNavSection = 'matches' | 'roster' | 'invites' | 'settings'
 
 /**
  * Club-scoped section links for the sub-nav.
- * Todo 2: Matches only (still `/matches` until `/c/[slug]` redirects land).
- * Roster / invites / settings hrefs are ready for todos 3–4.
+ * Matches uses `/c/[slug]/matches`. Roster / invites / settings stay behind
+ * `includeClubAdminSections` until those routes ship (todo 4).
  */
 export function clubSubNavSections(input: {
   slug: string
@@ -59,7 +59,7 @@ export function clubSubNavSections(input: {
   includeClubAdminSections?: boolean
 }): { id: ClubSubNavSection; label: string; href: string }[] {
   const sections: { id: ClubSubNavSection; label: string; href: string }[] = [
-    { id: 'matches', label: 'Matches', href: '/matches' },
+    { id: 'matches', label: 'Matches', href: `/c/${input.slug}/matches` },
   ]
 
   if (!input.includeClubAdminSections) {

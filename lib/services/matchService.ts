@@ -1,4 +1,4 @@
-import { orderBy } from 'firebase/firestore/lite'
+import { orderBy, where } from 'firebase/firestore/lite'
 import {
   dateToTimestamp,
   getDocument,
@@ -72,6 +72,81 @@ export const getAllMatches = async (options?: {
   })
 
   return filtered
+}
+
+function finalizeMatchList(
+  docs: Record<string, unknown>[],
+  options?: { includeDeleted?: boolean }
+): Match[] {
+  const byId = new Map<string, Match>()
+  for (const match of docs) {
+    const id = (match.id as string) || ''
+    if (!id || byId.has(id)) continue
+    byId.set(id, mapDocToMatch(match, id))
+  }
+
+  const list = Array.from(byId.values())
+  const filtered = options?.includeDeleted
+    ? list
+    : list.filter(m => m.deletedAt == null)
+
+  filtered.sort((a, b) => {
+    const dateCompare = a.date.getTime() - b.date.getTime()
+    if (dateCompare !== 0) return dateCompare
+    return (a.time || '').localeCompare(b.time || '')
+  })
+  return filtered
+}
+
+/**
+ * Club-scoped match list for members (and super users viewing one club).
+ * Queries `clubId == clubId` so Firestore rules allow the read.
+ *
+ * Does not attempt to load unscoped / missing-`clubId` docs: `where('clubId','==',null)`
+ * only matches explicit null, not absent fields, and cannot be combined into a
+ * rules-safe member collection query. Pre-backfill docs remain visible to
+ * super users via {@link getAllMatches} / the all-clubs list.
+ */
+export const getMatchesForClub = async (
+  clubId: string,
+  options?: { includeDeleted?: boolean }
+): Promise<Match[]> => {
+  const trimmed = clubId.trim()
+  if (!trimmed) return []
+
+  const clubDocs = await queryDocuments('matches', [
+    where('clubId', '==', trimmed),
+    orderBy('date', 'asc'),
+  ])
+
+  return finalizeMatchList(clubDocs, options)
+}
+
+/**
+ * Load matches the viewer is allowed to query under Firestore rules.
+ * - Super user, no club: full collection (authorized for operators).
+ * - Otherwise: club-scoped `clubId` query only.
+ */
+export const listMatchesForViewer = async (input: {
+  clubId: string | null
+  isSuperUser: boolean
+  includeDeleted?: boolean
+}): Promise<Match[]> => {
+  const preferred =
+    typeof input.clubId === 'string' ? input.clubId.trim() : ''
+
+  if (input.isSuperUser && !preferred) {
+    return getAllMatches({ includeDeleted: input.includeDeleted })
+  }
+
+  if (!preferred) {
+    // Members without a club context: do not run an unqualified matches query.
+    return []
+  }
+
+  return getMatchesForClub(preferred, {
+    includeDeleted: input.includeDeleted,
+  })
 }
 
 export const updateMatch = async (

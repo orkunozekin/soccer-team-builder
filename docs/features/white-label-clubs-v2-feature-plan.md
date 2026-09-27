@@ -7,9 +7,9 @@ Plan for the follow-ups listed under Later in the [v1 white-label plan](./white-
 | Field | Value |
 |-------|-------|
 | Status | in progress |
-| Owner session | cloud agent (club sub-nav) |
-| Last updated | 2026-09-26 |
-| Related PR / branch | [#80](https://github.com/orkunozekin/soccer-team-builder/pull/80) `cursor/club-sub-nav-77d2`. Prior: [#79](https://github.com/orkunozekin/soccer-team-builder/pull/79) `club-creation` flag (merged). Continues [v1 plan](./white-label-clubs-feature-plan.md) (merged [#65](https://github.com/orkunozekin/soccer-team-builder/pull/65), [#71](https://github.com/orkunozekin/soccer-team-builder/pull/71), [#73](https://github.com/orkunozekin/soccer-team-builder/pull/73), [#74](https://github.com/orkunozekin/soccer-team-builder/pull/74), [#76](https://github.com/orkunozekin/soccer-team-builder/pull/76)) |
+| Owner session | cloud agent (club slug match routes) |
+| Last updated | 2026-09-27 |
+| Related PR / branch | [#82](https://github.com/orkunozekin/soccer-team-builder/pull/82) `cursor/club-slug-matches-d070` (todo 3). Prior: [#80](https://github.com/orkunozekin/soccer-team-builder/pull/80) club sub-nav, [#79](https://github.com/orkunozekin/soccer-team-builder/pull/79) `club-creation`. Continues [v1 plan](./white-label-clubs-feature-plan.md) (merged [#65](https://github.com/orkunozekin/soccer-team-builder/pull/65), [#71](https://github.com/orkunozekin/soccer-team-builder/pull/71), [#73](https://github.com/orkunozekin/soccer-team-builder/pull/73), [#74](https://github.com/orkunozekin/soccer-team-builder/pull/74), [#76](https://github.com/orkunozekin/soccer-team-builder/pull/76)) |
 
 ## Goals (v1 of this plan)
 
@@ -27,7 +27,7 @@ Ship in this order. Later numbers wait until the nav shell exists.
 
 1. [x] Feature-flag club creation (`club-creation`, default off) on the admin form and on `POST /api/clubs`.
 2. [x] Split the shell into a Soccerville platform bar and a club sub-nav with a club switcher.
-3. [ ] Move member match pages to `/c/[slug]/…` and redirect legacy `/matches` URLs.
+3. [x] Move member match pages to `/c/[slug]/…` and redirect legacy `/matches` URLs.
 4. [ ] Move roster, invites, and club settings onto the club sub-nav (club-admin console).
 5. [ ] Add club logo, display name, and primary color on the club sub-nav only.
 6. [ ] QR code for the existing invite URL.
@@ -43,8 +43,9 @@ v1 tenancy is on `main`. Founding club is Jax State Soccer Club. Promote/demote 
 
 | Area | Today |
 |------|--------|
-| Shell | Sticky [`AppShell`](../../components/layout/AppShell.tsx): Soccerville platform bar ([`Navigation.tsx`](../../components/layout/Navigation.tsx): wordmark → `/matches`, Profile, Admin for `super_user`, Sign out) plus signed-in [`ClubSubNav`](../../components/layout/ClubSubNav.tsx) (club switcher, Matches, Join; Create club when `club-creation` + super user). Signed-out: centered wordmark only. Mounted from [`app/layout.tsx`](../../app/layout.tsx). |
-| Selected club | Sub-nav switcher writes `users.activeClubId` via `PATCH /api/users/me` ([`resolveSelectedClubMembership`](../../lib/utils/resolveSelectedClub.ts)). Profile “Set as active” still works. Match lists in [`app/matches/page.tsx`](../../app/matches/page.tsx) filter with [`lib/utils/clubMatches.ts`](../../lib/utils/clubMatches.ts). |
+| Shell | Sticky [`AppShell`](../../components/layout/AppShell.tsx): Soccerville platform bar ([`Navigation.tsx`](../../components/layout/Navigation.tsx): wordmark → `/matches` redirect, Profile, Admin for `super_user`, Sign out) plus signed-in [`ClubSubNav`](../../components/layout/ClubSubNav.tsx) (club switcher, Matches → `/c/{slug}/matches`, Join; Create club when `club-creation` + super user). Signed-out: centered wordmark only. |
+| Selected club | URL slug on `/c/[slug]/…` is source of truth for that tab. Switcher writes `users.activeClubId` via `PATCH /api/users/me` for legacy redirects ([`resolveClubMembershipForPath`](../../lib/utils/clubPaths.ts)). |
+| Match pages | Canonical: [`app/c/[slug]/matches`](../../app/c/[slug]/matches/page.tsx) + match detail. Legacy [`/matches`](../../app/matches/page.tsx) and [`/matches/[matchId]`](../../app/matches/[matchId]/page.tsx) redirect. Access via [`useClubSlugAccess`](../../lib/hooks/useClubSlugAccess.ts); super users without membership use [`GET /api/clubs/by-slug/[slug]`](../../app/api/clubs/by-slug/[slug]/route.ts). |
 | Club create | Super-user form [`components/admin/ClubAdminPanel.tsx`](../../components/admin/ClubAdminPanel.tsx) on [`app/admin/users/page.tsx`](../../app/admin/users/page.tsx). Hidden unless `club-creation` is on. `POST` [`app/api/clubs/route.ts`](../../app/api/clubs/route.ts) uses `verifySuperUser` then `evaluateFeatureFlag('club-creation')` (403 when off). |
 | Flags | Client: `launchdarkly-react-client-sdk` + [`useFeatureFlag`](../../lib/flags/useFeatureFlag.ts). Server: `@launchdarkly/node-server-sdk` via [`lib/flags/evaluateFeatureFlag.ts`](../../lib/flags/evaluateFeatureFlag.ts). Keys in [`lib/flags/featureFlags.ts`](../../lib/flags/featureFlags.ts): `pitch-lineup-view`, `club-creation` (both default false). Local overrides: `NEXT_PUBLIC_FF_PITCH_LINEUP_VIEW`, `NEXT_PUBLIC_FF_CLUB_CREATION`. |
 | Club admin UI | Roster, invites, and `allowPlayerInvites` live on the profile page ([`ClubAdminRoster`](../../components/profile/ClubAdminRoster.tsx), [`ProfileClubsSection`](../../components/profile/ProfileClubsSection.tsx)). Platform admin stays [`/admin/*`](../../app/admin/layout.tsx) with [`AdminNav`](../../components/admin/AdminNav.tsx). |
@@ -206,8 +207,8 @@ Starting map only. Touch any other files the work needs: tests, hooks, services,
 - [x] With `club-creation` off, super users do not see the create form and `POST /api/clubs` returns 403. With the flag on (or `NEXT_PUBLIC_FF_CLUB_CREATION=true`), create still works for a super user. Missing server SDK key fails closed.
 - [x] Signed-in users see a Soccerville platform bar and a club sub-nav. The sub-nav shows the current club and switches clubs. Matches is on the sub-nav. Profile and super-user Admin stay on the platform bar.
 - [x] Signed-out users still see the centered Soccerville header. Users with no club see a Join prompt on the sub-nav.
-- [ ] `/c/[slug]/matches` is the match list for that club. `/matches` redirects there from `activeClubId` or the sole membership. A non-member slug 404s.
-- [ ] Switching clubs updates `activeClubId` and the URL. Two tabs can show two clubs.
+- [x] `/c/[slug]/matches` is the match list for that club. `/matches` redirects there from `activeClubId` or the sole membership. A non-member slug 404s.
+- [x] Switching clubs updates `activeClubId` and the URL. Two tabs can show two clubs.
 - [ ] Roster, invites, and settings are reachable from the sub-nav for the roles above, and the APIs still enforce `verifyClubAdmin` / the invite gate.
 - [ ] Club logo, display name, and primary color appear on the sub-nav. The Soccerville bar stays the platform red. Invalid color or logo values are rejected.
 - [ ] Invite QR encodes the existing `/join?code=` URL.
@@ -231,31 +232,30 @@ Starting map only. Touch any other files the work needs: tests, hooks, services,
 
 - Plan drafted; v1 sibling unchanged.
 - **`club-creation` flag** merged in [#79](https://github.com/orkunozekin/soccer-team-builder/pull/79) (client hide + server 403 + LD Node helper + tests).
-- **Platform bar + club sub-nav (todo 2) on `cursor/club-sub-nav-77d2`:**
-  - [`AppShell`](../../components/layout/AppShell.tsx) sticky wrapper mounts [`Navigation`](../../components/layout/Navigation.tsx) + signed-in [`ClubSubNav`](../../components/layout/ClubSubNav.tsx).
-  - Platform bar: Matches removed; Profile / Admin / Sign out remain; wordmark still → `/matches`.
-  - ClubSubNav: current club + chevron menu (memberships with role, Join a club, Create club when `club-creation` + super user); Matches link; mobile club + section selects; empty-membership Join prompt.
-  - Switcher: `PATCH /api/users/me` `activeClubId` + auth store update ([`resolveSelectedClubMembership`](../../lib/utils/resolveSelectedClub.ts)).
-  - Roster / invites / settings section hrefs are implemented in `clubSubNavSections` behind `includeClubAdminSections` (default off until those routes exist).
-  - Tests: `lib/utils/resolveSelectedClub.test.ts`, `components/layout/ClubSubNav.test.tsx`, `components/layout/Navigation.test.tsx`.
+- **Platform bar + club sub-nav (todo 2)** merged in [#80](https://github.com/orkunozekin/soccer-team-builder/pull/80).
+- **Club slug match routes (todo 3) on `cursor/club-slug-matches-d070`:**
+  - Canonical pages: [`app/c/[slug]/matches/page.tsx`](../../app/c/[slug]/matches/page.tsx), [`app/c/[slug]/matches/[matchId]/page.tsx`](../../app/c/[slug]/matches/[matchId]/page.tsx) via [`ClubMatchesView`](../../components/matches/ClubMatchesView.tsx) + [`useClubSlugAccess`](../../lib/hooks/useClubSlugAccess.ts).
+  - Legacy redirects: [`app/matches/page.tsx`](../../app/matches/page.tsx) → `/c/{slug}/matches` (or `/join`); [`app/matches/[matchId]/page.tsx`](../../app/matches/[matchId]/page.tsx) → club match detail.
+  - Sub-nav Matches href + switcher navigation use `/c/{slug}/matches`; path slug wins over `activeClubId` for selected club ([`clubPaths.ts`](../../lib/utils/clubPaths.ts)).
+  - Super-user / membership gate: [`GET /api/clubs/by-slug/[slug]`](../../app/api/clubs/by-slug/[slug]/route.ts) + [`getClubBySlug`](../../lib/services/clubService.ts). Non-member and unknown slug → 404.
+  - Tests: `clubPaths`, by-slug route, `ClubMatchesView`, matches redirect, ClubSubNav path updates.
 
 ### Remaining work
 
-1. `/c/[slug]/…` match routes and legacy `/matches` redirects (todo 3). Point Matches (and wordmark) at `/c/{slug}/matches`; enable multi-tab slug truth.
-2. Move roster, invites, and settings onto the sub-nav; set `includeClubAdminSections: true` (todo 4).
-3. Branding fields and sub-nav paint (todo 5).
-4. QR, invite-only flag, ownership transfer, club-scoped attendance, club-context copy (todos 6–10).
-5. Custom domain only after the above, as its own slice (todo 11).
+1. Move roster, invites, and settings onto the sub-nav; set `includeClubAdminSections: true` (todo 4).
+2. Branding fields and sub-nav paint (todo 5).
+3. QR, invite-only flag, ownership transfer, club-scoped attendance, club-context copy (todos 6–10).
+4. Custom domain only after the above, as its own slice (todo 11).
 
 ### Blockers / risks
 
 - Create the LaunchDarkly `club-creation` boolean (default off) in each environment dashboard, and set `LAUNCHDARKLY_SDK_KEY` in deployed server env. Until then, creation stays off unless `NEXT_PUBLIC_FF_CLUB_CREATION=true` (dev/demo).
-- Path move will touch every in-app `/matches` link. API routes stay put.
-- Multi-tab safety still depends on `activeClubId` until slug URLs land (todo 3).
+- In-app links that still push `/matches` rely on the redirect (login/register/join/wordmark). Prefer updating call sites to slug paths when touching those files.
+- Enable `includeClubAdminSections` only after roster/invites/settings pages exist.
 
 ### Pointers for the next agent
 
-- Start at: Design §3 (club routes) — add `app/c/[slug]/matches` (+ match detail) and redirect `/matches` using `activeClubId` / sole membership.
-- Do not: put `club_admin` on `users.role`; rename match `teams`; paint the Soccerville bar with club colors; point local Firebase at production; start custom domains; enable `includeClubAdminSections` before roster/invites/settings pages exist.
-- Verify with: `yarn vitest run lib/utils/resolveSelectedClub.test.ts components/layout/ClubSubNav.test.tsx components/layout/Navigation.test.tsx`; then slug route + redirect tests.
+- Start at: Design §4 (club-admin console) — move roster/invites/settings to `/c/[slug]/…` and flip `includeClubAdminSections`.
+- Do not: put `club_admin` on `users.role`; rename match `teams`; paint the Soccerville bar with club colors; point local Firebase at production; start custom domains; enable admin sections before those pages exist.
+- Verify with: `yarn vitest run lib/utils/clubPaths.test.ts lib/utils/resolveSelectedClub.test.ts components/layout/ClubSubNav.test.tsx components/matches/ClubMatchesView.test.tsx app/matches/page.test.tsx app/api/clubs/by-slug/[slug]/route.test.ts`
 - Next skills: `/feature-context` on this file before coding; `/handoff` when a session ends or status changes.
