@@ -143,7 +143,7 @@ Keep existing zinc / shadcn patterns and the Soccerville red for **platform** ac
 | New `components/layout/ClubContextSwitcher.tsx` | Searchable membership popover. |
 | New `components/layout/ClubNav.tsx` (name flexible) | Section links for rail + sheet. |
 | New `components/ui/sheet.tsx` (if added) | Mobile club nav container. |
-| [`lib/utils/resolveSelectedClub.ts`](../../lib/utils/resolveSelectedClub.ts) | Keep resolver + `clubSubNavSections`; only change if hrefs need `/c/[slug]` early. |
+| [`lib/utils/resolveSelectedClub.ts`](../../lib/utils/resolveSelectedClub.ts) / [`lib/utils/clubPaths.ts`](../../lib/utils/clubPaths.ts) | Keep resolvers + section hrefs; reuse path helpers on switch. |
 | [`components/layout/ClubSubNav.test.tsx`](../../components/layout/ClubSubNav.test.tsx) / new tests | Cover switcher search, empty state, section active state, mobile trigger. |
 | [`docs/features/white-label-clubs-v2-feature-plan.md`](./white-label-clubs-v2-feature-plan.md) | Note chrome supersession in Status / Handoff when implementation lands. |
 | [`app/layout.tsx`](../../app/layout.tsx) | Only if shell mount / body layout classes change. |
