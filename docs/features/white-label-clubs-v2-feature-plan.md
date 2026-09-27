@@ -21,7 +21,8 @@ Ship in this order. Later numbers wait until the nav shell exists.
 - **Club sub-nav is the club-admin console.** Matches, roster, invites, and settings. Profile stays personal.
 - **Branding on the club bar.** Logo, display name, and one primary color on the sub-nav. Soccerville chrome stays Soccerville.
 - **Remaining v1 Later items.** QR invites, invite-only registration, ownership transfer, club-scoped attendance, club-context copy. Custom domain is last and is its own slice.
-- **Out of scope for v1:** billing, a cross-club match marketplace, renaming match-lineup teams, a command palette, a sidebar layout, a searchable club switcher, restyling the Soccerville bar with club colors, re-running the founding-club backfill.
+- **Out of scope for v1:** billing, a cross-club match marketplace, renaming match-lineup teams, a command palette, restyling the Soccerville bar with club colors, re-running the founding-club backfill.
+- **Nav chrome follow-up:** stacked platform bar + horizontal club sub-nav is being redesigned as a Vercel-style club context switcher + club-owned rail/sheet. See [club-context-nav-feature-plan.md](./club-context-nav-feature-plan.md). That plan supersedes the “no sidebar / no searchable switcher” deferral below for product direction; slug routes and club-admin pages in this plan stay.
 
 ## Todos
 
@@ -222,7 +223,7 @@ Starting map only. Touch any other files the work needs: tests, hooks, services,
 
 - Custom domain host mapping and the chrome choice for that host (todo 11). Do not fold it into the nav PR.
 - Search inside the club menu, only if real users belong to many clubs.
-- Command palette and a sidebar shell. Revisit only if the sub-nav stops fitting.
+- Command palette. Sidebar / searchable club switcher: see [club-context-nav-feature-plan.md](./club-context-nav-feature-plan.md).
 
 ## Handoff
 
