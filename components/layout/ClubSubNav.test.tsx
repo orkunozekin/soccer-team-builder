@@ -197,15 +197,18 @@ describe('ClubSubNav', () => {
     expect(screen.queryByText('Create club')).not.toBeInTheDocument()
   })
 
-  it('shows Create club for super users when club-creation is on', () => {
+  it('shows Create club for super users when club-creation is on', async () => {
+    const user = userEvent.setup()
     useAdminMock.mockReturnValue({ isSuperUser: true, isAdmin: true })
     useFeatureFlagMock.mockImplementation(
       (key: string) => key === 'club-creation'
     )
     render(<ClubSubNav />)
-    // Desktop menu item is inside the closed dropdown; open it.
-    // Mobile link is also rendered (sm:hidden) in jsdom.
-    expect(screen.getAllByText('Create club').length).toBeGreaterThan(0)
+    await user.click(screen.getByLabelText('Switch club'))
+    expect(screen.getByRole('link', { name: 'Create club' })).toHaveAttribute(
+      'href',
+      '/admin/users'
+    )
   })
 
   it('switches active club via PATCH /users/me', async () => {
