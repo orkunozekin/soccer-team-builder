@@ -18,6 +18,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { ButtonSpinner } from '@/components/ui/button-spinner'
 import { Card, CardContent } from '@/components/ui/card'
+import { InitialsAvatar } from '@/components/ui/initials-avatar'
 import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/pagination'
 import {
@@ -33,10 +34,7 @@ import {
   updateUserRoleAPI,
 } from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
-import {
-  getUsersCount,
-  getUsersPaginated,
-} from '@/lib/services/userService'
+import { getUsersCount, getUsersPaginated } from '@/lib/services/userService'
 import { User, UserRole } from '@/types/user'
 
 const PAGE_SIZE = 10
@@ -48,11 +46,7 @@ type UsersPageData = {
   nextCursor: string | null
 }
 
-function adminUsersPageKey(
-  uid: string,
-  page: number,
-  cursor: string | null
-) {
+function adminUsersPageKey(uid: string, page: number, cursor: string | null) {
   return ['admin-users', uid, page, cursor] as const
 }
 
@@ -63,7 +57,9 @@ function adminUsersCountKey(uid: string) {
 function isAdminUsersPageKey(
   key: unknown
 ): key is ReturnType<typeof adminUsersPageKey> {
-  return Array.isArray(key) && key[0] === 'admin-users' && typeof key[1] === 'string'
+  return (
+    Array.isArray(key) && key[0] === 'admin-users' && typeof key[1] === 'string'
+  )
 }
 
 export function UserRoleManager() {
@@ -93,10 +89,7 @@ export function UserRoleManager() {
       ? adminUsersPageKey(adminUid, page, cursorForPage)
       : null
 
-  const {
-    data: pageData,
-    isLoading: pageLoading,
-  } = useSWR(
+  const { data: pageData, isLoading: pageLoading } = useSWR(
     pageKey,
     async ([, , , cursor]: readonly [
       'admin-users',
@@ -185,9 +178,7 @@ export function UserRoleManager() {
 
   const patchUserInSwrCache = (userId: string, patch: Partial<UserRow>) => {
     setSearchUsers(prev =>
-      prev
-        ? prev.map(u => (u.uid === userId ? { ...u, ...patch } : u))
-        : prev
+      prev ? prev.map(u => (u.uid === userId ? { ...u, ...patch } : u)) : prev
     )
     void globalMutate(
       (key: unknown) =>
@@ -302,64 +293,68 @@ export function UserRoleManager() {
           className="h-11 text-base sm:h-9 sm:text-sm"
         />
 
-        <div className="max-h-96 space-y-2 overflow-y-auto">
-          {searchLoading || (browsing && pageLoading && visibleUsers.length === 0) ? (
-            <div className="rounded-md border p-4 text-sm text-zinc-600 dark:text-zinc-400">
+        <div className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+          {searchLoading ||
+          (browsing && pageLoading && visibleUsers.length === 0) ? (
+            <div className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
               {searchLoading ? 'Searching…' : 'Loading…'}
             </div>
           ) : visibleUsers.length === 0 ? (
-            <div className="rounded-md border p-4 text-sm text-zinc-600 dark:text-zinc-400">
+            <div className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
               No users found.
             </div>
           ) : (
-            visibleUsers.map(user => (
-              <div
-                key={user.uid}
-                className="flex items-center justify-between gap-4 rounded-lg border p-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <Link
-                    href={`/admin/players/${user.uid}`}
-                    className="block truncate font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
-                  >
-                    {user.displayName}
-                  </Link>
-                  <p className="truncate text-sm text-zinc-600 dark:text-zinc-400">
-                    {user.email}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Select
-                    value={user.role}
-                    onValueChange={(value: UserRole) =>
-                      handleRoleChange(user.uid, value)
-                    }
-                    disabled={updating === user.uid || deleting === user.uid}
-                  >
-                    <SelectTrigger className="h-9 w-[8.5rem]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="super_user">Super user</SelectItem>
-                    </SelectContent>
-                  </Select>
+            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {visibleUsers.map(user => (
+                <li
+                  key={user.uid}
+                  className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
+                >
+                  <InitialsAvatar name={user.displayName || user.email} />
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/admin/players/${user.uid}`}
+                      className="block truncate text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
+                    >
+                      {user.displayName}
+                    </Link>
+                    <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                      {user.email}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Select
+                      value={user.role}
+                      onValueChange={(value: UserRole) =>
+                        handleRoleChange(user.uid, value)
+                      }
+                      disabled={updating === user.uid || deleting === user.uid}
+                    >
+                      <SelectTrigger className="h-9 w-[8.5rem]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="super_user">Super user</SelectItem>
+                      </SelectContent>
+                    </Select>
 
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    disabled={updating === user.uid || deleting === user.uid}
-                    onClick={() => setDeleteDialogUserId(user.uid)}
-                    aria-label={`Remove ${user.displayName || user.email}`}
-                  >
-                    <CloseIcon
-                      className={deleting === user.uid ? 'opacity-50' : ''}
-                    />
-                  </Button>
-                </div>
-              </div>
-            ))
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      disabled={updating === user.uid || deleting === user.uid}
+                      onClick={() => setDeleteDialogUserId(user.uid)}
+                      aria-label={`Remove ${user.displayName || user.email}`}
+                    >
+                      <CloseIcon
+                        className={deleting === user.uid ? 'opacity-50' : ''}
+                      />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
@@ -406,8 +401,7 @@ export function UserRoleManager() {
             onNext={() => {
               setCursors(prev => {
                 const next = [...prev]
-                next[page - 1] =
-                  pageData?.nextCursor ?? next[page - 1] ?? null
+                next[page - 1] = pageData?.nextCursor ?? next[page - 1] ?? null
                 return next
               })
               setPage(p => p + 1)
