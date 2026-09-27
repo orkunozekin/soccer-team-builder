@@ -88,4 +88,55 @@ describe('ClubSettingsPanel', () => {
     )
     expect(screen.getByRole('checkbox')).toBeChecked()
   })
+
+  it('saves branding and rejects a non-https logo before calling the API', async () => {
+    const user = userEvent.setup()
+    vi.mocked(updateClubAPI).mockResolvedValue({
+      success: true,
+      club: {} as never,
+    })
+
+    render(
+      <ClubSettingsPanel
+        clubId="c1"
+        clubName="Alpha FC"
+        initialAllowPlayerInvites={false}
+        initialBranding={{ displayName: 'Wolves' }}
+      />
+    )
+
+    expect(screen.getByLabelText('Display name')).toHaveValue('Wolves')
+    await user.clear(screen.getByLabelText('Logo URL'))
+    await user.type(
+      screen.getByLabelText('Logo URL'),
+      'http://cdn.example/a.png'
+    )
+    await user.click(screen.getByRole('button', { name: 'Save branding' }))
+
+    expect(updateClubAPI).not.toHaveBeenCalled()
+    expect(
+      await screen.findByText('Logo URL must be an https URL')
+    ).toBeInTheDocument()
+
+    await user.clear(screen.getByLabelText('Logo URL'))
+    await user.type(
+      screen.getByLabelText('Logo URL'),
+      'https://cdn.example/logo.png'
+    )
+    await user.clear(screen.getByLabelText('Primary color'))
+    await user.type(screen.getByLabelText('Primary color'), '#112233')
+    await user.click(screen.getByRole('button', { name: 'Save branding' }))
+
+    await waitFor(() => {
+      expect(updateClubAPI).toHaveBeenCalledWith('c1', {
+        settings: {
+          branding: {
+            displayName: 'Wolves',
+            logoUrl: 'https://cdn.example/logo.png',
+            primaryColor: '#112233',
+          },
+        },
+      })
+    })
+  })
 })

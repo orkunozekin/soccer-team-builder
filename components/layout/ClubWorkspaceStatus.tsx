@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import type { ClubWorkspaceStatus as Status } from '@/lib/hooks/useClubWorkspace'
+import { clubChromeBorderClass } from '@/lib/utils/clubBranding'
 
 export function ClubWorkspaceStatus({
   status,
@@ -12,7 +13,7 @@ export function ClubWorkspaceStatus({
 }) {
   if (status.kind === 'loading') {
     return (
-      <p className="px-1 text-sm text-white/80">
+      <p className="px-1 text-sm text-[color:color-mix(in_srgb,var(--club-foreground)_80%,transparent)]">
         Loading clubs…
       </p>
     )
@@ -20,7 +21,9 @@ export function ClubWorkspaceStatus({
 
   if (status.kind === 'error') {
     return (
-      <div className="rounded-md border border-white/30 bg-white px-3 py-3 text-zinc-900">
+      <div
+        className={`rounded-md border bg-white px-3 py-3 text-zinc-900 ${clubChromeBorderClass}`}
+      >
         <p className="text-sm text-red-40">{status.message}</p>
         <button
           type="button"
@@ -35,7 +38,9 @@ export function ClubWorkspaceStatus({
 
   if (status.kind === 'empty') {
     return (
-      <div className="rounded-md border border-white/30 bg-white px-3 py-3 text-zinc-900">
+      <div
+        className={`rounded-md border bg-white px-3 py-3 text-zinc-900 ${clubChromeBorderClass}`}
+      >
         <p className="text-sm text-zinc-700">You are not in a club yet.</p>
         <Link
           href="/join"

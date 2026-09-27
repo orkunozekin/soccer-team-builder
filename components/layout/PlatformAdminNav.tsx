@@ -4,6 +4,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { ADMIN_NAV_LINKS } from '@/lib/utils/adminNavLinks'
+import {
+  clubChromeFgClass,
+  clubChromeFillClass,
+  clubChromeHoverClass,
+} from '@/lib/utils/clubBranding'
 
 /** Platform admin routes in the workspace rail and mobile sheet. */
 export function PlatformAdminNav({
@@ -30,9 +35,13 @@ export function PlatformAdminNav({
             onClick={onNavigate}
             className={cn(
               'rounded-md border-l-[6px] px-3 py-2 text-sm font-semibold transition-colors',
+              clubChromeFgClass,
               active
-                ? 'border-white bg-white/20 text-white'
-                : 'border-transparent text-white hover:bg-white/10'
+                ? cn(
+                    'border-[color:var(--club-foreground)]',
+                    clubChromeFillClass
+                  )
+                : cn('border-transparent', clubChromeHoverClass)
             )}
           >
             {link.label}

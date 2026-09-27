@@ -13,6 +13,11 @@ import {
 import { logoutUser } from '@/lib/firebase/auth'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { cn } from '@/lib/utils'
+import {
+  clubChromeBorderClass,
+  clubChromeFgClass,
+  clubChromeHoverClass,
+} from '@/lib/utils/clubBranding'
 
 /** Platform account links. Kept out of club section nav. */
 export function AccountMenu({
@@ -40,7 +45,10 @@ export function AccountMenu({
       <DropdownMenuTrigger
         aria-label="Account"
         className={cn(
-          'inline-flex h-9 w-full max-w-full items-center justify-between gap-1 rounded-md border border-white px-2 text-sm font-medium text-white outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white',
+          'inline-flex h-9 w-full max-w-full items-center justify-between gap-1 rounded-md border px-2 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-[var(--club-foreground)]',
+          clubChromeBorderClass,
+          clubChromeFgClass,
+          clubChromeHoverClass,
           className
         )}
       >

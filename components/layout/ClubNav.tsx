@@ -3,6 +3,11 @@
 import Link from 'next/link'
 import type { ClubWorkspaceSection } from '@/lib/hooks/useClubWorkspace'
 import { cn } from '@/lib/utils'
+import {
+  clubChromeFgClass,
+  clubChromeFillClass,
+  clubChromeHoverClass,
+} from '@/lib/utils/clubBranding'
 
 export function ClubNav({
   sections,
@@ -27,9 +32,13 @@ export function ClubNav({
             onClick={onNavigate}
             className={cn(
               'rounded-md border-l-[6px] px-3 py-2 text-sm font-semibold transition-colors',
+              clubChromeFgClass,
               active
-                ? 'border-white bg-white/20 text-white'
-                : 'border-transparent text-white hover:bg-white/10'
+                ? cn(
+                    'border-[color:var(--club-foreground)]',
+                    clubChromeFillClass
+                  )
+                : cn('border-transparent', clubChromeHoverClass)
             )}
           >
             {section.label}

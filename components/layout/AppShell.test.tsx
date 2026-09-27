@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppShell } from './AppShell'
 import { updateProfileAPI } from '@/lib/api/client'
+import { PLATFORM_CHROME_BACKGROUND } from '@/lib/utils/clubBranding'
 import type { ClubMembershipWithClub } from '@/types/club'
 
 const pushMock = vi.fn()
@@ -132,6 +133,67 @@ describe('AppShell', () => {
     expect(screen.getByText('page')).toBeInTheDocument()
     expect(screen.queryByLabelText('Switch club')).not.toBeInTheDocument()
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('banner').style.getPropertyValue('--club-primary')
+    ).toBe('')
+  })
+
+  it('paints the club rail and mobile bar with branding, not the page', () => {
+    useClubMembershipsMock.mockReturnValue({
+      memberships: [
+        {
+          ...membership('alpha', 'Alpha FC'),
+          club: {
+            id: 'alpha',
+            name: 'Alpha FC',
+            slug: 'alpha',
+            settings: {
+              allowPlayerInvites: false,
+              branding: {
+                displayName: 'Wolves',
+                logoUrl: 'https://cdn.example/logo.png',
+                primaryColor: '#112233',
+              },
+            },
+          },
+        },
+      ],
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    })
+
+    render(
+      <AppShell>
+        <h1>Matches</h1>
+      </AppShell>
+    )
+
+    const railEl = screen.getByRole('complementary')
+    const mobileBar = screen.getByRole('banner')
+    expect(railEl.style.getPropertyValue('--club-primary')).toBe('#112233')
+    expect(mobileBar.style.getPropertyValue('--club-primary')).toBe('#112233')
+    expect(railEl.style.getPropertyValue('--club-foreground')).toBe('#ffffff')
+    expect(rail().getByLabelText('Switch club')).toHaveTextContent('Wolves')
+    expect(railEl.querySelector('img')).toHaveAttribute(
+      'src',
+      'https://cdn.example/logo.png'
+    )
+    expect(
+      screen
+        .getByRole('heading', { name: 'Matches' })
+        .style.getPropertyValue('--club-primary')
+    ).toBe('')
+    expect(rail().getByRole('link', { name: 'Soccerville' })).toHaveTextContent(
+      'Soccerville'
+    )
+  })
+
+  it('keeps Soccerville red when the club has no primary color', () => {
+    render(<AppShell />)
+    expect(
+      screen.getByRole('complementary').style.getPropertyValue('--club-primary')
+    ).toBe(PLATFORM_CHROME_BACKGROUND)
   })
 
   it('renders page content next to the club rail', () => {

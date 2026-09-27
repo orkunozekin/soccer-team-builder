@@ -16,7 +16,7 @@ import {
 import { clubSubNavSections } from '@/lib/utils/resolveSelectedClub'
 import type { ClubSubNavSection } from '@/lib/utils/resolveSelectedClub'
 import { useAuthStore } from '@/store/authStore'
-import type { ClubMembershipRole } from '@/types/club'
+import type { ClubMembershipRole, ClubSettings } from '@/types/club'
 
 export type ClubWorkspaceStatus =
   | { kind: 'hidden' }
@@ -29,7 +29,7 @@ export type ClubWorkspaceClub = {
   id: string
   name: string
   slug: string
-  settings: { allowPlayerInvites: boolean }
+  settings: ClubSettings
 }
 
 export type ClubWorkspaceSection = {

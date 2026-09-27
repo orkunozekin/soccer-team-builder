@@ -502,3 +502,74 @@ describe('clubService redeem + backfill', () => {
     expect(mocks.store.get('clubInvites/inv1')?.useCount).toBe(0)
   })
 })
+
+describe('updateClub branding', () => {
+  beforeEach(() => {
+    mocks.store.clear()
+    mocks.beforeTransaction = null
+    vi.resetModules()
+  })
+
+  it('merges branding and keeps allowPlayerInvites when only one side is patched', async () => {
+    const { Timestamp } = await import('firebase-admin/firestore')
+    const now = Timestamp.now()
+    mocks.store.set('clubs/c1', {
+      name: 'Alpha FC',
+      slug: 'alpha',
+      createdBy: 'a1',
+      settings: {
+        allowPlayerInvites: true,
+        branding: {
+          displayName: 'Wolves',
+          logoUrl: 'https://cdn.example/logo.png',
+          primaryColor: '#112233',
+        },
+      },
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    const { updateClub } = await import('@/lib/services/clubService')
+
+    const invitesOnly = await updateClub('c1', {
+      settings: { allowPlayerInvites: false },
+    })
+    expect(invitesOnly.settings).toEqual({
+      allowPlayerInvites: false,
+      branding: {
+        displayName: 'Wolves',
+        logoUrl: 'https://cdn.example/logo.png',
+        primaryColor: '#112233',
+      },
+    })
+
+    const brandingOnly = await updateClub('c1', {
+      settings: { branding: { primaryColor: null, displayName: 'Pack' } },
+    })
+    expect(brandingOnly.settings.allowPlayerInvites).toBe(false)
+    expect(brandingOnly.settings.branding).toEqual({
+      displayName: 'Pack',
+      logoUrl: 'https://cdn.example/logo.png',
+    })
+  })
+
+  it('ignores an invalid stored color when reading the club', async () => {
+    const { Timestamp } = await import('firebase-admin/firestore')
+    const now = Timestamp.now()
+    mocks.store.set('clubs/c1', {
+      name: 'Alpha FC',
+      slug: 'alpha',
+      createdBy: 'a1',
+      settings: {
+        allowPlayerInvites: false,
+        branding: { primaryColor: 'red', displayName: 'Wolves' },
+      },
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    const { getClub } = await import('@/lib/services/clubService')
+    const club = await getClub('c1')
+    expect(club?.settings.branding).toEqual({ displayName: 'Wolves' })
+  })
+})

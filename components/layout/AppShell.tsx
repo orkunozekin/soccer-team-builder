@@ -21,6 +21,15 @@ import {
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useClubWorkspace } from '@/lib/hooks/useClubWorkspace'
+import { cn } from '@/lib/utils'
+import {
+  clubChromeBorderClass,
+  clubChromeEdgeClass,
+  clubChromeFgClass,
+  clubChromeHoverClass,
+  clubChromeStyle,
+  clubDisplayName,
+} from '@/lib/utils/clubBranding'
 import { clubMatchesPath } from '@/lib/utils/clubPaths'
 
 /**
@@ -58,9 +67,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const club = workspace.status.kind === 'ready' ? workspace.displayClub : null
   const brandHref = club ? clubMatchesPath(club.slug) : '/join'
 
+  const chromeStyle = clubChromeStyle(club?.settings.branding?.primaryColor)
+
   const switcher = club ? (
     <ClubContextSwitcher
-      clubName={club.name}
+      clubName={clubDisplayName(club)}
+      logoUrl={club.settings.branding?.logoUrl}
       role={workspace.displayRole}
       clubId={club.id}
       memberships={workspace.activeMemberships}
@@ -76,11 +88,20 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   return (
     <div className="flex min-h-dvh w-full">
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col self-start border-r border-red-40 bg-red-50 text-white md:flex">
+      <aside
+        style={chromeStyle}
+        className={cn(
+          'sticky top-0 hidden h-dvh w-60 shrink-0 flex-col self-start border-r md:flex',
+          clubChromeEdgeClass
+        )}
+      >
         <div className="px-4 pb-2 pt-4">
           <Link
             href={brandHref}
-            className="text-sm font-bold text-white hover:opacity-80"
+            className={cn(
+              'text-sm font-bold hover:opacity-80',
+              clubChromeFgClass
+            )}
           >
             Soccerville
           </Link>
@@ -95,29 +116,50 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           ) : null}
           {isAdmin ? <PlatformAdminNav /> : null}
         </div>
-        <div className="mt-auto border-t border-white/20 p-3">
+        <div className={cn('mt-auto border-t p-3', clubChromeBorderClass)}>
           <AccountMenu className="w-full max-w-none justify-between" />
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-red-40 bg-red-50 px-2 py-2 text-white shadow-md md:hidden">
+        <header
+          style={chromeStyle}
+          className={cn(
+            'sticky top-0 z-20 flex items-center gap-2 border-b px-2 py-2 shadow-md md:hidden',
+            clubChromeEdgeClass
+          )}
+        >
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
               <button
                 type="button"
                 aria-label="Open club menu"
-                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-white hover:bg-white/10"
+                className={cn(
+                  'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md',
+                  clubChromeFgClass,
+                  clubChromeHoverClass
+                )}
               >
                 <HamburgerMenuIcon className="h-5 w-5" />
               </button>
             </SheetTrigger>
             <SheetContent
               side="left"
-              className="flex w-72 flex-col gap-0 border-red-40 bg-red-50 p-0 text-white"
+              style={chromeStyle}
+              className={cn(
+                'flex w-72 flex-col gap-0 border-r p-0',
+                clubChromeEdgeClass
+              )}
             >
-              <SheetHeader className="border-b border-white/20 px-4 py-4 pr-12 text-left">
-                <SheetTitle className="text-sm font-bold text-white">
+              <SheetHeader
+                className={cn(
+                  'border-b px-4 py-4 pr-12 text-left',
+                  clubChromeEdgeClass
+                )}
+              >
+                <SheetTitle
+                  className={cn('text-sm font-bold', clubChromeFgClass)}
+                >
                   <Link href={brandHref} onClick={() => setSheetOpen(false)}>
                     Soccerville
                   </Link>
@@ -145,7 +187,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                   <PlatformAdminNav onNavigate={() => setSheetOpen(false)} />
                 ) : null}
               </div>
-              <div className="mt-auto border-t border-white/20 p-3">
+              <div
+                className={cn('mt-auto border-t p-3', clubChromeBorderClass)}
+              >
                 <AccountMenu onNavigate={() => setSheetOpen(false)} />
               </div>
             </SheetContent>

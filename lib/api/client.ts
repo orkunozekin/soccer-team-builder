@@ -715,7 +715,17 @@ export async function createClubAPI(input: {
 
 export async function updateClubAPI(
   clubId: string,
-  updates: { name?: string; settings?: { allowPlayerInvites?: boolean } }
+  updates: {
+    name?: string
+    settings?: {
+      allowPlayerInvites?: boolean
+      branding?: {
+        displayName?: string | null
+        logoUrl?: string | null
+        primaryColor?: string | null
+      }
+    }
+  }
 ): Promise<{ success: boolean; club: Club }> {
   const response = await apiRequest(`/clubs/${clubId}`, {
     method: 'PATCH',

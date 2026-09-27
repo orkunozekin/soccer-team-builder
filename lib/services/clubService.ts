@@ -1,5 +1,10 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import { getAdminDb } from '@/lib/firebase/admin'
+import {
+  type ClubBrandingPatch,
+  mergeClubBranding,
+  readStoredBranding,
+} from '@/lib/utils/clubBranding'
 import type {
   Club,
   ClubInvite,
@@ -29,17 +34,25 @@ export function membershipDocId(clubId: string, userId: string): string {
   return `${clubId}_${userId}`
 }
 
+function mapSettings(raw: unknown): ClubSettings {
+  const record =
+    raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
+  const branding = readStoredBranding(record.branding)
+  return {
+    allowPlayerInvites: Boolean(
+      record.allowPlayerInvites ?? DEFAULT_SETTINGS.allowPlayerInvites
+    ),
+    ...(branding ? { branding } : {}),
+  }
+}
+
 function mapClub(id: string, data: Record<string, any>): Club {
   return {
     id,
     name: (data.name as string) ?? '',
     slug: (data.slug as string) ?? '',
     createdBy: (data.createdBy as string) ?? '',
-    settings: {
-      allowPlayerInvites: Boolean(
-        data.settings?.allowPlayerInvites ?? DEFAULT_SETTINGS.allowPlayerInvites
-      ),
-    },
+    settings: mapSettings(data.settings),
     createdAt: data.createdAt?.toDate?.() ?? new Date(),
     updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
   }
@@ -181,7 +194,13 @@ export async function getClubBySlug(slug: string): Promise<Club | null> {
 
 export async function updateClub(
   clubId: string,
-  updates: { name?: string; settings?: Partial<ClubSettings> }
+  updates: {
+    name?: string
+    settings?: {
+      allowPlayerInvites?: boolean
+      branding?: ClubBrandingPatch
+    }
+  }
 ): Promise<Club> {
   const adminDb = getAdminDb()
   if (!adminDb) throw new Error('Firebase Admin not configured')
@@ -204,12 +223,19 @@ export async function updateClub(
     patch.slug = slug
   }
   if (updates.settings) {
-    const current = snap.data()?.settings ?? DEFAULT_SETTINGS
-    patch.settings = {
+    // Rewrite the whole settings object so a cleared branding field does not linger,
+    // while keeping allowPlayerInvites and branding that this patch did not touch.
+    const current = mapSettings(snap.data()?.settings)
+    const branding = mergeClubBranding(
+      current.branding,
+      updates.settings.branding
+    )
+    const settings: ClubSettings = {
       allowPlayerInvites:
-        updates.settings.allowPlayerInvites ??
-        Boolean(current.allowPlayerInvites),
+        updates.settings.allowPlayerInvites ?? current.allowPlayerInvites,
     }
+    if (branding) settings.branding = branding
+    patch.settings = settings
   }
 
   await ref.update(patch)

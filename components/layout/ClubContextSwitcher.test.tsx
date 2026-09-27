@@ -2,12 +2,13 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ClubContextSwitcher } from './ClubContextSwitcher'
-import type { ClubMembershipWithClub } from '@/types/club'
+import type { ClubBranding, ClubMembershipWithClub } from '@/types/club'
 
 function membership(
   clubId: string,
   name: string,
-  role: ClubMembershipWithClub['role'] = 'player'
+  role: ClubMembershipWithClub['role'] = 'player',
+  branding?: ClubBranding
 ): ClubMembershipWithClub {
   return {
     id: `${clubId}_u1`,
@@ -21,7 +22,10 @@ function membership(
       id: clubId,
       name,
       slug: clubId,
-      settings: { allowPlayerInvites: false },
+      settings: {
+        allowPlayerInvites: false,
+        ...(branding ? { branding } : {}),
+      },
     },
   }
 }
@@ -77,6 +81,26 @@ describe('ClubContextSwitcher', () => {
     renderSwitcher()
     await user.click(screen.getByLabelText('Switch club'))
     expect(screen.queryByLabelText('Find club')).not.toBeInTheDocument()
+  })
+
+  it('lists and filters by the branded display name', async () => {
+    const user = userEvent.setup()
+    renderSwitcher({
+      memberships: [
+        ...many.slice(0, 4),
+        membership('epsilon', 'Epsilon City', 'player', {
+          displayName: 'City Wolves',
+        }),
+      ],
+    })
+    await user.click(screen.getByLabelText('Switch club'))
+    expect(
+      screen.getByRole('button', { name: /city wolves/i })
+    ).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Find club'), 'epsilon')
+    expect(
+      screen.getByRole('button', { name: /city wolves/i })
+    ).toBeInTheDocument()
   })
 
   it('filters memberships by name when the list is long', async () => {

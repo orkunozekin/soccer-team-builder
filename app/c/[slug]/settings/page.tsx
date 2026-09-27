@@ -20,6 +20,7 @@ export default function ClubSettingsPage() {
           clubId={club.id}
           clubName={club.name}
           initialAllowPlayerInvites={club.settings.allowPlayerInvites}
+          initialBranding={club.settings.branding}
         />
       )}
     </ClubSectionPage>

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth, verifyClubAdmin, verifyClubMember } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
-import { getClub, updateClub } from '@/lib/services/clubService'
 import { auditLog } from '@/lib/services/auditService'
+import { getClub, updateClub } from '@/lib/services/clubService'
+import { parseClubBrandingInput } from '@/lib/utils/clubBranding'
 
 /**
  * Load a club by id for members / super_users.
@@ -80,8 +81,28 @@ export async function PATCH(
       typeof body?.settings?.allowPlayerInvites === 'boolean'
         ? body.settings.allowPlayerInvites
         : undefined
+    const settingsBody =
+      body?.settings && typeof body.settings === 'object'
+        ? (body.settings as Record<string, unknown>)
+        : undefined
+    const brandingResult = parseClubBrandingInput(
+      settingsBody && 'branding' in settingsBody
+        ? settingsBody.branding
+        : undefined
+    )
+    if (!brandingResult.ok) {
+      return NextResponse.json({ error: brandingResult.error }, { status: 400 })
+    }
+    const brandingPatch = brandingResult.patch
+    const hasBrandingUpdate = Boolean(
+      brandingPatch && Object.keys(brandingPatch).length > 0
+    )
 
-    if (name === undefined && allowPlayerInvites === undefined) {
+    if (
+      name === undefined &&
+      allowPlayerInvites === undefined &&
+      !hasBrandingUpdate
+    ) {
       return NextResponse.json(
         { error: 'No updates provided' },
         { status: 400 }
@@ -91,9 +112,14 @@ export async function PATCH(
     const club = await updateClub(clubId, {
       name,
       settings:
-        allowPlayerInvites === undefined
+        allowPlayerInvites === undefined && !hasBrandingUpdate
           ? undefined
-          : { allowPlayerInvites },
+          : {
+              ...(allowPlayerInvites === undefined
+                ? {}
+                : { allowPlayerInvites }),
+              ...(hasBrandingUpdate ? { branding: brandingPatch } : {}),
+            },
     })
 
     auditLog({
@@ -102,13 +128,16 @@ export async function PATCH(
       entityType: 'club',
       entityId: clubId,
       source: 'api',
-      metadata: { name, allowPlayerInvites },
+      metadata: {
+        name,
+        allowPlayerInvites,
+        branding: hasBrandingUpdate ? brandingPatch : undefined,
+      },
     })
 
     return NextResponse.json({ success: true, club })
   } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : 'Failed to update club'
+    const message = err instanceof Error ? err.message : 'Failed to update club'
     const status = message === 'Club not found' ? 404 : 500
     console.error('Error updating club:', err)
     return NextResponse.json(

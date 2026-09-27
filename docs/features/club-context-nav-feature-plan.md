@@ -8,10 +8,10 @@ This plan **revises the chrome** shipped for [white-label clubs v2](./white-labe
 
 | Field | Value |
 |-------|-------|
-| Status | planned |
+| Status | done |
 | Owner session | — |
 | Last updated | 2026-09-27 |
-| Related PR / branch | none yet (plan on `cursor/club-context-nav-plan-9fca`) |
+| Related PR / branch | [#88](https://github.com/orkunozekin/soccer-team-builder/pull/88) `cursor/club-context-shell-e639` |
 
 ## Goals (v1)
 
@@ -24,12 +24,12 @@ This plan **revises the chrome** shipped for [white-label clubs v2](./white-labe
 
 ## Todos
 
-1. [ ] Lock shell information architecture (context switcher + club nav + account menu) and retire the stacked `Navigation` + `ClubSubNav` chrome.
-2. [ ] Build `ClubContextSwitcher` (popover: search, memberships + role, checkmark, Join, Create when flagged).
-3. [ ] Build club-owned nav: desktop left rail; mobile sheet / drawer opened from the top shell.
-4. [ ] Move platform account links (Profile, Admin, Sign out) into an account control; keep Soccerville as platform brand, not the club label.
-5. [ ] Wire switch behavior to existing `activeClubId` + `/c/[slug]/…` section preserve (reuse [`clubPaths`](../../lib/utils/clubPaths.ts) / current `ClubSubNav` switch rules).
-6. [ ] Update tests and remove / slim the old sub-nav components; cross-link handoff on the v2 plan.
+1. [x] Lock shell information architecture (context switcher + club nav + account menu) and retire the stacked `Navigation` + `ClubSubNav` chrome.
+2. [x] Build `ClubContextSwitcher` (popover: search, memberships + role, checkmark, Join, Create when flagged).
+3. [x] Build club-owned nav: desktop left rail; mobile sheet / drawer opened from the top shell.
+4. [x] Move platform account links (Profile, Admin, Sign out) into an account control; keep Soccerville as platform brand, not the club label.
+5. [x] Wire switch behavior to existing `activeClubId` + `/c/[slug]/…` section preserve (reuse [`clubPaths`](../../lib/utils/clubPaths.ts) / current `ClubSubNav` switch rules).
+6. [x] Update tests and remove / slim the old sub-nav components; cross-link handoff on the v2 plan.
 
 ## Current state
 
@@ -150,14 +150,14 @@ Keep existing zinc / shadcn patterns and the Soccerville red for **platform** ac
 
 ## Acceptance criteria
 
-- [ ] Signed-in users pick a club from a context switcher (name + role + current checkmark). Switching updates `activeClubId` and club nav labels/links.
-- [ ] Club section links live in a club-owned nav (desktop rail, mobile sheet), not a second full-width bar under the old red header.
-- [ ] Switcher supports filtering memberships when the user has many clubs; no-membership state offers Join.
-- [ ] Profile, Sign out, and super-user Admin are reachable from an account control, not mixed into club section links.
-- [ ] Signed-out header unchanged in spirit (centered Soccerville, no club chrome).
-- [ ] Create club still gated by `club-creation` + super user.
-- [ ] Existing unit tests updated; new switcher / shell tests pass via `yarn test:run` for the touched files.
-- [ ] Mobile: club nav does not permanently shrink the content column.
+- [x] Signed-in users pick a club from a context switcher (name + role + current checkmark). Switching updates `activeClubId` and club nav labels/links.
+- [x] Club section links live in a club-owned nav (desktop rail, mobile sheet), not a second full-width bar under the old red header.
+- [x] Switcher supports filtering memberships when the user has many clubs; no-membership state offers Join.
+- [x] Profile, Sign out, and super-user Admin are reachable from an account control, not mixed into club section links. Landed shape: Profile, My clubs, and Sign out are in [`AccountMenu`](../../components/layout/AccountMenu.tsx). Super-user Admin is [`PlatformAdminNav`](../../components/layout/PlatformAdminNav.tsx) in the rail and sheet, separate from club section links.
+- [x] Signed-out header unchanged in spirit (centered Soccerville, no club chrome).
+- [x] Create club still gated by `club-creation` + super user.
+- [x] Existing unit tests updated; new switcher / shell tests pass via `yarn test:run` for the touched files.
+- [x] Mobile: club nav does not permanently shrink the content column.
 
 ## Later
 
@@ -172,25 +172,23 @@ Keep existing zinc / shadcn patterns and the Soccerville red for **platform** ac
 
 ### Done so far
 
-- Plan drafted from current `ClubSubNav` / `AppShell` and Vercel-style product direction.
-- No implementation yet.
+- Shell shipped in [#88](https://github.com/orkunozekin/soccer-team-builder/pull/88).
+- Signed-in chrome is [`AppShell`](../../components/layout/AppShell.tsx): desktop rail, mobile top bar + sheet, [`ClubContextSwitcher`](../../components/layout/ClubContextSwitcher.tsx), [`ClubNav`](../../components/layout/ClubNav.tsx), [`AccountMenu`](../../components/layout/AccountMenu.tsx), and [`PlatformAdminNav`](../../components/layout/PlatformAdminNav.tsx).
+- Signed-out users still get the centered [`Navigation`](../../components/layout/Navigation.tsx) header.
+- Horizontal `ClubSubNav` is gone. Switch still writes `activeClubId` and preserves the club section via [`useClubWorkspace`](../../lib/hooks/useClubWorkspace.ts).
+- Tests: `components/layout/AppShell.test.tsx`, `components/layout/ClubContextSwitcher.test.tsx`.
 
 ### Remaining work
 
-1. Confirm desktop rail + mobile sheet with the human if anything in Design conflicts with taste; otherwise implement todo 1–4 on a feature branch.
-2. Reuse switch + `clubSubNavSections` logic; do not fork membership resolution.
-3. Point Matches (and switch navigation) at `/c/{slug}/matches`; do not revive bare `/matches` as the canonical club link.
-4. Run `/handoff` when status moves past `planned`.
+1. None in this plan. Club branding paints this shell from [white-label clubs v2](./white-label-clubs-v2-feature-plan.md) todo 5.
 
 ### Blockers / risks
 
-- Product previously rejected a sidebar for mobile; this plan uses a **conditional** rail (desktop only). If the human wants a permanent phone sidebar, revisit before coding.
-- Branding todo in v2 assumed a horizontal club bar; paint target becomes the rail / switcher.
-- Double chrome during migration: delete the old sub-nav in the same PR that ships the rail so users never see both.
+- None for this plan.
 
 ### Pointers for the next agent
 
-- Start at: Design (IA) → implement `ClubContextSwitcher` + `AppShell` layout split; extract section list from `ClubSubNav`.
-- Do not: weaken auth helpers; list all clubs for super users; put Admin under club sections; point local Firebase at production; keep the horizontal `ClubSubNav` bar alongside the new rail.
-- Verify with: `yarn vitest run` on layout + `resolveSelectedClub` tests; manual check signed-out, no-membership, single club, multi-club switch, super-user Admin still reachable.
-- Next skills: `/feature-context` on this file to implement; `/handoff` when a session ends; keep [white-label-clubs-v2](./white-label-clubs-v2-feature-plan.md) handoff updated when chrome lands.
+- Start at: [white-label-clubs-v2](./white-label-clubs-v2-feature-plan.md) for the next product slice. This shell is the branding paint target (rail, switcher, mobile bar, and sheet).
+- Do not: restore the horizontal `ClubSubNav` bar; put Admin inside club section links; point local Firebase at production.
+- Verify with: `yarn vitest run components/layout/AppShell.test.tsx components/layout/ClubContextSwitcher.test.tsx`.
+- Next skills: `/feature-context` on the white-label v2 plan.
