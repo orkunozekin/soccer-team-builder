@@ -63,6 +63,16 @@ vi.mock('@/components/admin/CreateMatchCard', () => ({
   CreateMatchCard: () => <div>CreateMatchCardMock</div>,
 }))
 
+vi.mock('@/components/admin/AdminMatchCard', () => ({
+  AdminMatchCard: ({
+    match,
+    href,
+  }: {
+    match: { id: string }
+    href?: string
+  }) => <div>AdminMatchCard:{match.id}:{href}</div>,
+}))
+
 function mockMatch(id: string, hoursFromNow = 24) {
   const date = new Date(Date.now() + hoursFromNow * 60 * 60 * 1000)
   return {
@@ -233,6 +243,17 @@ describe('ClubMatchesView', () => {
     expect(screen.queryByText(/MatchCard:m-b/)).not.toBeInTheDocument()
   })
 
+  it('links all-clubs cards back to the admin list', async () => {
+    useAdminMock.mockReturnValue({ isAdmin: true })
+    listMatchesForViewerMock.mockResolvedValueOnce([mockMatch('m-all')])
+
+    render(<ClubMatchesView clubId={null} clubSlug={null} />)
+
+    expect(
+      await screen.findByText('AdminMatchCard:m-all:/admin/matches/m-all')
+    ).toBeInTheDocument()
+  })
+
   it('hides create match on the all-clubs list when clubId is null', async () => {
     useAdminMock.mockReturnValue({ isAdmin: true })
     listMatchesForViewerMock.mockResolvedValueOnce([])
@@ -241,6 +262,12 @@ describe('ClubMatchesView', () => {
 
     expect(await screen.findByText('No Matches')).toBeInTheDocument()
     expect(screen.queryByText('CreateMatchCardMock')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('tab', { name: 'All' }))
+    expect(screen.getByText('No matches yet.')).toBeInTheDocument()
+    expect(
+      screen.queryByText('Create a match using the form above.')
+    ).not.toBeInTheDocument()
   })
 
   it('hides create match when the user is only a player on this club', async () => {
@@ -289,6 +316,47 @@ describe('ClubMatchesView', () => {
     expect(screen.queryByText('CreateMatchCardMock')).not.toBeInTheDocument()
   })
 
+  it('keeps delete off unstamped matches for a club admin', async () => {
+    useClubMembershipsMock.mockReturnValue({
+      memberships: [
+        {
+          id: 'mem1',
+          clubId: 'club-a',
+          userId: 'user1',
+          role: 'club_admin',
+          status: 'active',
+          joinedAt: new Date(),
+          updatedAt: new Date(),
+          club: {
+            id: 'club-a',
+            name: 'A',
+            slug: 'alpha',
+            settings: { allowPlayerInvites: false },
+          },
+        },
+      ],
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    })
+    listMatchesForViewerMock.mockResolvedValueOnce([
+      { ...mockMatch('owned'), clubId: 'club-a' },
+      { ...mockMatch('legacy'), clubId: null },
+    ])
+
+    renderView('club-a', 'alpha')
+
+    expect(
+      await screen.findByText('AdminMatchCard:owned:/c/alpha/matches/owned')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('MatchCard:legacy:/c/alpha/matches/legacy')
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/AdminMatchCard:legacy:/)
+    ).not.toBeInTheDocument()
+  })
+
   it('shows create match when the user is club_admin of this club', async () => {
     useClubMembershipsMock.mockReturnValue({
       memberships: [
@@ -332,5 +400,58 @@ describe('ClubMatchesView', () => {
     renderView('club-b', 'beta')
 
     expect(await screen.findByText('CreateMatchCardMock')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Upcoming' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    expect(
+      screen.queryByText(/^MatchCard:/)
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows past matches on the admin list for club admins', async () => {
+    useClubMembershipsMock.mockReturnValue({
+      memberships: [
+        {
+          id: 'mem1',
+          clubId: 'club-a',
+          userId: 'user1',
+          role: 'club_admin',
+          status: 'active',
+          joinedAt: new Date(),
+          updatedAt: new Date(),
+          club: {
+            id: 'club-a',
+            name: 'A',
+            slug: 'alpha',
+            settings: { allowPlayerInvites: false },
+          },
+        },
+      ],
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    })
+    listMatchesForViewerMock.mockResolvedValueOnce([
+      { ...mockMatch('upcoming', 24), clubId: 'club-a' },
+      { ...mockMatch('past', -48), clubId: 'club-a' },
+    ])
+
+    renderView('club-a', 'alpha')
+
+    expect(
+      await screen.findByText('AdminMatchCard:upcoming:/c/alpha/matches/upcoming')
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText('AdminMatchCard:past:/c/alpha/matches/past')
+    ).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Past' }))
+    expect(
+      screen.getByText('AdminMatchCard:past:/c/alpha/matches/past')
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText('AdminMatchCard:upcoming:/c/alpha/matches/upcoming')
+    ).not.toBeInTheDocument()
   })
 })

@@ -42,6 +42,7 @@ function isPlatformPath(pathname: string): boolean {
   return (
     pathname === '/' ||
     pathname.startsWith('/profile') ||
+    pathname.startsWith('/clubs') ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/register') ||
@@ -137,7 +138,7 @@ export function useClubWorkspace() {
         )
       }
       return pathname === s.href || pathname.startsWith(`${s.href}/`)
-    })?.href ?? sections[0]?.href
+    })?.href
 
   const activeMemberships = useMemo(
     () => memberships.filter(m => m.status === 'active'),

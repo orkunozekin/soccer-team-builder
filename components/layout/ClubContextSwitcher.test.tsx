@@ -58,7 +58,7 @@ describe('ClubContextSwitcher', () => {
     renderSwitcher()
     const trigger = screen.getByLabelText('Switch club')
     expect(trigger).toHaveTextContent('Alpha FC')
-    expect(trigger).toHaveTextContent('player')
+    expect(trigger).toHaveTextContent('Player')
   })
 
   it('lists memberships with a checkmark on the current club', async () => {
@@ -69,7 +69,7 @@ describe('ClubContextSwitcher', () => {
     expect(current.querySelector('svg')).not.toBeNull()
     const other = screen.getByRole('button', { name: /beta united/i })
     expect(other.querySelector('svg')).toBeNull()
-    expect(other).toHaveTextContent('club_admin')
+    expect(other).toHaveTextContent('Club admin')
   })
 
   it('hides search for a short membership list', async () => {

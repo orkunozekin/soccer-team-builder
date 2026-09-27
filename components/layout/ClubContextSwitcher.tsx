@@ -10,14 +10,11 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
+import { formatMembershipRole } from '@/lib/utils/roleLabels'
 import type { ClubMembershipRole, ClubMembershipWithClub } from '@/types/club'
 
 /** Show the find field once the membership list is long enough to scan. */
 const CLUB_SEARCH_MIN = 5
-
-function roleLabel(role: string) {
-  return role === 'club_admin' ? 'club_admin' : 'player'
-}
 
 export function ClubContextSwitcher({
   clubName,
@@ -64,14 +61,14 @@ export function ClubContextSwitcher({
         disabled={switching}
         aria-label="Switch club"
         className={cn(
-          'inline-flex w-full min-w-0 items-center gap-2 rounded-md border border-zinc-200 bg-white px-2.5 py-2 text-left text-sm font-semibold text-zinc-900 outline-none hover:bg-zinc-50 focus-visible:ring-2 focus-visible:ring-zinc-400 disabled:opacity-60 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900',
+          'inline-flex w-full min-w-0 items-center gap-2 rounded-md border border-white/30 bg-white/10 px-2.5 py-2 text-left text-sm font-semibold text-white outline-none hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white/70 disabled:opacity-60',
           className
         )}
       >
         <span className="min-w-0 flex-1">
           <span className="block truncate">{clubName}</span>
-          <span className="block truncate text-xs font-normal text-zinc-500 dark:text-zinc-400">
-            {roleLabel(role)}
+          <span className="block truncate text-xs font-normal text-white">
+            {formatMembershipRole(role)}
           </span>
         </span>
         <ChevronDownIcon className="h-4 w-4 shrink-0 opacity-70" />
@@ -112,7 +109,7 @@ export function ClubContextSwitcher({
                         {membership.club.name}
                       </span>
                       <span className="text-xs text-zinc-500">
-                        {roleLabel(membership.role)}
+                        {formatMembershipRole(membership.role)}
                       </span>
                     </span>
                     {current ? (

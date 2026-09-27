@@ -33,6 +33,34 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-27 — Stale auth callbacks must not publish a profile
+
+- **Source:** PR #88 · Macroscope
+- **Gap:** `onAuthStateChanged` does not await the observer. An in-flight sign-in for user A could finish after user B signed in and set `profileReady` plus A’s `userData`, so the admin guard treated B as a confirmed non-admin.
+- **Going forward:** Give each auth callback a generation. After every await, skip store writes (`setUserData`, `setProfileReady`, `setLoading`) unless that generation is still current. Resetting `profileReady` at the start of a uid change is not enough on its own.
+- **Pointers:** `components/auth/AuthProvider.tsx` (`authGenRef`)
+
+### 2026-09-27 — Profile ready must follow the user; delete follows the match
+
+- **Source:** PR #88 · Macroscope | Greptile
+- **Gap:** (1) `profileReady` stayed true after sign-out, so the next sign-in looked role-settled while `userData` was still null and a super user was sent to `/matches`. (2) The club-admin match list rendered `AdminMatchCard` (with Delete) for every row, including unstamped matches `canManageMatchClub` already treats as super-user-only.
+- **Going forward:** Reset `profileReady` and clear `userData` when the auth uid changes. Do not reset them on a same-uid token refresh. Choose `AdminMatchCard` per match from `manageFlags`, not from the page-level admin list.
+- **Pointers:** `components/auth/AuthProvider.tsx`, `lib/hooks/useAdmin.ts` (`rolePending`), `components/matches/ClubMatchesView.tsx`, `lib/utils/clubMatches.ts` (`canManageMatchClub`)
+
+### 2026-09-27 — Admin role race and all-clubs match links
+
+- **Source:** PR #88 · Macroscope | Greptile
+- **Gap:** (1) Admin pages treated `loading === false` as “role known.” The 8-second auth timeout clears `loading` while the user doc is still in flight, so `isAdmin` is briefly false and a super user is sent to `/matches`. (2) All-clubs cards linked to `/matches/[id]`, which redirects to the club detail page, so Back returned to one club instead of All matches.
+- **Going forward:** Gate admin redirects on `rolePending` (`user` set and `profileReady` still false), not on `loading` alone. Set `profileReady` only when the user-doc fetch finishes. All-clubs cards (`clubId` null) must link to `/admin/matches/[id]`. Keep create-match off that list: a null club id cannot create, and creating for `activeClubId` while showing every club misstates the target.
+- **Pointers:** `components/auth/AuthProvider.tsx`, `components/admin/AdminRouteGuard.tsx`, `lib/hooks/useAdmin.ts` (`rolePending`), `components/matches/ClubMatchesView.tsx` (`matchHref`)
+
+### 2026-09-27 — Super-user all-clubs matches, sheet close, absolute invite links
+
+- **Source:** PR #88 · Greptile | Macroscope
+- **Gap:** (1) Redirecting `/admin/matches` through `/matches` sent member super users to their club list, so the all-clubs match view was unreachable. (2) The empty-state “Join a club” link inside the persistent `AppShell` sheet did not clear `sheetOpen`, so the overlay stayed on `/join`. (3) Invite list links can be a relative `/join?code=…` path when the request has no Origin and `NEXT_PUBLIC_APP_URL` is unset; copying that path is not a shareable URL.
+- **Going forward:** Keep a distinct all-clubs route (`/admin/matches`, labeled “All matches”) for super users even when they have a membership. Do not send that route through the club redirect. Every control inside a layout sheet that navigates must call the sheet’s close callback. When copying an invite link in the browser, prefix relative paths with `window.location.origin`.
+- **Pointers:** `app/admin/matches/page.tsx`, `lib/utils/adminNavLinks.ts`, `components/layout/ClubWorkspaceStatus.tsx`, `components/club/ClubInvitesPanel.tsx` (`shareableInviteLink`)
+
 ### 2026-09-27 — Controlled popover close does not clear local filter state
 
 - **Source:** PR #87 · Greptile

@@ -2,11 +2,11 @@
 
 import { useEffect, useRef } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
+import { recordAuditEventAPI, updateProfileAPI } from '@/lib/api/client'
 import { auth } from '@/lib/firebase/config'
 import { getDocument } from '@/lib/firebase/firestore'
 import { timestampToDate } from '@/lib/firebase/firestore'
 import { createUser } from '@/lib/services/userService'
-import { recordAuditEventAPI, updateProfileAPI } from '@/lib/api/client'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import { resolveHydratedActiveClubId } from '@/lib/utils/resolveHydratedActiveClubId'
 import { useAuthStore } from '@/store/authStore'
@@ -16,12 +16,27 @@ import { User, normalizeUserRole } from '@/types/user'
 const AUTH_LOADING_TIMEOUT_MS = 8_000
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { setUser, setUserData, setLoading } = useAuthStore()
+  const { setUser, setUserData, setLoading, setProfileReady } = useAuthStore()
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const authGenRef = useRef(0)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async firebaseUser => {
+      // Firebase does not await this observer, so an older callback can
+      // resume after a newer sign-in. Ignore its store writes.
+      const generation = ++authGenRef.current
+      const isCurrent = () => authGenRef.current === generation
+      const nextUid = firebaseUser?.uid ?? null
+      const prevUid = useAuthStore.getState().user?.uid ?? null
+      // Token refresh reuses the same uid. A new sign-in must not inherit
+      // profileReady from the previous signed-out (or other-user) callback.
+      const identityChanged = nextUid !== prevUid
+
       setUser(firebaseUser)
+      if (identityChanged) {
+        setUserData(null)
+        setProfileReady(false)
+      }
 
       // Auth store starts with loading: true. Do not flip loading back to true
       // on later auth callbacks (token refresh, user doc re-fetch, etc.). That
@@ -45,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (firebaseUser) {
           try {
             let userDoc = await getDocument('users', firebaseUser.uid)
+            if (!isCurrent()) return
 
             // Some legacy accounts may exist in Auth but not in Firestore yet.
             // Ensure the canonical user doc exists at /users/{uid} so role-based UI works.
@@ -67,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   firebaseUser.email ?? '',
                   displayName
                 )
+                if (!isCurrent()) return
                 recordAuditEventAPI({
                   action: 'user.created',
                   entityType: 'user',
@@ -87,6 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 throw createErr
               }
               userDoc = await getDocument('users', firebaseUser.uid)
+              if (!isCurrent()) return
             }
 
             if (userDoc) {
@@ -103,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               ) {
                 try {
                   await updateProfileAPI({ syncEmail: true })
+                  if (!isCurrent()) return
                 } catch (syncErr) {
                   console.error('Failed to sync email to Firestore:', syncErr)
                 }
@@ -130,20 +149,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 createdAt: timestampToDate(userDoc.createdAt) || new Date(),
                 updatedAt: timestampToDate(userDoc.updatedAt) || new Date(),
               }
+              if (!isCurrent()) return
               setUserData(userData)
-            } else {
+            } else if (isCurrent()) {
               setUserData(null)
             }
           } catch (error) {
             console.error('Error fetching user data:', error)
-            setUserData(null)
+            if (isCurrent()) setUserData(null)
           }
-        } else {
+        } else if (isCurrent()) {
           setUserData(null)
         }
       } finally {
+        if (!isCurrent()) return
         clearLoadingTimeout()
         setLoading(false)
+        // Separate from `loading`: the 8s timeout clears loading while this
+        // fetch is still in flight. Admin guards must wait for this flag.
+        setProfileReady(true)
       }
     })
 
@@ -151,7 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
       unsubscribe()
     }
-  }, [setUser, setUserData, setLoading])
+  }, [setUser, setUserData, setLoading, setProfileReady])
 
   return <>{children}</>
 }

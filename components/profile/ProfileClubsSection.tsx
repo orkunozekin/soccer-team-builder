@@ -8,12 +8,13 @@ import { Label } from '@/components/ui/label'
 import { updateProfileAPI } from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
-import { useAuthStore } from '@/store/authStore'
 import {
   clubInvitesPath,
   clubRosterPath,
   clubSettingsPath,
 } from '@/lib/utils/clubPaths'
+import { formatMembershipRole } from '@/lib/utils/roleLabels'
+import { useAuthStore } from '@/store/authStore'
 
 export function ProfileClubsSection() {
   const { userData } = useAuth()
@@ -90,8 +91,8 @@ export function ProfileClubsSection() {
                     <span className="truncate font-medium text-zinc-900 dark:text-zinc-100">
                       {m.club.name}
                     </span>
-                    <span className="shrink-0 rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium capitalize text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                      {m.role === 'club_admin' ? 'club admin' : 'player'}
+                    <span className="shrink-0 rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                      {formatMembershipRole(m.role)}
                     </span>
                     {isActive && (
                       <span className="shrink-0 rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">

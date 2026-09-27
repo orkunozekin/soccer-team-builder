@@ -11,6 +11,13 @@ import type { ClubInvite } from '@/types/club'
 
 type InviteWithLink = ClubInvite & { link: string }
 
+/** List responses omit Origin, so a missing app URL comes back as `/join?code=…`. */
+function shareableInviteLink(link: string) {
+  if (!link.startsWith('/')) return link
+  if (typeof window === 'undefined') return link
+  return `${window.location.origin}${link}`
+}
+
 export function ClubInvitesPanel({
   clubId,
   /** Club admins can list and revoke; players with invite permission only create. */
@@ -227,13 +234,15 @@ export function ClubInvitesPanel({
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">Link:</span>
             <code className="max-w-full truncate rounded bg-white px-2 py-0.5 dark:bg-zinc-800">
-              {created.link}
+              {shareableInviteLink(created.link)}
             </code>
             <Button
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => void copyText(created.link, 'link')}
+              onClick={() =>
+                void copyText(shareableInviteLink(created.link), 'link')
+              }
             >
               {copied === 'link' ? 'Copied' : 'Copy link'}
             </Button>
@@ -282,6 +291,21 @@ export function ClubInvitesPanel({
                         {copied === `code-${invite.id}`
                           ? 'Copied'
                           : 'Copy code'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          void copyText(
+                            shareableInviteLink(invite.link),
+                            `link-${invite.id}`
+                          )
+                        }
+                      >
+                        {copied === `link-${invite.id}`
+                          ? 'Copied'
+                          : 'Copy link'}
                       </Button>
                       <Button
                         type="button"
