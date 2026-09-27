@@ -3,16 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ClubMatchesView } from './ClubMatchesView'
 
-const navMocks = vi.hoisted(() => ({
-  push: vi.fn(),
-  scope: null as string | null,
-}))
-
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: navMocks.push }),
-  useSearchParams: () => ({
-    get: (key: string) => (key === 'scope' ? navMocks.scope : null),
-  }),
+  useRouter: () => ({ push: vi.fn() }),
 }))
 
 const useAuthMock = vi.fn()
@@ -58,11 +50,13 @@ vi.mock('@/lib/services/rsvpService', () => ({
 }))
 
 vi.mock('@/components/matches/MatchCard', () => ({
-  MatchCard: ({ match, href }: { match: { id: string }; href?: string }) => (
-    <div>
-      MatchCard:{match.id}:{href}
-    </div>
-  ),
+  MatchCard: ({
+    match,
+    href,
+  }: {
+    match: { id: string }
+    href?: string
+  }) => <div>MatchCard:{match.id}:{href}</div>,
 }))
 
 vi.mock('@/components/admin/CreateMatchCard', () => ({
@@ -76,11 +70,7 @@ vi.mock('@/components/admin/AdminMatchCard', () => ({
   }: {
     match: { id: string }
     href?: string
-  }) => (
-    <div>
-      AdminMatchCard:{match.id}:{href}
-    </div>
-  ),
+  }) => <div>AdminMatchCard:{match.id}:{href}</div>,
 }))
 
 function mockMatch(id: string, hoursFromNow = 24) {
@@ -105,8 +95,6 @@ function renderView(clubId = 'club-a', clubSlug = 'alpha') {
 describe('ClubMatchesView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    navMocks.scope = null
-    navMocks.push.mockReset()
     matchStoreState.matches = []
     useAuthMock.mockReturnValue({
       user: { uid: 'user1' },
@@ -148,9 +136,6 @@ describe('ClubMatchesView', () => {
       await screen.findByText('MatchCard:m1:/c/alpha/matches/m1')
     ).toBeInTheDocument()
     expect(screen.queryByText('No Matches')).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('tab', { name: 'All clubs' })
-    ).not.toBeInTheDocument()
   })
 
   it('does not show No Matches while a fetch is still in flight', async () => {
@@ -215,9 +200,7 @@ describe('ClubMatchesView', () => {
 
     renderView()
 
-    expect(
-      await screen.findByText('Could not load matches')
-    ).toBeInTheDocument()
+    expect(await screen.findByText('Could not load matches')).toBeInTheDocument()
     expect(screen.queryByText('No Matches')).not.toBeInTheDocument()
 
     listMatchesForViewerMock.mockResolvedValueOnce([mockMatch('m3')])
@@ -258,56 +241,6 @@ describe('ClubMatchesView', () => {
       screen.getByText('MatchCard:m-null:/c/alpha/matches/m-null')
     ).toBeInTheDocument()
     expect(screen.queryByText(/MatchCard:m-b/)).not.toBeInTheDocument()
-  })
-
-  it('lets a super user open every club from the club matches page', async () => {
-    useAdminMock.mockReturnValue({ isAdmin: true })
-    listMatchesForViewerMock.mockResolvedValueOnce([
-      { ...mockMatch('m-club'), clubId: 'club-a' },
-    ])
-
-    renderView('club-a', 'alpha')
-
-    expect(
-      await screen.findByRole('tab', { name: 'This club' })
-    ).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('tab', { name: 'All clubs' })).toHaveAttribute(
-      'aria-selected',
-      'false'
-    )
-    expect(listMatchesForViewerMock).toHaveBeenCalledWith({
-      clubId: 'club-a',
-      isSuperUser: true,
-    })
-
-    await userEvent.click(screen.getByRole('tab', { name: 'All clubs' }))
-    expect(navMocks.push).toHaveBeenCalledWith('/c/alpha/matches?scope=all')
-  })
-
-  it('lists every club when a super user opens Matches with scope=all', async () => {
-    useAdminMock.mockReturnValue({ isAdmin: true })
-    navMocks.scope = 'all'
-    listMatchesForViewerMock.mockResolvedValueOnce([
-      { ...mockMatch('m-other'), clubId: 'club-b' },
-    ])
-
-    renderView('club-a', 'alpha')
-
-    expect(
-      await screen.findByText('AdminMatchCard:m-other:/admin/matches/m-other')
-    ).toBeInTheDocument()
-    expect(listMatchesForViewerMock).toHaveBeenCalledWith({
-      clubId: null,
-      isSuperUser: true,
-    })
-    expect(screen.queryByText('CreateMatchCardMock')).not.toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'All clubs' })).toHaveAttribute(
-      'aria-selected',
-      'true'
-    )
-
-    await userEvent.click(screen.getByRole('tab', { name: 'This club' }))
-    expect(navMocks.push).toHaveBeenCalledWith('/c/alpha/matches')
   })
 
   it('links all-clubs cards back to the admin list', async () => {
@@ -419,7 +352,9 @@ describe('ClubMatchesView', () => {
     expect(
       screen.getByText('MatchCard:legacy:/c/alpha/matches/legacy')
     ).toBeInTheDocument()
-    expect(screen.queryByText(/AdminMatchCard:legacy:/)).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/AdminMatchCard:legacy:/)
+    ).not.toBeInTheDocument()
   })
 
   it('shows create match when the user is club_admin of this club', async () => {
@@ -469,7 +404,9 @@ describe('ClubMatchesView', () => {
       'aria-selected',
       'true'
     )
-    expect(screen.queryByText(/^MatchCard:/)).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/^MatchCard:/)
+    ).not.toBeInTheDocument()
   })
 
   it('shows past matches on the admin list for club admins', async () => {
@@ -503,9 +440,7 @@ describe('ClubMatchesView', () => {
     renderView('club-a', 'alpha')
 
     expect(
-      await screen.findByText(
-        'AdminMatchCard:upcoming:/c/alpha/matches/upcoming'
-      )
+      await screen.findByText('AdminMatchCard:upcoming:/c/alpha/matches/upcoming')
     ).toBeInTheDocument()
     expect(
       screen.queryByText('AdminMatchCard:past:/c/alpha/matches/past')

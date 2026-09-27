@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
 import { AdminMatchCard } from '@/components/admin/AdminMatchCard'
 import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
 import { SoccerBallIcon } from '@/components/icons/SoccerBallIcon'
@@ -21,13 +20,16 @@ import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
 import { listMatchesForViewer } from '@/lib/services/matchService'
 import { getMatchRsvpCount } from '@/lib/services/rsvpService'
 import { cn } from '@/lib/utils'
-import { type MatchFilter, filterMatches } from '@/lib/utils/adminMatchFilters'
+import {
+  type MatchFilter,
+  filterMatches,
+} from '@/lib/utils/adminMatchFilters'
 import {
   canCreateClubMatches,
   canManageMatchClub,
   filterMatchesForClubScope,
 } from '@/lib/utils/clubMatches'
-import { clubMatchPath, clubMatchesPath } from '@/lib/utils/clubPaths'
+import { clubMatchPath } from '@/lib/utils/clubPaths'
 import { isMatchPast } from '@/lib/utils/rsvpScheduler'
 import { useMatchStore } from '@/store/matchStore'
 
@@ -42,8 +44,8 @@ export type ClubMatchesViewProps = {
   clubId: string | null
   /**
    * Slug for match detail links. `null` with a club id uses legacy
-   * `/matches/[id]`. All-clubs stays on `/admin/matches/[id]` so Back
-   * returns through the all-clubs redirect.
+   * `/matches/[id]`. All-clubs (`clubId` null) stays on `/admin/matches/[id]`
+   * so Back returns to the cross-club list.
    */
   clubSlug: string | null
 }
@@ -53,8 +55,6 @@ export type ClubMatchesViewProps = {
  * Pass `clubId`/`clubSlug` null for the super-user all-clubs legacy list.
  */
 export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
   const { user, loading: authLoading } = useAuth()
   const userId = user?.uid
   const { isAdmin: isSuperUser } = useAdmin()
@@ -66,16 +66,9 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     'loading'
   )
   const fetchGen = useRef(0)
-  const scopeParam = searchParams.get('scope')
-  /**
-   * Super users can list every club from Matches (`?scope=all` or the
-   * no-membership `/matches` page). Club admins stay on the URL club.
-   */
-  const allClubs = !!isSuperUser && (clubId == null || scopeParam === 'all')
 
   const canCreateMatch =
     Boolean(clubId) &&
-    !allClubs &&
     canCreateClubMatches({
       memberships,
       activeClubId: clubId,
@@ -83,28 +76,24 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     })
   /** Super users and club admins get the manage list (past matches, delete). */
   const showAdminList = !!isSuperUser || canCreateMatch
-  const showClubScope = !!isSuperUser && Boolean(clubId) && Boolean(clubSlug)
 
   const matchHref = (matchId: string) => {
-    if (allClubs || !clubId) return `/admin/matches/${matchId}`
     if (clubSlug) return clubMatchPath(clubSlug, matchId)
+    if (!clubId) return `/admin/matches/${matchId}`
     return `/matches/${matchId}`
   }
-
-  const thisClubHref = clubSlug ? clubMatchesPath(clubSlug) : '/matches'
-  const allClubsHref = `${thisClubHref}?scope=all`
 
   const loadMatchesAndCounts = async (gen: number) => {
     try {
       const allMatches = await listMatchesForViewer({
-        clubId: allClubs ? null : clubId,
+        clubId,
         isSuperUser: !!isSuperUser,
       })
       if (gen !== fetchGen.current) return
       const scoped = filterMatchesForClubScope({
         matches: allMatches,
         memberships,
-        activeClubId: allClubs ? null : clubId,
+        activeClubId: clubId,
         isSuperUser: !!isSuperUser,
       })
       const listed = showAdminList
@@ -159,7 +148,6 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     memberships,
     clubId,
     isSuperUser,
-    allClubs,
     setMatches,
   ])
 
@@ -243,49 +231,6 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
           />
         </div>
       )}
-
-      {showClubScope ? (
-        <div
-          role="tablist"
-          aria-label="Match clubs"
-          className="mb-4 flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900/50"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={!allClubs}
-            onClick={() => {
-              if (!allClubs) return
-              router.push(thisClubHref)
-            }}
-            className={cn(
-              'rounded-md px-3 py-1.5 text-sm font-semibold transition-colors',
-              !allClubs
-                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100'
-                : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
-            )}
-          >
-            This club
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={allClubs}
-            onClick={() => {
-              if (allClubs) return
-              router.push(allClubsHref)
-            }}
-            className={cn(
-              'rounded-md px-3 py-1.5 text-sm font-semibold transition-colors',
-              allClubs
-                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100'
-                : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
-            )}
-          >
-            All clubs
-          </button>
-        </div>
-      ) : null}
 
       {showAdminList ? (
         <div
