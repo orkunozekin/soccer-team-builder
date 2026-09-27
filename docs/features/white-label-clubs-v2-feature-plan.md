@@ -11,7 +11,7 @@ Plan for the follow-ups listed under Later in the [v1 white-label plan](./white-
 | Status | in-progress |
 | Owner session | — |
 | Last updated | 2026-09-27 |
-| Related PR / branch | Branding on `cursor/club-branding-chrome-79e3`. Prerequisite shell: [#88](https://github.com/orkunozekin/soccer-team-builder/pull/88). Completed here: [#83](https://github.com/orkunozekin/soccer-team-builder/pull/83) club-admin console, [#82](https://github.com/orkunozekin/soccer-team-builder/pull/82) slug matches, [#80](https://github.com/orkunozekin/soccer-team-builder/pull/80) club sub-nav, [#79](https://github.com/orkunozekin/soccer-team-builder/pull/79) `club-creation`. Continues [v1 plan](./white-label-clubs-feature-plan.md) (merged [#65](https://github.com/orkunozekin/soccer-team-builder/pull/65), [#71](https://github.com/orkunozekin/soccer-team-builder/pull/71), [#73](https://github.com/orkunozekin/soccer-team-builder/pull/73), [#74](https://github.com/orkunozekin/soccer-team-builder/pull/74), [#76](https://github.com/orkunozekin/soccer-team-builder/pull/76)) |
+| Related PR / branch | [#97](https://github.com/orkunozekin/soccer-team-builder/pull/97) `cursor/club-branding-chrome-79e3`. Prerequisite shell: [#88](https://github.com/orkunozekin/soccer-team-builder/pull/88). Completed here: [#83](https://github.com/orkunozekin/soccer-team-builder/pull/83) club-admin console, [#82](https://github.com/orkunozekin/soccer-team-builder/pull/82) slug matches, [#80](https://github.com/orkunozekin/soccer-team-builder/pull/80) club sub-nav, [#79](https://github.com/orkunozekin/soccer-team-builder/pull/79) `club-creation`. Continues [v1 plan](./white-label-clubs-feature-plan.md) (merged [#65](https://github.com/orkunozekin/soccer-team-builder/pull/65), [#71](https://github.com/orkunozekin/soccer-team-builder/pull/71), [#73](https://github.com/orkunozekin/soccer-team-builder/pull/73), [#74](https://github.com/orkunozekin/soccer-team-builder/pull/74), [#76](https://github.com/orkunozekin/soccer-team-builder/pull/76)) |
 
 ## Goals (v1 of this plan)
 
@@ -251,7 +251,7 @@ Starting map only. Touch any other files the work needs: tests, hooks, services,
   - Profile “Clubs I manage” is links only; roster/invite/settings controls removed from profile.
   - Path helpers: `clubRosterPath` / `clubInvitesPath` / `clubSettingsPath` in [`clubPaths.ts`](../../lib/utils/clubPaths.ts).
 - **Club-context nav** landed in [#88](https://github.com/orkunozekin/soccer-team-builder/pull/88). See [that plan](./club-context-nav-feature-plan.md). `ClubSubNav` is gone.
-- **Club branding (todo 5)** on `cursor/club-branding-chrome-79e3`:
+- **Club branding (todo 5)** in [#97](https://github.com/orkunozekin/soccer-team-builder/pull/97):
   - `settings.branding` on [`types/club.ts`](../../types/club.ts): `displayName`, `logoUrl` (https only), `primaryColor` (`#rrggbb`).
   - Validate and merge in [`lib/utils/clubBranding.ts`](../../lib/utils/clubBranding.ts). `PATCH /api/clubs/[clubId]` returns 400 for invalid values. Empty strings clear a field. A settings patch keeps the other field (`allowPlayerInvites` vs branding). Invalid stored values are dropped on read.
   - Club admins edit branding on [`ClubSettingsPanel`](../../components/club/ClubSettingsPanel.tsx).

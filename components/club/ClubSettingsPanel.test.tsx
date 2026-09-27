@@ -17,6 +17,7 @@ vi.mock('@/lib/hooks/useClubMemberships', () => ({
 describe('ClubSettingsPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    refreshMock.mockResolvedValue(undefined)
   })
 
   it('toggles allowPlayerInvites via PATCH', async () => {
@@ -91,12 +92,13 @@ describe('ClubSettingsPanel', () => {
 
   it('saves branding and rejects a non-https logo before calling the API', async () => {
     const user = userEvent.setup()
+    refreshMock.mockResolvedValue(undefined)
     vi.mocked(updateClubAPI).mockResolvedValue({
       success: true,
       club: {} as never,
     })
 
-    render(
+    const { rerender } = render(
       <ClubSettingsPanel
         clubId="c1"
         clubName="Alpha FC"
@@ -138,5 +140,20 @@ describe('ClubSettingsPanel', () => {
         },
       })
     })
+    expect(await screen.findByText('Saved.')).toBeInTheDocument()
+
+    rerender(
+      <ClubSettingsPanel
+        clubId="c1"
+        clubName="Alpha FC"
+        initialAllowPlayerInvites={false}
+        initialBranding={{
+          displayName: 'Wolves',
+          logoUrl: 'https://cdn.example/logo.png',
+          primaryColor: '#112233',
+        }}
+      />
+    )
+    expect(screen.getByText('Saved.')).toBeInTheDocument()
   })
 })

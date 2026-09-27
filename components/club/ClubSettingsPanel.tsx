@@ -60,7 +60,6 @@ export function ClubSettingsPanel({
     setInviteBusy(false)
     setBrandingBusy(false)
     setError('')
-    setSaved(false)
   }, [
     clubId,
     form,
@@ -69,6 +68,10 @@ export function ClubSettingsPanel({
     initialLogoUrl,
     initialPrimaryColor,
   ])
+
+  useEffect(() => {
+    setSaved(false)
+  }, [clubId])
 
   const markSaved = () => {
     setSaved(true)
