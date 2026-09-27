@@ -33,6 +33,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-27 — Stale auth callbacks must not publish a profile
+
+- **Source:** PR #88 · Macroscope
+- **Gap:** `onAuthStateChanged` does not await the observer. An in-flight sign-in for user A could finish after user B signed in and set `profileReady` plus A’s `userData`, so the admin guard treated B as a confirmed non-admin.
+- **Going forward:** Give each auth callback a generation. After every await, skip store writes (`setUserData`, `setProfileReady`, `setLoading`) unless that generation is still current. Resetting `profileReady` at the start of a uid change is not enough on its own.
+- **Pointers:** `components/auth/AuthProvider.tsx` (`authGenRef`)
+
 ### 2026-09-27 — Profile ready must follow the user; delete follows the match
 
 - **Source:** PR #88 · Macroscope | Greptile

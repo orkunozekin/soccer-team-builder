@@ -141,4 +141,65 @@ describe('AuthProvider profile readiness', () => {
     resolveRefresh(superUserDoc())
     await refresh
   })
+
+  it('drops a stale profile write after a newer sign-in starts', async () => {
+    let resolveA: (doc: unknown) => void = () => {}
+    let resolveB: (doc: unknown) => void = () => {}
+    getDocumentMock
+      .mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            resolveA = resolve
+          })
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            resolveB = resolve
+          })
+      )
+
+    render(
+      <AuthProvider>
+        <span>app</span>
+      </AuthProvider>
+    )
+
+    const pendingA = listenerRef.current?.({
+      uid: 'user-a',
+      email: 'a@test.soccer',
+      displayName: 'A',
+    })
+    const pendingB = listenerRef.current?.({
+      uid: 'user-b',
+      email: 'b@test.soccer',
+      displayName: 'B',
+    })
+
+    expect(useAuthStore.getState().user?.uid).toBe('user-b')
+    expect(useAuthStore.getState().profileReady).toBe(false)
+
+    resolveA({
+      ...superUserDoc(),
+      role: 'user',
+      email: 'a@test.soccer',
+      displayName: 'A',
+    })
+    await pendingA
+
+    expect(useAuthStore.getState().profileReady).toBe(false)
+    expect(useAuthStore.getState().userData).toBeNull()
+    expect(useAuthStore.getState().user?.uid).toBe('user-b')
+
+    resolveB({
+      ...superUserDoc(),
+      email: 'b@test.soccer',
+      displayName: 'B',
+    })
+    await pendingB
+
+    expect(useAuthStore.getState().profileReady).toBe(true)
+    expect(useAuthStore.getState().userData?.uid).toBe('user-b')
+    expect(useAuthStore.getState().userData?.role).toBe('super_user')
+  })
 })
