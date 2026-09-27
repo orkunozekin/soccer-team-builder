@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 
-/** Admin entry redirects to Matches; section switching is via AdminNav. */
+/** Admin entry. Club match lists stay on the club page; all-clubs is /admin/matches. */
 export default function AdminPage() {
-  redirect('/admin/matches')
+  redirect('/admin/schedules')
 }

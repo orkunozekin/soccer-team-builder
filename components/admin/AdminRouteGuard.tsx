@@ -13,23 +13,22 @@ interface AdminRouteGuardProps {
 export function AdminRouteGuard({ children }: AdminRouteGuardProps) {
   const router = useRouter()
   const { user, loading } = useAuth()
-  const { isAdmin } = useAdmin()
+  const { isAdmin, rolePending } = useAdmin()
+  const pending = loading || rolePending
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        router.push('/login')
-        return
-      }
-
-      if (!isAdmin) {
-        router.push('/matches')
-        return
-      }
+    if (pending) return
+    if (!user) {
+      router.push('/login')
+      return
     }
-  }, [user, loading, isAdmin, router])
 
-  if (loading) {
+    if (!isAdmin) {
+      router.push('/matches')
+    }
+  }, [user, pending, isAdmin, router])
+
+  if (pending) {
     return <PageLoadingSkeleton variant="centered" />
   }
 

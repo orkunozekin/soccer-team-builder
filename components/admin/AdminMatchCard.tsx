@@ -31,12 +31,15 @@ interface AdminMatchCardProps {
   match: Match
   rsvpCount?: number
   onDeleted?: () => void
+  /** Detail URL. Defaults to the legacy admin match route. */
+  href?: string
 }
 
 export function AdminMatchCard({
   match,
   rsvpCount,
   onDeleted,
+  href,
 }: AdminMatchCardProps) {
   const [open, setOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -60,7 +63,7 @@ export function AdminMatchCard({
 
   return (
     <>
-      <Link href={`/admin/matches/${match.id}`}>
+      <Link href={href ?? `/admin/matches/${match.id}`}>
         <Card className="h-full cursor-pointer transition-all hover:shadow-md">
           <CardHeader>
             <div className="flex items-start justify-between gap-2">

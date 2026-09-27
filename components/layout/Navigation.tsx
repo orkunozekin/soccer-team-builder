@@ -1,164 +1,28 @@
 'use client'
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { NavLoadingSkeleton } from '@/components/LoadingSkeleton'
-import { Button } from '@/components/ui/button'
-import { logoutUser } from '@/lib/firebase/auth'
-import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 
 function BrandLogo({ className }: { className?: string }) {
   return <span className={className}>Soccerville</span>
 }
 
-/**
- * Radix Select/Dropdown in the club bar sets `pointer-events: none` on body
- * while open. Signing out unmounts that bar before the lock is released, which
- * leaves the login page visible but unable to take clicks or typing.
- */
-function releasePageInteractionLock() {
-  const { body } = document
-  if (body.style.pointerEvents === 'none') {
-    body.style.pointerEvents = ''
-  }
-  body.removeAttribute('data-scroll-locked')
-  for (const className of [...body.classList]) {
-    if (className.startsWith('block-interactivity-')) {
-      body.classList.remove(className)
-    }
-  }
-}
-
-/** Soccerville platform bar. Club links live on ClubSubNav. */
+/** Signed-out Soccerville header. Signed-in chrome lives on AppShell. */
 export function Navigation() {
   const { user, loading } = useAuth()
-  const { isAdmin } = useAdmin()
-  const router = useRouter()
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-
-  const handleLogout = async () => {
-    setIsMenuOpen(false)
-    try {
-      await logoutUser()
-      // Go straight to the login route. `/` only server-redirects there, and
-      // that hop races the signed-out page's own redirect and can leave a
-      // non-interactive skeleton on screen.
-      router.replace('/login')
-    } catch (error) {
-      console.error('Error logging out:', error)
-    } finally {
-      releasePageInteractionLock()
-      window.setTimeout(releasePageInteractionLock, 0)
-    }
-  }
 
   if (loading) {
     return <NavLoadingSkeleton />
   }
 
-  if (!user) {
-    return (
-      <header className="bg-red-50 py-3 font-semibold text-white shadow-md">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-center">
-            <BrandLogo />
-          </div>
-        </div>
-      </header>
-    )
-  }
+  if (user) return null
 
   return (
     <header className="bg-red-50 py-3 font-semibold text-white shadow-md">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between">
-          <Link
-            href="/matches"
-            className="text-lg font-bold transition-opacity hover:opacity-80"
-          >
-            <BrandLogo />
-          </Link>
-
-          {/* Desktop Navigation — platform links only */}
-          <nav className="hidden items-center gap-4 md:flex">
-            <Link
-              href="/profile"
-              className="transition-opacity hover:opacity-80"
-            >
-              Profile
-            </Link>
-            {isAdmin && (
-              <Link
-                href="/admin/matches"
-                className="transition-opacity hover:opacity-80"
-              >
-                Admin
-              </Link>
-            )}
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              size="sm"
-              className="h-8 border-white/40 bg-red-40 text-white shadow-sm hover:bg-red-30 hover:text-white"
-            >
-              Sign Out
-            </Button>
-          </nav>
-
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="flex flex-col gap-1.5 p-2 md:hidden"
-            aria-label="Toggle menu"
-          >
-            <span
-              className={`block h-0.5 w-6 bg-white transition-all ${
-                isMenuOpen ? 'translate-y-2 rotate-45' : ''
-              }`}
-            />
-            <span
-              className={`block h-0.5 w-6 bg-white transition-all ${
-                isMenuOpen ? 'opacity-0' : ''
-              }`}
-            />
-            <span
-              className={`block h-0.5 w-6 bg-white transition-all ${
-                isMenuOpen ? '-translate-y-2 -rotate-45' : ''
-              }`}
-            />
-          </button>
+        <div className="flex justify-center">
+          <BrandLogo />
         </div>
-
-        {/* Mobile Navigation Menu */}
-        {isMenuOpen && (
-          <nav className="mt-4 flex animate-slide-up-fade flex-col gap-2 border-t border-white/20 pt-4 md:hidden">
-            <Link
-              href="/profile"
-              onClick={() => setIsMenuOpen(false)}
-              className="py-2 transition-opacity hover:opacity-80"
-            >
-              Profile
-            </Link>
-            {isAdmin && (
-              <Link
-                href="/admin/matches"
-                onClick={() => setIsMenuOpen(false)}
-                className="py-2 transition-opacity hover:opacity-80"
-              >
-                Admin
-              </Link>
-            )}
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="mt-2 h-11 border-white/40 bg-red-40 text-white shadow-sm hover:bg-red-30 hover:text-white"
-            >
-              Sign Out
-            </Button>
-          </nav>
-        )}
       </div>
     </header>
   )

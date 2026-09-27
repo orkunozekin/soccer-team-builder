@@ -3,11 +3,11 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 import { EmulatorAuthGate } from '@/components/auth/EmulatorAuthGate'
-import { LaunchDarklyProvider } from '@/components/flags/LaunchDarklyProvider'
-import { SwrProvider } from '@/components/providers/SwrProvider'
 import { AdminUiToggle } from '@/components/dev/AdminUiToggle'
-import { MobileViewportFix } from '@/components/layout/MobileViewportFix'
+import { LaunchDarklyProvider } from '@/components/flags/LaunchDarklyProvider'
 import { AppShell } from '@/components/layout/AppShell'
+import { MobileViewportFix } from '@/components/layout/MobileViewportFix'
+import { SwrProvider } from '@/components/providers/SwrProvider'
 import { cn } from '@/lib/utils'
 
 // Use the Google Inter font from next/font
@@ -49,8 +49,7 @@ export default function RootLayout({
             <SwrProvider>
               <LaunchDarklyProvider>
                 <MobileViewportFix />
-                <AppShell />
-                {children}
+                <AppShell>{children}</AppShell>
                 <AdminUiToggle />
               </LaunchDarklyProvider>
             </SwrProvider>

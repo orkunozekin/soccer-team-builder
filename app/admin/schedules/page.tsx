@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { AdminNav } from '@/components/admin/AdminNav'
 import {
   ScheduleForm,
   type ScheduleFormValues,
@@ -126,8 +125,6 @@ export default function AdminSchedulesPage() {
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8">
-      <AdminNav />
-
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
