@@ -42,6 +42,7 @@ function isPlatformPath(pathname: string): boolean {
   return (
     pathname === '/' ||
     pathname.startsWith('/profile') ||
+    pathname.startsWith('/clubs') ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/register') ||

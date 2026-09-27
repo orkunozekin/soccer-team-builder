@@ -211,6 +211,10 @@ describe('AppShell', () => {
       'href',
       '/profile'
     )
+    expect(screen.getByRole('menuitem', { name: 'My clubs' })).toHaveAttribute(
+      'href',
+      '/clubs'
+    )
     expect(
       screen.queryByRole('menuitem', { name: 'Analytics' })
     ).not.toBeInTheDocument()
@@ -310,6 +314,20 @@ describe('AppShell', () => {
     await waitFor(() => {
       expect(pushMock).toHaveBeenCalledWith('/c/alpha/matches')
     })
+  })
+
+  it('stays on my clubs when switching from that page', async () => {
+    const user = userEvent.setup()
+    usePathnameMock.mockReturnValue('/clubs')
+    vi.mocked(updateProfileAPI).mockResolvedValue({ success: true })
+    render(<AppShell />)
+    await user.click(rail().getByLabelText('Switch club'))
+    await user.click(screen.getByRole('button', { name: /beta united/i }))
+
+    await waitFor(() => {
+      expect(updateProfileAPI).toHaveBeenCalledWith({ activeClubId: 'beta' })
+    })
+    expect(pushMock).not.toHaveBeenCalled()
   })
 
   it('stays on profile when switching from a platform page', async () => {

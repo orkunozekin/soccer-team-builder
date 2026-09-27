@@ -53,6 +53,11 @@ export function AccountMenu({
             Profile
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuItem asChild className="cursor-pointer">
+          <Link href="/clubs" onClick={onNavigate}>
+            My clubs
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="cursor-pointer"
