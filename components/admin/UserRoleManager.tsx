@@ -302,7 +302,7 @@ export function UserRoleManager() {
           className="h-11 text-base sm:h-9 sm:text-sm"
         />
 
-        <div className="max-h-96 space-y-2 overflow-y-auto">
+        <div className="max-h-96 space-y-2 overflow-y-auto md:max-h-[70vh]">
           {searchLoading || (browsing && pageLoading && visibleUsers.length === 0) ? (
             <div className="rounded-md border p-4 text-sm text-zinc-600 dark:text-zinc-400">
               {searchLoading ? 'Searching…' : 'Loading…'}
