@@ -17,7 +17,9 @@ function releasePageInteractionLock() {
     body.style.pointerEvents = ''
   }
   body.removeAttribute('data-scroll-locked')
-  for (const className of [...body.classList]) {
+  // className is a string. Spreading DOMTokenList fails `next build` typecheck
+  // (target below es2015, no downlevelIteration).
+  for (const className of body.className.split(/\s+/)) {
     if (className.startsWith('block-interactivity-')) {
       body.classList.remove(className)
     }
