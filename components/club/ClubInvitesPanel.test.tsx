@@ -122,6 +122,41 @@ describe('ClubInvitesPanel', () => {
     ).toBeInTheDocument()
   })
 
+  it('copies a relative invite path as an absolute URL', async () => {
+    const user = userEvent.setup()
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+    vi.mocked(listClubInvitesAPI).mockResolvedValue({
+      success: true,
+      invites: [
+        {
+          id: 'i1',
+          clubId: 'c1',
+          code: 'REL001',
+          createdBy: 'u1',
+          createdByRole: 'club_admin',
+          useCount: 0,
+          maxUses: null,
+          expiresAt: null,
+          revokedAt: null,
+          createdAt: new Date(),
+          link: '/join?code=REL001',
+        },
+      ],
+    })
+
+    render(<ClubInvitesPanel clubId="c1" canManageInvites />)
+
+    await user.click(await screen.findByRole('button', { name: 'Copy link' }))
+
+    expect(writeText).toHaveBeenCalledWith(
+      `${window.location.origin}/join?code=REL001`
+    )
+  })
+
   it('does not clear busy state for a newer revoke when an older one finishes', async () => {
     const user = userEvent.setup()
     let resolveFirst!: (value: { success: boolean }) => void
