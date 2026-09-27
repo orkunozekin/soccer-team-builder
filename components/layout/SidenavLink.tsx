@@ -28,7 +28,8 @@ export function SidenavLink({
           : 'border-transparent text-white hover:bg-white/10'
       )}
     >
-      <Icon className="h-4 w-4 shrink-0" aria-hidden />
+      {/* Cap height sits above the line-box center, so the icon is nudged up. */}
+      <Icon className="h-4 w-4 shrink-0 -translate-y-px" aria-hidden />
       <span className="min-w-0 truncate">{label}</span>
     </Link>
   )
