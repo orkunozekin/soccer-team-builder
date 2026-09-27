@@ -78,6 +78,7 @@ Path alias: `@/*` → project root (`tsconfig.json`).
 
 - Client Firestore uses the **Lite** SDK on purpose (no `onSnapshot` Listen streams). Do not switch to the full Firestore client SDK without an explicit product decision and mobile regression plan.
 - Emulator wiring: `NEXT_PUBLIC_USE_FIREBASE_EMULATOR` plus `FIRESTORE_EMULATOR_HOST` / `FIREBASE_AUTH_EMULATOR_HOST`. See [`local-development.md`](./local-development.md).
+- **Club-tenant queries must be constrained.** Collection queries on `matches` (and similar tenant-scoped collections) must include a `clubId` filter that matches what Firestore rules allow the caller to read. Unqualified `getAllMatches()`-style queries fail for members once other clubs have documents. Super users may query the full collection. Prefer helpers like `listMatchesForViewer` / `getMatchesForClub` and keep indexes in `firestore.indexes.json` aligned.
 
 ### Feature flags
 

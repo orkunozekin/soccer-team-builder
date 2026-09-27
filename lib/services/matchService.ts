@@ -1,4 +1,4 @@
-import { orderBy } from 'firebase/firestore/lite'
+import { orderBy, where } from 'firebase/firestore/lite'
 import {
   dateToTimestamp,
   getDocument,
@@ -72,6 +72,92 @@ export const getAllMatches = async (options?: {
   })
 
   return filtered
+}
+
+function finalizeMatchList(
+  docs: Record<string, unknown>[],
+  options?: { includeDeleted?: boolean }
+): Match[] {
+  const byId = new Map<string, Match>()
+  for (const match of docs) {
+    const id = (match.id as string) || ''
+    if (!id || byId.has(id)) continue
+    byId.set(id, mapDocToMatch(match, id))
+  }
+
+  const list = Array.from(byId.values())
+  const filtered = options?.includeDeleted
+    ? list
+    : list.filter(m => m.deletedAt == null)
+
+  filtered.sort((a, b) => {
+    const dateCompare = a.date.getTime() - b.date.getTime()
+    if (dateCompare !== 0) return dateCompare
+    return (a.time || '').localeCompare(b.time || '')
+  })
+  return filtered
+}
+
+/**
+ * Club-scoped match list for members (and super users viewing one club).
+ * Queries `clubId == clubId` so Firestore rules allow the read; optionally
+ * also loads pre-backfill docs with `clubId == null`.
+ */
+export const getMatchesForClub = async (
+  clubId: string,
+  options?: { includeDeleted?: boolean; includeUnscoped?: boolean }
+): Promise<Match[]> => {
+  const trimmed = clubId.trim()
+  if (!trimmed) return []
+
+  const includeUnscoped = options?.includeUnscoped !== false
+  const [clubDocs, unscopedDocs] = await Promise.all([
+    queryDocuments('matches', [
+      where('clubId', '==', trimmed),
+      orderBy('date', 'asc'),
+    ]),
+    includeUnscoped
+      ? queryDocuments('matches', [
+          where('clubId', '==', null),
+          orderBy('date', 'asc'),
+        ])
+      : Promise.resolve([]),
+  ])
+
+  return finalizeMatchList([...clubDocs, ...unscopedDocs], options)
+}
+
+/**
+ * Load matches the viewer is allowed to query under Firestore rules.
+ * - Super user, no club: full collection (authorized for operators).
+ * - Otherwise: club-scoped query (+ unscoped pre-backfill docs).
+ */
+export const listMatchesForViewer = async (input: {
+  clubId: string | null
+  isSuperUser: boolean
+  includeDeleted?: boolean
+}): Promise<Match[]> => {
+  const preferred =
+    typeof input.clubId === 'string' ? input.clubId.trim() : ''
+
+  if (input.isSuperUser && !preferred) {
+    return getAllMatches({ includeDeleted: input.includeDeleted })
+  }
+
+  if (!preferred) {
+    return finalizeMatchList(
+      await queryDocuments('matches', [
+        where('clubId', '==', null),
+        orderBy('date', 'asc'),
+      ]),
+      { includeDeleted: input.includeDeleted }
+    )
+  }
+
+  return getMatchesForClub(preferred, {
+    includeDeleted: input.includeDeleted,
+    includeUnscoped: true,
+  })
 }
 
 export const updateMatch = async (

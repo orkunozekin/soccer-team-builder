@@ -33,6 +33,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-27 — Club-scoped Firestore queries for member match lists
+
+- **Source:** PR #82 · Macroscope
+- **Gap:** `ClubMatchesView` called `getAllMatches()` (unqualified `matches` query). Once any other club had a match, Firestore rejected the query for members because rules cannot prove every result is readable.
+- **Going forward:** Client match lists for members must query with `where('clubId', '==', clubId)` (plus optional unscoped `clubId == null`). Super users may keep the collection query when viewing all clubs. Add composite indexes when combining `clubId` + `orderBy`.
+- **Pointers:** `lib/services/matchService.ts` (`listMatchesForViewer` / `getMatchesForClub`), `components/matches/ClubMatchesView.tsx`, `firestore.indexes.json`, `firestore.rules` matches read
+
 ### 2026-09-27 — Club slug routes: no existence leaks; preserve super-user paths
 
 - **Source:** PR #82 · Macroscope | Greptile

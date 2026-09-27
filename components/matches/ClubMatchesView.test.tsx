@@ -38,11 +38,12 @@ vi.mock('@/store/matchStore', () => ({
   useMatchStore: () => matchStoreState,
 }))
 
-const getAllMatchesMock = vi.fn()
+const listMatchesForViewerMock = vi.fn()
 const getMatchRsvpCountMock = vi.fn()
 
 vi.mock('@/lib/services/matchService', () => ({
-  getAllMatches: (...args: unknown[]) => getAllMatchesMock(...args),
+  listMatchesForViewer: (...args: unknown[]) =>
+    listMatchesForViewerMock(...args),
 }))
 vi.mock('@/lib/services/rsvpService', () => ({
   getMatchRsvpCount: (...args: unknown[]) => getMatchRsvpCountMock(...args),
@@ -117,7 +118,7 @@ describe('ClubMatchesView', () => {
   })
 
   it('renders upcoming matches after a successful fetch', async () => {
-    getAllMatchesMock.mockResolvedValueOnce([mockMatch('m1')])
+    listMatchesForViewerMock.mockResolvedValueOnce([mockMatch('m1')])
 
     renderView()
 
@@ -129,7 +130,7 @@ describe('ClubMatchesView', () => {
 
   it('does not show No Matches while a fetch is still in flight', async () => {
     let resolveMatches: (value: unknown) => void = () => {}
-    getAllMatchesMock.mockReturnValueOnce(
+    listMatchesForViewerMock.mockReturnValueOnce(
       new Promise(resolve => {
         resolveMatches = resolve
       })
@@ -150,7 +151,7 @@ describe('ClubMatchesView', () => {
     let rejectFirst: (error: Error) => void = () => {}
     let resolveSecond: (value: unknown) => void = () => {}
 
-    getAllMatchesMock
+    listMatchesForViewerMock
       .mockImplementationOnce(
         () =>
           new Promise((_resolve, reject) => {
@@ -185,14 +186,14 @@ describe('ClubMatchesView', () => {
   })
 
   it('shows an error retry state when the only fetch fails', async () => {
-    getAllMatchesMock.mockRejectedValueOnce(new Error('network'))
+    listMatchesForViewerMock.mockRejectedValueOnce(new Error('network'))
 
     renderView()
 
     expect(await screen.findByText('Could not load matches')).toBeInTheDocument()
     expect(screen.queryByText('No Matches')).not.toBeInTheDocument()
 
-    getAllMatchesMock.mockResolvedValueOnce([mockMatch('m3')])
+    listMatchesForViewerMock.mockResolvedValueOnce([mockMatch('m3')])
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
 
     await waitFor(() => {
@@ -203,7 +204,7 @@ describe('ClubMatchesView', () => {
   })
 
   it('filters matches to the club from the URL', async () => {
-    getAllMatchesMock.mockResolvedValueOnce([
+    listMatchesForViewerMock.mockResolvedValueOnce([
       { ...mockMatch('m-a'), clubId: 'club-a' },
       { ...mockMatch('m-b'), clubId: 'club-b' },
       { ...mockMatch('m-null'), clubId: null },
@@ -258,7 +259,7 @@ describe('ClubMatchesView', () => {
       error: null,
       refresh: vi.fn(),
     })
-    getAllMatchesMock.mockResolvedValueOnce([])
+    listMatchesForViewerMock.mockResolvedValueOnce([])
 
     renderView('club-a', 'alpha')
 
@@ -304,7 +305,7 @@ describe('ClubMatchesView', () => {
       error: null,
       refresh: vi.fn(),
     })
-    getAllMatchesMock.mockResolvedValueOnce([])
+    listMatchesForViewerMock.mockResolvedValueOnce([])
 
     renderView('club-b', 'beta')
 

@@ -16,8 +16,8 @@ import { Button } from '@/components/ui/button'
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
-import { getAllMatches } from '@/lib/services/matchService'
 import { getMatchRsvpCount } from '@/lib/services/rsvpService'
+import { listMatchesForViewer } from '@/lib/services/matchService'
 import { cn } from '@/lib/utils'
 import {
   canCreateClubMatches,
@@ -70,7 +70,10 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
 
     const fetchMatches = async () => {
       try {
-        const allMatches = await getAllMatches()
+        const allMatches = await listMatchesForViewer({
+          clubId,
+          isSuperUser: !!isSuperUser,
+        })
         if (gen !== fetchGen.current) return
         const scoped = filterMatchesForClubScope({
           matches: allMatches,
@@ -115,7 +118,10 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     setMatches([])
     setRsvpCounts({})
     try {
-      const allMatches = await getAllMatches()
+      const allMatches = await listMatchesForViewer({
+        clubId,
+        isSuperUser: !!isSuperUser,
+      })
       if (gen !== fetchGen.current) return
       const scoped = filterMatchesForClubScope({
         matches: allMatches,
