@@ -40,12 +40,12 @@ export function AccountMenu({
       <DropdownMenuTrigger
         aria-label="Account"
         className={cn(
-          'inline-flex h-9 w-full max-w-full items-center justify-between gap-1 rounded-md px-2 text-sm font-medium text-white outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/70',
+          'inline-flex h-9 w-full max-w-full items-center justify-between gap-1 rounded-md border border-white px-2 text-sm font-medium text-white outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white',
           className
         )}
       >
         <span className="truncate">{label}</span>
-        <ChevronDownIcon className="h-4 w-4 shrink-0 opacity-70" />
+        <ChevronDownIcon className="h-4 w-4 shrink-0" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[10rem]">
         <DropdownMenuItem asChild className="cursor-pointer">

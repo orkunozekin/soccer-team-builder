@@ -62,7 +62,7 @@ export function ClubContextSwitcher({
       >
         <span className="min-w-0 flex-1">
           <span className="block truncate">{clubName}</span>
-          <span className="block truncate text-xs font-normal text-white/70">
+          <span className="block truncate text-xs font-normal text-white">
             {formatMembershipRole(role)}
           </span>
         </span>

@@ -32,7 +32,7 @@ export function PlatformAdminNav({
               'rounded-md border-l-[6px] px-3 py-2 text-sm font-semibold transition-colors',
               active
                 ? 'border-white bg-white/20 text-white'
-                : 'border-transparent text-white/80 hover:bg-white/10 hover:text-white'
+                : 'border-transparent text-white hover:bg-white/10'
             )}
           >
             {link.label}
