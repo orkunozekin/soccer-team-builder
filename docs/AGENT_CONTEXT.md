@@ -78,7 +78,13 @@ Path alias: `@/*` → project root (`tsconfig.json`).
 
 - Client Firestore uses the **Lite** SDK on purpose (no `onSnapshot` Listen streams). Do not switch to the full Firestore client SDK without an explicit product decision and mobile regression plan.
 - Emulator wiring: `NEXT_PUBLIC_USE_FIREBASE_EMULATOR` plus `FIRESTORE_EMULATOR_HOST` / `FIREBASE_AUTH_EMULATOR_HOST`. See [`local-development.md`](./local-development.md).
-- **Club-tenant queries must be constrained.** Collection queries on `matches` (and similar tenant-scoped collections) must include a `clubId` filter that matches what Firestore rules allow the caller to read. Unqualified `getAllMatches()`-style queries fail for members once other clubs have documents. Super users may query the full collection. Prefer helpers like `listMatchesForViewer` / `getMatchesForClub` and keep indexes in `firestore.indexes.json` aligned. Do not use `where('clubId','==',null)` as a stand-in for “field missing”; that only matches explicit null.
+- **Club-tenant queries must be constrained.** Collection queries on `matches` (and similar tenant-scoped collections) must include a `clubId` filter that matches what Firestore rules allow the caller to read. Unqualified `getAllMatches()`-style queries fail for members once other clubs have documents. Super users may query the full collection. Prefer helpers like `listMatchesForViewer` / `getMatchesForClub`. Do not use `where('clubId','==',null)` as a stand-in for “field missing”; that only matches explicit null.
+- **Composite indexes: keep them; deploy before the query ships.** Indexes in `firestore.indexes.json` are good and expected for compound queries (e.g. `clubId` + `orderBy('date')`). The failure mode is shipping client/Admin query shapes that need a composite index while production still lacks it (`FAILED_PRECONDITION` → blank UI such as “Could not load matches”). Rules for agents:
+  1. When adding `where` + `orderBy` (or multi-field equality) on a collection, update `firestore.indexes.json` in the same PR.
+  2. Call out in the PR that **`firebase deploy --only firestore:indexes`** (or Console create) must reach **Enabled** before/at production traffic for that query — merging the JSON alone does nothing.
+  3. Prefer equality-only client queries + in-memory sort when list sizes are small, so the app stays up even if an index is still Building or missing.
+  4. Emulators often do **not** enforce composite indexes; green local runs are not proof the index exists in production.
+  5. Do not delete useful composite indexes just to avoid deploy discipline; keep indexes and ship the deploy.
 
 ### Feature flags
 

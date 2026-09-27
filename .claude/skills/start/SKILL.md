@@ -51,6 +51,7 @@ Internalize especially:
 - Local development uses Firebase emulators only unless the human explicitly directs a production ops task
 - No committing or pasting secrets
 - API auth via `lib/api/auth.ts`; client errors via `sanitizeErrorForClient`
+- Compound Firestore queries need `firestore.indexes.json` **and** a production index deploy to Enabled (emulators often skip this)
 - Prefer smallest task-scoped change
 
 ### 3. Feature plans (optional)

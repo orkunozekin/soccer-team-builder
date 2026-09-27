@@ -51,13 +51,20 @@ describe('listMatchesForViewer / getMatchesForClub', () => {
     expect(result.map(m => m.id)).toEqual(['m1'])
   })
 
-  it('queries only by clubId for a club-scoped list', async () => {
-    queryDocumentsMock.mockResolvedValueOnce([matchDoc('m-club', 'club-a')])
+  it('queries only by clubId for a club-scoped list (no orderBy)', async () => {
+    // Return unsorted so we prove finalizeMatchList sorts in memory.
+    queryDocumentsMock.mockResolvedValueOnce([
+      matchDoc('m-later', 'club-a', 48),
+      matchDoc('m-sooner', 'club-a', 12),
+    ])
 
     const result = await getMatchesForClub('club-a')
 
     expect(queryDocumentsMock).toHaveBeenCalledTimes(1)
-    expect(result.map(m => m.id)).toEqual(['m-club'])
+    expect(queryDocumentsMock.mock.calls[0][0]).toBe('matches')
+    // Single equality constraint — composite index not required.
+    expect(queryDocumentsMock.mock.calls[0][1]).toHaveLength(1)
+    expect(result.map(m => m.id)).toEqual(['m-sooner', 'm-later'])
   })
 
   it('returns no matches for members without a club context', async () => {

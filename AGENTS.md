@@ -15,6 +15,7 @@ Instructions for LLM coding agents and AI code-review bots working in this repos
 - **No secrets in git or chat.** Never commit `.env*`, service accounts, or API keys; never paste full secret values.
 - **AuthZ first.** API routes use `lib/api/auth.ts` helpers; keep club tenancy and Firestore rules intact.
 - **Sanitize client errors** via `lib/api/sanitizeError.ts`.
+- **Firestore indexes before compound queries.** Adding `where` + `orderBy` (or multi-field filters) requires `firestore.indexes.json` **and** a production index deploy to **Enabled**; merging JSON alone is not enough. See `docs/AGENT_CONTEXT.md` / `docs/DEPLOYMENT.md`.
 - **Small, task-scoped diffs.** Match existing Prettier/ESLint/Tailwind/shadcn patterns.
 - **Trusted logic on the server** for team generation, transfers, privileged club/match mutations (`docs/ARCHITECTURE.md`).
 

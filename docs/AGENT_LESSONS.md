@@ -33,6 +33,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-27 — Club match queries must not require undeployed composite indexes
+
+- **Source:** Production report after PR #82 merge · human (confirmed via Network `runQuery` `FAILED_PRECONDITION`)
+- **Gap:** `getMatchesForClub` used `where('clubId')` + `orderBy('date')`. The matching composite index was added to `firestore.indexes.json` in the PR but **not deployed** to production, so members saw “Could not load matches.” Emulators did not catch this (indexes often unenforced locally). Having the composite index itself is fine and desirable; the mistake was query-before-Enabled. RSVP count failures in the same try/catch could also wipe the list.
+- **Going forward:** (1) Update `firestore.indexes.json` with any new compound query. (2) Deploy indexes (`firebase deploy --only firestore:indexes` or Console) and wait until **Enabled** before/at cutover. (3) Prefer equality-only + in-memory sort for small lists so missing/Building indexes do not blank the UI. (4) Keep useful indexes; do not “avoid” them. (5) Isolate secondary fetches (RSVP counts) from primary list success.
+- **Pointers:** `lib/services/matchService.ts` (`getMatchesForClub`), `components/matches/ClubMatchesView.tsx`, `firestore.indexes.json`, `docs/DEPLOYMENT.md` (indexes), `docs/AGENT_CONTEXT.md` (Client Firebase)
+
 ### 2026-09-27 — Club match list: scoped queries, no create without clubId, invalidate on unmount
 
 - **Source:** PR #82 · Macroscope
