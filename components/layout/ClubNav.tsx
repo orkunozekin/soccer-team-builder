@@ -1,8 +1,22 @@
 'use client'
 
-import Link from 'next/link'
+import {
+  Calendar,
+  type LucideIcon,
+  MailPlus,
+  Settings,
+  Users,
+} from 'lucide-react'
+import { SidenavLink } from '@/components/layout/SidenavLink'
 import type { ClubWorkspaceSection } from '@/lib/hooks/useClubWorkspace'
-import { cn } from '@/lib/utils'
+import type { ClubSubNavSection } from '@/lib/utils/resolveSelectedClub'
+
+const CLUB_SECTION_ICONS: Record<ClubSubNavSection, LucideIcon> = {
+  matches: Calendar,
+  roster: Users,
+  invites: MailPlus,
+  settings: Settings,
+}
 
 export function ClubNav({
   sections,
@@ -17,25 +31,16 @@ export function ClubNav({
 
   return (
     <nav aria-label="Club sections" className="flex flex-col gap-1">
-      {sections.map(section => {
-        const active = section.href === activeHref
-        return (
-          <Link
-            key={section.id}
-            href={section.href}
-            aria-current={active ? 'page' : undefined}
-            onClick={onNavigate}
-            className={cn(
-              'rounded-md border-l-[6px] px-3 py-2 text-sm font-semibold transition-colors',
-              active
-                ? 'border-white bg-white/20 text-white'
-                : 'border-transparent text-white hover:bg-white/10'
-            )}
-          >
-            {section.label}
-          </Link>
-        )
-      })}
+      {sections.map(section => (
+        <SidenavLink
+          key={section.id}
+          href={section.href}
+          label={section.label}
+          icon={CLUB_SECTION_ICONS[section.id]}
+          active={section.href === activeHref}
+          onNavigate={onNavigate}
+        />
+      ))}
     </nav>
   )
 }
