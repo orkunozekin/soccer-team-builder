@@ -1,0 +1,67 @@
+'use client'
+
+import { ChevronDownIcon } from '@radix-ui/react-icons'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { logoutUser } from '@/lib/firebase/auth'
+import { useAdmin } from '@/lib/hooks/useAdmin'
+import { useAuth } from '@/lib/hooks/useAuth'
+import { cn } from '@/lib/utils'
+
+/** Platform account links. Kept out of club section nav. */
+export function AccountMenu({ className }: { className?: string }) {
+  const { user, userData } = useAuth()
+  const { isAdmin } = useAdmin()
+  const router = useRouter()
+  const label = userData?.displayName?.trim() || user?.email || 'Account'
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser()
+      router.push('/')
+    } catch (error) {
+      console.error('Error logging out:', error)
+    }
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="Account"
+        className={cn(
+          'inline-flex h-9 max-w-[10rem] items-center gap-1 rounded-md px-2 text-sm font-medium text-zinc-900 outline-none hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-100 dark:hover:bg-zinc-800 md:max-w-full',
+          className
+        )}
+      >
+        <span className="truncate">{label}</span>
+        <ChevronDownIcon className="h-4 w-4 shrink-0 opacity-70" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[10rem]">
+        <DropdownMenuItem asChild className="cursor-pointer">
+          <Link href="/profile">Profile</Link>
+        </DropdownMenuItem>
+        {isAdmin ? (
+          <DropdownMenuItem asChild className="cursor-pointer">
+            <Link href="/admin/matches">Admin</Link>
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onSelect={() => {
+            void handleLogout()
+          }}
+        >
+          Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
