@@ -26,6 +26,8 @@ interface MatchCardProps {
   isAdmin?: boolean
   /** Index for staggered entrance animation */
   index?: number
+  /** Detail URL. Defaults to legacy `/matches/[id]` (redirects to club path). */
+  href?: string
 }
 
 export function MatchCard({
@@ -33,7 +35,9 @@ export function MatchCard({
   rsvpCount,
   isAdmin,
   index = 0,
+  href,
 }: MatchCardProps) {
+  const detailHref = href ?? `/matches/${match.id}`
   const matchDate = new Date(match.date)
   const formattedDate = format(matchDate, 'EEEE, MMM d')
   const formattedTime = format(matchDate, 'h:mm a')
@@ -119,7 +123,7 @@ export function MatchCard({
           animationFillMode: 'backwards',
         }}
       >
-        <Link href={`/matches/${match.id}`} className="block h-full">
+        <Link href={detailHref} className="block h-full">
           {cardContent}
         </Link>
       </div>

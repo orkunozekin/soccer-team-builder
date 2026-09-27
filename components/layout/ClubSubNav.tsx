@@ -26,9 +26,11 @@ import { useFeatureFlag } from '@/lib/flags/useFeatureFlag'
 import { updateProfileAPI } from '@/lib/api/client'
 import { useAuthStore } from '@/store/authStore'
 import {
-  clubSubNavSections,
-  resolveSelectedClubMembership,
-} from '@/lib/utils/resolveSelectedClub'
+  clubMatchesPath,
+  parseClubSlugFromPathname,
+  resolveClubMembershipForPath,
+} from '@/lib/utils/clubPaths'
+import { clubSubNavSections } from '@/lib/utils/resolveSelectedClub'
 import { cn } from '@/lib/utils'
 
 function isPlatformPath(pathname: string): boolean {
@@ -63,13 +65,16 @@ export function ClubSubNav() {
   const [switching, setSwitching] = useState(false)
   const [switchError, setSwitchError] = useState('')
 
+  const pathSlug = parseClubSlugFromPathname(pathname)
+
   const selected = useMemo(
     () =>
-      resolveSelectedClubMembership({
+      resolveClubMembershipForPath({
         memberships,
         activeClubId: userData?.activeClubId,
+        pathSlug,
       }),
-    [memberships, userData?.activeClubId]
+    [memberships, userData?.activeClubId, pathSlug]
   )
 
   const sections = useMemo(() => {
@@ -85,7 +90,12 @@ export function ClubSubNav() {
   const activeSectionHref =
     sections.find(s => {
       if (s.id === 'matches') {
-        return pathname === '/matches' || pathname.startsWith('/matches/')
+        return (
+          pathname === s.href ||
+          pathname.startsWith(`${s.href}/`) ||
+          pathname === '/matches' ||
+          pathname.startsWith('/matches/')
+        )
       }
       return pathname === s.href || pathname.startsWith(`${s.href}/`)
     })?.href ?? sections[0]?.href
@@ -185,8 +195,10 @@ export function ClubSubNav() {
           return
         }
       }
-      if (pathname !== '/matches' && !pathname.startsWith('/matches/')) {
-        router.push('/matches')
+
+      const nextMatches = clubMatchesPath(next.club.slug)
+      if (pathname !== nextMatches) {
+        router.push(nextMatches)
       }
     } catch (err) {
       console.error('Failed to switch club:', err)

@@ -160,6 +160,25 @@ export async function getClub(clubId: string): Promise<Club | null> {
   return mapClub(snap.id, snap.data()!)
 }
 
+/** Look up a club by its unique URL slug. Returns null when missing. */
+export async function getClubBySlug(slug: string): Promise<Club | null> {
+  const adminDb = getAdminDb()
+  if (!adminDb) throw new Error('Firebase Admin not configured')
+
+  const normalized = slug.trim().toLowerCase()
+  if (!normalized) return null
+
+  const snap = await adminDb
+    .collection('clubs')
+    .where('slug', '==', normalized)
+    .limit(1)
+    .get()
+
+  if (snap.empty) return null
+  const doc = snap.docs[0]
+  return mapClub(doc.id, doc.data())
+}
+
 export async function updateClub(
   clubId: string,
   updates: { name?: string; settings?: Partial<ClubSettings> }

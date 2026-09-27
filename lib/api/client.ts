@@ -659,6 +659,24 @@ export async function getMyClubsAPI(): Promise<{
   return response.json()
 }
 
+/** Club by slug when the caller is a member or super_user. 404 → throws. */
+export async function getClubBySlugAPI(slug: string): Promise<{
+  success: boolean
+  club: Pick<Club, 'id' | 'name' | 'slug' | 'settings'>
+}> {
+  const response = await apiRequest(
+    `/clubs/by-slug/${encodeURIComponent(slug)}`,
+    { method: 'GET' }
+  )
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(
+      (error as { error?: string }).error || 'Failed to load club'
+    )
+  }
+  return response.json()
+}
+
 export async function createClubAPI(input: {
   name: string
   settings?: { allowPlayerInvites?: boolean }
