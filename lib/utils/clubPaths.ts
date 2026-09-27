@@ -9,6 +9,18 @@ export function clubMatchPath(slug: string, matchId: string): string {
   return `/c/${slug}/matches/${matchId}`
 }
 
+export function clubRosterPath(slug: string): string {
+  return `/c/${slug}/roster`
+}
+
+export function clubInvitesPath(slug: string): string {
+  return `/c/${slug}/invites`
+}
+
+export function clubSettingsPath(slug: string): string {
+  return `/c/${slug}/settings`
+}
+
 /** Extract `/c/[slug]` from a pathname, or null when not on a club route. */
 export function parseClubSlugFromPathname(pathname: string): string | null {
   const match = pathname.match(/^\/c\/([^/]+)/)
