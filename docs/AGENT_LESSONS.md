@@ -33,6 +33,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-27 — Club match list: scoped queries, no create without clubId, invalidate on unmount
+
+- **Source:** PR #82 · Macroscope
+- **Gap:** (1) Super-user all-clubs view showed CreateMatchCard with `clubId: null` so creates always failed. (2) `where('clubId','==',null)` does not return docs missing the field, so “unscoped” fetches were incomplete. (3) Unmount did not bump `fetchGen`, so a late response could overwrite the shared match store for the next club page.
+- **Going forward:** Only show create-match UI when a concrete `clubId` is in context. Club-scoped client lists query `clubId == <id>` only; do not rely on null-equality for absent fields (super users use full-collection `getAllMatches` for legacy/unscoped). Always invalidate in-flight list fetches on effect cleanup when writing a shared store.
+- **Pointers:** `components/matches/ClubMatchesView.tsx`, `lib/services/matchService.ts` (`listMatchesForViewer` / `getMatchesForClub`)
+
 ### 2026-09-27 — Club-scoped Firestore queries for member match lists
 
 - **Source:** PR #82 · Macroscope

@@ -100,37 +100,32 @@ function finalizeMatchList(
 
 /**
  * Club-scoped match list for members (and super users viewing one club).
- * Queries `clubId == clubId` so Firestore rules allow the read; optionally
- * also loads pre-backfill docs with `clubId == null`.
+ * Queries `clubId == clubId` so Firestore rules allow the read.
+ *
+ * Does not attempt to load unscoped / missing-`clubId` docs: `where('clubId','==',null)`
+ * only matches explicit null, not absent fields, and cannot be combined into a
+ * rules-safe member collection query. Pre-backfill docs remain visible to
+ * super users via {@link getAllMatches} / the all-clubs list.
  */
 export const getMatchesForClub = async (
   clubId: string,
-  options?: { includeDeleted?: boolean; includeUnscoped?: boolean }
+  options?: { includeDeleted?: boolean }
 ): Promise<Match[]> => {
   const trimmed = clubId.trim()
   if (!trimmed) return []
 
-  const includeUnscoped = options?.includeUnscoped !== false
-  const [clubDocs, unscopedDocs] = await Promise.all([
-    queryDocuments('matches', [
-      where('clubId', '==', trimmed),
-      orderBy('date', 'asc'),
-    ]),
-    includeUnscoped
-      ? queryDocuments('matches', [
-          where('clubId', '==', null),
-          orderBy('date', 'asc'),
-        ])
-      : Promise.resolve([]),
+  const clubDocs = await queryDocuments('matches', [
+    where('clubId', '==', trimmed),
+    orderBy('date', 'asc'),
   ])
 
-  return finalizeMatchList([...clubDocs, ...unscopedDocs], options)
+  return finalizeMatchList(clubDocs, options)
 }
 
 /**
  * Load matches the viewer is allowed to query under Firestore rules.
  * - Super user, no club: full collection (authorized for operators).
- * - Otherwise: club-scoped query (+ unscoped pre-backfill docs).
+ * - Otherwise: club-scoped `clubId` query only.
  */
 export const listMatchesForViewer = async (input: {
   clubId: string | null
@@ -145,18 +140,12 @@ export const listMatchesForViewer = async (input: {
   }
 
   if (!preferred) {
-    return finalizeMatchList(
-      await queryDocuments('matches', [
-        where('clubId', '==', null),
-        orderBy('date', 'asc'),
-      ]),
-      { includeDeleted: input.includeDeleted }
-    )
+    // Members without a club context: do not run an unqualified matches query.
+    return []
   }
 
   return getMatchesForClub(preferred, {
     includeDeleted: input.includeDeleted,
-    includeUnscoped: true,
   })
 }
 

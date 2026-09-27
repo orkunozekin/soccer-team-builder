@@ -51,11 +51,13 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
   )
   const fetchGen = useRef(0)
 
-  const canCreateMatch = canCreateClubMatches({
-    memberships,
-    activeClubId: clubId,
-    isSuperUser: !!isSuperUser,
-  })
+  const canCreateMatch =
+    Boolean(clubId) &&
+    canCreateClubMatches({
+      memberships,
+      activeClubId: clubId,
+      isSuperUser: !!isSuperUser,
+    })
 
   const matchHref = (matchId: string) =>
     clubSlug ? clubMatchPath(clubSlug, matchId) : `/matches/${matchId}`
@@ -102,6 +104,10 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     }
 
     void fetchMatches()
+    return () => {
+      // Invalidate in-flight work so unmount cannot overwrite the shared store.
+      fetchGen.current++
+    }
   }, [
     userId,
     authLoading,

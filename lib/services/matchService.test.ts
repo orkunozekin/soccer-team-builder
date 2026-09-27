@@ -51,29 +51,33 @@ describe('listMatchesForViewer / getMatchesForClub', () => {
     expect(result.map(m => m.id)).toEqual(['m1'])
   })
 
-  it('queries by clubId for members (plus unscoped)', async () => {
-    queryDocumentsMock
-      .mockResolvedValueOnce([matchDoc('m-club', 'club-a')])
-      .mockResolvedValueOnce([matchDoc('m-null', null)])
+  it('queries only by clubId for a club-scoped list', async () => {
+    queryDocumentsMock.mockResolvedValueOnce([matchDoc('m-club', 'club-a')])
 
     const result = await getMatchesForClub('club-a')
 
-    expect(queryDocumentsMock).toHaveBeenCalledTimes(2)
-    expect(result.map(m => m.id).sort()).toEqual(['m-club', 'm-null'])
+    expect(queryDocumentsMock).toHaveBeenCalledTimes(1)
+    expect(result.map(m => m.id)).toEqual(['m-club'])
+  })
+
+  it('returns no matches for members without a club context', async () => {
+    const result = await listMatchesForViewer({
+      clubId: null,
+      isSuperUser: false,
+    })
+
+    expect(queryDocumentsMock).not.toHaveBeenCalled()
+    expect(result).toEqual([])
   })
 
   it('listMatchesForViewer scopes non-super users to the club query', async () => {
-    queryDocumentsMock
-      .mockResolvedValueOnce([matchDoc('m-a', 'club-a')])
-      .mockResolvedValueOnce([])
+    queryDocumentsMock.mockResolvedValueOnce([matchDoc('m-a', 'club-a')])
 
     await listMatchesForViewer({
       clubId: 'club-a',
       isSuperUser: false,
     })
 
-    expect(queryDocumentsMock).toHaveBeenCalledTimes(2)
-    const firstConstraints = queryDocumentsMock.mock.calls[0][1]
-    expect(Array.isArray(firstConstraints)).toBe(true)
+    expect(queryDocumentsMock).toHaveBeenCalledTimes(1)
   })
 })

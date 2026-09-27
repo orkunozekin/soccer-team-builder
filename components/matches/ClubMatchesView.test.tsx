@@ -221,6 +221,16 @@ describe('ClubMatchesView', () => {
     expect(screen.queryByText(/MatchCard:m-b/)).not.toBeInTheDocument()
   })
 
+  it('hides create match on the all-clubs list when clubId is null', async () => {
+    useAdminMock.mockReturnValue({ isAdmin: true })
+    listMatchesForViewerMock.mockResolvedValueOnce([])
+
+    render(<ClubMatchesView clubId={null} clubSlug={null} />)
+
+    expect(await screen.findByText('No Matches')).toBeInTheDocument()
+    expect(screen.queryByText('CreateMatchCardMock')).not.toBeInTheDocument()
+  })
+
   it('hides create match when the user is only a player on this club', async () => {
     useClubMembershipsMock.mockReturnValue({
       memberships: [
