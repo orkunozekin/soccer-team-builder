@@ -8,6 +8,8 @@ disable-model-invocation: true
 
 Refresh an existing feature plan under `docs/features/` with the latest related work so `/feature-context` can resume cleanly.
 
+Works in Cursor, Claude Code, and other Agent Skills–compatible tools via `/handoff`. Canonical path: `.claude/skills/handoff/`.
+
 ## When to run
 
 - User invokes `/handoff`
