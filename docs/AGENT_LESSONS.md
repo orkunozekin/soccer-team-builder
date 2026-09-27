@@ -36,9 +36,9 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 ### 2026-09-27 — Club match queries must not require undeployed composite indexes
 
 - **Source:** Production report after PR #82 merge · human
-- **Gap:** `getMatchesForClub` used `where('clubId')` + `orderBy('date')`, which needs a composite index. The index was added to `firestore.indexes.json` but not deployed, so regular members saw “Could not load matches” in production.
-- **Going forward:** Prefer equality-only client queries when results can be sorted in memory. If a composite index is required, deploy `firestore.indexes.json` before relying on that query in production (or gate the feature until the index is Ready).
-- **Pointers:** `lib/services/matchService.ts` (`getMatchesForClub`), `firestore.indexes.json`
+- **Gap:** `getMatchesForClub` used `where('clubId')` + `orderBy('date')`, which needs a composite index. The index was added to `firestore.indexes.json` but not deployed, so regular members saw “Could not load matches” in production. RSVP count failures in the same try/catch could also wipe the list.
+- **Going forward:** Prefer equality-only client queries when results can be sorted in memory. If a composite index is required, deploy `firestore.indexes.json` before relying on that query in production (or gate the feature until the index is Ready). Keep secondary fetches (e.g. RSVP counts) from failing the primary list UI.
+- **Pointers:** `lib/services/matchService.ts` (`getMatchesForClub`), `components/matches/ClubMatchesView.tsx`, `firestore.indexes.json`
 
 ### 2026-09-27 — Club match list: scoped queries, no create without clubId, invalidate on unmount
 
