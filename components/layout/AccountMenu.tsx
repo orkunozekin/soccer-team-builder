@@ -6,6 +6,27 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { cn } from '@/lib/utils'
 
 /**
+ * Radix Select/Dropdown/Sheet in the workspace chrome set `pointer-events: none`
+ * (and a scroll lock) on body while open. Signing out unmounts that chrome
+ * before the lock is released, which leaves the login page visible but unable
+ * to take clicks or typing.
+ */
+function releasePageInteractionLock() {
+  const { body } = document
+  if (body.style.pointerEvents === 'none') {
+    body.style.pointerEvents = ''
+  }
+  body.removeAttribute('data-scroll-locked')
+  // className is a string. Spreading DOMTokenList fails `next build` typecheck
+  // (target below es2015, no downlevelIteration).
+  for (const className of body.className.split(/\s+/)) {
+    if (className.startsWith('block-interactivity-')) {
+      body.classList.remove(className)
+    }
+  }
+}
+
+/**
  * Account footer for the workspace rail / mobile sheet.
  * Profile and My clubs live in AccountNav; this only signs out.
  */
@@ -24,9 +45,15 @@ export function AccountMenu({
     try {
       onNavigate?.()
       await logoutUser()
-      router.push('/')
+      // Go straight to the login route. `/` only server-redirects there, and
+      // that hop races the signed-out page's own redirect and can leave a
+      // non-interactive skeleton on screen.
+      router.replace('/login')
     } catch (error) {
       console.error('Error logging out:', error)
+    } finally {
+      releasePageInteractionLock()
+      window.setTimeout(releasePageInteractionLock, 0)
     }
   }
 

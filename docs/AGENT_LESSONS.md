@@ -33,6 +33,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-27 — Sign-out tests must cover the overlay that locked the page
+
+- **Source:** PR #93 · Greptile
+- **Gap:** The sign-out regression test exercised `releasePageInteractionLock` on `AccountMenu` alone. The bug came from signing out inside the open mobile `Sheet`, which is a Radix dialog that sets `pointer-events: none` on `document.body` and can leave that lock after the sheet closes.
+- **Going forward:** When a control lives inside a dialog, sheet, or dropdown that locks the page, the regression test must open that overlay, trigger the action from inside it, and assert both that the overlay closed and that body pointer / scroll locks are gone.
+- **Pointers:** `components/layout/AppShell.tsx` (mobile `Sheet` + `AccountMenu`), `components/layout/AppShell.test.tsx`
+
 ### 2026-09-27 — Stale auth callbacks must not publish a profile
 
 - **Source:** PR #88 · Macroscope
