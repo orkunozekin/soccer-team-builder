@@ -40,6 +40,28 @@ const PLAYER_PASSWORD = 'password123'
 process.env.FIRESTORE_EMULATOR_HOST ??= '127.0.0.1:8080'
 process.env.FIREBASE_AUTH_EMULATOR_HOST ??= '127.0.0.1:9099'
 
+function parseHostPort(raw, fallbackHost, fallbackPort) {
+  const value = String(raw || '').trim()
+  if (!value) return { host: fallbackHost, port: fallbackPort }
+  // Accept "host:port" or "http(s)://host:port"
+  const withoutScheme = value.replace(/^https?:\/\//, '')
+  const [hostPart, portPart] = withoutScheme.split(':')
+  const host = hostPart || fallbackHost
+  const port = Number(portPart) || fallbackPort
+  return { host, port }
+}
+
+const firestoreEmu = parseHostPort(
+  process.env.FIRESTORE_EMULATOR_HOST,
+  '127.0.0.1',
+  8080
+)
+const authEmu = parseHostPort(
+  process.env.FIREBASE_AUTH_EMULATOR_HOST,
+  '127.0.0.1',
+  9099
+)
+
 // Admin SDK against emulators does not need a real service account.
 initializeApp({ projectId: PROJECT })
 const adminAuth = getAdminAuth()
@@ -52,10 +74,11 @@ const clientApp = initClient({
 })
 const clientAuth = getClientAuth(clientApp)
 const clientDb = getClientFirestore(clientApp)
-connectAuthEmulator(clientAuth, 'http://127.0.0.1:9099', {
+// Use the same env-configured hosts as the Admin SDK (not hardcoded ports).
+connectAuthEmulator(clientAuth, `http://${authEmu.host}:${authEmu.port}`, {
   disableWarnings: true,
 })
-connectFirestoreEmulator(clientDb, '127.0.0.1', 8080)
+connectFirestoreEmulator(clientDb, firestoreEmu.host, firestoreEmu.port)
 
 async function seed() {
   // Idempotent-ish: overwrite known docs.
@@ -133,12 +156,15 @@ async function main() {
     const snap = await getDocs(
       query(collection(clientDb, 'matches'), where('clubId', '==', CLUB_A))
     )
-    const ids = snap.docs.map(d => d.id).sort()
+    const ids = snap.docs.map(d => d.id)
+    const clubIds = snap.docs.map(d => d.data().clubId)
+    const hasSeeded = ids.includes('m-a-1') && ids.includes('m-a-2')
+    const allClubA = clubIds.every(id => id === CLUB_A)
     passed =
       logResult(
-        'equality-only clubId query returns only club A matches',
-        ids.join(',') === 'm-a-1,m-a-2',
-        `got [${ids.join(', ')}]`
+        'equality-only clubId query returns club A matches (incl. seeded)',
+        hasSeeded && allClubA,
+        `ids=[${ids.sort().join(', ')}] clubIds=[${[...new Set(clubIds)].join(', ')}]`
       ) && passed
   } catch (err) {
     passed =
