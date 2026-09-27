@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyClubMember } from '@/lib/api/auth'
+import { verifyAuth, verifyClubMember } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { getClubBySlug } from '@/lib/services/clubService'
 
 /**
  * Resolve a club by URL slug for callers who may open it (member or super_user).
- * Unknown slug and unauthorized callers both get 404 so existence is not leaked.
+ * Unknown slug, unauthenticated, and unauthorized callers all get 404 so
+ * existence is not leaked via status codes.
  */
 export async function GET(
   request: NextRequest,
@@ -18,15 +19,19 @@ export async function GET(
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
+    // Authenticate before lookup so missing vs existing slugs look the same
+    // to anonymous callers (always 404).
+    const { uid, error: authError } = await verifyAuth(request)
+    if (authError || !uid) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
     const club = await getClubBySlug(slug)
     if (!club) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    const { uid, isMember, error } = await verifyClubMember(request, club.id)
-    if (error || !uid) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { isMember } = await verifyClubMember(request, club.id)
     if (!isMember) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }

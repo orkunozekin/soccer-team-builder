@@ -30,6 +30,11 @@ import { User } from '@/types/user'
 export interface MatchDetailViewProps {
   /** Used for the back link and for redirects (e.g. match not found, match deleted). */
   backLink: { href: string; label: string }
+  /**
+   * When set, the loaded match must belong to this club (or have no clubId for
+   * pre-backfill docs). Mismatched club → treat as not found.
+   */
+  expectedClubId?: string | null
 }
 
 function paramToString(
@@ -46,7 +51,10 @@ function paramToString(
  * Shared match detail UI used by both /matches/[matchId] and /admin/matches/[matchId].
  * Caller must ensure user is authenticated (and admin for admin route).
  */
-export function MatchDetailView({ backLink }: MatchDetailViewProps) {
+export function MatchDetailView({
+  backLink,
+  expectedClubId,
+}: MatchDetailViewProps) {
   const router = useRouter()
   const params = useParams()
   const matchId = paramToString(params?.matchId)
@@ -104,6 +112,15 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
           return
         }
 
+        const matchClub =
+          typeof nextMatch.clubId === 'string' ? nextMatch.clubId.trim() : ''
+        const expected =
+          typeof expectedClubId === 'string' ? expectedClubId.trim() : ''
+        if (expected && matchClub && matchClub !== expected) {
+          router.push(backLink.href)
+          return
+        }
+
         setCurrentMatch(nextMatch)
 
         try {
@@ -147,6 +164,7 @@ export function MatchDetailView({ backLink }: MatchDetailViewProps) {
     userId,
     router,
     backLink.href,
+    expectedClubId,
     setCurrentMatch,
     setMatchRSVPs,
   ])

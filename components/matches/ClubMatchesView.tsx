@@ -29,12 +29,15 @@ import { isMatchPast } from '@/lib/utils/rsvpScheduler'
 import { useMatchStore } from '@/store/matchStore'
 
 export type ClubMatchesViewProps = {
-  clubId: string
-  clubSlug: string
+  /** Club to scope the list. `null` = all clubs (super_user legacy `/matches`). */
+  clubId: string | null
+  /** Slug for match detail links. `null` uses legacy `/matches/[id]` hrefs. */
+  clubSlug: string | null
 }
 
 /**
  * Match list scoped to one club (used by `/c/[slug]/matches`).
+ * Pass `clubId`/`clubSlug` null for the super-user all-clubs legacy list.
  */
 export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
   const { user, loading: authLoading } = useAuth()
@@ -53,6 +56,9 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     activeClubId: clubId,
     isSuperUser: !!isSuperUser,
   })
+
+  const matchHref = (matchId: string) =>
+    clubSlug ? clubMatchPath(clubSlug, matchId) : `/matches/${matchId}`
 
   useEffect(() => {
     if (authLoading || !userId || membershipsLoading) return
@@ -223,7 +229,7 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
             <MatchCard
               key={match.id}
               match={match}
-              href={clubMatchPath(clubSlug, match.id)}
+              href={matchHref(match.id)}
               rsvpCount={rsvpCounts[match.id]}
               isAdmin={manageFlags[match.id] ?? false}
               index={index}

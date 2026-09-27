@@ -33,6 +33,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-27 — Club slug routes: no existence leaks; preserve super-user paths
+
+- **Source:** PR #82 · Macroscope | Greptile
+- **Gap:** By-slug API returned 401 vs 404 (enumerable). Legacy `/matches` redirects treated membership load failures and super users with no membership as `/join`. Club match detail did not enforce match.`clubId` vs URL club. Sub-nav ignored path club for super users without membership. Transient by-slug errors looked like 404.
+- **Going forward:** Auth before club lookup; unauthorized/missing both 404. Never redirect to `/join` on membership `error` (retry UI). Super users without membership keep all-clubs `/matches` (or resolve match club via API). Club-scoped match detail must check `expectedClubId`. Path slug drives sub-nav display when it differs from memberships.
+- **Pointers:** `app/api/clubs/by-slug/[slug]/route.ts`, `app/matches/page.tsx`, `app/matches/[matchId]/page.tsx`, `components/matches/MatchDetailView.tsx`, `components/layout/ClubSubNav.tsx`, `lib/hooks/useClubSlugAccess.ts`
+
 ### 2026-09-27 — Keep club selection consistent across chrome and pages
 
 - **Source:** PR #80 · Greptile

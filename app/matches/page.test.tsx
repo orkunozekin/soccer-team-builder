@@ -1,4 +1,4 @@
-import { render, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MatchesRedirectPage from './page'
 
@@ -13,9 +13,22 @@ vi.mock('@/lib/hooks/useAuth', () => ({
   useAuth: () => useAuthMock(),
 }))
 
+const useAdminMock = vi.fn()
+vi.mock('@/lib/hooks/useAdmin', () => ({
+  useAdmin: () => useAdminMock(),
+}))
+
 const useClubMembershipsMock = vi.fn()
 vi.mock('@/lib/hooks/useClubMemberships', () => ({
   useClubMemberships: () => useClubMembershipsMock(),
+}))
+
+vi.mock('@/components/matches/ClubMatchesView', () => ({
+  ClubMatchesView: ({
+    clubId,
+  }: {
+    clubId: string | null
+  }) => <div>AllClubsMatches:{String(clubId)}</div>,
 }))
 
 describe('MatchesRedirectPage', () => {
@@ -26,6 +39,7 @@ describe('MatchesRedirectPage', () => {
       userData: { uid: 'user1', activeClubId: 'club-a' },
       loading: false,
     })
+    useAdminMock.mockReturnValue({ isAdmin: false })
     useClubMembershipsMock.mockReturnValue({
       memberships: [
         {
@@ -68,6 +82,32 @@ describe('MatchesRedirectPage', () => {
     await waitFor(() => {
       expect(replaceMock).toHaveBeenCalledWith('/join')
     })
+  })
+
+  it('keeps the all-clubs list for super users with no membership', async () => {
+    useAdminMock.mockReturnValue({ isAdmin: true })
+    useClubMembershipsMock.mockReturnValue({
+      memberships: [],
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    })
+    render(<MatchesRedirectPage />)
+    expect(await screen.findByText('AllClubsMatches:null')).toBeInTheDocument()
+    expect(replaceMock).not.toHaveBeenCalledWith('/join')
+  })
+
+  it('shows retry instead of /join when memberships fail to load', async () => {
+    const refresh = vi.fn()
+    useClubMembershipsMock.mockReturnValue({
+      memberships: [],
+      loading: false,
+      error: 'Failed to load clubs',
+      refresh,
+    })
+    render(<MatchesRedirectPage />)
+    expect(await screen.findByText(/could not load clubs/i)).toBeInTheDocument()
+    expect(replaceMock).not.toHaveBeenCalledWith('/join')
   })
 
   it('sends signed-out users to /login', async () => {

@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { notFound, useParams, useRouter } from 'next/navigation'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { MatchDetailView } from '@/components/matches/MatchDetailView'
+import { Button } from '@/components/ui/button'
 import { useClubSlugAccess } from '@/lib/hooks/useClubSlugAccess'
 import { clubMatchesPath } from '@/lib/utils/clubPaths'
 
@@ -33,12 +34,26 @@ export default function ClubMatchDetailPage() {
     return <PageLoadingSkeleton showBack variant="container" />
   }
 
+  if (access.status === 'error') {
+    return (
+      <div className="container mx-auto max-w-5xl px-4 py-8">
+        <p className="text-sm text-red-700 dark:text-red-400">
+          Could not load club. {access.message}
+        </p>
+        <Button type="button" className="mt-3" onClick={() => access.retry()}>
+          Try again
+        </Button>
+      </div>
+    )
+  }
+
   if (access.status === 'forbidden') {
     notFound()
   }
 
   return (
     <MatchDetailView
+      expectedClubId={access.club.id}
       backLink={{
         href: clubMatchesPath(access.club.slug),
         label: 'Back to Matches',

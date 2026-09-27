@@ -30,6 +30,10 @@ vi.mock('@/lib/hooks/useClubMemberships', () => ({
   useClubMemberships: () => useClubMembershipsMock(),
 }))
 
+vi.mock('@/lib/hooks/useClubSlugAccess', () => ({
+  useClubSlugAccess: () => ({ status: 'forbidden' }),
+}))
+
 vi.mock('@/lib/flags/useFeatureFlag', () => ({
   useFeatureFlag: (key: string) => useFeatureFlagMock(key),
 }))

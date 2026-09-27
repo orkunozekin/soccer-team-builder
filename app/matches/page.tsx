@@ -3,6 +3,9 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
+import { ClubMatchesView } from '@/components/matches/ClubMatchesView'
+import { Button } from '@/components/ui/button'
+import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
 import {
@@ -11,12 +14,25 @@ import {
 } from '@/lib/utils/clubPaths'
 
 /**
- * Legacy `/matches` → `/c/{slug}/matches` (or `/join` with no membership).
+ * Legacy `/matches` → `/c/{slug}/matches` when a membership slug resolves.
+ * Super users with no membership keep the all-clubs list here.
+ * Membership load errors show retry (not `/join`).
  */
 export default function MatchesRedirectPage() {
   const router = useRouter()
   const { user, userData, loading: authLoading } = useAuth()
-  const { memberships, loading: membershipsLoading } = useClubMemberships()
+  const { isAdmin: isSuperUser } = useAdmin()
+  const {
+    memberships,
+    loading: membershipsLoading,
+    error: membershipsError,
+    refresh,
+  } = useClubMemberships()
+
+  const slug = resolveLegacyMatchesRedirectSlug({
+    memberships,
+    activeClubId: userData?.activeClubId,
+  })
 
   useEffect(() => {
     if (authLoading) return
@@ -24,25 +40,63 @@ export default function MatchesRedirectPage() {
       router.replace('/login')
       return
     }
-    if (membershipsLoading) return
-
-    const slug = resolveLegacyMatchesRedirectSlug({
-      memberships,
-      activeClubId: userData?.activeClubId,
-    })
-    if (!slug) {
-      router.replace('/join')
+    if (membershipsLoading || membershipsError) return
+    if (slug) {
+      router.replace(clubMatchesPath(slug))
       return
     }
-    router.replace(clubMatchesPath(slug))
+    if (!isSuperUser) {
+      router.replace('/join')
+    }
   }, [
     authLoading,
     user,
     membershipsLoading,
-    memberships,
-    userData?.activeClubId,
+    membershipsError,
+    slug,
+    isSuperUser,
     router,
   ])
+
+  if (authLoading || (!user && !authLoading)) {
+    return <PageLoadingSkeleton variant="container" />
+  }
+
+  if (!user) {
+    return <PageLoadingSkeleton variant="container" />
+  }
+
+  if (membershipsLoading) {
+    return <PageLoadingSkeleton variant="container" />
+  }
+
+  if (membershipsError) {
+    return (
+      <div className="container mx-auto max-w-5xl px-4 py-8">
+        <p className="text-sm text-red-700 dark:text-red-400">
+          Could not load clubs. {membershipsError}
+        </p>
+        <Button
+          type="button"
+          className="mt-3"
+          onClick={() => {
+            void refresh()
+          }}
+        >
+          Try again
+        </Button>
+      </div>
+    )
+  }
+
+  if (slug) {
+    return <PageLoadingSkeleton variant="container" />
+  }
+
+  if (isSuperUser) {
+    // Platform operators without a membership keep the all-clubs list.
+    return <ClubMatchesView clubId={null} clubSlug={null} />
+  }
 
   return <PageLoadingSkeleton variant="container" />
 }

@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
+import { MatchDetailView } from '@/components/matches/MatchDetailView'
+import { Button } from '@/components/ui/button'
+import { getClubByIdAPI } from '@/lib/api/client'
+import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
 import { getMatch } from '@/lib/services/matchService'
@@ -24,15 +28,23 @@ function paramToString(
 /**
  * Legacy `/matches/[matchId]` → `/c/{slug}/matches/[matchId]`.
  * Prefers the match's club slug when the caller may open it; otherwise the
- * active/sole membership slug. No membership → `/join`.
+ * active/sole membership slug. Super users without memberships resolve the
+ * match club via API. Membership load errors show retry (not `/join`).
  */
 export default function MatchDetailsRedirectPage() {
   const router = useRouter()
   const params = useParams()
   const matchId = paramToString(params?.matchId)
   const { user, userData, loading: authLoading } = useAuth()
-  const { memberships, loading: membershipsLoading } = useClubMemberships()
+  const { isAdmin: isSuperUser } = useAdmin()
+  const {
+    memberships,
+    loading: membershipsLoading,
+    error: membershipsError,
+    refresh,
+  } = useClubMemberships()
   const [failed, setFailed] = useState(false)
+  const [stayOnLegacy, setStayOnLegacy] = useState(false)
 
   useEffect(() => {
     if (authLoading) return
@@ -40,7 +52,7 @@ export default function MatchDetailsRedirectPage() {
       router.replace('/login')
       return
     }
-    if (membershipsLoading || !matchId) return
+    if (membershipsLoading || membershipsError || !matchId) return
 
     let cancelled = false
 
@@ -62,14 +74,28 @@ export default function MatchDetailsRedirectPage() {
             )
           : null
 
-        const slug =
+        let slug =
           matchClubMembership?.club.slug ??
           resolveLegacyMatchesRedirectSlug({
             memberships,
             activeClubId: userData?.activeClubId,
           })
 
+        if (!slug && isSuperUser && matchClubId) {
+          try {
+            const res = await getClubByIdAPI(matchClubId)
+            slug = res.club.slug
+          } catch (err) {
+            console.error('Failed to resolve match club slug:', err)
+          }
+        }
+
         if (!slug) {
+          if (isSuperUser) {
+            // Pre-backfill / unresolved club: keep legacy detail for operators.
+            setStayOnLegacy(true)
+            return
+          }
           router.replace('/join')
           return
         }
@@ -89,11 +115,32 @@ export default function MatchDetailsRedirectPage() {
     authLoading,
     user,
     membershipsLoading,
+    membershipsError,
     memberships,
     userData?.activeClubId,
     matchId,
+    isSuperUser,
     router,
   ])
+
+  if (membershipsError) {
+    return (
+      <div className="container mx-auto max-w-5xl px-4 py-8">
+        <p className="text-sm text-red-700 dark:text-red-400">
+          Could not load clubs. {membershipsError}
+        </p>
+        <Button
+          type="button"
+          className="mt-3"
+          onClick={() => {
+            void refresh()
+          }}
+        >
+          Try again
+        </Button>
+      </div>
+    )
+  }
 
   if (failed) {
     return (
@@ -102,6 +149,14 @@ export default function MatchDetailsRedirectPage() {
           Match not found.
         </p>
       </div>
+    )
+  }
+
+  if (stayOnLegacy && matchId) {
+    return (
+      <MatchDetailView
+        backLink={{ href: '/matches', label: 'Back to Matches' }}
+      />
     )
   }
 
