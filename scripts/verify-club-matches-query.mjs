@@ -17,7 +17,7 @@ import { initializeApp as initClient } from 'firebase/app'
 import {
   connectAuthEmulator,
   getAuth as getClientAuth,
-  signInWithCustomToken,
+  signInWithEmailAndPassword,
 } from 'firebase/auth'
 import {
   collection,
@@ -34,10 +34,13 @@ import {
 const PROJECT = 'soccerville'
 const CLUB_A = 'club-a'
 const CLUB_B = 'club-b'
+const PLAYER_EMAIL = 'player1@example.com'
+const PLAYER_PASSWORD = 'password123'
 
 process.env.FIRESTORE_EMULATOR_HOST ??= '127.0.0.1:8080'
 process.env.FIREBASE_AUTH_EMULATOR_HOST ??= '127.0.0.1:9099'
 
+// Admin SDK against emulators does not need a real service account.
 initializeApp({ projectId: PROJECT })
 const adminAuth = getAdminAuth()
 const adminDb = getAdminFirestore()
@@ -60,15 +63,15 @@ async function seed() {
   try {
     await adminAuth.createUser({
       uid,
-      email: 'player1@example.com',
-      password: 'password123',
+      email: PLAYER_EMAIL,
+      password: PLAYER_PASSWORD,
     })
   } catch {
     // already exists from a prior run
   }
 
   await adminDb.collection('users').doc(uid).set({
-    email: 'player1@example.com',
+    email: PLAYER_EMAIL,
     role: 'user',
     activeClubId: CLUB_A,
   })
@@ -106,9 +109,10 @@ async function seed() {
   return uid
 }
 
-async function asMember(uid) {
-  const token = await adminAuth.createCustomToken(uid)
-  await signInWithCustomToken(clientAuth, token)
+async function asMember() {
+  // Prefer email/password so this script works without a service-account
+  // private key (createCustomToken requires one outside the Auth emulator).
+  await signInWithEmailAndPassword(clientAuth, PLAYER_EMAIL, PLAYER_PASSWORD)
 }
 
 function logResult(label, ok, detail = '') {
@@ -119,8 +123,8 @@ function logResult(label, ok, detail = '') {
 
 async function main() {
   console.log('Seeding emulator data…')
-  const uid = await seed()
-  await asMember(uid)
+  await seed()
+  await asMember()
 
   let passed = true
 
