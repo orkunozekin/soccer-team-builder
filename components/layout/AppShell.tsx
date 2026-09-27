@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { HamburgerMenuIcon } from '@radix-ui/react-icons'
 import Link from 'next/link'
 import { AccountMenu } from '@/components/layout/AccountMenu'
+import { AccountNav } from '@/components/layout/AccountNav'
 import { ClubContextSwitcher } from '@/components/layout/ClubContextSwitcher'
 import { ClubNav } from '@/components/layout/ClubNav'
 import { ClubWorkspaceStatus } from '@/components/layout/ClubWorkspaceStatus'
@@ -24,8 +25,8 @@ import { useClubWorkspace } from '@/lib/hooks/useClubWorkspace'
 import { clubMatchesPath } from '@/lib/utils/clubPaths'
 
 /**
- * Signed-in workspace: club switcher + club nav (desktop rail, mobile sheet)
- * and a separate account menu. Signed-out users keep the centered header.
+ * Signed-in workspace: club switcher + club/admin/account nav (desktop rail,
+ * mobile sheet) and a sign-out footer. Signed-out users keep the centered header.
  */
 export function AppShell({ children }: { children?: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -86,7 +87,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           </Link>
         </div>
         <div className="px-3">{switcher}</div>
-        <div className="mt-3 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-2">
+        <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2">
           {club ? (
             <ClubNav
               sections={workspace.sections}
@@ -94,9 +95,10 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             />
           ) : null}
           {isAdmin ? <PlatformAdminNav /> : null}
+          <AccountNav />
         </div>
         <div className="mt-auto border-t border-white/20 p-3">
-          <AccountMenu className="w-full max-w-none justify-between" />
+          <AccountMenu />
         </div>
       </aside>
 
@@ -126,7 +128,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                   Club navigation
                 </SheetDescription>
               </SheetHeader>
-              <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-3">
+              <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-2 py-3">
                 {club ? (
                   <ClubNav
                     sections={workspace.sections}
@@ -144,6 +146,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                 {isAdmin ? (
                   <PlatformAdminNav onNavigate={() => setSheetOpen(false)} />
                 ) : null}
+                <AccountNav onNavigate={() => setSheetOpen(false)} />
               </div>
               <div className="mt-auto border-t border-white/20 p-3">
                 <AccountMenu onNavigate={() => setSheetOpen(false)} />

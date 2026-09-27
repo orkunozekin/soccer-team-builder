@@ -55,10 +55,7 @@ function LoginPageInner() {
           </p>
         </div>
 
-        <Card
-          className="card-soccer-accent animate-slide-up-fade shadow-lg"
-          style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}
-        >
+        <Card className="card-soccer-accent shadow-lg">
           <CardHeader className="space-y-1">
             <CardTitle className="text-center text-2xl font-bold">
               Sign In
