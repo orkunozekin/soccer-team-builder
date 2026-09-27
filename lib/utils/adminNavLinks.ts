@@ -7,11 +7,6 @@ export type AdminNavLink = {
 /** Platform admin destinations. Shared by the admin page tabs and the shell. */
 export const ADMIN_NAV_LINKS: AdminNavLink[] = [
   {
-    href: '/admin/matches',
-    label: 'All matches',
-    isActive: pathname => pathname.startsWith('/admin/matches'),
-  },
-  {
     href: '/admin/schedules',
     label: 'Schedules',
     isActive: pathname => pathname.startsWith('/admin/schedules'),

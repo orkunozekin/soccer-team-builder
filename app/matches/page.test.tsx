@@ -3,9 +3,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MatchesRedirectPage from './page'
 
 const replaceMock = vi.fn()
+const searchMocks = vi.hoisted(() => ({
+  scope: null as string | null,
+}))
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: replaceMock, push: vi.fn() }),
+  useSearchParams: () => ({
+    get: (key: string) => (key === 'scope' ? searchMocks.scope : null),
+  }),
 }))
 
 const useAuthMock = vi.fn()
@@ -24,16 +30,15 @@ vi.mock('@/lib/hooks/useClubMemberships', () => ({
 }))
 
 vi.mock('@/components/matches/ClubMatchesView', () => ({
-  ClubMatchesView: ({
-    clubId,
-  }: {
-    clubId: string | null
-  }) => <div>AllClubsMatches:{String(clubId)}</div>,
+  ClubMatchesView: ({ clubId }: { clubId: string | null }) => (
+    <div>AllClubsMatches:{String(clubId)}</div>
+  ),
 }))
 
 describe('MatchesRedirectPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    searchMocks.scope = null
     useAuthMock.mockReturnValue({
       user: { uid: 'user1' },
       userData: { uid: 'user1', activeClubId: 'club-a' },
@@ -65,6 +70,23 @@ describe('MatchesRedirectPage', () => {
   })
 
   it('redirects to /c/{slug}/matches for the active club', async () => {
+    render(<MatchesRedirectPage />)
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith('/c/alpha/matches')
+    })
+  })
+
+  it('forwards all-clubs scope for a super user with a membership', async () => {
+    searchMocks.scope = 'all'
+    useAdminMock.mockReturnValue({ isAdmin: true })
+    render(<MatchesRedirectPage />)
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith('/c/alpha/matches?scope=all')
+    })
+  })
+
+  it('does not forward all-clubs scope for a player', async () => {
+    searchMocks.scope = 'all'
     render(<MatchesRedirectPage />)
     await waitFor(() => {
       expect(replaceMock).toHaveBeenCalledWith('/c/alpha/matches')

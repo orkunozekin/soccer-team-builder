@@ -33,10 +33,7 @@ import {
   updateUserRoleAPI,
 } from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
-import {
-  getUsersCount,
-  getUsersPaginated,
-} from '@/lib/services/userService'
+import { getUsersCount, getUsersPaginated } from '@/lib/services/userService'
 import { User, UserRole } from '@/types/user'
 
 const PAGE_SIZE = 10
@@ -48,11 +45,7 @@ type UsersPageData = {
   nextCursor: string | null
 }
 
-function adminUsersPageKey(
-  uid: string,
-  page: number,
-  cursor: string | null
-) {
+function adminUsersPageKey(uid: string, page: number, cursor: string | null) {
   return ['admin-users', uid, page, cursor] as const
 }
 
@@ -63,7 +56,9 @@ function adminUsersCountKey(uid: string) {
 function isAdminUsersPageKey(
   key: unknown
 ): key is ReturnType<typeof adminUsersPageKey> {
-  return Array.isArray(key) && key[0] === 'admin-users' && typeof key[1] === 'string'
+  return (
+    Array.isArray(key) && key[0] === 'admin-users' && typeof key[1] === 'string'
+  )
 }
 
 export function UserRoleManager() {
@@ -93,10 +88,7 @@ export function UserRoleManager() {
       ? adminUsersPageKey(adminUid, page, cursorForPage)
       : null
 
-  const {
-    data: pageData,
-    isLoading: pageLoading,
-  } = useSWR(
+  const { data: pageData, isLoading: pageLoading } = useSWR(
     pageKey,
     async ([, , , cursor]: readonly [
       'admin-users',
@@ -185,9 +177,7 @@ export function UserRoleManager() {
 
   const patchUserInSwrCache = (userId: string, patch: Partial<UserRow>) => {
     setSearchUsers(prev =>
-      prev
-        ? prev.map(u => (u.uid === userId ? { ...u, ...patch } : u))
-        : prev
+      prev ? prev.map(u => (u.uid === userId ? { ...u, ...patch } : u)) : prev
     )
     void globalMutate(
       (key: unknown) =>
@@ -302,8 +292,9 @@ export function UserRoleManager() {
           className="h-11 text-base sm:h-9 sm:text-sm"
         />
 
-        <div className="max-h-96 space-y-2 overflow-y-auto">
-          {searchLoading || (browsing && pageLoading && visibleUsers.length === 0) ? (
+        <div className="max-h-96 space-y-2 overflow-y-auto md:max-h-[70vh]">
+          {searchLoading ||
+          (browsing && pageLoading && visibleUsers.length === 0) ? (
             <div className="rounded-md border p-4 text-sm text-zinc-600 dark:text-zinc-400">
               {searchLoading ? 'Searching…' : 'Loading…'}
             </div>
@@ -406,8 +397,7 @@ export function UserRoleManager() {
             onNext={() => {
               setCursors(prev => {
                 const next = [...prev]
-                next[page - 1] =
-                  pageData?.nextCursor ?? next[page - 1] ?? null
+                next[page - 1] = pageData?.nextCursor ?? next[page - 1] ?? null
                 return next
               })
               setPage(p => p + 1)

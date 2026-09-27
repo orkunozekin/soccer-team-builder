@@ -33,6 +33,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-27 — All matches belongs on the club Matches page
+
+- **Source:** product request (dedupe admin match lists)
+- **Gap:** Super users had both club Matches and a platform “All matches” item (`/admin/matches`). An earlier lesson kept that split so a redirect through `/matches` would not hide other clubs.
+- **Going forward:** Do not add a separate All matches nav item. Super users switch to every club on the club Matches page (`?scope=all`). `/admin/matches` redirects to `/matches?scope=all`, and that query is forwarded onto `/c/{slug}/matches`. All-clubs cards still link to `/admin/matches/[id]` so Back returns through that redirect. Keep create-match off the all-clubs list.
+- **Pointers:** `components/matches/ClubMatchesView.tsx`, `app/admin/matches/page.tsx`, `app/matches/page.tsx`, `lib/utils/adminNavLinks.ts`
+
 ### 2026-09-27 — Stale auth callbacks must not publish a profile
 
 - **Source:** PR #88 · Macroscope
@@ -58,7 +65,7 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 - **Source:** PR #88 · Greptile | Macroscope
 - **Gap:** (1) Redirecting `/admin/matches` through `/matches` sent member super users to their club list, so the all-clubs match view was unreachable. (2) The empty-state “Join a club” link inside the persistent `AppShell` sheet did not clear `sheetOpen`, so the overlay stayed on `/join`. (3) Invite list links can be a relative `/join?code=…` path when the request has no Origin and `NEXT_PUBLIC_APP_URL` is unset; copying that path is not a shareable URL.
-- **Going forward:** Keep a distinct all-clubs route (`/admin/matches`, labeled “All matches”) for super users even when they have a membership. Do not send that route through the club redirect. Every control inside a layout sheet that navigates must call the sheet’s close callback. When copying an invite link in the browser, prefix relative paths with `window.location.origin`.
+- **Going forward:** Sheet controls that navigate must call the sheet’s close callback. When copying an invite link in the browser, prefix relative paths with `window.location.origin`. The separate All matches nav item is superseded: all clubs now open from the club Matches page (`?scope=all`); see “All matches belongs on the club Matches page.”
 - **Pointers:** `app/admin/matches/page.tsx`, `lib/utils/adminNavLinks.ts`, `components/layout/ClubWorkspaceStatus.tsx`, `components/club/ClubInvitesPanel.tsx` (`shareableInviteLink`)
 
 ### 2026-09-27 — Controlled popover close does not clear local filter state

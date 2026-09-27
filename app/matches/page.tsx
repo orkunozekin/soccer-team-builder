@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { ClubMatchesView } from '@/components/matches/ClubMatchesView'
 import { Button } from '@/components/ui/button'
@@ -16,10 +16,14 @@ import {
 /**
  * Legacy `/matches` → `/c/{slug}/matches` when a membership slug resolves.
  * Super users with no membership keep the all-clubs list here.
+ * `?scope=all` is forwarded for super users so `/admin/matches` still opens
+ * every club after they have a membership.
  * Membership load errors show retry (not `/join`).
  */
 export default function MatchesRedirectPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const scopeAll = searchParams.get('scope') === 'all'
   const { user, userData, loading: authLoading } = useAuth()
   const { isAdmin: isSuperUser } = useAdmin()
   const {
@@ -42,7 +46,8 @@ export default function MatchesRedirectPage() {
     }
     if (membershipsLoading || membershipsError) return
     if (slug) {
-      router.replace(clubMatchesPath(slug))
+      const dest = clubMatchesPath(slug)
+      router.replace(scopeAll && isSuperUser ? `${dest}?scope=all` : dest)
       return
     }
     if (!isSuperUser) {
@@ -55,6 +60,7 @@ export default function MatchesRedirectPage() {
     membershipsError,
     slug,
     isSuperUser,
+    scopeAll,
     router,
   ])
 

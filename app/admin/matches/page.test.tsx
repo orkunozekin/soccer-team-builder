@@ -34,10 +34,12 @@ describe('AdminMatchesPage', () => {
     useAdminMock.mockReturnValue({ isAdmin: true, rolePending: false })
   })
 
-  it('keeps the all-clubs list for super users', async () => {
+  it('sends super users to Matches with all-clubs scope', async () => {
     render(<AdminMatchesPage />)
-    expect(await screen.findByText('AllClubsMatches:null')).toBeInTheDocument()
-    expect(replaceMock).not.toHaveBeenCalled()
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith('/matches?scope=all')
+    })
+    expect(screen.queryByText('AllClubsMatches:null')).not.toBeInTheDocument()
   })
 
   it('waits for the user role before sending someone away', async () => {

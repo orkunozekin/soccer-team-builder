@@ -3,14 +3,13 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
-import { ClubMatchesView } from '@/components/matches/ClubMatchesView'
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 
 /**
- * All-clubs match management for super users.
- * Do not redirect through `/matches`: that route sends members to their club
- * and hides this list.
+ * Former all-clubs list. Super users land on Matches with `?scope=all`
+ * so the club page can show every club. `/matches` forwards that query
+ * when the operator has a membership.
  */
 export default function AdminMatchesPage() {
   const router = useRouter()
@@ -26,12 +25,10 @@ export default function AdminMatchesPage() {
     }
     if (!isAdmin) {
       router.replace('/matches')
+      return
     }
+    router.replace('/matches?scope=all')
   }, [pending, user, isAdmin, router])
 
-  if (pending || !user || !isAdmin) {
-    return <PageLoadingSkeleton variant="container" />
-  }
-
-  return <ClubMatchesView clubId={null} clubSlug={null} />
+  return <PageLoadingSkeleton variant="container" />
 }
