@@ -145,7 +145,7 @@ Rules:
 
 The club-owned navigation is the console. After the prerequisite lands, its rail / mobile sheet replaces the original sub-nav. Do not add a second admin area.
 
-- Roster: move [`ClubAdminRoster`](../../components/profile/ClubAdminRoster.tsx) to `/c/[slug]/roster`.
+- Roster: [`ClubAdminRoster`](../../components/club/ClubAdminRoster.tsx) lives at `/c/[slug]/roster`.
 - Invites and `allowPlayerInvites`: move off [`ProfileClubsSection`](../../components/profile/ProfileClubsSection.tsx) onto `/c/[slug]/invites` and `/c/[slug]/settings`.
 - Profile keeps account fields and attendance until todo 9 scopes attendance.
 - Page handlers and server calls keep using [`verifyClubAdmin`](../../lib/api/auth.ts) / `verifyClubMember`. Hiding a nav link is not authorization.
