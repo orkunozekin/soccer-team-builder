@@ -37,6 +37,11 @@ export function ClubContextSwitcher({
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  // Controlled close does not go through onOpenChange, so clear the filter here too.
+  const closeSwitcher = () => {
+    setOpen(false)
+    setQuery('')
+  }
   const active = memberships.filter(m => m.status === 'active')
   const showSearch = active.length >= CLUB_SEARCH_MIN
   const needle = query.trim().toLowerCase()
@@ -94,7 +99,7 @@ export function ClubContextSwitcher({
                     type="button"
                     disabled={switching}
                     onClick={() => {
-                      setOpen(false)
+                      closeSwitcher()
                       onSwitch(membership.clubId)
                     }}
                     className="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm hover:bg-zinc-100 disabled:opacity-60 dark:hover:bg-zinc-800"
@@ -119,7 +124,7 @@ export function ClubContextSwitcher({
         <div className="flex flex-col border-t border-zinc-200 p-1 dark:border-zinc-800">
           <Link
             href="/join"
-            onClick={() => setOpen(false)}
+            onClick={() => closeSwitcher()}
             className="rounded-sm px-2 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
           >
             Join a club
@@ -127,7 +132,7 @@ export function ClubContextSwitcher({
           {showCreateClub ? (
             <Link
               href="/admin/users"
-              onClick={() => setOpen(false)}
+              onClick={() => closeSwitcher()}
               className="rounded-sm px-2 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
             >
               Create club
