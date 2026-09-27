@@ -164,7 +164,7 @@ export function ClubInvitesPanel({
       setError(err instanceof Error ? err.message : 'Failed to revoke invite')
     } finally {
       if (clubIdRef.current === requestClubId) {
-        setBusyInviteId(null)
+        setBusyInviteId(prev => (prev === inviteId ? null : prev))
       }
     }
   }

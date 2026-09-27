@@ -81,6 +81,80 @@ describe('ClubInvitesPanel', () => {
     })
   })
 
+  it('does not clear busy state for a newer revoke when an older one finishes', async () => {
+    const user = userEvent.setup()
+    let resolveFirst!: (value: { success: boolean }) => void
+    let resolveSecond!: (value: { success: boolean }) => void
+    vi.mocked(listClubInvitesAPI).mockResolvedValue({
+      success: true,
+      invites: [
+        {
+          id: 'i1',
+          clubId: 'c1',
+          code: 'AAA111',
+          createdBy: 'u1',
+          createdByRole: 'club_admin',
+          useCount: 0,
+          maxUses: null,
+          expiresAt: null,
+          revokedAt: null,
+          createdAt: new Date(),
+          link: '/join?code=AAA111',
+        },
+        {
+          id: 'i2',
+          clubId: 'c1',
+          code: 'BBB222',
+          createdBy: 'u1',
+          createdByRole: 'club_admin',
+          useCount: 0,
+          maxUses: null,
+          expiresAt: null,
+          revokedAt: null,
+          createdAt: new Date(),
+          link: '/join?code=BBB222',
+        },
+      ],
+    })
+    vi.mocked(revokeClubInviteAPI).mockImplementation(
+      (_clubId: string, inviteId: string) => {
+        if (inviteId === 'i1') {
+          return new Promise(resolve => {
+            resolveFirst = resolve
+          })
+        }
+        return new Promise(resolve => {
+          resolveSecond = resolve
+        })
+      }
+    )
+
+    render(<ClubInvitesPanel clubId="c1" canManageInvites />)
+    expect(await screen.findByText('AAA111')).toBeInTheDocument()
+
+    const revokeButtons = screen.getAllByRole('button', { name: 'Revoke' })
+    await user.click(revokeButtons[0])
+    await user.click(revokeButtons[1])
+
+    await waitFor(() => {
+      expect(revokeClubInviteAPI).toHaveBeenCalledTimes(2)
+    })
+    expect(screen.getByRole('button', { name: '…' })).toBeDisabled()
+
+    resolveFirst({ success: true })
+    await waitFor(() => {
+      expect(screen.queryByText('AAA111')).not.toBeInTheDocument()
+    })
+    // First revoke finishing must leave the second invite's busy state intact.
+    expect(screen.getByRole('button', { name: '…' })).toBeDisabled()
+    expect(screen.getByText('BBB222')).toBeInTheDocument()
+
+    resolveSecond({ success: true })
+    await waitFor(() => {
+      expect(screen.queryByText('BBB222')).not.toBeInTheDocument()
+    })
+  })
+
   it('keeps a created invite when the list refresh fails', async () => {
     const user = userEvent.setup()
     vi.mocked(listClubInvitesAPI).mockResolvedValue({

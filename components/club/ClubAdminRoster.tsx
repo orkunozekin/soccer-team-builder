@@ -85,7 +85,7 @@ export function ClubAdminRoster({
       setError(err instanceof Error ? err.message : 'Failed to update role')
     } finally {
       if (clubIdRef.current === targetClubId) {
-        setBusyUserId(null)
+        setBusyUserId(prev => (prev === userId ? null : prev))
       }
     }
   }
