@@ -111,7 +111,7 @@ export function CreateMatchCard({
       <CardHeader>
         <CardTitle>Create new match</CardTitle>
         <CardDescription>
-          Create a new match with date, time, and location for your active club
+          Create a new match with date, time, and location for the selected club
         </CardDescription>
       </CardHeader>
       <CardContent>
