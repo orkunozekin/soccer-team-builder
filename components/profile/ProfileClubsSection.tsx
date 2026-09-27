@@ -1,36 +1,28 @@
 'use client'
 
 import { useState } from 'react'
-import { ClubAdminRoster } from '@/components/profile/ClubAdminRoster'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  createClubInviteAPI,
-  updateClubAPI,
-  updateProfileAPI,
-} from '@/lib/api/client'
+import { updateProfileAPI } from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
 import { useAuthStore } from '@/store/authStore'
+import {
+  clubInvitesPath,
+  clubRosterPath,
+  clubSettingsPath,
+} from '@/lib/utils/clubPaths'
 
 export function ProfileClubsSection() {
-  const { user, userData } = useAuth()
+  const { userData } = useAuth()
   const setUserData = useAuthStore(state => state.setUserData)
   const { memberships, loading, error, refresh } = useClubMemberships()
-  const [busyClubId, setBusyClubId] = useState<string | null>(null)
   const [activeBusy, setActiveBusy] = useState(false)
-  const [inviteInfo, setInviteInfo] = useState<{
-    clubId: string
-    code: string
-    link: string
-  } | null>(null)
   const [actionError, setActionError] = useState('')
-  const [copied, setCopied] = useState<'code' | 'link' | null>(null)
-  const [rosterOpenFor, setRosterOpenFor] = useState<string | null>(null)
 
   const adminClubs = memberships.filter(m => m.role === 'club_admin')
-  const currentUserId = user?.uid ?? ''
   const activeClubId = userData?.activeClubId ?? null
 
   const handleSetActiveClub = async (clubId: string | null) => {
@@ -46,51 +38,6 @@ export function ProfileClubsSection() {
       )
     } finally {
       setActiveBusy(false)
-    }
-  }
-
-  const handleCreateInvite = async (clubId: string) => {
-    setBusyClubId(clubId)
-    setActionError('')
-    try {
-      const res = await createClubInviteAPI(clubId)
-      setInviteInfo({ clubId, code: res.invite.code, link: res.link })
-    } catch (err) {
-      setActionError(
-        err instanceof Error ? err.message : 'Failed to create invite'
-      )
-    } finally {
-      setBusyClubId(null)
-    }
-  }
-
-  const handleTogglePlayerInvites = async (
-    clubId: string,
-    next: boolean
-  ) => {
-    setBusyClubId(clubId)
-    setActionError('')
-    try {
-      await updateClubAPI(clubId, {
-        settings: { allowPlayerInvites: next },
-      })
-      await refresh()
-    } catch (err) {
-      setActionError(
-        err instanceof Error ? err.message : 'Failed to update settings'
-      )
-    } finally {
-      setBusyClubId(null)
-    }
-  }
-
-  const copyText = async (value: string, kind: 'code' | 'link') => {
-    try {
-      await navigator.clipboard.writeText(value)
-      setCopied(kind)
-      setTimeout(() => setCopied(null), 2000)
-    } catch {
-      setActionError('Could not copy to clipboard')
     }
   }
 
@@ -170,8 +117,8 @@ export function ProfileClubsSection() {
         )}
         {memberships.length > 1 && activeClubId && (
           <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-            Match lists and new matches use your active club. You can switch
-            anytime.
+            Match lists and new matches use your active club. You can also
+            switch from the club bar.
           </p>
         )}
       </div>
@@ -181,93 +128,38 @@ export function ProfileClubsSection() {
           <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
             Clubs I manage
           </h3>
-          <ul className="mt-2 space-y-4">
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            Roster, invites, and settings live on the club bar for each club.
+          </p>
+          <ul className="mt-2 space-y-2">
             {adminClubs.map(m => (
               <li
                 key={`admin-${m.id}`}
-                className="space-y-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+                className="rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800"
               >
                 <div className="font-medium text-zinc-900 dark:text-zinc-100">
                   {m.club.name}
                 </div>
-                <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-                  <input
-                    type="checkbox"
-                    checked={m.club.settings.allowPlayerInvites}
-                    disabled={busyClubId === m.clubId}
-                    onChange={e =>
-                      handleTogglePlayerInvites(m.clubId, e.target.checked)
-                    }
-                  />
-                  Players can invite
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={busyClubId === m.clubId}
-                    onClick={() => handleCreateInvite(m.clubId)}
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                  <Link
+                    href={clubRosterPath(m.club.slug)}
+                    className="font-medium text-zinc-700 underline-offset-2 hover:underline dark:text-zinc-300"
                   >
-                    {busyClubId === m.clubId ? 'Working…' : 'Create invite'}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      setRosterOpenFor(prev =>
-                        prev === m.clubId ? null : m.clubId
-                      )
-                    }
+                    Roster
+                  </Link>
+                  <Link
+                    href={clubInvitesPath(m.club.slug)}
+                    className="font-medium text-zinc-700 underline-offset-2 hover:underline dark:text-zinc-300"
                   >
-                    {rosterOpenFor === m.clubId
-                      ? 'Hide roster'
-                      : 'Manage roster'}
-                  </Button>
+                    Invites
+                  </Link>
+                  <Link
+                    href={clubSettingsPath(m.club.slug)}
+                    className="font-medium text-zinc-700 underline-offset-2 hover:underline dark:text-zinc-300"
+                  >
+                    Settings
+                  </Link>
                 </div>
-                {inviteInfo?.clubId === m.clubId && (
-                  <div className="space-y-2 rounded-md bg-zinc-50 p-3 text-sm dark:bg-zinc-900">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium">Code:</span>
-                      <code className="rounded bg-white px-2 py-0.5 dark:bg-zinc-800">
-                        {inviteInfo.code}
-                      </code>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => copyText(inviteInfo.code, 'code')}
-                      >
-                        {copied === 'code' ? 'Copied' : 'Copy code'}
-                      </Button>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium">Link:</span>
-                      <code className="max-w-full truncate rounded bg-white px-2 py-0.5 dark:bg-zinc-800">
-                        {inviteInfo.link}
-                      </code>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => copyText(inviteInfo.link, 'link')}
-                      >
-                        {copied === 'link' ? 'Copied' : 'Copy link'}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-                {rosterOpenFor === m.clubId && currentUserId && (
-                  <ClubAdminRoster
-                    clubId={m.clubId}
-                    currentUserId={currentUserId}
-                    refreshToken={
-                      inviteInfo?.clubId === m.clubId
-                        ? inviteInfo.code
-                        : ''
-                    }
-                  />
-                )}
               </li>
             ))}
           </ul>

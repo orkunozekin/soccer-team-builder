@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  clubInvitesPath,
   clubMatchPath,
   clubMatchesPath,
+  clubRosterPath,
+  clubSettingsPath,
   parseClubSlugFromPathname,
   resolveClubMembershipForPath,
   resolveLegacyMatchesRedirectSlug,
@@ -34,9 +37,12 @@ function membership(
 }
 
 describe('clubPaths', () => {
-  it('builds club match paths', () => {
+  it('builds club match and console paths', () => {
     expect(clubMatchesPath('jax')).toBe('/c/jax/matches')
     expect(clubMatchPath('jax', 'm1')).toBe('/c/jax/matches/m1')
+    expect(clubRosterPath('jax')).toBe('/c/jax/roster')
+    expect(clubInvitesPath('jax')).toBe('/c/jax/invites')
+    expect(clubSettingsPath('jax')).toBe('/c/jax/settings')
   })
 
   it('parses slug from club pathnames', () => {

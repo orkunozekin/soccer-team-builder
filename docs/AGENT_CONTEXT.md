@@ -132,6 +132,9 @@ These are hard constraints. If a user request conflicts with them, refuse or pro
 12. Do not disable `sanitizeErrorForClient`, broaden CORS, or bypass token verification for convenience.
 13. Do not introduce `eval`, shelling out with user input, or arbitrary file reads in API routes.
 14. When reviewing or writing auth/payment/PII paths, call out missing checks explicitly rather than assuming they exist.
+15. Membership / club-list fetch failures must surface as retryable errors — never as “not a member”, `/join`, or `notFound()`.
+16. Club-scoped async UI (`clubId` in props) must ignore stale responses after the club changes or the effect cleans up.
+17. After a successful mutation, do not roll back optimistic UI when a follow-up refresh fails; report the refresh failure separately.
 
 ### Review / Greptile focus
 
@@ -141,7 +144,8 @@ When acting as a reviewer (including Greptile), prioritize:
 - Secret leakage and unsafe logging
 - Client exposure of internal errors
 - Breakage of emulator-only local-dev assumptions
-- Race/concurrency around RSVP and team generation
+- Race/concurrency around RSVP, team generation, and club-scoped fetches (stale `clubId`)
+- Membership fetch errors mistaken for 404 / empty membership
 - Firestore rule / Admin SDK inconsistency (client write allowed that should be API-only)
 
 Deprioritize pure style nits already covered by Prettier/ESLint unless they hide a real bug.

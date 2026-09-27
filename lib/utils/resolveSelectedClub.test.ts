@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  canAccessClubSection,
   clubSubNavSections,
   resolveEffectiveActiveClubId,
   resolveSelectedClubMembership,
@@ -86,12 +87,12 @@ describe('resolveSelectedClubMembership', () => {
 })
 
 describe('clubSubNavSections', () => {
-  it('defaults to Matches only until club-admin routes ship', () => {
+  it('shows Matches only for a player without invite permission', () => {
     expect(
       clubSubNavSections({
         slug: 'jax',
-        role: 'club_admin',
-        allowPlayerInvites: true,
+        role: 'player',
+        allowPlayerInvites: false,
       }).map(s => s.id)
     ).toEqual(['matches'])
   })
@@ -102,18 +103,16 @@ describe('clubSubNavSections', () => {
         slug: 'jax',
         role: 'player',
         allowPlayerInvites: true,
-        includeClubAdminSections: true,
       }).map(s => s.id)
     ).toEqual(['matches', 'invites'])
   })
 
-  it('shows all sections for club_admin when enabled', () => {
+  it('shows all sections for club_admin', () => {
     expect(
       clubSubNavSections({
         slug: 'jax',
         role: 'club_admin',
         allowPlayerInvites: false,
-        includeClubAdminSections: true,
       }).map(s => ({ id: s.id, href: s.href }))
     ).toEqual([
       { id: 'matches', href: '/c/jax/matches' },
@@ -130,8 +129,33 @@ describe('clubSubNavSections', () => {
         role: 'player',
         allowPlayerInvites: false,
         isSuperUser: true,
-        includeClubAdminSections: true,
       }).map(s => s.id)
     ).toEqual(['matches', 'roster', 'invites', 'settings'])
+  })
+})
+
+describe('canAccessClubSection', () => {
+  it('allows roster only for club admins and super users', () => {
+    expect(
+      canAccessClubSection({
+        section: 'roster',
+        role: 'player',
+        allowPlayerInvites: true,
+      })
+    ).toBe(false)
+    expect(
+      canAccessClubSection({
+        section: 'roster',
+        role: 'club_admin',
+        allowPlayerInvites: false,
+      })
+    ).toBe(true)
+    expect(
+      canAccessClubSection({
+        section: 'invites',
+        role: 'player',
+        allowPlayerInvites: true,
+      })
+    ).toBe(true)
   })
 })

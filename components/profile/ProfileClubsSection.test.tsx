@@ -24,13 +24,7 @@ vi.mock('@/lib/hooks/useClubMemberships', () => ({
   afterInviteRedeemed: (...args: unknown[]) => afterInviteRedeemedMock(...args),
 }))
 
-vi.mock('@/components/profile/ClubAdminRoster', () => ({
-  ClubAdminRoster: () => <div>ClubAdminRosterMock</div>,
-}))
-
 vi.mock('@/lib/api/client', () => ({
-  createClubInviteAPI: vi.fn(),
-  updateClubAPI: vi.fn(),
   updateProfileAPI: vi.fn(),
   redeemInviteAPI: vi.fn(),
 }))
@@ -83,5 +77,45 @@ describe('ProfileClubsSection', () => {
     expect(
       await screen.findByText('Joined club successfully.')
     ).toBeInTheDocument()
+  })
+
+  it('links club admins to roster, invites, and settings', () => {
+    useClubMembershipsMock.mockReturnValue({
+      memberships: [
+        {
+          id: 'm1',
+          clubId: 'c1',
+          userId: 'u1',
+          role: 'club_admin',
+          status: 'active',
+          joinedAt: new Date(),
+          updatedAt: new Date(),
+          club: {
+            id: 'c1',
+            name: 'Alpha FC',
+            slug: 'alpha',
+            settings: { allowPlayerInvites: false },
+          },
+        },
+      ],
+      loading: false,
+      error: null,
+      refresh: refreshMock,
+    })
+
+    render(<ProfileClubsSection />)
+
+    expect(screen.getByRole('link', { name: 'Roster' })).toHaveAttribute(
+      'href',
+      '/c/alpha/roster'
+    )
+    expect(screen.getByRole('link', { name: 'Invites' })).toHaveAttribute(
+      'href',
+      '/c/alpha/invites'
+    )
+    expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute(
+      'href',
+      '/c/alpha/settings'
+    )
   })
 })

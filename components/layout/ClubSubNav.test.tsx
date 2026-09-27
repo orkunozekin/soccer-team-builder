@@ -141,6 +141,36 @@ describe('ClubSubNav', () => {
     )
   })
 
+  it('shows roster, invites, and settings for club admins', () => {
+    useAuthMock.mockReturnValue({
+      user: { uid: 'u1' },
+      userData: { uid: 'u1', activeClubId: 'beta' },
+      loading: false,
+    })
+    usePathnameMock.mockReturnValue('/c/beta/matches')
+    render(<ClubSubNav />)
+    expect(screen.getAllByRole('link', { name: 'Roster' })[0]).toHaveAttribute(
+      'href',
+      '/c/beta/roster'
+    )
+    expect(screen.getAllByRole('link', { name: 'Invites' })[0]).toHaveAttribute(
+      'href',
+      '/c/beta/invites'
+    )
+    expect(
+      screen.getAllByRole('link', { name: 'Settings' })[0]
+    ).toHaveAttribute('href', '/c/beta/settings')
+  })
+
+  it('hides admin sections for players without invite permission', () => {
+    render(<ClubSubNav />)
+    expect(screen.queryByRole('link', { name: 'Roster' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Invites' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'Settings' })
+    ).not.toBeInTheDocument()
+  })
+
   it('highlights Matches from the club slug path', () => {
     usePathnameMock.mockReturnValue('/c/alpha/matches')
     render(<ClubSubNav />)
@@ -219,6 +249,26 @@ describe('ClubSubNav', () => {
       expect(updateProfileAPI).toHaveBeenCalledWith({ activeClubId: 'beta' })
     })
     expect(pushMock).toHaveBeenCalledWith('/c/beta/matches')
+  })
+
+  it('lands on matches when switching to a club that cannot open roster', async () => {
+    const user = userEvent.setup()
+    useAuthMock.mockReturnValue({
+      user: { uid: 'u1' },
+      userData: { uid: 'u1', activeClubId: 'beta' },
+      loading: false,
+    })
+    usePathnameMock.mockReturnValue('/c/beta/roster')
+    vi.mocked(updateProfileAPI).mockResolvedValue({ success: true })
+
+    render(<ClubSubNav />)
+    await user.click(screen.getByLabelText('Switch club'))
+    await user.click(screen.getByText('Alpha FC'))
+
+    await waitFor(() => {
+      expect(updateProfileAPI).toHaveBeenCalledWith({ activeClubId: 'alpha' })
+    })
+    expect(pushMock).toHaveBeenCalledWith('/c/alpha/matches')
   })
 
   it('stays on profile when switching clubs from a platform page', async () => {

@@ -41,10 +41,26 @@ export function resolveEffectiveActiveClubId(input: {
 
 export type ClubSubNavSection = 'matches' | 'roster' | 'invites' | 'settings'
 
+/** Whether the viewer may open a club console section (nav + page gate). */
+export function canAccessClubSection(input: {
+  section: ClubSubNavSection
+  role: ClubMembershipWithClub['role']
+  allowPlayerInvites: boolean
+  isSuperUser?: boolean
+}): boolean {
+  if (input.section === 'matches') return true
+  const isClubAdmin = Boolean(input.isSuperUser) || input.role === 'club_admin'
+  if (input.section === 'roster' || input.section === 'settings') {
+    return isClubAdmin
+  }
+  // invites
+  return isClubAdmin || input.allowPlayerInvites
+}
+
 /**
  * Club-scoped section links for the sub-nav.
- * Matches uses `/c/[slug]/matches`. Roster / invites / settings stay behind
- * `includeClubAdminSections` until those routes ship (todo 4).
+ * Matches uses `/c/[slug]/matches`. Roster / invites / settings are the
+ * club-admin console (players see Invites only when allowPlayerInvites).
  */
 export function clubSubNavSections(input: {
   slug: string
@@ -52,22 +68,18 @@ export function clubSubNavSections(input: {
   allowPlayerInvites: boolean
   /** When true, treat as club admin for link visibility (super_user). */
   isSuperUser?: boolean
-  /**
-   * When false (default until club-admin routes ship), only Matches is listed.
-   * Pass true from tests or once `/c/[slug]/roster|invites|settings` exist.
-   */
-  includeClubAdminSections?: boolean
 }): { id: ClubSubNavSection; label: string; href: string }[] {
   const sections: { id: ClubSubNavSection; label: string; href: string }[] = [
     { id: 'matches', label: 'Matches', href: `/c/${input.slug}/matches` },
   ]
 
-  if (!input.includeClubAdminSections) {
-    return sections
-  }
-
-  const isClubAdmin = input.isSuperUser || input.role === 'club_admin'
-  const canInvites = isClubAdmin || input.allowPlayerInvites
+  const isClubAdmin = Boolean(input.isSuperUser) || input.role === 'club_admin'
+  const canInvites = canAccessClubSection({
+    section: 'invites',
+    role: input.role,
+    allowPlayerInvites: input.allowPlayerInvites,
+    isSuperUser: input.isSuperUser,
+  })
   if (isClubAdmin) {
     sections.push({
       id: 'roster',

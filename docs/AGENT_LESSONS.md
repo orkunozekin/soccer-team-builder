@@ -33,6 +33,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-27 — Club console: membership errors, stale clubId, mutation vs refresh
+
+- **Source:** PR #83 · Macroscope | Greptile
+- **Gap:** (1) Membership fetch failure with an empty list made `useClubSlugAccess` / section pages look like 404. (2) Roster/invites applied responses after `clubId` changed. (3) Settings/invite create rolled back or reported failure when only the follow-up refresh failed; revoke stayed enabled during create refresh. (4) Follow-up: invite refresh cleared the list on error; initial list race overwrote post-create refresh; settings checkbox did not reset when `clubId` changed.
+- **Going forward:** Propagate membership/`my-clubs` errors as retryable `error` (never forbidden/join/404). Club-scoped panels cancel/ignore stale `clubId` responses and use a request generation for concurrent list fetches. Separate mutation success from refresh failure; on refresh failure keep prior list / optimistic setting. Reset local form state when the club prop changes. Disable conflicting actions while a list refresh is in flight. When clearing a per-row busy id in `finally`, only clear if it still matches the completing row (`setBusyX(prev => prev === id ? null : prev)`).
+- **Pointers:** `lib/hooks/useClubSlugAccess.ts`, `components/club/ClubAdminRoster.tsx`, `components/club/ClubInvitesPanel.tsx`, `components/club/ClubSettingsPanel.tsx`
+
 ### 2026-09-27 — Club match queries must not require undeployed composite indexes
 
 - **Source:** Production report after PR #82 merge · human (confirmed via Network `runQuery` `FAILED_PRECONDITION`)
