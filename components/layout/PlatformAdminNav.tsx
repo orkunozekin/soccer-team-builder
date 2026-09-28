@@ -1,9 +1,25 @@
 'use client'
 
-import Link from 'next/link'
+import {
+  CalendarClock,
+  CalendarDays,
+  ChartColumn,
+  type LucideIcon,
+  MapPin,
+  Users,
+} from 'lucide-react'
 import { usePathname } from 'next/navigation'
+import { SidenavLink } from '@/components/layout/SidenavLink'
 import { cn } from '@/lib/utils'
 import { ADMIN_NAV_LINKS } from '@/lib/utils/adminNavLinks'
+
+const ADMIN_NAV_ICONS: Record<string, LucideIcon> = {
+  '/admin/matches': CalendarDays,
+  '/admin/schedules': CalendarClock,
+  '/admin/locations': MapPin,
+  '/admin/users': Users,
+  '/admin/analytics': ChartColumn,
+}
 
 /** Platform admin routes in the workspace rail and mobile sheet. */
 export function PlatformAdminNav({
@@ -20,25 +36,16 @@ export function PlatformAdminNav({
       aria-label="Admin sections"
       className={cn('flex flex-col gap-1', className)}
     >
-      {ADMIN_NAV_LINKS.map(link => {
-        const active = link.isActive(pathname)
-        return (
-          <Link
-            key={link.href}
-            href={link.href}
-            aria-current={active ? 'page' : undefined}
-            onClick={onNavigate}
-            className={cn(
-              'rounded-md border-l-[6px] px-3 py-2 text-sm font-semibold transition-colors',
-              active
-                ? 'border-white bg-white/20 text-white'
-                : 'border-transparent text-white hover:bg-white/10'
-            )}
-          >
-            {link.label}
-          </Link>
-        )
-      })}
+      {ADMIN_NAV_LINKS.map(link => (
+        <SidenavLink
+          key={link.href}
+          href={link.href}
+          label={link.label}
+          icon={ADMIN_NAV_ICONS[link.href]}
+          active={link.isActive(pathname)}
+          onNavigate={onNavigate}
+        />
+      ))}
     </nav>
   )
 }

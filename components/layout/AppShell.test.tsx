@@ -227,6 +227,12 @@ describe('AppShell', () => {
       within(accountNav).queryByRole('link', { name: 'Analytics' })
     ).not.toBeInTheDocument()
     expect(rail().getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+
+    for (const nav of [clubNav, adminNav, accountNav]) {
+      for (const link of within(nav).getAllByRole('link')) {
+        expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+      }
+    }
   })
 
   it('hides admin sections for non super users', () => {
