@@ -20,10 +20,7 @@ import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
 import { listMatchesForViewer } from '@/lib/services/matchService'
 import { getMatchRsvpCount } from '@/lib/services/rsvpService'
 import { cn } from '@/lib/utils'
-import {
-  type MatchFilter,
-  filterMatches,
-} from '@/lib/utils/adminMatchFilters'
+import { type MatchFilter, filterMatches } from '@/lib/utils/adminMatchFilters'
 import {
   canCreateClubMatches,
   canManageMatchClub,
@@ -32,6 +29,7 @@ import {
 import { clubMatchPath } from '@/lib/utils/clubPaths'
 import { isMatchPast } from '@/lib/utils/rsvpScheduler'
 import { useMatchStore } from '@/store/matchStore'
+import type { Match } from '@/types/match'
 
 const ADMIN_FILTERS: { value: MatchFilter; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -50,6 +48,13 @@ export type ClubMatchesViewProps = {
   clubSlug: string | null
 }
 
+function resolveRsvpCount(match: Match): number | null {
+  if (typeof match.rsvpConfirmedCount === 'number') {
+    return match.rsvpConfirmedCount
+  }
+  return null
+}
+
 /**
  * Match list scoped to one club (used by `/c/[slug]/matches`).
  * Pass `clubId`/`clubSlug` null for the super-user all-clubs legacy list.
@@ -66,6 +71,9 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     'loading'
   )
   const fetchGen = useRef(0)
+  const countsGen = useRef(0)
+  /** Avoid re-requesting counts for the same match after a failure. */
+  const attemptedCountIds = useRef(new Set<string>())
 
   const canCreateMatch =
     Boolean(clubId) &&
@@ -83,6 +91,23 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     return `/matches/${matchId}`
   }
 
+  const loadCountsForMatches = async (matchesToCount: Match[], gen: number) => {
+    if (matchesToCount.length === 0) return
+    const next: Record<string, number> = {}
+    await Promise.all(
+      matchesToCount.map(async m => {
+        const denormalized = resolveRsvpCount(m)
+        if (denormalized != null) {
+          next[m.id] = denormalized
+          return
+        }
+        next[m.id] = await getMatchRsvpCount(m.id)
+      })
+    )
+    if (gen !== countsGen.current) return
+    setRsvpCounts(prev => ({ ...prev, ...next }))
+  }
+
   const loadMatchesAndCounts = async (gen: number) => {
     try {
       const allMatches = await listMatchesForViewer({
@@ -96,6 +121,7 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
         activeClubId: clubId,
         isSuperUser: !!isSuperUser,
       })
+      // Admins keep past matches in memory for tabs; players only see upcoming.
       const listed = showAdminList
         ? scoped
         : scoped.filter(m => !isMatchPast(m.date, m.time))
@@ -103,19 +129,26 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
       // Match list is usable without counts; do not fail the page if RSVP
       // queries error (e.g. missing composite index).
       setListStatus('ready')
-      try {
-        const counts: Record<string, number> = {}
-        await Promise.all(
-          listed.map(async m => {
-            counts[m.id] = await getMatchRsvpCount(m.id)
-          })
-        )
-        if (gen !== fetchGen.current) return
-        setRsvpCounts(counts)
-      } catch (countError) {
-        console.error('Error fetching RSVP counts:', countError)
-        if (gen !== fetchGen.current) return
-        setRsvpCounts({})
+
+      // Only count currently relevant cards: upcoming by default (admin Past
+      // tab lazy-loads counts when opened). Prefer denormalized match fields.
+      const initialForCounts = listed.filter(m => !isMatchPast(m.date, m.time))
+      const countGen = ++countsGen.current
+      const seeded: Record<string, number> = {}
+      const needsFetch: Match[] = []
+      for (const m of initialForCounts) {
+        attemptedCountIds.current.add(m.id)
+        const denormalized = resolveRsvpCount(m)
+        if (denormalized != null) seeded[m.id] = denormalized
+        else needsFetch.push(m)
+      }
+      setRsvpCounts(seeded)
+      if (needsFetch.length > 0) {
+        try {
+          await loadCountsForMatches(needsFetch, countGen)
+        } catch (countError) {
+          console.error('Error fetching RSVP counts:', countError)
+        }
       }
     } catch (error) {
       console.error('Error fetching matches:', error)
@@ -133,11 +166,13 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     setListStatus('loading')
     setMatches([])
     setRsvpCounts({})
+    attemptedCountIds.current = new Set()
 
     void loadMatchesAndCounts(gen)
     return () => {
       // Invalidate in-flight work so unmount cannot overwrite the shared store.
       fetchGen.current++
+      countsGen.current++
     }
     // loadMatchesAndCounts closes over latest club/membership state each effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional gen-gated fetch
@@ -151,18 +186,35 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     setMatches,
   ])
 
+  const visibleMatches = useMemo(() => {
+    if (!showAdminList) return matches
+    return filterMatches(matches, filter)
+  }, [matches, filter, showAdminList])
+
+  // Lazy-load counts when an admin opens Past / All and cards lack counts.
+  useEffect(() => {
+    if (listStatus !== 'ready' || !showAdminList) return
+    const missing = visibleMatches.filter(
+      m =>
+        rsvpCounts[m.id] === undefined && !attemptedCountIds.current.has(m.id)
+    )
+    if (missing.length === 0) return
+    for (const m of missing) attemptedCountIds.current.add(m.id)
+    const gen = ++countsGen.current
+    void loadCountsForMatches(missing, gen).catch(countError => {
+      console.error('Error fetching RSVP counts:', countError)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when visible set changes
+  }, [listStatus, showAdminList, visibleMatches])
+
   const refetchMatchesAndCounts = async () => {
     const gen = ++fetchGen.current
     setListStatus('loading')
     setMatches([])
     setRsvpCounts({})
+    attemptedCountIds.current = new Set()
     await loadMatchesAndCounts(gen)
   }
-
-  const visibleMatches = useMemo(() => {
-    if (!showAdminList) return matches
-    return filterMatches(matches, filter)
-  }, [matches, filter, showAdminList])
 
   const manageFlags = useMemo(() => {
     const flags: Record<string, boolean> = {}

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   cancelRSVP,
   createRSVP,
@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => {
   const updateDocumentMock = vi.fn()
   const deleteDocumentMock = vi.fn()
   const queryDocumentsMock = vi.fn()
+  const getCollectionCountMock = vi.fn()
   const timestampToDateMock = vi.fn(value =>
     value instanceof Date ? value : new Date()
   )
@@ -25,6 +26,7 @@ const mocks = vi.hoisted(() => {
     updateDocumentMock,
     deleteDocumentMock,
     queryDocumentsMock,
+    getCollectionCountMock,
     timestampToDateMock,
   }
 })
@@ -35,14 +37,19 @@ vi.mock('@/lib/firebase/firestore', () => ({
   updateDocument: mocks.updateDocumentMock,
   deleteDocument: mocks.deleteDocumentMock,
   queryDocuments: mocks.queryDocumentsMock,
+  getCollectionCount: mocks.getCollectionCountMock,
   timestampToDate: mocks.timestampToDateMock,
 }))
 
-vi.mock('firebase/firestore', () => ({
+vi.mock('firebase/firestore/lite', () => ({
   where: (...args: unknown[]) => ({ where: args }),
 }))
 
 describe('rsvpService', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('createRSVP writes a confirmed RSVP with a generated id', async () => {
     vi.spyOn(Date, 'now').mockReturnValue(1700000000000)
 
@@ -146,10 +153,15 @@ describe('rsvpService', () => {
     expect(result[1].id).toBe('r2')
   })
 
-  it('getMatchRsvpCount returns number of confirmed RSVPs', async () => {
-    mocks.queryDocumentsMock.mockResolvedValueOnce([{}, {}, {}])
+  it('getMatchRsvpCount uses a count aggregation instead of loading docs', async () => {
+    mocks.getCollectionCountMock.mockResolvedValueOnce(3)
     const count = await getMatchRsvpCount('match1')
     expect(count).toBe(3)
+    expect(mocks.getCollectionCountMock).toHaveBeenCalledWith('rsvps', [
+      { where: ['matchId', '==', 'match1'] },
+      { where: ['status', '==', 'confirmed'] },
+    ])
+    expect(mocks.queryDocumentsMock).not.toHaveBeenCalled()
   })
 
   it('cancelRSVP updates status to cancelled', async () => {

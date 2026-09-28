@@ -45,7 +45,19 @@ export async function createMatchDoc(
       scheduleId: input.scheduleId ?? null,
       scheduleSlotId: input.scheduleSlotId ?? null,
       scheduleOccurrenceKey: input.scheduleOccurrenceKey ?? null,
+      rsvpConfirmedCount: 0,
       createdAt: now,
+      updatedAt: now,
+    })
+
+  await adminDb
+    .collection('matches')
+    .doc(matchId)
+    .collection('_state')
+    .doc('rsvp')
+    .set({
+      confirmedCount: 0,
+      gkCount: 0,
       updatedAt: now,
     })
 
