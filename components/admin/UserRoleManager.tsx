@@ -308,52 +308,47 @@ export function UserRoleManager() {
               {visibleUsers.map(user => (
                 <li
                   key={user.uid}
-                  className="flex flex-col gap-3 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60 sm:flex-row sm:items-center"
+                  className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
                 >
-                  <div className="flex min-w-0 items-center gap-3 sm:flex-1">
-                    <InitialsAvatar name={user.displayName || user.email} />
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={`/admin/players/${user.uid}`}
-                        className="block truncate text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
-                      >
-                        {user.displayName}
-                      </Link>
-                      <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                        {user.email}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Select
-                      value={user.role}
-                      onValueChange={(value: UserRole) =>
-                        handleRoleChange(user.uid, value)
-                      }
-                      disabled={updating === user.uid || deleting === user.uid}
+                  <InitialsAvatar name={user.displayName || user.email} />
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/admin/players/${user.uid}`}
+                      className="block truncate text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
                     >
-                      <SelectTrigger className="h-9 w-[8.5rem]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="super_user">Super user</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      disabled={updating === user.uid || deleting === user.uid}
-                      onClick={() => setDeleteDialogUserId(user.uid)}
-                      aria-label={`Remove ${user.displayName || user.email}`}
-                    >
-                      <CloseIcon
-                        className={deleting === user.uid ? 'opacity-50' : ''}
-                      />
-                    </Button>
+                      {user.displayName}
+                    </Link>
+                    <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                      {user.email}
+                    </p>
                   </div>
+                  <Select
+                    value={user.role}
+                    onValueChange={(value: UserRole) =>
+                      handleRoleChange(user.uid, value)
+                    }
+                    disabled={updating === user.uid || deleting === user.uid}
+                  >
+                    <SelectTrigger className="h-9 w-[8.5rem] shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="super_user">Super user</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    disabled={updating === user.uid || deleting === user.uid}
+                    onClick={() => setDeleteDialogUserId(user.uid)}
+                    aria-label={`Remove ${user.displayName || user.email}`}
+                  >
+                    <CloseIcon
+                      className={deleting === user.uid ? 'opacity-50' : ''}
+                    />
+                  </Button>
                 </li>
               ))}
             </ul>
