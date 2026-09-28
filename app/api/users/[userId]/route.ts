@@ -187,7 +187,7 @@ export async function DELETE(
       await batch.commit()
     }
     // Keep denormalized match headcounts accurate after confirmed RSVPs vanish.
-    for (const matchId of affectedMatchIds) {
+    for (const matchId of Array.from(affectedMatchIds)) {
       await syncMatchRsvpCountsFromConfirmed(adminDb, matchId)
     }
 
