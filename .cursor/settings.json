@@ -1,0 +1,7 @@
+{
+  "plugins": {
+    "launchdarkly": {
+      "enabled": true
+    }
+  }
+}
