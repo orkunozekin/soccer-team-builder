@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('firebase-admin/firestore', () => ({
   Timestamp: {
@@ -11,173 +11,102 @@ import {
   syncMatchRsvpCountsFromConfirmed,
 } from './syncMatchRsvpCounts'
 
+const STATE_REF = { kind: 'state' }
+const MATCH_REF = {
+  kind: 'match',
+  collection: () => ({ doc: () => STATE_REF }),
+}
+const RSVP_QUERY = { kind: 'rsvpQuery' }
+
+function createAdminDb(opts: {
+  stateExists: boolean
+  confirmedPositions: Array<string | null>
+}) {
+  const sets: Array<{ ref: unknown; data: Record<string, unknown> }> = []
+  const tx = {
+    get: vi.fn(async (ref: unknown) => {
+      if (ref === STATE_REF) return { exists: opts.stateExists }
+      if (ref === RSVP_QUERY) {
+        return {
+          size: opts.confirmedPositions.length,
+          docs: opts.confirmedPositions.map(position => ({
+            data: () => ({ position }),
+          })),
+        }
+      }
+      throw new Error('unexpected tx.get')
+    }),
+    set: vi.fn((ref: unknown, data: Record<string, unknown>) => {
+      sets.push({ ref, data })
+    }),
+  }
+  const adminDb = {
+    collection: (path: string) => {
+      if (path === 'matches') return { doc: () => MATCH_REF }
+      if (path === 'rsvps') {
+        return { where: () => ({ where: () => RSVP_QUERY }) }
+      }
+      throw new Error(`unexpected ${path}`)
+    },
+    runTransaction: vi.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)),
+  }
+  return { adminDb, tx, sets }
+}
+
 describe('syncMatchRsvpCountsFromConfirmed', () => {
-  it('writes confirmed and gk counts from remaining RSVPs', async () => {
-    const setCalls: Array<{ merge?: boolean; data: Record<string, unknown> }> =
-      []
-    const batch = {
-      set: (
-        _ref: unknown,
-        data: Record<string, unknown>,
-        opts?: { merge?: boolean }
-      ) => {
-        setCalls.push({ data, merge: opts?.merge })
-      },
-      commit: vi.fn(async () => undefined),
-    }
-    const adminDb = {
-      collection: (path: string) => {
-        if (path === 'rsvps') {
-          return {
-            where: () => ({
-              where: () => ({
-                get: async () => ({
-                  size: 2,
-                  docs: [
-                    { data: () => ({ position: 'GK' }) },
-                    { data: () => ({ position: 'ST' }) },
-                  ],
-                }),
-              }),
-            }),
-          }
-        }
-        if (path === 'matches') {
-          return {
-            doc: () => ({
-              collection: () => ({
-                doc: () => ({}),
-              }),
-            }),
-          }
-        }
-        throw new Error(`unexpected ${path}`)
-      },
-      batch: () => batch,
-    }
+  it('recounts inside a transaction that also reads _state/rsvp', async () => {
+    const { adminDb, tx, sets } = createAdminDb({
+      stateExists: true,
+      confirmedPositions: ['GK', 'ST'],
+    })
 
     const result = await syncMatchRsvpCountsFromConfirmed(
       adminDb as never,
       'match1'
     )
+
     expect(result).toEqual({ confirmedCount: 2, gkCount: 1 })
-    expect(batch.commit).toHaveBeenCalledTimes(1)
-    expect(setCalls).toHaveLength(2)
-    expect(setCalls[0]?.data).toMatchObject({
+    expect(adminDb.runTransaction).toHaveBeenCalledTimes(1)
+    expect(tx.get).toHaveBeenCalledWith(STATE_REF)
+    expect(tx.get).toHaveBeenCalledWith(RSVP_QUERY)
+    expect(sets.find(s => s.ref === STATE_REF)?.data).toMatchObject({
       confirmedCount: 2,
       gkCount: 1,
     })
-    expect(setCalls[1]?.data).toMatchObject({ rsvpConfirmedCount: 2 })
+    expect(sets.find(s => s.ref === MATCH_REF)?.data).toMatchObject({
+      rsvpConfirmedCount: 2,
+    })
   })
 })
 
 describe('ensureMatchRsvpStateSeeded', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('no-ops when state already exists', async () => {
-    const create = vi.fn()
-    const adminDb = {
-      collection: () => ({
-        doc: () => ({
-          collection: () => ({
-            doc: () => ({
-              get: async () => ({ exists: true }),
-              create,
-            }),
-          }),
-        }),
-      }),
-    }
-    await ensureMatchRsvpStateSeeded(adminDb as never, 'match1')
-    expect(create).not.toHaveBeenCalled()
-  })
-
-  it('seeds state from existing confirmed RSVPs', async () => {
-    const create = vi.fn(async () => undefined)
-    const matchSet = vi.fn(async () => undefined)
-    const adminDb = {
-      collection: (path: string) => {
-        if (path === 'matches') {
-          return {
-            doc: () => ({
-              collection: () => ({
-                doc: () => ({
-                  get: async () => ({ exists: false }),
-                  create,
-                }),
-              }),
-              set: matchSet,
-            }),
-          }
-        }
-        if (path === 'rsvps') {
-          return {
-            where: () => ({
-              where: () => ({
-                get: async () => ({
-                  size: 3,
-                  docs: [
-                    { data: () => ({ position: 'GK' }) },
-                    { data: () => ({ position: 'GK' }) },
-                    { data: () => ({ position: 'CM' }) },
-                  ],
-                }),
-              }),
-            }),
-          }
-        }
-        throw new Error(`unexpected ${path}`)
-      },
-    }
-
-    await ensureMatchRsvpStateSeeded(adminDb as never, 'match1')
-    expect(create).toHaveBeenCalledWith(
-      expect.objectContaining({ confirmedCount: 3, gkCount: 2 })
-    )
-    expect(matchSet).toHaveBeenCalledWith(
-      expect.objectContaining({ rsvpConfirmedCount: 3 }),
-      { merge: true }
-    )
-  })
-
-  it('ignores concurrent create races', async () => {
-    const create = vi.fn(async () => {
-      const err = new Error('ALREADY_EXISTS') as Error & { code: number }
-      err.code = 6
-      throw err
+    const { adminDb, tx, sets } = createAdminDb({
+      stateExists: true,
+      confirmedPositions: ['GK'],
     })
-    const adminDb = {
-      collection: (path: string) => {
-        if (path === 'matches') {
-          return {
-            doc: () => ({
-              collection: () => ({
-                doc: () => ({
-                  get: async () => ({ exists: false }),
-                  create,
-                }),
-              }),
-              set: vi.fn(),
-            }),
-          }
-        }
-        if (path === 'rsvps') {
-          return {
-            where: () => ({
-              where: () => ({
-                get: async () => ({ size: 0, docs: [] }),
-              }),
-            }),
-          }
-        }
-        throw new Error(`unexpected ${path}`)
-      },
-    }
 
-    await expect(
-      ensureMatchRsvpStateSeeded(adminDb as never, 'match1')
-    ).resolves.toBeUndefined()
+    await ensureMatchRsvpStateSeeded(adminDb as never, 'match1')
+
+    expect(tx.get).not.toHaveBeenCalledWith(RSVP_QUERY)
+    expect(sets).toHaveLength(0)
+  })
+
+  it('seeds state from confirmed RSVPs in the same transaction', async () => {
+    const { adminDb, sets } = createAdminDb({
+      stateExists: false,
+      confirmedPositions: ['GK', 'GK', 'CM'],
+    })
+
+    await ensureMatchRsvpStateSeeded(adminDb as never, 'match1')
+
+    expect(adminDb.runTransaction).toHaveBeenCalledTimes(1)
+    expect(sets.find(s => s.ref === STATE_REF)?.data).toMatchObject({
+      confirmedCount: 3,
+      gkCount: 2,
+    })
+    expect(sets.find(s => s.ref === MATCH_REF)?.data).toMatchObject({
+      rsvpConfirmedCount: 3,
+    })
   })
 })

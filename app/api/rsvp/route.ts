@@ -612,14 +612,15 @@ export async function PATCH(request: NextRequest) {
       .doc('rsvp')
     const now = Timestamp.now()
     const matchRefForCancel = adminDb.collection('matches').doc(matchId)
-    let cancelledInTx = false
-    await adminDb.runTransaction(async tx => {
+    // The callback may run more than once; only the committed attempt's return
+    // value decides whether team cleanup runs.
+    const cancelledInTx = await adminDb.runTransaction(async tx => {
       // Re-check status inside the transaction so concurrent cancels cannot
       // double-decrement `_state` / rsvpConfirmedCount.
       const latestRsvpSnap = await tx.get(rsvpRef)
-      if (!latestRsvpSnap.exists) return
+      if (!latestRsvpSnap.exists) return false
       const latestRsvp = latestRsvpSnap.data() ?? {}
-      if (latestRsvp.status !== 'confirmed') return
+      if (latestRsvp.status !== 'confirmed') return false
 
       const stateSnap = await tx.get(stateRefForCancel)
       const matchSnap = await tx.get(matchRefForCancel)
@@ -644,7 +645,6 @@ export async function PATCH(request: NextRequest) {
       }
 
       tx.update(rsvpRef, { status: 'cancelled', updatedAt: now })
-      cancelledInTx = true
       if (stateSnap.exists && newConfirmedCount != null && newGkCount != null) {
         tx.set(
           stateRefForCancel,
@@ -663,6 +663,7 @@ export async function PATCH(request: NextRequest) {
           { merge: true }
         )
       }
+      return true
     })
     if (!cancelledInTx) {
       return NextResponse.json({ cancelled: true, teamsUpdated: false })
