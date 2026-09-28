@@ -2,15 +2,15 @@
 
 Plan for the follow-ups listed under Later in the [v1 white-label plan](./white-label-clubs-feature-plan.md): flag club creation, rebuild navigation around the selected club, then add club branding and the remaining club-admin surfaces. v1 tenancy stays as shipped.
 
-**Sequencing dependency:** todos 1–5 are complete. [club-context-nav-feature-plan.md](./club-context-nav-feature-plan.md) landed in [#88](https://github.com/orkunozekin/soccer-team-builder/pull/88) and is the shell branding paints. Remaining work is todos 6–11.
+**Sequencing dependency:** todos 1–5 are implemented. Branding (todo 5) is parked on draft [#97](https://github.com/orkunozekin/soccer-team-builder/pull/97). Do not start todos 6–11 until this plan is resumed.
 
 ## Status
 
 | Field | Value |
 |-------|-------|
-| Status | in-progress |
+| Status | paused — branding draft PR left open; do not resume todos 6–11 until asked |
 | Owner session | — |
-| Last updated | 2026-09-27 |
+| Last updated | 2026-09-28 |
 | Related PR / branch | [#97](https://github.com/orkunozekin/soccer-team-builder/pull/97) `cursor/club-branding-chrome-79e3`. Prerequisite shell: [#88](https://github.com/orkunozekin/soccer-team-builder/pull/88). Completed here: [#83](https://github.com/orkunozekin/soccer-team-builder/pull/83) club-admin console, [#82](https://github.com/orkunozekin/soccer-team-builder/pull/82) slug matches, [#80](https://github.com/orkunozekin/soccer-team-builder/pull/80) club sub-nav, [#79](https://github.com/orkunozekin/soccer-team-builder/pull/79) `club-creation`. Continues [v1 plan](./white-label-clubs-feature-plan.md) (merged [#65](https://github.com/orkunozekin/soccer-team-builder/pull/65), [#71](https://github.com/orkunozekin/soccer-team-builder/pull/71), [#73](https://github.com/orkunozekin/soccer-team-builder/pull/73), [#74](https://github.com/orkunozekin/soccer-team-builder/pull/74), [#76](https://github.com/orkunozekin/soccer-team-builder/pull/76)) |
 
 ## Goals (v1 of this plan)
@@ -259,12 +259,13 @@ Starting map only. Touch any other files the work needs: tests, hooks, services,
 
 ### Remaining work
 
-1. QR code for the existing invite URL (todo 6).
-2. Invite-only registration behind `invite-only-registration` (todo 7).
-3. Club ownership transfer (todo 8).
-4. Club-scoped attendance stats (todo 9).
-5. Club-context copy on match titles (todo 10).
-6. Custom domain only after the above, as its own slice (todo 11).
+1. Paused. Leave [#97](https://github.com/orkunozekin/soccer-team-builder/pull/97) open as a draft. Do not merge it and do not start the next todo until asked.
+2. QR code for the existing invite URL (todo 6).
+3. Invite-only registration behind `invite-only-registration` (todo 7).
+4. Club ownership transfer (todo 8).
+5. Club-scoped attendance stats (todo 9).
+6. Club-context copy on match titles (todo 10).
+7. Custom domain only after the above, as its own slice (todo 11).
 
 ### Blockers / risks
 
@@ -275,7 +276,7 @@ Starting map only. Touch any other files the work needs: tests, hooks, services,
 
 ### Pointers for the next agent
 
-- Start at: todo 6, the invite link already returned by the invites API, rendered in [`ClubInvitesPanel`](../../components/club/ClubInvitesPanel.tsx).
-- Do not: restore `ClubSubNav`; put `club_admin` on `users.role`; rename match `teams`; paint signed-out or in-page Soccerville chrome with club colors; point local Firebase at production; start custom domains.
+- Start at: nothing until this plan is resumed. When it is, todo 6 is the invite link already returned by the invites API, rendered in [`ClubInvitesPanel`](../../components/club/ClubInvitesPanel.tsx).
+- Do not: mark [#97](https://github.com/orkunozekin/soccer-team-builder/pull/97) ready or merge it while this plan is paused; restore `ClubSubNav`; put `club_admin` on `users.role`; rename match `teams`; paint signed-out or in-page Soccerville chrome with club colors; point local Firebase at production; start custom domains.
 - Verify with: `lib/utils/clubBranding.test.ts`, `app/api/clubs/[clubId]/route.test.ts`, `components/club/ClubSettingsPanel.test.tsx`, `components/layout/AppShell.test.tsx`, `components/layout/ClubContextSwitcher.test.tsx`.
 - Next skills: `/feature-context` on this file. Run `/handoff` when a later todo lands.
