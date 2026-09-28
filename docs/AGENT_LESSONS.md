@@ -33,6 +33,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-28 — Extra row actions must wrap before overflow clips them
+
+- **Source:** PR #94 · Macroscope
+- **Gap:** Matching the roster’s single non-wrapping row on the admin users list kept the role select and remove button on one line. The name used `min-w-0`, so it shrank to nothing and the `overflow-hidden` list clipped the remove button at 320px.
+- **Going forward:** When a row copies a layout that has fewer trailing actions, give the text a readable `min-width` and `flex-wrap` the action group. Do not rely on `min-w-0` alone inside `overflow-hidden`; the text will absorb the overflow and the last control gets clipped.
+- **Pointers:** `components/admin/UserRoleManager.tsx`
+
 ### 2026-09-27 — Paged lists must keep the edited row, and narrow rows must wrap
 
 - **Source:** PR #94 · Greptile | Macroscope
