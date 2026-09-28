@@ -42,10 +42,13 @@ describe('PlayerTransfer', () => {
       <PlayerTransfer matchId="match1" teams={teams} users={users} />
     )
 
-    expect(screen.queryByText(/move a player/i)).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /^move$/i })
+    ).not.toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: /transfer player/i })
     ).toHaveAttribute('data-state', 'closed')
+    expect(screen.getByText(/move a player to another team/i)).toBeInTheDocument()
   })
 
   it('expands to show transfer controls', async () => {

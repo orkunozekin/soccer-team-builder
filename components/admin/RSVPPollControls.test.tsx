@@ -56,6 +56,9 @@ describe('RSVPPollControls', () => {
     expect(
       screen.getByRole('button', { name: /rsvp poll controls/i })
     ).toHaveAttribute('data-state', 'closed')
+    expect(
+      screen.getByText(/manually control rsvp poll status/i)
+    ).toBeInTheDocument()
   })
 
   it('shows current RSVP status and disables appropriate buttons', async () => {

@@ -8,7 +8,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
-import { Card, CardDescription } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -189,15 +189,17 @@ export function PlayerTransfer({
     <Card>
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="transfer-player" className="border-0">
-          <AccordionTrigger className="px-6 py-4 hover:no-underline">
-            <span className="text-base font-semibold">Transfer Player</span>
+          <AccordionTrigger className="gap-4 px-6 py-4 text-left hover:no-underline">
+            <span className="flex flex-col gap-1">
+              <span className="text-base font-semibold">Transfer Player</span>
+              <span className="font-normal text-zinc-500 dark:text-zinc-400">
+                {mode === 'swap'
+                  ? 'Swap two players between teams in one step'
+                  : 'Move a player to another team'}
+              </span>
+            </span>
           </AccordionTrigger>
           <AccordionContent className="px-6 pb-4">
-            <CardDescription className="mb-4">
-              {mode === 'swap'
-                ? 'Swap two players between teams in one step'
-                : 'Move a player to another team'}
-            </CardDescription>
             <div className="space-y-4">
               <div className="flex gap-2">
                 <Button

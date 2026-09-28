@@ -8,7 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
-import { Card, CardDescription } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import type { RSVP } from '@/types/rsvp'
 import type { User } from '@/types/user'
 
@@ -32,17 +32,19 @@ export function RsvpOrderCard({ matchRSVPs, users }: RsvpOrderCardProps) {
     <Card>
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="rsvp-order" className="border-0">
-          <AccordionTrigger className="px-6 py-4 hover:no-underline">
-            <span className="text-base font-semibold">
-              RSVP order ({orderedRsvps.length})
+          <AccordionTrigger className="gap-4 px-6 py-4 text-left hover:no-underline">
+            <span className="flex flex-col gap-1">
+              <span className="text-base font-semibold">
+                RSVP order ({orderedRsvps.length})
+              </span>
+              <span className="font-normal text-zinc-500 dark:text-zinc-400">
+                Confirmed players in the order they RSVP&apos;d (earliest
+                first). Teams are filled in this order: Team 1 gets the earliest
+                RSVPs, then Team 2, then Team 3, and so on.
+              </span>
             </span>
           </AccordionTrigger>
           <AccordionContent className="px-6 pb-4">
-            <CardDescription className="mb-4">
-              Confirmed players in the order they RSVP&apos;d (earliest first).
-              Teams are filled in this order: Team 1 gets the earliest RSVPs,
-              then Team 2, then Team 3, and so on.
-            </CardDescription>
             {orderedRsvps.length === 0 ? (
               <p className="text-sm text-zinc-500">No confirmed RSVPs yet.</p>
             ) : (
