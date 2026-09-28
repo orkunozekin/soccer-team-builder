@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Pagination } from '@/components/ui/pagination'
 import { getAllMatches } from '@/lib/services/matchService'
 import { getUserRSVPs } from '@/lib/services/rsvpService'
 import { isCheckInWindowEnded } from '@/lib/utils/checkIn'
@@ -51,6 +52,8 @@ function badgeVariant(
   return 'outline'
 }
 
+const PAGE_SIZE = 10
+
 interface PlayerRsvpHistoryProps {
   userId: string
 }
@@ -58,11 +61,13 @@ interface PlayerRsvpHistoryProps {
 export function PlayerRsvpHistory({ userId }: PlayerRsvpHistoryProps) {
   const [rows, setRows] = useState<HistoryRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
 
   useEffect(() => {
     let cancelled = false
     const load = async () => {
       setLoading(true)
+      setPage(1)
       try {
         const [rsvps, matches] = await Promise.all([
           getUserRSVPs(userId),
@@ -102,6 +107,13 @@ export function PlayerRsvpHistory({ userId }: PlayerRsvpHistoryProps) {
     return { confirmed, cancelled, total: rows.length }
   }, [rows])
 
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const pageRows = rows.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  )
+
   return (
     <Card className="overflow-hidden rounded-xl border-zinc-200 shadow-sm dark:border-zinc-800">
       <CardHeader className="pb-3 sm:px-8 sm:pt-8">
@@ -124,48 +136,62 @@ export function PlayerRsvpHistory({ userId }: PlayerRsvpHistoryProps) {
             This player has not RSVP&apos;d to any matches yet.
           </p>
         ) : (
-          <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
-            {rows.map(({ rsvp, match, label }) => {
-              const dateLabel = match
-                ? format(match.date, 'EEE, MMM d')
-                : 'Unknown match'
-              const timeLabel = match?.time ? ` · ${match.time}` : ''
-              const place = match ? locationDisplayName(match.location) : null
-              return (
-                <li
-                  key={rsvp.id}
-                  className="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0"
-                >
-                  <div className="min-w-0 flex-1">
-                    {match ? (
-                      <Link
-                        href={`/admin/matches/${match.id}`}
-                        className="truncate text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
-                      >
-                        {dateLabel}
-                        {timeLabel}
-                      </Link>
-                    ) : (
-                      <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                        {dateLabel}
-                      </p>
-                    )}
-                    {place && (
-                      <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                        {place}
-                      </p>
-                    )}
-                  </div>
-                  <Badge
-                    variant={badgeVariant(label)}
-                    className={badgeClassName(label)}
+          <>
+            <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              {pageRows.map(({ rsvp, match, label }) => {
+                const dateLabel = match
+                  ? format(match.date, 'EEE, MMM d')
+                  : 'Unknown match'
+                const timeLabel = match?.time ? ` · ${match.time}` : ''
+                const place = match ? locationDisplayName(match.location) : null
+                return (
+                  <li
+                    key={rsvp.id}
+                    className="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0"
                   >
-                    {label}
-                  </Badge>
-                </li>
-              )
-            })}
-          </ul>
+                    <div className="min-w-0 flex-1">
+                      {match ? (
+                        <Link
+                          href={`/admin/matches/${match.id}`}
+                          className="truncate text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
+                        >
+                          {dateLabel}
+                          {timeLabel}
+                        </Link>
+                      ) : (
+                        <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                          {dateLabel}
+                        </p>
+                      )}
+                      {place && (
+                        <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                          {place}
+                        </p>
+                      )}
+                    </div>
+                    <Badge
+                      variant={badgeVariant(label)}
+                      className={badgeClassName(label)}
+                    >
+                      {label}
+                    </Badge>
+                  </li>
+                )
+              })}
+            </ul>
+            {totalPages > 1 && (
+              <Pagination
+                page={currentPage}
+                totalPages={totalPages}
+                totalCount={rows.length}
+                pageSize={PAGE_SIZE}
+                itemLabel="RSVPs"
+                onPrevious={() => setPage(Math.max(1, currentPage - 1))}
+                onNext={() => setPage(Math.min(totalPages, currentPage + 1))}
+                onPageChange={setPage}
+              />
+            )}
+          </>
         )}
       </CardContent>
     </Card>
