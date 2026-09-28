@@ -2,16 +2,18 @@
 
 Plan for the follow-ups listed under Later in the [v1 white-label plan](./white-label-clubs-feature-plan.md): flag club creation, rebuild navigation around the selected club, then add club branding and the remaining club-admin surfaces. v1 tenancy stays as shipped.
 
-**Sequencing dependency:** todos 1–4 are complete. Do not resume todo 5 or later until [club-context-nav-feature-plan.md](./club-context-nav-feature-plan.md) is implemented. Remaining work assumes its Vercel-style context switcher, desktop club rail, mobile sheet, and account control have replaced the stacked platform bar + horizontal club sub-nav.
+**Sequencing dependency:** todos 1–4 are complete. The [club-context-nav](./club-context-nav-feature-plan.md) prerequisite landed in [#86](https://github.com/orkunozekin/soccer-team-builder/pull/86)–[#88](https://github.com/orkunozekin/soccer-team-builder/pull/88); remaining work builds on its context switcher, desktop club rail, mobile sheet, and account control.
+
+**Backburner:** QR invites (todo 6) and branding / color customization (todo 5) are shelved and not planned any time soon. Do not pick them up unless the product owner asks. Next up is invite-only registration (todo 7).
 
 ## Status
 
 | Field | Value |
 |-------|-------|
-| Status | paused — resume after club-context-nav implementation |
+| Status | in progress — todos 7–10 next; todos 5 and 6 on the backburner |
 | Owner session | — |
-| Last updated | 2026-09-27 |
-| Related PR / branch | Prerequisite: [club-context-nav plan](./club-context-nav-feature-plan.md) (not implemented yet). Completed here: [#83](https://github.com/orkunozekin/soccer-team-builder/pull/83) club-admin console, [#82](https://github.com/orkunozekin/soccer-team-builder/pull/82) slug matches, [#80](https://github.com/orkunozekin/soccer-team-builder/pull/80) club sub-nav, [#79](https://github.com/orkunozekin/soccer-team-builder/pull/79) `club-creation`. Continues [v1 plan](./white-label-clubs-feature-plan.md) (merged [#65](https://github.com/orkunozekin/soccer-team-builder/pull/65), [#71](https://github.com/orkunozekin/soccer-team-builder/pull/71), [#73](https://github.com/orkunozekin/soccer-team-builder/pull/73), [#74](https://github.com/orkunozekin/soccer-team-builder/pull/74), [#76](https://github.com/orkunozekin/soccer-team-builder/pull/76)) |
+| Last updated | 2026-09-28 |
+| Related PR / branch | Parked: [#101](https://github.com/orkunozekin/soccer-team-builder/pull/101) `cursor/club-invite-qr` (QR invites, not merging). Prerequisite [club-context-nav plan](./club-context-nav-feature-plan.md) landed in #86–#88. Completed here: [#83](https://github.com/orkunozekin/soccer-team-builder/pull/83) club-admin console, [#82](https://github.com/orkunozekin/soccer-team-builder/pull/82) slug matches, [#80](https://github.com/orkunozekin/soccer-team-builder/pull/80) club sub-nav, [#79](https://github.com/orkunozekin/soccer-team-builder/pull/79) `club-creation`. Continues [v1 plan](./white-label-clubs-feature-plan.md) (merged [#65](https://github.com/orkunozekin/soccer-team-builder/pull/65), [#71](https://github.com/orkunozekin/soccer-team-builder/pull/71), [#73](https://github.com/orkunozekin/soccer-team-builder/pull/73), [#74](https://github.com/orkunozekin/soccer-team-builder/pull/74), [#76](https://github.com/orkunozekin/soccer-team-builder/pull/76)) |
 
 ## Goals (v1 of this plan)
 
@@ -32,8 +34,8 @@ Ship in this order. Todos 1–4 are historical completed slices. Before todo 5, 
 2. [x] Split the shell into a Soccerville platform bar and a club sub-nav with a club switcher (historical milestone; the club-context-nav prerequisite replaces this chrome before todo 5).
 3. [x] Move member match pages to `/c/[slug]/…` and redirect legacy `/matches` URLs.
 4. [x] Move roster, invites, and club settings into club-scoped navigation (initially the sub-nav; retained in the replacement rail / sheet).
-5. [ ] After club-context-nav lands, add club logo, display name, and primary color on the club context switcher / rail and equivalent mobile club chrome only.
-6. [ ] QR code for the existing invite URL.
+5. [ ] **Backburner.** Add club logo, display name, and primary color on the club context switcher / rail and equivalent mobile club chrome only.
+6. [ ] **Backburner.** QR code for the existing invite URL. Implemented and UI-tested in parked [#101](https://github.com/orkunozekin/soccer-team-builder/pull/101); not merging for now.
 7. [ ] Invite-only registration behind `invite-only-registration` (default off).
 8. [ ] Club ownership transfer (`createdBy`), leaving at least one `club_admin`.
 9. [ ] Club-scoped attendance stats for the selected club.
@@ -212,15 +214,15 @@ Starting map only. Touch any other files the work needs: tests, hooks, services,
 
 ## Acceptance criteria
 
-- [ ] Before todo 5 starts, every [club-context-nav acceptance criterion](./club-context-nav-feature-plan.md#acceptance-criteria) is complete and the replacement shell is the implementation baseline.
+- [x] The club-context-nav replacement shell ([#86](https://github.com/orkunozekin/soccer-team-builder/pull/86)–[#88](https://github.com/orkunozekin/soccer-team-builder/pull/88)) is the implementation baseline for remaining work.
 - [x] With `club-creation` off, super users do not see the create form and `POST /api/clubs` returns 403. With the flag on (or `NEXT_PUBLIC_FF_CLUB_CREATION=true`), create still works for a super user. Missing server SDK key fails closed.
 - [x] Historical todo 2 baseline: signed-in users see a Soccerville platform bar and a club sub-nav; the prerequisite replaces this chrome while preserving club switching and platform-account access.
 - [x] Signed-out users still see the centered Soccerville header. Users with no club have a Join path in club-owned navigation.
 - [x] `/c/[slug]/matches` is the match list for that club. `/matches` redirects there from `activeClubId` or the sole membership. A non-member slug 404s.
 - [x] Switching clubs updates `activeClubId` and the URL. Two tabs can show two clubs.
 - [x] Roster, invites, and settings are reachable from club-owned navigation for the roles above, and the APIs still enforce `verifyClubAdmin` / the invite gate.
-- [ ] Club logo, display name, and primary color appear on the club context switcher / rail and equivalent mobile club chrome. Platform-level Soccerville chrome stays platform-branded. Invalid color or logo values are rejected.
-- [ ] Invite QR encodes the existing `/join?code=` URL.
+- [ ] (Backburner) Club logo, display name, and primary color appear on the club context switcher / rail and equivalent mobile club chrome. Platform-level Soccerville chrome stays platform-branded. Invalid color or logo values are rejected.
+- [ ] (Backburner) Invite QR encodes the existing `/join?code=` URL.
 - [ ] `invite-only-registration` off preserves open registration. On, registration requires a code.
 - [ ] Ownership transfer updates `createdBy` and cannot remove the last `club_admin`.
 - [ ] Attendance stats on the selected club ignore other clubs’ matches.
@@ -229,6 +231,8 @@ Starting map only. Touch any other files the work needs: tests, hooks, services,
 
 ## Later
 
+- Branding / color customization (todo 5). Backburner, 2026-09-28.
+- QR invites (todo 6). Backburner, 2026-09-28. Resume from [#101](https://github.com/orkunozekin/soccer-team-builder/pull/101): client-only `qrcode.react` (MIT, no external service) in [`ClubInvitesPanel`](../../components/club/ClubInvitesPanel.tsx), encoding the same absolute join URL as Copy link. Rebase onto `main` before reviving.
 - Custom domain host mapping and the chrome choice for that host (todo 11). Do not fold it into the nav PR.
 - Command palette.
 - Additional switcher ranking or recent-club behavior beyond the search delivered by [club-context-nav-feature-plan.md](./club-context-nav-feature-plan.md).
@@ -250,26 +254,26 @@ Starting map only. Touch any other files the work needs: tests, hooks, services,
   - Sub-nav always lists role-appropriate Roster / Invites / Settings (`includeClubAdminSections` removed).
   - Profile “Clubs I manage” is links only; roster/invite/settings controls removed from profile.
   - Path helpers: `clubRosterPath` / `clubInvitesPath` / `clubSettingsPath` in [`clubPaths.ts`](../../lib/utils/clubPaths.ts).
-- **Sequencing decision:** remaining white-label v2 work is paused until [club-context-nav-feature-plan.md](./club-context-nav-feature-plan.md) is implemented. Its landed shell becomes the baseline for branding and all later work.
+- **Sequencing decision (2026-09-27):** remaining work waited on [club-context-nav-feature-plan.md](./club-context-nav-feature-plan.md). That shell landed in [#86](https://github.com/orkunozekin/soccer-team-builder/pull/86)–[#88](https://github.com/orkunozekin/soccer-team-builder/pull/88).
+- **Backburner decision (2026-09-28):** branding / color customization (todo 5) and QR invites (todo 6) are shelved. QR was built and UI-tested in [#101](https://github.com/orkunozekin/soccer-team-builder/pull/101), which is parked, not merging.
 
 ### Remaining work
 
-1. Implement and complete [club-context-nav-feature-plan.md](./club-context-nav-feature-plan.md) outside this plan.
-2. Re-run `/feature-context` on this plan, verify the prerequisite’s landed components and tests, then refresh Current state / Likely files.
-3. Add branding fields and paint the club context switcher / rail and equivalent mobile chrome (todo 5).
-4. QR, invite-only flag, ownership transfer, club-scoped attendance, club-context copy (todos 6–10).
-5. Custom domain only after the above, as its own slice (todo 11).
+1. Re-verify Current state / Likely files against the landed club-context-nav shell (the table above still describes `ClubSubNav`).
+2. Invite-only registration behind `invite-only-registration` (todo 7).
+3. Ownership transfer, club-scoped attendance, club-context copy (todos 8–10).
+4. Custom domain only after the above, as its own slice (todo 11).
+5. Todos 5 and 6 stay on the backburner (see Later) until the product owner revives them.
 
 ### Blockers / risks
 
 - Create the LaunchDarkly `club-creation` boolean (default off) in each environment dashboard, and set `LAUNCHDARKLY_SDK_KEY` in deployed server env. Until then, creation stays off unless `NEXT_PUBLIC_FF_CLUB_CREATION=true` (dev/demo).
-- The prerequisite nav plan is not implemented yet. Do not begin branding against the temporary horizontal `ClubSubNav`, or the work will target chrome scheduled for removal.
 - In-app links that still push `/matches` rely on the redirect (login/register/join/wordmark). Prefer updating call sites to slug paths when touching those files.
 - Players with `allowPlayerInvites` can create invites but cannot list/revoke (GET/revoke still require `verifyClubAdmin`).
 
 ### Pointers for the next agent
 
-- Start at: confirm [club-context-nav-feature-plan.md](./club-context-nav-feature-plan.md) is implemented and its handoff is complete. Then re-verify the landed shell component names before Design §5 (branding), extending `ClubSettings` / `PATCH /api/clubs/[clubId]` and painting club-owned chrome only.
-- Do not: resume todo 5 before the nav prerequisite lands; extend the temporary horizontal `ClubSubNav`; put `club_admin` on `users.role`; rename match `teams`; paint platform Soccerville chrome with club colors; point local Firebase at production; start custom domains.
-- Verify with: the landed club-context-nav layout/switcher tests plus `lib/utils/clubPaths.test.ts`, `lib/utils/resolveSelectedClub.test.ts`, relevant branding/settings tests, and a manual desktop/mobile check of scoped club branding. Do not assume `components/layout/ClubSubNav.test.tsx` still exists.
-- Next skills: `/feature-context` on the club-context-nav plan until that prerequisite is complete; then `/feature-context` on this file. Run `/handoff` whenever either plan’s status changes.
+- Start at: Design “Todos 6 to 10” → invite-only registration (todo 7). Follow the existing client + server fail-closed flag pattern (`club-creation` in Design §1).
+- Do not: pick up branding (todo 5) or QR invites (todo 6) unless asked; extend the temporary horizontal `ClubSubNav`; put `club_admin` on `users.role`; rename match `teams`; paint platform Soccerville chrome with club colors; point local Firebase at production; start custom domains.
+- Verify with: focused flag, registration, and invite-redeem API tests for todo 7, plus `lib/utils/clubPaths.test.ts` and `lib/utils/resolveSelectedClub.test.ts`. Do not assume `components/layout/ClubSubNav.test.tsx` still exists.
+- Next skills: `/feature-context` on this file before coding; `/handoff` whenever status changes.
