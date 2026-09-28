@@ -248,6 +248,10 @@ describe('AppShell', () => {
     expect(
       within(railFooter).queryByRole('navigation', { name: 'Club sections' })
     ).not.toBeInTheDocument()
+    const railScroll = railFooter.closest('.overflow-y-auto') as HTMLElement
+    expect(
+      within(railScroll).getByRole('navigation', { name: 'Club sections' })
+    ).toBeInTheDocument()
 
     await user.click(screen.getByLabelText('Open club menu'))
     const sheetFooter = within(screen.getByRole('dialog')).getByRole(
@@ -260,6 +264,10 @@ describe('AppShell', () => {
     expect(
       within(sheetFooter).queryByRole('navigation', { name: 'Club sections' })
     ).not.toBeInTheDocument()
+    const sheetScroll = sheetFooter.closest('.overflow-y-auto') as HTMLElement
+    expect(
+      within(sheetScroll).getByRole('navigation', { name: 'Club sections' })
+    ).toBeInTheDocument()
   })
 
   it('hides admin sections for non super users', () => {
