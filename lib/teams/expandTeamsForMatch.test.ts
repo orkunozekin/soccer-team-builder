@@ -65,6 +65,11 @@ function createMockFirestore(initial: {
       if (path === 'users') {
         return {
           get: async () => makeQuerySnap(users),
+          doc: (id: string) => ({
+            id,
+            get: async () =>
+              makeDocSnap(users.find(user => user.id === id) ?? null),
+          }),
         }
       }
 
@@ -108,6 +113,11 @@ function createMockFirestore(initial: {
 
       throw new Error(`Unexpected collection path: ${path}`)
     },
+    getAll: async (...refs: Array<{ id: string }>) =>
+      refs.map(ref => {
+        const found = users.find(user => user.id === ref.id) ?? null
+        return { id: ref.id, ...makeDocSnap(found) }
+      }),
     batch: () => {
       const pendingDeletes: string[] = []
       return {
@@ -216,9 +226,9 @@ describe('expandTeamsForMatch', () => {
 
     expect(result).toEqual({ regenerated: true })
     expect(getTeams()).toHaveLength(2)
-    expect(getTeams().flatMap(t => (t.data.playerIds as string[]) ?? [])).toEqual(
-      expect.arrayContaining(['p1', 'p2'])
-    )
+    expect(
+      getTeams().flatMap(t => (t.data.playerIds as string[]) ?? [])
+    ).toEqual(expect.arrayContaining(['p1', 'p2']))
   })
 
   it('does nothing when all RSVPs are already assigned and team count is sufficient', async () => {
@@ -228,10 +238,7 @@ describe('expandTeamsForMatch', () => {
         makeRsvpDoc('r2', 'p2', new Date('2024-01-01T11:00:00Z')),
       ],
       users: [makeUserDoc('p1'), makeUserDoc('p2')],
-      teams: [
-        makeTeamDoc('team1', 1, ['p1']),
-        makeTeamDoc('team2', 2, ['p2']),
-      ],
+      teams: [makeTeamDoc('team1', 1, ['p1']), makeTeamDoc('team2', 2, ['p2'])],
     })
 
     const result = await expandTeamsForMatch(adminDb, 'match1')
@@ -282,9 +289,7 @@ describe('expandTeamsForMatch', () => {
           id === 'gk_late' ? 'GK' : 'ST'
         )
       ),
-      users: allIds.map(id =>
-        makeUserDoc(id, id === 'gk_late' ? 'GK' : 'ST')
-      ),
+      users: allIds.map(id => makeUserDoc(id, id === 'gk_late' ? 'GK' : 'ST')),
       teams: [
         makeTeamDoc('team1', 1, team1Ids),
         makeTeamDoc('team2', 2, team2Ids),
@@ -326,10 +331,7 @@ describe('expandTeamsForMatch', () => {
         makeUserDoc('p2'),
         makeUserDoc('gk_late', 'GK'),
       ],
-      teams: [
-        makeTeamDoc('team1', 1, ['p1']),
-        makeTeamDoc('team2', 2, ['p2']),
-      ],
+      teams: [makeTeamDoc('team1', 1, ['p1']), makeTeamDoc('team2', 2, ['p2'])],
       match: {
         id: 'match1',
         data: { manualTeamAssignments: { p1: 2 } },
@@ -361,9 +363,7 @@ describe('expandTeamsForMatch', () => {
           id === 'gk_late' ? 'GK' : 'ST'
         )
       ),
-      users: allIds.map(id =>
-        makeUserDoc(id, id === 'gk_late' ? 'GK' : 'ST')
-      ),
+      users: allIds.map(id => makeUserDoc(id, id === 'gk_late' ? 'GK' : 'ST')),
       teams: [
         makeTeamDoc('team1', 1, team1Ids),
         makeTeamDoc('team2', 2, team2Ids),
@@ -407,9 +407,7 @@ describe('expandTeamsForMatch', () => {
           id === 'gk_late' ? 'GK' : 'ST'
         )
       ),
-      users: allIds.map(id =>
-        makeUserDoc(id, id === 'gk_late' ? 'GK' : 'ST')
-      ),
+      users: allIds.map(id => makeUserDoc(id, id === 'gk_late' ? 'GK' : 'ST')),
       teams: [
         makeTeamDoc('team1', 1, team1Ids),
         makeTeamDoc('team2', 2, team2Ids),
@@ -443,9 +441,7 @@ describe('expandTeamsForMatch', () => {
           id === 'gk_late' ? 'GK' : 'ST'
         )
       ),
-      users: allIds.map(id =>
-        makeUserDoc(id, id === 'gk_late' ? 'GK' : 'ST')
-      ),
+      users: allIds.map(id => makeUserDoc(id, id === 'gk_late' ? 'GK' : 'ST')),
       teams: [
         makeTeamDoc('team1', 1, team1Ids),
         makeTeamDoc('team2', 2, team2Ids),

@@ -72,6 +72,7 @@ function createRebalanceMockRepos(initial: {
       if (path === 'users') {
         return {
           get: async () => makeQuerySnap(initial.users),
+          doc: (id: string) => ({ id }),
         }
       }
 
@@ -108,6 +109,11 @@ function createRebalanceMockRepos(initial: {
 
       throw new Error(`Unexpected collection path: ${path}`)
     },
+    getAll: async (...refs: Array<{ id: string }>) =>
+      refs.map(ref => {
+        const found = initial.users.find(user => user.id === ref.id) ?? null
+        return { id: ref.id, ...makeDocSnap(found) }
+      }),
     batch: () => {
       const pending: Array<{ id: string; data: Record<string, unknown> }> = []
       return {
@@ -397,13 +403,21 @@ describe('POST /api/teams/rebalance', () => {
   it('places later team pairs by contiguous RSVP order (not position scramble)', async () => {
     // 44 players → 4 teams of 11. RSVPs 23–24 must land on Team 3, not Team 4.
     const playerIds = Array.from({ length: 44 }, (_, i) => `p${i + 1}`)
-    const positions = ['ST', 'CB', 'CM', 'CAM', 'LW', 'RB', 'CDM', 'LWB', 'RW', 'LB', 'GK']
+    const positions = [
+      'ST',
+      'CB',
+      'CM',
+      'CAM',
+      'LW',
+      'RB',
+      'CDM',
+      'LWB',
+      'RW',
+      'LB',
+      'GK',
+    ]
     const rsvps = playerIds.map((id, i) =>
-      makeRsvpDoc(
-        `r${i + 1}`,
-        id,
-        new Date(Date.UTC(2024, 0, 1, 10, i))
-      )
+      makeRsvpDoc(`r${i + 1}`, id, new Date(Date.UTC(2024, 0, 1, 10, i)))
     )
     const users = playerIds.map((id, i) =>
       makeUserDoc(id, positions[i % positions.length]!)

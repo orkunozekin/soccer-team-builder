@@ -3,12 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyClubAdminForMatch } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { auditLog } from '@/lib/services/auditService'
+import { getUsersByIdsAdmin } from '@/lib/users/getUsersByIdsAdmin'
 import {
   applyPersistedTransfersKeepingBalance,
   isGoalkeeper,
 } from '@/lib/utils/teamGenerator'
 import type { User } from '@/types/user'
-import { normalizeUserRole } from '@/types/user'
 
 function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
   if (!t) return null
@@ -124,21 +124,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Build user map (position/role/etc)
-    const usersSnap = await adminDb.collection('users').get()
-    const users: User[] = usersSnap.docs.map(d => {
-      const data = d.data()
-      return {
-        uid: (data.uid as string) ?? d.id,
-        email: (data.email as string) ?? '',
-        displayName: (data.displayName as string) ?? '',
-        jerseyNumber: (data.jerseyNumber as number | null) ?? null,
-        position: (data.position as string | null) ?? null,
-        role: normalizeUserRole(data.role),
-        createdAt: timestampToDate(data.createdAt) || new Date(),
-        updatedAt: timestampToDate(data.updatedAt) || new Date(),
-      }
-    })
+    // Build user map for RSVP participants only (avoid full users collection scan).
+    const users: User[] = await getUsersByIdsAdmin(
+      adminDb,
+      rsvps.map(r => r.userId)
+    )
     const userById = new Map(users.map(u => [u.uid, u]))
 
     // Deduplicate RSVP list by userId, keep earliest RSVP timestamp
@@ -254,9 +244,7 @@ export async function POST(request: NextRequest) {
     const finalByNumber = new Map(
       finalTeams.map(t => [t.teamNumber, t.playerIds])
     )
-    const finalAssigned = teams.map(
-      t => finalByNumber.get(t.teamNumber) ?? []
-    )
+    const finalAssigned = teams.map(t => finalByNumber.get(t.teamNumber) ?? [])
 
     const TEAM_COLORS = [
       '#f97316',

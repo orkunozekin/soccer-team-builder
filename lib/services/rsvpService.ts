@@ -2,6 +2,7 @@ import { where } from 'firebase/firestore/lite'
 import {
   createDocument,
   deleteDocument,
+  getCollectionCount,
   getDocument,
   queryDocuments,
   timestampToDate,
@@ -84,13 +85,16 @@ export const getUserRSVPs = async (userId: string): Promise<RSVP[]> => {
   return rsvps.map((rsvp: Record<string, unknown>) => mapRsvpDoc(rsvp))
 }
 
-/** Returns the number of confirmed RSVPs for a match. */
+/**
+ * Returns the number of confirmed RSVPs for a match.
+ * Uses a count aggregation (~1 read) instead of loading every RSVP doc.
+ * Prefer {@link Match.rsvpConfirmedCount} from an already-loaded match when present.
+ */
 export const getMatchRsvpCount = async (matchId: string): Promise<number> => {
-  const rsvps = await queryDocuments('rsvps', [
+  return getCollectionCount('rsvps', [
     where('matchId', '==', matchId),
     where('status', '==', 'confirmed'),
   ])
-  return rsvps.length
 }
 
 export const cancelRSVP = async (rsvpId: string): Promise<void> => {

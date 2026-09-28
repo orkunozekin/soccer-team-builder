@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { getAllMatches } from '@/lib/services/matchService'
+import { getMatchesByIds } from '@/lib/services/matchService'
 import { getUserRSVPs } from '@/lib/services/rsvpService'
 import { computeAttendanceStats } from '@/lib/utils/attendanceStats'
 import type { AttendanceStats } from '@/lib/utils/attendanceStats'
@@ -26,10 +26,12 @@ export function AttendanceStatsCard({ userId }: AttendanceStatsCardProps) {
     const load = async () => {
       setLoading(true)
       try {
-        const [rsvps, matches] = await Promise.all([
-          getUserRSVPs(userId),
-          getAllMatches({ includeDeleted: true }),
-        ])
+        const rsvps = await getUserRSVPs(userId)
+        if (cancelled) return
+        const matches = await getMatchesByIds(
+          rsvps.map(r => r.matchId),
+          { includeDeleted: true }
+        )
         if (cancelled) return
         const matchesById = new Map(matches.map(m => [m.id, m]))
         setStats(computeAttendanceStats(rsvps, matchesById))

@@ -38,6 +38,10 @@ function mapDocToMatch(match: Record<string, unknown>, id: string): Match {
     scheduleSlotId: (match.scheduleSlotId as string | null | undefined) ?? null,
     scheduleOccurrenceKey:
       (match.scheduleOccurrenceKey as string | null | undefined) ?? null,
+    rsvpConfirmedCount:
+      typeof match.rsvpConfirmedCount === 'number'
+        ? match.rsvpConfirmedCount
+        : null,
     createdAt: timestampToDate(match.createdAt as never) || new Date(),
     updatedAt: timestampToDate(match.updatedAt as never) || new Date(),
   }
@@ -50,6 +54,32 @@ export const getMatch = async (matchId: string): Promise<Match | null> => {
   const match = mapDocToMatch(matchDoc, matchId)
   if (match.deletedAt) return null
   return match
+}
+
+/**
+ * Load specific matches by id. Prefer this over {@link getAllMatches} when the
+ * caller already knows which match ids it needs (e.g. a user's RSVP history).
+ */
+export const getMatchesByIds = async (
+  matchIds: string[],
+  options?: { includeDeleted?: boolean }
+): Promise<Match[]> => {
+  const uniqueIds = Array.from(
+    new Set(matchIds.filter((id): id is string => Boolean(id)))
+  )
+  if (uniqueIds.length === 0) return []
+
+  const matches = await Promise.all(
+    uniqueIds.map(async id => {
+      const matchDoc = await getDocument('matches', id)
+      if (!matchDoc) return null
+      const match = mapDocToMatch(matchDoc, id)
+      if (!options?.includeDeleted && match.deletedAt) return null
+      return match
+    })
+  )
+
+  return matches.filter((m): m is Match => m != null)
 }
 
 export const getAllMatches = async (options?: {
@@ -132,8 +162,7 @@ export const listMatchesForViewer = async (input: {
   isSuperUser: boolean
   includeDeleted?: boolean
 }): Promise<Match[]> => {
-  const preferred =
-    typeof input.clubId === 'string' ? input.clubId.trim() : ''
+  const preferred = typeof input.clubId === 'string' ? input.clubId.trim() : ''
 
   if (input.isSuperUser && !preferred) {
     return getAllMatches({ includeDeleted: input.includeDeleted })
