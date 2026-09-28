@@ -175,6 +175,7 @@ export function UserRoleManager() {
   }, [baseUsers, currentUser?.uid])
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+  const showPagination = browsing && totalCount > PAGE_SIZE
 
   const patchUserInSwrCache = (userId: string, patch: Partial<UserRow>) => {
     setSearchUsers(prev =>
@@ -297,61 +298,65 @@ export function UserRoleManager() {
         <Card className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
           {searchLoading ? 'Searching…' : 'Loading…'}
         </Card>
-      ) : visibleUsers.length === 0 ? (
-        <Card className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
-          No users found.
-        </Card>
       ) : (
         <Card className="overflow-hidden">
-          <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-            {visibleUsers.map(user => (
-              <li
-                key={user.uid}
-                className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
-              >
-                <InitialsAvatar name={user.displayName || user.email} />
-                <div className="min-w-0 flex-1">
-                  <Link
-                    href={`/admin/players/${user.uid}`}
-                    className="block truncate text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
-                  >
-                    {user.displayName}
-                  </Link>
-                  <div className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                    {user.email}
+          {visibleUsers.length === 0 ? (
+            <p className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
+              No users found.
+            </p>
+          ) : (
+            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {visibleUsers.map(user => (
+                <li
+                  key={user.uid}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
+                >
+                  <InitialsAvatar name={user.displayName || user.email} />
+                  <div className="min-w-[8rem] flex-1">
+                    <Link
+                      href={`/admin/players/${user.uid}`}
+                      className="block truncate text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
+                    >
+                      {user.displayName}
+                    </Link>
+                    <div className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                      {user.email}
+                    </div>
                   </div>
-                </div>
-                <Select
-                  value={user.role}
-                  onValueChange={(value: UserRole) =>
-                    handleRoleChange(user.uid, value)
-                  }
-                  disabled={updating === user.uid || deleting === user.uid}
-                >
-                  <SelectTrigger className="h-9 w-[8.5rem] shrink-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="super_user">Super user</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  disabled={updating === user.uid || deleting === user.uid}
-                  onClick={() => setDeleteDialogUserId(user.uid)}
-                  aria-label={`Remove ${user.displayName || user.email}`}
-                >
-                  <CloseIcon
-                    className={deleting === user.uid ? 'opacity-50' : ''}
-                  />
-                </Button>
-              </li>
-            ))}
-          </ul>
-          {browsing && totalCount > PAGE_SIZE && (
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Select
+                      value={user.role}
+                      onValueChange={(value: UserRole) =>
+                        handleRoleChange(user.uid, value)
+                      }
+                      disabled={updating === user.uid || deleting === user.uid}
+                    >
+                      <SelectTrigger className="h-9 w-[8.5rem] shrink-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="super_user">Super user</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      disabled={updating === user.uid || deleting === user.uid}
+                      onClick={() => setDeleteDialogUserId(user.uid)}
+                      aria-label={`Remove ${user.displayName || user.email}`}
+                    >
+                      <CloseIcon
+                        className={deleting === user.uid ? 'opacity-50' : ''}
+                      />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          {showPagination && (
             <Pagination
               className="mt-0 border-zinc-100 px-4 py-3 dark:border-zinc-800"
               page={page}

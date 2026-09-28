@@ -33,6 +33,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-28 — Filtered pages still need their pager
+
+- **Source:** PR #98 · Greptile
+- **Gap:** Admin user rows hide the signed-in user. Moving pagination inside the “has visible rows” branch meant a later page that only contained that user rendered “No users found” with no Previous control. The same pass also dropped `flex-wrap`, so at 320px the name shrank to nothing beside the fixed role select and remove button.
+- **Going forward:** Render list pagination from the unfiltered total, not from the rows left after hiding the current user. A desktop single-line row still needs `flex-wrap` and a minimum width on the name so phones wrap the action group instead of truncating the person.
+- **Pointers:** `components/admin/UserRoleManager.tsx` (`showPagination`, row `min-w-[8rem]`)
+
 ### 2026-09-28 — Extra row actions must wrap before overflow clips them
 
 - **Source:** PR #94 · Macroscope
