@@ -33,6 +33,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-28 — Denormalized counters need bootstrap, transactional cancel, and delete sync
+
+- **Source:** PR #99 · Greptile | Macroscope
+- **Gap:** Shipping `rsvpConfirmedCount` for list headcounts left several consistency holes: (1) legacy matches without `_state/rsvp` initialized the counter at 0 on the next RSVP; (2) cancel decremented outside a status re-check so concurrent cancels could double-count down; (3) account deletion deleted confirmed RSVPs without refreshing match counters; (4) match create wrote match + `_state` non-atomically; (5) lazy count loads bumped a shared generation and stranded in-flight upcoming counts.
+- **Going forward:** When denormalizing a counter onto a parent doc, seed from source documents before the first increment, mutate the counter in the same transaction that changes source status, recompute (or invalidate) after bulk deletes, write parent + state atomically, and never invalidate in-flight reads just to start a secondary fetch.
+- **Pointers:** `lib/matches/syncMatchRsvpCounts.ts`, `app/api/rsvp/route.ts`, `lib/matches/createMatch.ts`, `app/api/users/[userId]/route.ts`, `components/matches/ClubMatchesView.tsx`
+
 ### 2026-09-28 — Extra row actions must wrap before overflow clips them
 
 - **Source:** PR #94 · Macroscope

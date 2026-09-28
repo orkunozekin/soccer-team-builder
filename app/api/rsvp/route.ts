@@ -13,6 +13,7 @@ import {
   performGkSwap,
   swapGkWithLowerPriority,
 } from '@/lib/teams/swapGkWithLowerTeam'
+import { ensureMatchRsvpStateSeeded } from '@/lib/matches/syncMatchRsvpCounts'
 import { getUserPositionsByIdsAdmin } from '@/lib/users/getUsersByIdsAdmin'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import { hasMatchStarted } from '@/lib/utils/rsvpScheduler'
@@ -178,6 +179,9 @@ export async function POST(request: NextRequest) {
       .doc(matchId)
       .collection('_state')
       .doc('rsvp')
+    // Legacy matches may lack `_state/rsvp`; seed from existing confirmed RSVPs
+    // so the first increment does not publish rsvpConfirmedCount: 1 incorrectly.
+    await ensureMatchRsvpStateSeeded(adminDb, matchId)
     const TX_MAX_ATTEMPTS = 7
     const TX_BACKOFF_BASE_MS = 80
     const TX_BACKOFF_JITTER_MS = 120
@@ -606,12 +610,20 @@ export async function PATCH(request: NextRequest) {
       .doc(matchId)
       .collection('_state')
       .doc('rsvp')
-    const wasGk = isGoalkeeper((data.position as string | null) ?? null)
     const now = Timestamp.now()
     const matchRefForCancel = adminDb.collection('matches').doc(matchId)
+    let cancelledInTx = false
     await adminDb.runTransaction(async tx => {
+      // Re-check status inside the transaction so concurrent cancels cannot
+      // double-decrement `_state` / rsvpConfirmedCount.
+      const latestRsvpSnap = await tx.get(rsvpRef)
+      if (!latestRsvpSnap.exists) return
+      const latestRsvp = latestRsvpSnap.data() ?? {}
+      if (latestRsvp.status !== 'confirmed') return
+
       const stateSnap = await tx.get(stateRefForCancel)
       const matchSnap = await tx.get(matchRefForCancel)
+      const wasGk = isGoalkeeper((latestRsvp.position as string | null) ?? null)
       let newConfirmedCount: number | null = null
       let newGkCount: number | null = null
       if (stateSnap.exists) {
@@ -632,6 +644,7 @@ export async function PATCH(request: NextRequest) {
       }
 
       tx.update(rsvpRef, { status: 'cancelled', updatedAt: now })
+      cancelledInTx = true
       if (stateSnap.exists && newConfirmedCount != null && newGkCount != null) {
         tx.set(
           stateRefForCancel,
@@ -651,6 +664,9 @@ export async function PATCH(request: NextRequest) {
         )
       }
     })
+    if (!cancelledInTx) {
+      return NextResponse.json({ cancelled: true, teamsUpdated: false })
+    }
 
     const { removed } = await removeUserFromMatchTeams(adminDb, matchId, userId)
 

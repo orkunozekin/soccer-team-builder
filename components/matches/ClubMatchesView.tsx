@@ -148,6 +148,7 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
           await loadCountsForMatches(needsFetch, countGen)
         } catch (countError) {
           console.error('Error fetching RSVP counts:', countError)
+          for (const m of needsFetch) attemptedCountIds.current.delete(m.id)
         }
       }
     } catch (error) {
@@ -192,6 +193,8 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
   }, [matches, filter, showAdminList])
 
   // Lazy-load counts when an admin opens Past / All and cards lack counts.
+  // Do not bump countsGen here — that would discard in-flight upcoming counts
+  // while leaving their IDs marked attempted (blank cards until full refetch).
   useEffect(() => {
     if (listStatus !== 'ready' || !showAdminList) return
     const missing = visibleMatches.filter(
@@ -200,9 +203,11 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     )
     if (missing.length === 0) return
     for (const m of missing) attemptedCountIds.current.add(m.id)
-    const gen = ++countsGen.current
+    const gen = countsGen.current
     void loadCountsForMatches(missing, gen).catch(countError => {
       console.error('Error fetching RSVP counts:', countError)
+      // Allow a later retry if this lazy fetch failed.
+      for (const m of missing) attemptedCountIds.current.delete(m.id)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when visible set changes
   }, [listStatus, showAdminList, visibleMatches])

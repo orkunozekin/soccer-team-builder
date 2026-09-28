@@ -30,36 +30,31 @@ export async function createMatchDoc(
   const now = Timestamp.now()
   const locationValue = serializeMatchLocation(input.location ?? null)
 
-  await adminDb
-    .collection('matches')
-    .doc(matchId)
-    .set({
-      date: Timestamp.fromDate(input.date),
-      time: input.time,
-      location: locationValue,
-      clubId: input.clubId ?? null,
-      rsvpOpen: false,
-      rsvpOpenAt: openAt ? Timestamp.fromDate(openAt) : null,
-      rsvpCloseAt: closeAt ? Timestamp.fromDate(closeAt) : null,
-      deletedAt: null,
-      scheduleId: input.scheduleId ?? null,
-      scheduleSlotId: input.scheduleSlotId ?? null,
-      scheduleOccurrenceKey: input.scheduleOccurrenceKey ?? null,
-      rsvpConfirmedCount: 0,
-      createdAt: now,
-      updatedAt: now,
-    })
-
-  await adminDb
-    .collection('matches')
-    .doc(matchId)
-    .collection('_state')
-    .doc('rsvp')
-    .set({
-      confirmedCount: 0,
-      gkCount: 0,
-      updatedAt: now,
-    })
+  const matchRef = adminDb.collection('matches').doc(matchId)
+  const stateRef = matchRef.collection('_state').doc('rsvp')
+  const batch = adminDb.batch()
+  batch.set(matchRef, {
+    date: Timestamp.fromDate(input.date),
+    time: input.time,
+    location: locationValue,
+    clubId: input.clubId ?? null,
+    rsvpOpen: false,
+    rsvpOpenAt: openAt ? Timestamp.fromDate(openAt) : null,
+    rsvpCloseAt: closeAt ? Timestamp.fromDate(closeAt) : null,
+    deletedAt: null,
+    scheduleId: input.scheduleId ?? null,
+    scheduleSlotId: input.scheduleSlotId ?? null,
+    scheduleOccurrenceKey: input.scheduleOccurrenceKey ?? null,
+    rsvpConfirmedCount: 0,
+    createdAt: now,
+    updatedAt: now,
+  })
+  batch.set(stateRef, {
+    confirmedCount: 0,
+    gkCount: 0,
+    updatedAt: now,
+  })
+  await batch.commit()
 
   return { matchId }
 }

@@ -2,6 +2,7 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifySuperUser } from '@/lib/api/auth'
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin'
+import { syncMatchRsvpCountsFromConfirmed } from '@/lib/matches/syncMatchRsvpCounts'
 import { removeUserFromMatchTeams } from '@/lib/teams/removeUserFromMatchTeams'
 import { auditLog } from '@/lib/services/auditService'
 import { logUserError, userErrorResponse } from '@/lib/audit/logUserError'
@@ -173,10 +174,21 @@ export async function DELETE(
       .collection('rsvps')
       .where('userId', '==', userId)
       .get()
+    const affectedMatchIds = new Set<string>()
+    for (const doc of rsvpSnap.docs) {
+      const data = doc.data()
+      if (data.status === 'confirmed' && typeof data.matchId === 'string') {
+        affectedMatchIds.add(data.matchId)
+      }
+    }
     for (const batchDocs of chunk(rsvpSnap.docs, 450)) {
       const batch = adminDb.batch()
       batchDocs.forEach(d => batch.delete(d.ref))
       await batch.commit()
+    }
+    // Keep denormalized match headcounts accurate after confirmed RSVPs vanish.
+    for (const matchId of affectedMatchIds) {
+      await syncMatchRsvpCountsFromConfirmed(adminDb, matchId)
     }
 
     // 4) Delete Firebase Auth user (if present)
