@@ -95,9 +95,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             />
           ) : null}
           {isAdmin ? <PlatformAdminNav /> : null}
-          <AccountNav />
         </div>
-        <div className="mt-auto border-t border-white/20 p-3">
+        <div className="mt-auto flex flex-col gap-3 border-t border-white/20 p-3">
+          <AccountNav />
           <AccountMenu />
         </div>
       </aside>
@@ -146,9 +146,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                 {isAdmin ? (
                   <PlatformAdminNav onNavigate={() => setSheetOpen(false)} />
                 ) : null}
-                <AccountNav onNavigate={() => setSheetOpen(false)} />
               </div>
-              <div className="mt-auto border-t border-white/20 p-3">
+              <div className="mt-auto flex flex-col gap-3 border-t border-white/20 p-3">
+                <AccountNav onNavigate={() => setSheetOpen(false)} />
                 <AccountMenu onNavigate={() => setSheetOpen(false)} />
               </div>
             </SheetContent>

@@ -235,6 +235,33 @@ describe('AppShell', () => {
     }
   })
 
+  it('groups account links with the user name and sign out', async () => {
+    const user = userEvent.setup()
+    render(<AppShell />)
+
+    const railFooter = rail().getByRole('navigation', {
+      name: 'Account sections',
+    }).parentElement as HTMLElement
+    expect(
+      within(railFooter).getByRole('button', { name: 'Sign out' })
+    ).toBeInTheDocument()
+    expect(
+      within(railFooter).queryByRole('navigation', { name: 'Club sections' })
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByLabelText('Open club menu'))
+    const sheetFooter = within(screen.getByRole('dialog')).getByRole(
+      'navigation',
+      { name: 'Account sections' }
+    ).parentElement as HTMLElement
+    expect(
+      within(sheetFooter).getByRole('button', { name: 'Sign out' })
+    ).toBeInTheDocument()
+    expect(
+      within(sheetFooter).queryByRole('navigation', { name: 'Club sections' })
+    ).not.toBeInTheDocument()
+  })
+
   it('hides admin sections for non super users', () => {
     render(<AppShell />)
     expect(
