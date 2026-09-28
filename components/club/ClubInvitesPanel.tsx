@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 import { Button } from '@/components/ui/button'
 import {
   createClubInviteAPI,
@@ -76,10 +77,7 @@ export function ClubInvitesPanel({
       setError(err instanceof Error ? err.message : 'Failed to load invites')
       throw err
     } finally {
-      if (
-        clubIdRef.current === requestClubId &&
-        listGenRef.current === gen
-      ) {
+      if (clubIdRef.current === requestClubId && listGenRef.current === gen) {
         setLoading(false)
       }
     }
@@ -216,36 +214,50 @@ export function ClubInvitesPanel({
       </div>
 
       {created && (
-        <div className="space-y-2 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium">Code:</span>
-            <code className="rounded bg-white px-2 py-0.5 font-mono tracking-wider dark:bg-zinc-800">
-              {created.code}
-            </code>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => void copyText(created.code, 'code')}
-            >
-              {copied === 'code' ? 'Copied' : 'Copy code'}
-            </Button>
+        <div className="flex flex-col gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row">
+          <div className="shrink-0 self-center rounded-md bg-white p-2 sm:self-start">
+            <QRCodeSVG
+              value={shareableInviteLink(created.link)}
+              size={160}
+              title="Invite QR code"
+              role="img"
+              aria-label="Invite QR code"
+            />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium">Link:</span>
-            <code className="max-w-full truncate rounded bg-white px-2 py-0.5 dark:bg-zinc-800">
-              {shareableInviteLink(created.link)}
-            </code>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                void copyText(shareableInviteLink(created.link), 'link')
-              }
-            >
-              {copied === 'link' ? 'Copied' : 'Copy link'}
-            </Button>
+          <div className="min-w-0 space-y-3">
+            <p className="text-zinc-600 dark:text-zinc-300">
+              Scan this QR code to join the club.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">Code:</span>
+              <code className="rounded bg-white px-2 py-0.5 font-mono tracking-wider dark:bg-zinc-800">
+                {created.code}
+              </code>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void copyText(created.code, 'code')}
+              >
+                {copied === 'code' ? 'Copied' : 'Copy code'}
+              </Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">Link:</span>
+              <code className="max-w-full truncate rounded bg-white px-2 py-0.5 dark:bg-zinc-800">
+                {shareableInviteLink(created.link)}
+              </code>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  void copyText(shareableInviteLink(created.link), 'link')
+                }
+              >
+                {copied === 'link' ? 'Copied' : 'Copy link'}
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -268,7 +280,7 @@ export function ClubInvitesPanel({
                 return (
                   <li
                     key={invite.id}
-                    className="flex flex-col gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-900"
+                    className="flex flex-col gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0 text-sm">
                       <code className="font-mono tracking-wider">

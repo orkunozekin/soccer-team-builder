@@ -14,6 +14,14 @@ vi.mock('@/lib/api/client', () => ({
   revokeClubInviteAPI: vi.fn(),
 }))
 
+vi.mock('qrcode.react', () => ({
+  QRCodeSVG: ({ value, title }: { value: string; title?: string }) => (
+    <svg role="img" aria-label={title} data-value={value}>
+      <title>{title}</title>
+    </svg>
+  ),
+}))
+
 describe('ClubInvitesPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -46,6 +54,10 @@ describe('ClubInvitesPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Create invite' }))
 
     expect(await screen.findByText('ABCD12')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Invite QR code' })).toHaveAttribute(
+      'data-value',
+      'http://localhost/join?code=ABCD12'
+    )
     expect(createClubInviteAPI).toHaveBeenCalledWith('c1')
   })
 
@@ -315,7 +327,7 @@ describe('ClubInvitesPanel', () => {
 
     let resolveInitial!: (value: {
       success: boolean
-      invites: typeof staleInvite[]
+      invites: (typeof staleInvite)[]
     }) => void
     let listCalls = 0
     vi.mocked(listClubInvitesAPI).mockImplementation(() => {
