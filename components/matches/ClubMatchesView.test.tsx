@@ -50,13 +50,11 @@ vi.mock('@/lib/services/rsvpService', () => ({
 }))
 
 vi.mock('@/components/matches/MatchCard', () => ({
-  MatchCard: ({
-    match,
-    href,
-  }: {
-    match: { id: string }
-    href?: string
-  }) => <div>MatchCard:{match.id}:{href}</div>,
+  MatchCard: ({ match, href }: { match: { id: string }; href?: string }) => (
+    <div>
+      MatchCard:{match.id}:{href}
+    </div>
+  ),
 }))
 
 vi.mock('@/components/admin/CreateMatchCard', () => ({
@@ -70,7 +68,11 @@ vi.mock('@/components/admin/AdminMatchCard', () => ({
   }: {
     match: { id: string }
     href?: string
-  }) => <div>AdminMatchCard:{match.id}:{href}</div>,
+  }) => (
+    <div>
+      AdminMatchCard:{match.id}:{href}
+    </div>
+  ),
 }))
 
 function mockMatch(id: string, hoursFromNow = 24) {
@@ -200,7 +202,9 @@ describe('ClubMatchesView', () => {
 
     renderView()
 
-    expect(await screen.findByText('Could not load matches')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Could not load matches')
+    ).toBeInTheDocument()
     expect(screen.queryByText('No Matches')).not.toBeInTheDocument()
 
     listMatchesForViewerMock.mockResolvedValueOnce([mockMatch('m3')])
@@ -352,9 +356,7 @@ describe('ClubMatchesView', () => {
     expect(
       screen.getByText('MatchCard:legacy:/c/alpha/matches/legacy')
     ).toBeInTheDocument()
-    expect(
-      screen.queryByText(/AdminMatchCard:legacy:/)
-    ).not.toBeInTheDocument()
+    expect(screen.queryByText(/AdminMatchCard:legacy:/)).not.toBeInTheDocument()
   })
 
   it('shows create match when the user is club_admin of this club', async () => {
@@ -404,9 +406,7 @@ describe('ClubMatchesView', () => {
       'aria-selected',
       'true'
     )
-    expect(
-      screen.queryByText(/^MatchCard:/)
-    ).not.toBeInTheDocument()
+    expect(screen.queryByText(/^MatchCard:/)).not.toBeInTheDocument()
   })
 
   it('shows past matches on the admin list for club admins', async () => {
@@ -440,7 +440,9 @@ describe('ClubMatchesView', () => {
     renderView('club-a', 'alpha')
 
     expect(
-      await screen.findByText('AdminMatchCard:upcoming:/c/alpha/matches/upcoming')
+      await screen.findByText(
+        'AdminMatchCard:upcoming:/c/alpha/matches/upcoming'
+      )
     ).toBeInTheDocument()
     expect(
       screen.queryByText('AdminMatchCard:past:/c/alpha/matches/past')
@@ -453,5 +455,60 @@ describe('ClubMatchesView', () => {
     expect(
       screen.queryByText('AdminMatchCard:upcoming:/c/alpha/matches/upcoming')
     ).not.toBeInTheDocument()
+  })
+
+  it('counts only upcoming matches on initial admin load, then past on tab open', async () => {
+    useClubMembershipsMock.mockReturnValue({
+      memberships: [
+        {
+          id: 'mem1',
+          clubId: 'club-a',
+          userId: 'user1',
+          role: 'club_admin',
+          status: 'active',
+          joinedAt: new Date(),
+          updatedAt: new Date(),
+          club: {
+            id: 'club-a',
+            name: 'A',
+            slug: 'alpha',
+            settings: { allowPlayerInvites: false },
+          },
+        },
+      ],
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    })
+    listMatchesForViewerMock.mockResolvedValueOnce([
+      { ...mockMatch('upcoming', 24), clubId: 'club-a' },
+      { ...mockMatch('past', -48), clubId: 'club-a' },
+    ])
+
+    renderView('club-a', 'alpha')
+
+    await screen.findByText('AdminMatchCard:upcoming:/c/alpha/matches/upcoming')
+    await waitFor(() => {
+      expect(getMatchRsvpCountMock).toHaveBeenCalledWith('upcoming')
+    })
+    expect(getMatchRsvpCountMock).not.toHaveBeenCalledWith('past')
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Past' }))
+    await waitFor(() => {
+      expect(getMatchRsvpCountMock).toHaveBeenCalledWith('past')
+    })
+  })
+
+  it('uses denormalized rsvpConfirmedCount without querying RSVPs', async () => {
+    listMatchesForViewerMock.mockResolvedValueOnce([
+      { ...mockMatch('m-denorm'), rsvpConfirmedCount: 12 },
+    ])
+
+    renderView()
+
+    expect(
+      await screen.findByText('MatchCard:m-denorm:/c/alpha/matches/m-denorm')
+    ).toBeInTheDocument()
+    expect(getMatchRsvpCountMock).not.toHaveBeenCalled()
   })
 })

@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Pagination } from '@/components/ui/pagination'
-import { getAllMatches } from '@/lib/services/matchService'
+import { getMatchesByIds } from '@/lib/services/matchService'
 import { getUserRSVPs } from '@/lib/services/rsvpService'
 import { isCheckInWindowEnded } from '@/lib/utils/checkIn'
 import { locationDisplayName } from '@/lib/utils/location'
@@ -69,10 +69,12 @@ export function PlayerRsvpHistory({ userId }: PlayerRsvpHistoryProps) {
       setLoading(true)
       setPage(1)
       try {
-        const [rsvps, matches] = await Promise.all([
-          getUserRSVPs(userId),
-          getAllMatches({ includeDeleted: true }),
-        ])
+        const rsvps = await getUserRSVPs(userId)
+        if (cancelled) return
+        const matches = await getMatchesByIds(
+          rsvps.map(r => r.matchId),
+          { includeDeleted: true }
+        )
         if (cancelled) return
         const matchesById = new Map(matches.map(m => [m.id, m]))
         const next: HistoryRow[] = rsvps.map(rsvp => {

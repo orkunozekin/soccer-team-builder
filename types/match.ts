@@ -25,6 +25,11 @@ export interface Match {
   scheduleSlotId?: string | null
   /** Stable key e.g. "sched_x:slot_y:2026-09-01" */
   scheduleOccurrenceKey?: string | null
+  /**
+   * Denormalized confirmed RSVP headcount for list UIs.
+   * Maintained by RSVP API writes; may be missing on older matches.
+   */
+  rsvpConfirmedCount?: number | null
   createdAt: Date
   updatedAt: Date
 }

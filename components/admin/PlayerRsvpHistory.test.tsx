@@ -2,13 +2,13 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { format } from 'date-fns'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PlayerRsvpHistory } from './PlayerRsvpHistory'
-import { getAllMatches } from '@/lib/services/matchService'
+import { getMatchesByIds } from '@/lib/services/matchService'
 import { getUserRSVPs } from '@/lib/services/rsvpService'
 import type { Match } from '@/types/match'
 import type { RSVP } from '@/types/rsvp'
 
 vi.mock('@/lib/services/matchService', () => ({
-  getAllMatches: vi.fn(),
+  getMatchesByIds: vi.fn(),
 }))
 
 vi.mock('@/lib/services/rsvpService', () => ({
@@ -65,7 +65,7 @@ describe('PlayerRsvpHistory', () => {
       { length: 12 },
       (_, i) => new Date(Date.UTC(2026, 5, i + 1, 12))
     )
-    vi.mocked(getAllMatches).mockResolvedValue(
+    vi.mocked(getMatchesByIds).mockResolvedValue(
       dates.map((date, i) => matchOn(`m${i}`, date))
     )
     vi.mocked(getUserRSVPs).mockResolvedValue(
@@ -95,7 +95,7 @@ describe('PlayerRsvpHistory', () => {
 
   it('hides pagination when the history fits on one page', async () => {
     const date = new Date(Date.UTC(2026, 5, 1, 12))
-    vi.mocked(getAllMatches).mockResolvedValue([matchOn('m1', date)])
+    vi.mocked(getMatchesByIds).mockResolvedValue([matchOn('m1', date)])
     vi.mocked(getUserRSVPs).mockResolvedValue([rsvpFor('m1', 'u1')])
 
     render(<PlayerRsvpHistory userId="u1" />)

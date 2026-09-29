@@ -2,15 +2,15 @@
 
 import { useState } from 'react'
 import { format } from 'date-fns'
+import { SectionAccordionTrigger } from '@/components/admin/SectionAccordionTrigger'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardDescription } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { updateMatchAPI } from '@/lib/api/client'
 import { getRSVPSchedule } from '@/lib/utils/rsvpScheduler'
 import { useMatchStore } from '@/store/matchStore'
@@ -77,13 +77,11 @@ export function RSVPPollControls({ match, onUpdated }: RSVPPollControlsProps) {
     <Card>
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="rsvp-poll-controls" className="border-0">
-          <AccordionTrigger className="px-6 py-4 hover:no-underline">
-            <span className="text-base font-semibold">RSVP Poll Controls</span>
-          </AccordionTrigger>
+          <SectionAccordionTrigger
+            title="RSVP Poll Controls"
+            description="Manually control RSVP poll status for this match"
+          />
           <AccordionContent className="px-6 pb-4">
-            <CardDescription className="mb-4">
-              Manually control RSVP poll status for this match
-            </CardDescription>
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">Current Status:</span>

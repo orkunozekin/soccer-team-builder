@@ -6,6 +6,7 @@
 
 import { Timestamp } from 'firebase-admin/firestore'
 import type { Firestore, QuerySnapshot } from 'firebase-admin/firestore'
+import { getUsersByIdsAdmin } from '@/lib/users/getUsersByIdsAdmin'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import {
   applyPersistedTransfersKeepingBalance,
@@ -50,13 +51,12 @@ async function incrementallyAssignUnassignedPlayers(
   users: User[],
   desiredTeamCount: number
 ): Promise<void> {
-  const assignedUserIds = new Set(
-    existingTeams.flatMap(t => t.playerIds)
-  )
-  const unassignedRsvps = rsvpsToUse.filter(
-    r => !assignedUserIds.has(r.userId)
-  )
-  if (unassignedRsvps.length === 0 && existingTeams.length >= desiredTeamCount) {
+  const assignedUserIds = new Set(existingTeams.flatMap(t => t.playerIds))
+  const unassignedRsvps = rsvpsToUse.filter(r => !assignedUserIds.has(r.userId))
+  if (
+    unassignedRsvps.length === 0 &&
+    existingTeams.length >= desiredTeamCount
+  ) {
     return
   }
 
@@ -106,9 +106,7 @@ async function incrementallyAssignUnassignedPlayers(
       : updatedAssignments
 
   const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
-  const existingByNumber = new Map(
-    existingTeams.map(t => [t.teamNumber, t])
-  )
+  const existingByNumber = new Map(existingTeams.map(t => [t.teamNumber, t]))
   const now = Timestamp.now()
   const writes: Promise<unknown>[] = []
 
@@ -315,20 +313,10 @@ export async function expandTeamsForMatch(
     return { regenerated: false }
   }
 
-  const usersSnap = await adminDb.collection('users').get()
-  const users: User[] = usersSnap.docs.map(d => {
-    const data = d.data()
-    return {
-      uid: data.uid ?? d.id,
-      email: data.email ?? '',
-      displayName: data.displayName ?? '',
-      jerseyNumber: normalizeJerseyNumber(data.jerseyNumber),
-      position: data.position ?? null,
-      role: data.role || 'user',
-      createdAt: timestampToDate(data.createdAt) || new Date(),
-      updatedAt: timestampToDate(data.updatedAt) || new Date(),
-    }
-  })
+  const users: User[] = await getUsersByIdsAdmin(
+    adminDb,
+    rsvpsToUse.map(r => r.userId)
+  )
 
   if (forceRegenerate || currentTeamCount === 0) {
     await fullyRegenerateTeams(

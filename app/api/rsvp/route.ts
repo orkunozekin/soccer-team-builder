@@ -13,6 +13,8 @@ import {
   performGkSwap,
   swapGkWithLowerPriority,
 } from '@/lib/teams/swapGkWithLowerTeam'
+import { ensureMatchRsvpStateSeeded } from '@/lib/matches/syncMatchRsvpCounts'
+import { getUserPositionsByIdsAdmin } from '@/lib/users/getUsersByIdsAdmin'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import { hasMatchStarted } from '@/lib/utils/rsvpScheduler'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
@@ -74,9 +76,14 @@ export async function POST(request: NextRequest) {
     if (impersonateUserId) {
       const { isClubAdmin } = await verifyClubAdminForMatch(request, matchId)
       if (!isClubAdmin) {
-        return rsvpFailed(uid, 403, 'Club admin required to RSVP on behalf of another user', {
-          matchId,
-        })
+        return rsvpFailed(
+          uid,
+          403,
+          'Club admin required to RSVP on behalf of another user',
+          {
+            matchId,
+          }
+        )
       }
       effectiveUid = impersonateUserId
     }
@@ -156,7 +163,8 @@ export async function POST(request: NextRequest) {
           rsvpId,
           regenerated,
           position: existingPosition,
-          jerseyNumber: normalizeJerseyNumber(existingDoc.data()?.jerseyNumber) ??
+          jerseyNumber:
+            normalizeJerseyNumber(existingDoc.data()?.jerseyNumber) ??
             jerseyNumber,
         })
       } finally {
@@ -171,6 +179,9 @@ export async function POST(request: NextRequest) {
       .doc(matchId)
       .collection('_state')
       .doc('rsvp')
+    // Legacy matches may lack `_state/rsvp`; seed from existing confirmed RSVPs
+    // so the first increment does not publish rsvpConfirmedCount: 1 incorrectly.
+    await ensureMatchRsvpStateSeeded(adminDb, matchId)
     const TX_MAX_ATTEMPTS = 7
     const TX_BACKOFF_BASE_MS = 80
     const TX_BACKOFF_JITTER_MS = 120
@@ -198,13 +209,21 @@ export async function POST(request: NextRequest) {
           const state = stateSnap.data() ?? {}
           const confirmedCount = (state.confirmedCount as number) ?? 0
           const gkCount = (state.gkCount as number) ?? 0
+          const newConfirmedCount = confirmedCount + 1
           const newGkCount = gkCount + (isGoalkeeper(position) ? 1 : 0)
+          const matchRef = adminDb.collection('matches').doc(matchId)
           tx.set(stateRef, {
-            confirmedCount: confirmedCount + 1,
+            confirmedCount: newConfirmedCount,
             gkCount: newGkCount,
             updatedAt: now,
           })
           tx.set(rsvpRef, rsvpData)
+          // Denormalize onto the match doc so list UIs need zero extra reads.
+          tx.set(
+            matchRef,
+            { rsvpConfirmedCount: newConfirmedCount, updatedAt: now },
+            { merge: true }
+          )
         })
         txError = null
         break
@@ -429,15 +448,10 @@ export async function PATCH(request: NextRequest) {
               (ddata.position as string | null) ?? null
             )
           })
-          const usersSnap = await adminDb.collection('users').get()
-          const userPositionsByUserId = new Map<string, string | null>()
-          usersSnap.docs.forEach(d => {
-            const u = d.id === d.data()?.uid ? d.id : (d.data()?.uid as string)
-            userPositionsByUserId.set(
-              u,
-              (d.data()?.position as string | null) ?? null
-            )
-          })
+          const userPositionsByUserId = await getUserPositionsByIdsAdmin(
+            adminDb,
+            rsvpPositionsByUserId.keys()
+          )
 
           const swapResult = await swapGkWithLowerPriority(
             adminDb,
@@ -506,15 +520,10 @@ export async function PATCH(request: NextRequest) {
               : ((ddata.position as string | null) ?? null)
           )
         })
-        const usersSnap = await adminDb.collection('users').get()
-        const userPositionsByUserId = new Map<string, string | null>()
-        usersSnap.docs.forEach(d => {
-          const u = d.id === d.data()?.uid ? d.id : (d.data()?.uid as string)
-          userPositionsByUserId.set(
-            u,
-            (d.data()?.position as string | null) ?? null
-          )
-        })
+        const userPositionsByUserId = await getUserPositionsByIdsAdmin(
+          adminDb,
+          rsvpPositionsByUserId.keys()
+        )
         const placeResult = await placeGkOnTeamWithoutGk(
           adminDb,
           matchId,
@@ -601,28 +610,64 @@ export async function PATCH(request: NextRequest) {
       .doc(matchId)
       .collection('_state')
       .doc('rsvp')
-    const wasGk = isGoalkeeper((data.position as string | null) ?? null)
     const now = Timestamp.now()
-    await adminDb.runTransaction(async tx => {
+    const matchRefForCancel = adminDb.collection('matches').doc(matchId)
+    // The callback may run more than once; only the committed attempt's return
+    // value decides whether team cleanup runs.
+    const cancelledInTx = await adminDb.runTransaction(async tx => {
+      // Re-check status inside the transaction so concurrent cancels cannot
+      // double-decrement `_state` / rsvpConfirmedCount.
+      const latestRsvpSnap = await tx.get(rsvpRef)
+      if (!latestRsvpSnap.exists) return false
+      const latestRsvp = latestRsvpSnap.data() ?? {}
+      if (latestRsvp.status !== 'confirmed') return false
+
       const stateSnap = await tx.get(stateRefForCancel)
-      tx.update(rsvpRef, { status: 'cancelled', updatedAt: now })
+      const matchSnap = await tx.get(matchRefForCancel)
+      const wasGk = isGoalkeeper((latestRsvp.position as string | null) ?? null)
+      let newConfirmedCount: number | null = null
+      let newGkCount: number | null = null
       if (stateSnap.exists) {
         const state = stateSnap.data() ?? {}
-        const confirmedCount = Math.max(
+        newConfirmedCount = Math.max(
           0,
           ((state.confirmedCount as number) ?? 0) - 1
         )
-        const gkCount = Math.max(
+        newGkCount = Math.max(
           0,
           ((state.gkCount as number) ?? 0) - (wasGk ? 1 : 0)
         )
+      } else {
+        const current = matchSnap.data()?.rsvpConfirmedCount
+        if (typeof current === 'number') {
+          newConfirmedCount = Math.max(0, current - 1)
+        }
+      }
+
+      tx.update(rsvpRef, { status: 'cancelled', updatedAt: now })
+      if (stateSnap.exists && newConfirmedCount != null && newGkCount != null) {
         tx.set(
           stateRefForCancel,
-          { confirmedCount, gkCount, updatedAt: now },
+          {
+            confirmedCount: newConfirmedCount,
+            gkCount: newGkCount,
+            updatedAt: now,
+          },
           { merge: true }
         )
       }
+      if (newConfirmedCount != null) {
+        tx.set(
+          matchRefForCancel,
+          { rsvpConfirmedCount: newConfirmedCount, updatedAt: now },
+          { merge: true }
+        )
+      }
+      return true
     })
+    if (!cancelledInTx) {
+      return NextResponse.json({ cancelled: true, teamsUpdated: false })
+    }
 
     const { removed } = await removeUserFromMatchTeams(adminDb, matchId, userId)
 

@@ -54,9 +54,12 @@ describe('ImpersonateRSVP', () => {
     expect(
       screen.queryByLabelText(/search by name or email/i)
     ).not.toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /rsvp as player/i })
-    ).toHaveAttribute('data-state', 'closed')
+    const trigger = screen.getByRole('button', { name: /rsvp as player/i })
+    expect(trigger).toHaveAttribute('data-state', 'closed')
+    expect(trigger).toHaveAccessibleName('RSVP as player')
+    expect(trigger).toHaveAccessibleDescription(
+      'Search for a user and RSVP or cancel on their behalf.'
+    )
   })
 
   it('searches and RSVPs as a user without existing RSVP', async () => {
