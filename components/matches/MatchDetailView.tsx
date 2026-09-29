@@ -212,7 +212,7 @@ export function MatchDetailView({
   return (
     <div className="flex w-full min-w-0 flex-col items-center overflow-x-hidden">
       <div
-        className={`mx-auto w-full min-w-0 px-4 py-2 ${
+        className={`mx-auto w-full min-w-0 px-4 pb-2 pt-6 ${
           hasTeamsPanel ? 'max-w-6xl' : 'max-w-xl'
         }`}
       >
