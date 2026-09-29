@@ -87,18 +87,20 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           </Link>
         </div>
         <div className="px-3">{switcher}</div>
-        <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2">
-          {club ? (
-            <ClubNav
-              sections={workspace.sections}
-              activeHref={workspace.activeSectionHref}
-            />
-          ) : null}
-          {isAdmin ? <PlatformAdminNav /> : null}
-          <AccountNav />
-        </div>
-        <div className="mt-auto border-t border-white/20 p-3">
-          <AccountMenu />
+        <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <div className="flex flex-col gap-3 px-2 pb-3">
+            {club ? (
+              <ClubNav
+                sections={workspace.sections}
+                activeHref={workspace.activeSectionHref}
+              />
+            ) : null}
+            {isAdmin ? <PlatformAdminNav /> : null}
+          </div>
+          <div className="mt-auto flex flex-col gap-3 border-t border-white/20 p-3">
+            <AccountNav className="-mx-1" />
+            <AccountMenu />
+          </div>
         </div>
       </aside>
 
@@ -128,28 +130,33 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                   Club navigation
                 </SheetDescription>
               </SheetHeader>
-              <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-2 py-3">
-                {club ? (
-                  <ClubNav
-                    sections={workspace.sections}
-                    activeHref={workspace.activeSectionHref}
-                    onNavigate={() => setSheetOpen(false)}
-                  />
-                ) : (
-                  <div className="px-1">
-                    <ClubWorkspaceStatus
-                      status={workspace.status}
+              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+                <div className="flex flex-col gap-3 px-2 py-3">
+                  {club ? (
+                    <ClubNav
+                      sections={workspace.sections}
+                      activeHref={workspace.activeSectionHref}
                       onNavigate={() => setSheetOpen(false)}
                     />
-                  </div>
-                )}
-                {isAdmin ? (
-                  <PlatformAdminNav onNavigate={() => setSheetOpen(false)} />
-                ) : null}
-                <AccountNav onNavigate={() => setSheetOpen(false)} />
-              </div>
-              <div className="mt-auto border-t border-white/20 p-3">
-                <AccountMenu onNavigate={() => setSheetOpen(false)} />
+                  ) : (
+                    <div className="px-1">
+                      <ClubWorkspaceStatus
+                        status={workspace.status}
+                        onNavigate={() => setSheetOpen(false)}
+                      />
+                    </div>
+                  )}
+                  {isAdmin ? (
+                    <PlatformAdminNav onNavigate={() => setSheetOpen(false)} />
+                  ) : null}
+                </div>
+                <div className="mt-auto flex flex-col gap-3 border-t border-white/20 p-3">
+                  <AccountNav
+                    className="-mx-1"
+                    onNavigate={() => setSheetOpen(false)}
+                  />
+                  <AccountMenu onNavigate={() => setSheetOpen(false)} />
+                </div>
               </div>
             </SheetContent>
           </Sheet>

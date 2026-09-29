@@ -59,7 +59,9 @@ export function AccountMenu({
 
   return (
     <div className={cn('flex w-full flex-col gap-2', className)}>
-      <p className="truncate px-1 text-xs font-medium text-white/80">{label}</p>
+      <p className="truncate px-1 text-base font-semibold text-white">
+        {label}
+      </p>
       <button
         type="button"
         aria-label="Sign out"

@@ -45,6 +45,14 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 - **Going forward:** When a trigger shows supporting text, name the button with `aria-labelledby` on the title and link the text with `aria-describedby` (see `SectionAccordionTrigger`). Assert exact `toHaveAccessibleName` and `toHaveAccessibleDescription` for every card the change touches, not just some of them.
 - **Pointers:** `components/admin/SectionAccordionTrigger.tsx`
 
+### 2026-09-28 — A taller pinned sidebar footer must still scroll into view
+
+- **Source:** PR #104 · Greptile
+- **Gap:** Moving Profile and My clubs into the sidebar's pinned footer made it about 180px tall. Only the nav above it scrolled, so in a short window (around 240px) the nav collapsed to nothing and Sign out was cut off below the `h-dvh` rail and sheet.
+- **Going forward:** When adding to a non-scrolling header or footer in a viewport-height panel, check a short window. Put the nav and footer in one `overflow-y-auto` column with the footer on `mt-auto`.
+- **Pointers:** `components/layout/AppShell.tsx`
+- **Promoted:** AGENT_CONTEXT.md → §3 React / Next.js (viewport-height panels)
+
 ### 2026-09-28 — Transaction callbacks retry; recounts must share the writers' locks
 
 - **Source:** PR #99 · Greptile | Macroscope
