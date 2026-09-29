@@ -137,6 +137,52 @@ describe('UserRoleManager', () => {
     expect(mocks.getUsersPaginatedMock).toHaveBeenCalledTimes(2)
   })
 
+  it('keeps previous when a later page only contains the signed-in user', async () => {
+    useAuthMock.mockReturnValue({
+      user: { uid: 'current' },
+    })
+
+    mocks.getUsersPaginatedMock
+      .mockResolvedValueOnce({
+        users: [
+          {
+            uid: 'u1',
+            email: 'u1@example.com',
+            displayName: 'Page One User',
+            role: 'user',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        nextCursor: 'cursor-page-2',
+      })
+      .mockResolvedValueOnce({
+        users: [
+          {
+            uid: 'current',
+            email: 'me@example.com',
+            displayName: 'Just Me',
+            role: 'super_user',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        nextCursor: null,
+      })
+    mocks.getUsersCountMock.mockResolvedValue(11)
+
+    const user = userEvent.setup()
+    renderUserRoleManager()
+
+    expect(await screen.findByText(/page one user/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /next/i }))
+
+    expect(await screen.findByText(/no users found/i)).toBeInTheDocument()
+    expect(screen.queryByText(/just me/i)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /previous/i }))
+    expect(await screen.findByText(/page one user/i)).toBeInTheDocument()
+  })
+
   it('deletes a user via the dialog and updates the list', async () => {
     useAuthMock.mockReturnValue({
       user: { uid: 'current' },

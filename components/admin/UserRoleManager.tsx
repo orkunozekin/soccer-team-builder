@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { ButtonSpinner } from '@/components/ui/button-spinner'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { InitialsAvatar } from '@/components/ui/initials-avatar'
 import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/pagination'
@@ -175,6 +175,7 @@ export function UserRoleManager() {
   }, [baseUsers, currentUser?.uid])
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+  const showPagination = browsing && totalCount > PAGE_SIZE
 
   const patchUserInSwrCache = (userId: string, patch: Partial<UserRow>) => {
     setSearchUsers(prev =>
@@ -272,37 +273,37 @@ export function UserRoleManager() {
   }
 
   return (
-    <Card>
-      <CardContent className="space-y-4 pt-6">
-        {error && (
-          <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
-            {error}
-          </div>
-        )}
+    <div className="space-y-4">
+      {error && (
+        <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+          {error}
+        </div>
+      )}
 
-        {success && (
-          <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-400">
-            Changes saved successfully!
-          </div>
-        )}
+      {success && (
+        <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-400">
+          Changes saved successfully!
+        </div>
+      )}
 
-        <Input
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Search users by name or email…"
-          className="h-11 text-base sm:h-9 sm:text-sm"
-        />
+      <Input
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        placeholder="Search users by name or email…"
+        className="h-11 text-base sm:h-9 sm:text-sm"
+      />
 
-        <div className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
-          {searchLoading ||
-          (browsing && pageLoading && visibleUsers.length === 0) ? (
-            <div className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
-              {searchLoading ? 'Searching…' : 'Loading…'}
-            </div>
-          ) : visibleUsers.length === 0 ? (
-            <div className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
+      {searchLoading ||
+      (browsing && pageLoading && visibleUsers.length === 0) ? (
+        <Card className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
+          {searchLoading ? 'Searching…' : 'Loading…'}
+        </Card>
+      ) : (
+        <Card className="overflow-hidden">
+          {visibleUsers.length === 0 ? (
+            <p className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
               No users found.
-            </div>
+            </p>
           ) : (
             <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {visibleUsers.map(user => (
@@ -311,16 +312,16 @@ export function UserRoleManager() {
                   className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
                 >
                   <InitialsAvatar name={user.displayName || user.email} />
-                  <div className="min-w-[5.5rem] flex-1">
+                  <div className="min-w-[8rem] flex-1">
                     <Link
                       href={`/admin/players/${user.uid}`}
                       className="block truncate text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
                     >
                       {user.displayName}
                     </Link>
-                    <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                    <div className="truncate text-xs text-zinc-500 dark:text-zinc-400">
                       {user.email}
-                    </p>
+                    </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <Select
@@ -355,60 +356,60 @@ export function UserRoleManager() {
               ))}
             </ul>
           )}
-        </div>
+          {showPagination && (
+            <Pagination
+              className="mt-0 border-zinc-100 px-4 py-3 dark:border-zinc-800"
+              page={page}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              pageSize={PAGE_SIZE}
+              onPrevious={() => setPage(p => Math.max(1, p - 1))}
+              onNext={() => {
+                setCursors(prev => {
+                  const next = [...prev]
+                  next[page - 1] =
+                    pageData?.nextCursor ?? next[page - 1] ?? null
+                  return next
+                })
+                setPage(p => p + 1)
+              }}
+              itemLabel="users"
+            />
+          )}
+        </Card>
+      )}
 
-        <AlertDialog
-          open={deleteDialogUserId != null}
-          onOpenChange={open => {
-            if (!open) setDeleteDialogUserId(null)
-          }}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Remove user?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will delete the user from the system (Auth + database) and
-                remove them from teams/RSVPs. This cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleting != null}>
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                disabled={deleteDialogUserId == null || deleting != null}
-                onClick={e => {
-                  e.preventDefault()
-                  if (deleteDialogUserId)
-                    handleConfirmDelete(deleteDialogUserId)
-                }}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {deleting ? <ButtonSpinner /> : 'Remove user'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {browsing && totalCount > PAGE_SIZE && (
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            totalCount={totalCount}
-            pageSize={PAGE_SIZE}
-            onPrevious={() => setPage(p => Math.max(1, p - 1))}
-            onNext={() => {
-              setCursors(prev => {
-                const next = [...prev]
-                next[page - 1] = pageData?.nextCursor ?? next[page - 1] ?? null
-                return next
-              })
-              setPage(p => p + 1)
-            }}
-            itemLabel="users"
-          />
-        )}
-      </CardContent>
-    </Card>
+      <AlertDialog
+        open={deleteDialogUserId != null}
+        onOpenChange={open => {
+          if (!open) setDeleteDialogUserId(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete the user from the system (Auth + database) and
+              remove them from teams/RSVPs. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting != null}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteDialogUserId == null || deleting != null}
+              onClick={e => {
+                e.preventDefault()
+                if (deleteDialogUserId) handleConfirmDelete(deleteDialogUserId)
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <ButtonSpinner /> : 'Remove user'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   )
 }
