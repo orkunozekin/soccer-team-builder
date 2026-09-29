@@ -1,11 +1,11 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { SectionAccordionTrigger } from '@/components/admin/SectionAccordionTrigger'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -189,16 +189,14 @@ export function PlayerTransfer({
     <Card>
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="transfer-player" className="border-0">
-          <AccordionTrigger className="gap-4 px-6 py-4 text-left hover:no-underline">
-            <span className="flex flex-col gap-1">
-              <span className="text-base font-semibold">Transfer Player</span>
-              <span className="font-normal text-zinc-500 dark:text-zinc-400">
-                {mode === 'swap'
-                  ? 'Swap two players between teams in one step'
-                  : 'Move a player to another team'}
-              </span>
-            </span>
-          </AccordionTrigger>
+          <SectionAccordionTrigger
+            title="Transfer Player"
+            description={
+              mode === 'swap'
+                ? 'Swap two players between teams in one step'
+                : 'Move a player to another team'
+            }
+          />
           <AccordionContent className="px-6 pb-4">
             <div className="space-y-4">
               <div className="flex gap-2">

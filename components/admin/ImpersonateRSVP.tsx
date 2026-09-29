@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { SectionAccordionTrigger } from '@/components/admin/SectionAccordionTrigger'
 import { PositionSelector } from '@/components/profile/PositionSelector'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -112,14 +112,10 @@ export function ImpersonateRSVP({
     <Card>
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="rsvp-as-player" className="border-0">
-          <AccordionTrigger className="gap-4 px-6 py-4 text-left hover:no-underline">
-            <span className="flex flex-col gap-1">
-              <span className="text-base font-semibold">RSVP as player</span>
-              <span className="font-normal text-zinc-500 dark:text-zinc-400">
-                Search for a user and RSVP or cancel on their behalf.
-              </span>
-            </span>
-          </AccordionTrigger>
+          <SectionAccordionTrigger
+            title="RSVP as player"
+            description="Search for a user and RSVP or cancel on their behalf."
+          />
           <AccordionContent className="px-6 pb-4">
             <div className="space-y-4">
               <div className="space-y-2">

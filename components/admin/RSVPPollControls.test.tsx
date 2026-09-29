@@ -53,12 +53,12 @@ describe('RSVPPollControls', () => {
     render(<RSVPPollControls match={baseMatch} />)
 
     expect(screen.queryByText(/current status/i)).not.toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /rsvp poll controls/i })
-    ).toHaveAttribute('data-state', 'closed')
-    expect(
-      screen.getByText(/manually control rsvp poll status/i)
-    ).toBeInTheDocument()
+    const trigger = screen.getByRole('button', { name: /rsvp poll controls/i })
+    expect(trigger).toHaveAttribute('data-state', 'closed')
+    expect(trigger).toHaveAccessibleName('RSVP Poll Controls')
+    expect(trigger).toHaveAccessibleDescription(
+      'Manually control RSVP poll status for this match'
+    )
   })
 
   it('shows current RSVP status and disables appropriate buttons', async () => {

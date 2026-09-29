@@ -33,6 +33,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-29 — Summary text inside a button becomes its accessible name
+
+- **Source:** PR #103 · Macroscope
+- **Gap:** Moving section descriptions into accordion triggers put every word inside the `<button>`, so screen readers announced a full paragraph (e.g. the RSVP-order explanation) as the control's label. Tests only used substring name regexes, so they still passed. Two of the five changed cards had no collapsed-state assertion.
+- **Going forward:** When a trigger shows supporting text, name the button with `aria-labelledby` on the title and link the text with `aria-describedby` (see `SectionAccordionTrigger`). Assert exact `toHaveAccessibleName` and `toHaveAccessibleDescription` for every card the change touches, not just some of them.
+- **Pointers:** `components/admin/SectionAccordionTrigger.tsx`
+
 ### 2026-09-28 — Denormalized counters need bootstrap, transactional cancel, and delete sync
 
 - **Source:** PR #99 · Greptile | Macroscope

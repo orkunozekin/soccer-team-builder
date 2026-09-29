@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import { format } from 'date-fns'
+import { SectionAccordionTrigger } from '@/components/admin/SectionAccordionTrigger'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -77,16 +77,10 @@ export function RSVPPollControls({ match, onUpdated }: RSVPPollControlsProps) {
     <Card>
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="rsvp-poll-controls" className="border-0">
-          <AccordionTrigger className="gap-4 px-6 py-4 text-left hover:no-underline">
-            <span className="flex flex-col gap-1">
-              <span className="text-base font-semibold">
-                RSVP Poll Controls
-              </span>
-              <span className="font-normal text-zinc-500 dark:text-zinc-400">
-                Manually control RSVP poll status for this match
-              </span>
-            </span>
-          </AccordionTrigger>
+          <SectionAccordionTrigger
+            title="RSVP Poll Controls"
+            description="Manually control RSVP poll status for this match"
+          />
           <AccordionContent className="px-6 pb-4">
             <div className="space-y-4">
               <div className="flex items-center gap-2">

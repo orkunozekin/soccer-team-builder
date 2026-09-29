@@ -133,9 +133,12 @@ describe('RsvpOrderCard', () => {
       />
     )
 
-    expect(
-      screen.getByRole('button', { name: /rsvp order \(1\)/i })
-    ).toHaveAttribute('data-state', 'closed')
+    const trigger = screen.getByRole('button', { name: /rsvp order \(1\)/i })
+    expect(trigger).toHaveAttribute('data-state', 'closed')
+    expect(trigger).toHaveAccessibleName('RSVP order (1)')
+    expect(trigger).toHaveAccessibleDescription(
+      /teams are filled in this order/i
+    )
     expect(
       screen.getByText(/teams are filled in this order/i)
     ).toBeInTheDocument()
