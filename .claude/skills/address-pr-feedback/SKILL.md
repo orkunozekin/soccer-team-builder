@@ -103,7 +103,12 @@ When feedback caught a **real** bug, safety gap, or improvement that slipped pas
 
 Do **not** log one-off typos, pure style nits, or PR-specific noise.
 
-If the lesson hardens into a standing rule, also update `docs/AGENT_CONTEXT.md` (and `.greptile/` when it is a review-severity rule). Prefer promoting repeated lessons into `AGENT_CONTEXT.md` rather than leaving them only in the lessons log.
+**Promotion check (every time you append):** scan existing entries for the same theme. If the theme now appears in two or more entries, or the lesson is high severity (AuthZ, data loss, production outage), promote it in the same change:
+
+1. Add or tighten the rule in `docs/AGENT_CONTEXT.md` (and `.greptile/rules.md` when it should be flagged in review).
+2. Add `- **Promoted:** AGENT_CONTEXT.md → <section>` to each lesson entry it covers.
+
+`/start` loads `AGENT_CONTEXT.md`, not the lessons log, so an unpromoted lesson does not reach future sessions.
 
 Entry shape (append under Lessons):
 
@@ -128,6 +133,7 @@ Entry shape (append under Lessons):
 - Blindly applying every bot suggestion (especially if it fights AuthZ, emulators-only, or sanitize-error rules)
 - Huge refactors justified as “addressing review”
 - Skipping `AGENT_LESSONS.md` when a real recurring gap was found
+- Appending a repeat lesson without promoting it into `AGENT_CONTEXT.md`
 - Updating only one skill mirror (edit the `.claude/skills/` copy, then sync personal mirrors)
 
 ## Skill chain

@@ -64,6 +64,9 @@ Path alias: `@/*` → project root (`tsconfig.json`).
 - Mobile-first layouts; UI must work on phone, tablet, and desktop.
 - Reuse existing `components/` and `components/ui/` patterns. Do **not** treat “build everything from scratch” as a current rule (that applied only to early greenfield phases).
 - Forms: Zod schemas + `react-hook-form` + `@hookform/resolvers` when adding or changing form flows.
+- **Narrow rows must wrap (check 320px).** Inside an `overflow-hidden` card or list, a single non-wrapping flex row clips its trailing controls. Give row text a readable `min-width`, `flex-wrap` (or stack) the action group, and keep Previous/Next reachable without a non-wrapping page-number strip. `min-w-0` alone lets the text absorb the overflow while the last button gets clipped.
+- **Overlays: close and reset from inside.** Radix `onOpenChange` does not fire for a programmatic `setOpen(false)`, so a handler inside a popover, dialog, or sheet that closes it must also reset that overlay's local query or form state. Every control inside a layout sheet that navigates must call the sheet's close callback. Regression tests for these controls must open the overlay, act from inside it, and assert the overlay closed and body pointer/scroll locks are gone.
+- **Paged lists keep the edited row.** After a client-side reorder (e.g. promote to admin), move the page to the edited row so it does not vanish.
 
 ### API routes and auth
 
@@ -85,6 +88,26 @@ Path alias: `@/*` → project root (`tsconfig.json`).
   3. Prefer equality-only client queries + in-memory sort when list sizes are small, so the app stays up even if an index is still Building or missing.
   4. Emulators often do **not** enforce composite indexes; green local runs are not proof the index exists in production.
   5. Do not delete useful composite indexes just to avoid deploy discipline; keep indexes and ship the deploy.
+- **Isolate secondary fetches.** A failure in a follow-up read (RSVP counts, enrichment) must not wipe or error the primary list.
+
+### Async state, races, and transactions
+
+Repeated review findings; treat these as defaults.
+
+- **Generation-guard every async write to shared state.** Give each fetch or auth callback a generation (`fetchGen`, `authGenRef`). After every `await`, skip store/state writes unless that generation is still current, and bump it in effect cleanup so an unmounted page cannot overwrite the shared store for the next one.
+- **Do not invalidate in-flight work to start a secondary fetch.** Bumping a shared generation for a lazy load (e.g. another tab) discards results the UI still needs.
+- **Separate mutation success from refresh failure.** If the write succeeded and only the follow-up refresh failed, keep the prior list or optimistic value and report the refresh error. Disable conflicting actions while a refresh is in flight. When clearing a per-row busy id in `finally`, only clear it if it still matches (`setBusy(prev => (prev === id ? null : prev))`).
+- **Reset local form state when the club (or other scoping prop) changes.**
+- **Transaction callbacks can run more than once.** Return the outcome from `runTransaction` and act on the returned value; never set outer variables inside the callback. Re-check source status (e.g. RSVP still `confirmed`) inside the transaction before changing counters.
+- **Denormalized counters** (e.g. `rsvpConfirmedCount`, `_state/rsvp`): seed from the source documents before the first increment, change the counter in the same transaction that changes the source doc, write parent + state atomically on create, and recompute after bulk deletes. Recounts must run in a transaction that reads the same docs the writers touch so concurrent writes retry instead of being lost.
+
+### Auth, roles, and club context
+
+- **Role is not known until the profile loads.** `loading === false` is not “role settled” (the auth timeout clears it while the user doc is in flight). Gate admin redirects on `rolePending` (user set, `profileReady` false). Reset `profileReady` and clear `userData` when the auth uid changes, not on a same-uid token refresh.
+- **One resolver for “current club.”** Sub-nav, match list, create eligibility, and create API `clubId` must share `resolveEffectiveActiveClubId` / `resolveSelectedClubMembership`; do not re-derive it per surface.
+- **Club-scoped detail pages check the resource's club.** Match detail under `/c/[slug]` must verify match `clubId` against the URL club; legacy redirects resolve via the match's club before any active-club fallback. By-slug/by-id lookups: authenticate first, and return 404 for both unauthorized and missing.
+- **Super users keep the all-clubs view.** `/admin/matches` (“All matches”) is distinct from the club redirect even when the super user has a membership; all-clubs cards link to `/admin/matches/[id]`. Show create-match UI only when a concrete `clubId` is in context.
+- **Choose admin controls per row**, from per-resource permission (`manageFlags` / `canManageMatchClub`), not from a page-level admin flag.
 
 ### Feature flags
 
@@ -199,4 +222,4 @@ Edit the `.claude/skills/` copy in git, then refresh personal mirrors when a ski
                  ↘ /address-pr-feedback → docs/AGENT_LESSONS.md
 ```
 
-**Lessons log:** [`AGENT_LESSONS.md`](./AGENT_LESSONS.md) — append when review feedback reveals a lasting gap; promote standing rules into this file + `.greptile/` when appropriate.
+**Lessons log:** [`AGENT_LESSONS.md`](./AGENT_LESSONS.md) — append when review feedback reveals a lasting gap. When a theme repeats (two or more entries) or is high severity, promote it into this file (and `.greptile/rules.md`) and mark the entries `Promoted`. `/start` reads this file, not the log.
