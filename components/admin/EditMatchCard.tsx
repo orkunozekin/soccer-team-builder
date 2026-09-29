@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { LocationPicker } from '@/components/admin/LocationPicker'
 import { RSVPPollControls } from '@/components/admin/RSVPPollControls'
+import { SectionAccordionTrigger } from '@/components/admin/SectionAccordionTrigger'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
 } from '@/components/ui/accordion'
 import {
   AlertDialog,
@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { ButtonSpinner } from '@/components/ui/button-spinner'
-import { Card, CardDescription } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { DatePickerTime } from '@/components/ui/date-picker-time'
 import { deleteMatchAPI, updateMatchAPI } from '@/lib/api/client'
 import { hasValidCoords } from '@/lib/utils/geo'
@@ -153,13 +153,11 @@ export function EditMatchCard({
       <Card className="w-full max-w-xl">
         <Accordion type="single" collapsible className="w-full">
           <AccordionItem value="manage-match" className="border-0">
-            <AccordionTrigger className="px-6 py-4 hover:no-underline">
-              <span className="text-base font-semibold">Manage match</span>
-            </AccordionTrigger>
+            <SectionAccordionTrigger
+              title="Manage match"
+              description="Edit date, time, location, and RSVP window."
+            />
             <AccordionContent className="px-6 pb-4">
-              <CardDescription className="mb-4">
-                Edit date, time, location, and RSVP window.
-              </CardDescription>
               <div className="space-y-4">
                 <form onSubmit={handleSaveDateTime} className="space-y-4">
                   <DatePickerTime
