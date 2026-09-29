@@ -1,15 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { SectionAccordionTrigger } from '@/components/admin/SectionAccordionTrigger'
 import { PositionSelector } from '@/components/profile/PositionSelector'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
-import { Card, CardDescription } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cancelRSVPAPI, confirmRSVPAPI, searchUsersAPI } from '@/lib/api/client'
@@ -112,13 +112,11 @@ export function ImpersonateRSVP({
     <Card>
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="rsvp-as-player" className="border-0">
-          <AccordionTrigger className="px-6 py-4 hover:no-underline">
-            <span className="text-base font-semibold">RSVP as player</span>
-          </AccordionTrigger>
+          <SectionAccordionTrigger
+            title="RSVP as player"
+            description="Search for a user and RSVP or cancel on their behalf."
+          />
           <AccordionContent className="px-6 pb-4">
-            <CardDescription className="mb-4">
-              Search for a user and RSVP or cancel on their behalf.
-            </CardDescription>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="impersonate-search">

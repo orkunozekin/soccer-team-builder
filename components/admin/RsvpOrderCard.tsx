@@ -2,13 +2,13 @@
 
 import { useMemo } from 'react'
 import { format } from 'date-fns'
+import { SectionAccordionTrigger } from '@/components/admin/SectionAccordionTrigger'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
 } from '@/components/ui/accordion'
-import { Card, CardDescription } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import type { RSVP } from '@/types/rsvp'
 import type { User } from '@/types/user'
 
@@ -32,17 +32,11 @@ export function RsvpOrderCard({ matchRSVPs, users }: RsvpOrderCardProps) {
     <Card>
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="rsvp-order" className="border-0">
-          <AccordionTrigger className="px-6 py-4 hover:no-underline">
-            <span className="text-base font-semibold">
-              RSVP order ({orderedRsvps.length})
-            </span>
-          </AccordionTrigger>
+          <SectionAccordionTrigger
+            title={`RSVP order (${orderedRsvps.length})`}
+            description="Confirmed players in the order they RSVP'd (earliest first). Teams are filled in this order: Team 1 gets the earliest RSVPs, then Team 2, then Team 3, and so on."
+          />
           <AccordionContent className="px-6 pb-4">
-            <CardDescription className="mb-4">
-              Confirmed players in the order they RSVP&apos;d (earliest first).
-              Teams are filled in this order: Team 1 gets the earliest RSVPs,
-              then Team 2, then Team 3, and so on.
-            </CardDescription>
             {orderedRsvps.length === 0 ? (
               <p className="text-sm text-zinc-500">No confirmed RSVPs yet.</p>
             ) : (

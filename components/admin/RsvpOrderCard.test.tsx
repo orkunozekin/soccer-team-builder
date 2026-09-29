@@ -125,8 +125,7 @@ describe('RsvpOrderCard', () => {
     expect(screen.getByText(/no confirmed rsvps yet/i)).toBeInTheDocument()
   })
 
-  it('describes RSVP-order team fill', async () => {
-    const user = userEvent.setup()
+  it('describes RSVP-order team fill while collapsed', () => {
     render(
       <RsvpOrderCard
         matchRSVPs={[makeRsvp('r1', 'u1', new Date('2026-01-01T12:00:00Z'))]}
@@ -134,8 +133,12 @@ describe('RsvpOrderCard', () => {
       />
     )
 
-    await user.click(screen.getByRole('button', { name: /rsvp order \(1\)/i }))
-
+    const trigger = screen.getByRole('button', { name: /rsvp order \(1\)/i })
+    expect(trigger).toHaveAttribute('data-state', 'closed')
+    expect(trigger).toHaveAccessibleName('RSVP order (1)')
+    expect(trigger).toHaveAccessibleDescription(
+      /teams are filled in this order/i
+    )
     expect(
       screen.getByText(/teams are filled in this order/i)
     ).toBeInTheDocument()

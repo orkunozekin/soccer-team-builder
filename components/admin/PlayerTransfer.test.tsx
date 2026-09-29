@@ -42,10 +42,13 @@ describe('PlayerTransfer', () => {
       <PlayerTransfer matchId="match1" teams={teams} users={users} />
     )
 
-    expect(screen.queryByText(/move a player/i)).not.toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /transfer player/i })
-    ).toHaveAttribute('data-state', 'closed')
+      screen.queryByRole('button', { name: /^move$/i })
+    ).not.toBeInTheDocument()
+    const trigger = screen.getByRole('button', { name: /transfer player/i })
+    expect(trigger).toHaveAttribute('data-state', 'closed')
+    expect(trigger).toHaveAccessibleName('Transfer Player')
+    expect(trigger).toHaveAccessibleDescription('Move a player to another team')
   })
 
   it('expands to show transfer controls', async () => {

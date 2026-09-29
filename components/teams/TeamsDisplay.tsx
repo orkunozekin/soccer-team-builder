@@ -378,7 +378,7 @@ export function TeamsDisplay({
   )
 
   return (
-    <div className="min-w-0 space-y-2 overflow-x-hidden">
+    <div className="min-w-0 space-y-2 overflow-x-clip">
       <AlertDialog
         open={!!pendingCancel}
         onOpenChange={open => !open && setPendingCancel(null)}
