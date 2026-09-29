@@ -210,7 +210,7 @@ export function MatchDetailView({
   const showCheckInHeadcount = hasCheckInWindowStarted(match.date, match.time)
 
   return (
-    <div className="flex w-full min-w-0 flex-col items-center overflow-x-hidden">
+    <div className="flex w-full min-w-0 flex-col items-center overflow-x-clip">
       <div
         className={`mx-auto w-full min-w-0 px-4 py-2 ${
           hasTeamsPanel ? 'max-w-6xl' : 'max-w-xl'
