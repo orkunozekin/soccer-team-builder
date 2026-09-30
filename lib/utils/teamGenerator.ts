@@ -175,10 +175,11 @@ export function assignUnassignedPlayersToTeams(
 /**
  * For each team that has no GK, move the earliest-RSVP GK from a later team onto it
  * via shift-down (bumped players cascade toward the GK's former team).
+ * Surplus keepers on earlier teams can also fill a gap via a size-neutral swap.
  */
 export function shiftGoalkeepersOntoTeamsWithoutGk(
   existingTeams: TeamAssignment[],
-  rsvps: RSVP[],
+  rsvps: Pick<RSVP, 'userId' | 'position' | 'rsvpAt'>[],
   users: User[]
 ): { teams: TeamAssignment[]; gkReplacements: GkReplacement[] } {
   const teams = existingTeams
@@ -237,12 +238,24 @@ export function shiftGoalkeepersOntoTeamsWithoutGk(
         gksLater.push({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 })
       }
     }
+    // Rebalance can put multiple early keepers on one team. Retain that team's
+    // earliest keeper and make its surplus available to later teams without one.
+    for (const t of teams.slice(0, targetTi)) {
+      const keepers = t.playerIds
+        .filter(uid => isGoalkeeper(effectivePosition(uid)))
+        .sort(
+          (a, b) => (rsvpAtByUserId.get(a) ?? 0) - (rsvpAtByUserId.get(b) ?? 0)
+        )
+      for (const uid of keepers.slice(1)) {
+        gksLater.push({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 })
+      }
+    }
     if (gksLater.length === 0) continue
     gksLater.sort((a, b) => a.rsvpAt - b.rsvpAt)
     const gkId = gksLater[0].uid
 
     const gkTeamIndex = teams.findIndex(t => t.playerIds.includes(gkId))
-    if (gkTeamIndex < 0 || gkTeamIndex <= targetTi) continue
+    if (gkTeamIndex < 0 || gkTeamIndex === targetTi) continue
 
     const p0 = lastByRsvp(teams[targetTi].playerIds, false)
     if (!p0) continue
@@ -250,6 +263,15 @@ export function shiftGoalkeepersOntoTeamsWithoutGk(
     teams[targetTi].playerIds = teams[targetTi].playerIds.map(id =>
       id === p0 ? gkId : id
     )
+
+    if (gkTeamIndex < targetTi) {
+      teams[gkTeamIndex].playerIds = teams[gkTeamIndex].playerIds.map(id =>
+        id === gkId ? p0 : id
+      )
+      gkReplacements.push({ insertedGK: gkId, removedPlayer: p0 })
+      insertedGkIds.add(gkId)
+      continue
+    }
 
     let bumped: string = p0
 

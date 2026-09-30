@@ -7,6 +7,7 @@ import { getUsersByIdsAdmin } from '@/lib/users/getUsersByIdsAdmin'
 import {
   applyPersistedTransfersKeepingBalance,
   isGoalkeeper,
+  shiftGoalkeepersOntoTeamsWithoutGk,
 } from '@/lib/utils/teamGenerator'
 import type { User } from '@/types/user'
 
@@ -111,6 +112,7 @@ export async function POST(request: NextRequest) {
         const data = d.data()
         return {
           userId: data.userId as string,
+          position: (data.position as string | null) ?? null,
           rsvpAt: timestampToDate(data.rsvpAt) ?? new Date(0),
         }
       })
@@ -131,6 +133,11 @@ export async function POST(request: NextRequest) {
     )
     const userById = new Map(users.map(u => [u.uid, u]))
 
+    // Keep the earliest RSVP's match position, falling back only for legacy RSVPs.
+    const rsvpByUser = new Map([...rsvps].reverse().map(r => [r.userId, r]))
+    const effectivePosition = (userId: string) =>
+      rsvpByUser.get(userId)?.position ?? userById.get(userId)?.position ?? null
+
     // Deduplicate RSVP list by userId, keep earliest RSVP timestamp
     const earliestByUser = new Map<string, Date>()
     for (const r of rsvps) {
@@ -139,7 +146,11 @@ export async function POST(request: NextRequest) {
     }
 
     const uniqueRsvpsSorted = Array.from(earliestByUser.entries())
-      .map(([userId, rsvpAt]) => ({ userId, rsvpAt }))
+      .map(([userId, rsvpAt]) => ({
+        userId,
+        rsvpAt,
+        position: effectivePosition(userId),
+      }))
       .sort((a, b) => a.rsvpAt.getTime() - b.rsvpAt.getTime())
 
     // Base roster: first N RSVPs by time
@@ -149,7 +160,7 @@ export async function POST(request: NextRequest) {
 
     // GK priority: ensure earliest goalkeepers are included, even if outside the base roster.
     const gkCandidates = uniqueRsvpsSorted
-      .filter(r => isGoalkeeper(userById.get(r.userId)?.position ?? null))
+      .filter(r => isGoalkeeper(r.position))
       .map(r => r.userId)
 
     const rosterSet = new Set(baseRoster)
@@ -167,7 +178,7 @@ export async function POST(request: NextRequest) {
       for (let i = uniqueRsvpsSorted.length - 1; i >= 0; i--) {
         const candidateId = uniqueRsvpsSorted[i].userId
         if (!rosterSet.has(candidateId)) continue
-        if (isGoalkeeper(userById.get(candidateId)?.position ?? null)) continue
+        if (isGoalkeeper(effectivePosition(candidateId))) continue
         rosterSet.delete(candidateId)
         rosterSet.add(gkId)
         replacements.push({ insertedGK: gkId, removedPlayer: candidateId })
@@ -235,11 +246,15 @@ export async function POST(request: NextRequest) {
     const rsvpAtByUserId = new Map(
       uniqueRsvpsSorted.map(r => [r.userId, r.rsvpAt.getTime()])
     )
+    const { teams: teamsWithKeepers, gkReplacements } =
+      shiftGoalkeepersOntoTeamsWithoutGk(baselineTeams, uniqueRsvpsSorted, users)
+    replacements.push(...gkReplacements)
     const finalTeams = applyPersistedTransfersKeepingBalance(
-      baselineTeams,
+      teamsWithKeepers,
       persisted,
       maxSizeByTeamNumber,
-      rsvpAtByUserId
+      rsvpAtByUserId,
+      new Set(gkCandidates)
     )
     const finalByNumber = new Map(
       finalTeams.map(t => [t.teamNumber, t.playerIds])
@@ -287,12 +302,15 @@ export async function POST(request: NextRequest) {
     await batch.commit()
 
     // Persist GK replacements so when that GK later changes position, we can swap them with the person they replaced
-    const gkReplacements: Record<string, string> = {}
+    const gkReplacementsMap: Record<string, string> = {}
     for (const r of replacements) {
-      gkReplacements[r.insertedGK] = r.removedPlayer
+      gkReplacementsMap[r.insertedGK] = r.removedPlayer
     }
-    if (Object.keys(gkReplacements).length > 0) {
-      await matchRef.set({ gkReplacements, updatedAt: now }, { merge: true })
+    if (Object.keys(gkReplacementsMap).length > 0) {
+      await matchRef.set(
+        { gkReplacements: gkReplacementsMap, updatedAt: now },
+        { merge: true }
+      )
     }
 
     auditLog({
