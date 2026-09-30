@@ -175,10 +175,11 @@ export function assignUnassignedPlayersToTeams(
 /**
  * For each team that has no GK, move the earliest-RSVP GK from a later team onto it
  * via shift-down (bumped players cascade toward the GK's former team).
+ * Surplus keepers on earlier teams can also fill a gap via a size-neutral swap.
  */
 export function shiftGoalkeepersOntoTeamsWithoutGk(
   existingTeams: TeamAssignment[],
-  rsvps: RSVP[],
+  rsvps: Pick<RSVP, 'userId' | 'position' | 'rsvpAt'>[],
   users: User[]
 ): { teams: TeamAssignment[]; gkReplacements: GkReplacement[] } {
   const teams = existingTeams
@@ -237,12 +238,24 @@ export function shiftGoalkeepersOntoTeamsWithoutGk(
         gksLater.push({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 })
       }
     }
+    // Rebalance can put multiple early keepers on one team. Retain that team's
+    // earliest keeper and make its surplus available to later teams without one.
+    for (const t of teams.slice(0, targetTi)) {
+      const keepers = t.playerIds
+        .filter(uid => isGoalkeeper(effectivePosition(uid)))
+        .sort(
+          (a, b) => (rsvpAtByUserId.get(a) ?? 0) - (rsvpAtByUserId.get(b) ?? 0)
+        )
+      for (const uid of keepers.slice(1)) {
+        gksLater.push({ uid, rsvpAt: rsvpAtByUserId.get(uid) ?? 0 })
+      }
+    }
     if (gksLater.length === 0) continue
     gksLater.sort((a, b) => a.rsvpAt - b.rsvpAt)
     const gkId = gksLater[0].uid
 
     const gkTeamIndex = teams.findIndex(t => t.playerIds.includes(gkId))
-    if (gkTeamIndex < 0 || gkTeamIndex <= targetTi) continue
+    if (gkTeamIndex < 0 || gkTeamIndex === targetTi) continue
 
     const p0 = lastByRsvp(teams[targetTi].playerIds, false)
     if (!p0) continue
@@ -250,6 +263,15 @@ export function shiftGoalkeepersOntoTeamsWithoutGk(
     teams[targetTi].playerIds = teams[targetTi].playerIds.map(id =>
       id === p0 ? gkId : id
     )
+
+    if (gkTeamIndex < targetTi) {
+      teams[gkTeamIndex].playerIds = teams[gkTeamIndex].playerIds.map(id =>
+        id === gkId ? p0 : id
+      )
+      gkReplacements.push({ insertedGK: gkId, removedPlayer: p0 })
+      insertedGkIds.add(gkId)
+      continue
+    }
 
     let bumped: string = p0
 
@@ -365,6 +387,7 @@ export function mergeBaselineWithManualTransfers(
   options?: {
     maxSizeByTeamNumber?: Map<number, number>
     rsvpAtByUserId?: Map<string, number>
+    goalkeeperIds?: Set<string>
   }
 ): TeamAssignment[] {
   const manualTransfers = mergeManualTransfers(
@@ -378,6 +401,7 @@ export function mergeBaselineWithManualTransfers(
   return enforceTeamMaxSizes(merged, options.maxSizeByTeamNumber, {
     manualPins: manualTransfers,
     rsvpAtByUserId: options.rsvpAtByUserId,
+    goalkeeperIds: options.goalkeeperIds,
   })
 }
 
@@ -408,7 +432,8 @@ function pickOverflowPlayerId(
   playerIds: string[],
   teamNumber: number,
   manualPins: Map<string, number>,
-  rsvpAtByUserId?: Map<string, number>
+  rsvpAtByUserId?: Map<string, number>,
+  goalkeeperIds?: Set<string>
 ): string | null {
   if (playerIds.length === 0) return null
 
@@ -422,7 +447,13 @@ function pickOverflowPlayerId(
     id => manualPins.get(id) !== teamNumber
   )
   if (unpinned.length > 0) {
-    return byLatestRsvp(unpinned)[0] ?? null
+    // Keep the sole keeper when an unpinned outfield player can make room.
+    const keepers = playerIds.filter(id => goalkeeperIds?.has(id))
+    const candidates =
+      keepers.length === 1
+        ? unpinned.filter(id => id !== keepers[0])
+        : unpinned
+    return byLatestRsvp(candidates.length > 0 ? candidates : unpinned)[0] ?? null
   }
   return byLatestRsvp(playerIds)[0] ?? null
 }
@@ -437,6 +468,7 @@ export function enforceTeamMaxSizes(
   maxSizeByTeamNumber: Map<number, number>,
   options?: {
     manualPins?: Map<string, number>
+    goalkeeperIds?: Set<string>
     rsvpAtByUserId?: Map<string, number>
   }
 ): TeamAssignment[] {
@@ -457,7 +489,8 @@ export function enforceTeamMaxSizes(
         team.playerIds,
         team.teamNumber,
         manualPins,
-        rsvpAtByUserId
+        rsvpAtByUserId,
+        options?.goalkeeperIds
       )
       if (!overflowId) break
 
@@ -498,7 +531,8 @@ export function applyPersistedTransfersKeepingBalance(
   baselineTeams: TeamAssignment[],
   persistedManualAssignments: Record<string, number> | undefined,
   maxSizeByTeamNumber: Map<number, number>,
-  rsvpAtByUserId?: Map<string, number>
+  rsvpAtByUserId?: Map<string, number>,
+  goalkeeperIds?: Set<string>
 ): TeamAssignment[] {
   const manualPins = mergeManualTransfers(new Map(), persistedManualAssignments)
   const teams = applyManualTeamTransfers(baselineTeams, manualPins).sort(
@@ -519,8 +553,11 @@ export function applyPersistedTransfersKeepingBalance(
       from: TeamAssignment,
       to: TeamAssignment
     ): boolean => {
+      const soleKeeper = from.playerIds.filter(id => goalkeeperIds?.has(id))
       const idx = from.playerIds.findIndex(
-        id => manualPins.get(id) !== from.teamNumber
+        id =>
+          manualPins.get(id) !== from.teamNumber &&
+          (soleKeeper.length !== 1 || id !== soleKeeper[0])
       )
       if (idx < 0) return false
       const [playerId] = from.playerIds.splice(idx, 1)
@@ -546,6 +583,7 @@ export function applyPersistedTransfersKeepingBalance(
   return enforceTeamMaxSizes(teams, maxSizeByTeamNumber, {
     manualPins,
     rsvpAtByUserId,
+    goalkeeperIds,
   })
 }
 

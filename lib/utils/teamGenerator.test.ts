@@ -592,6 +592,38 @@ describe('mergeBaselineWithManualTransfers', () => {
 })
 
 describe('applyPersistedTransfersKeepingBalance', () => {
+  it('moves an outfield player instead of the sole keeper when restoring balance', () => {
+    const result = applyPersistedTransfersKeepingBalance(
+      [
+        { teamNumber: 1, playerIds: ['gk1', 'a', 'b'] },
+        { teamNumber: 2, playerIds: ['gk2', 'c', 'd'] },
+      ],
+      { c: 1 },
+      new Map([[1, 11], [2, 11]]),
+      undefined,
+      new Set(['gk1', 'gk2'])
+    )
+    expect(result[0].playerIds).toContain('gk1')
+    expect(result[0].playerIds).toContain('c')
+    expect(result[1].playerIds).toContain('gk2')
+    expect(result.map(t => t.playerIds.length)).toEqual([3, 3])
+  })
+
+  it('honors an explicit keeper transfer over automatic keeper protection', () => {
+    const result = applyPersistedTransfersKeepingBalance(
+      [
+        { teamNumber: 1, playerIds: ['gk1', 'a'] },
+        { teamNumber: 2, playerIds: ['b', 'c'] },
+      ],
+      { gk1: 2 },
+      new Map([[1, 11], [2, 11]]),
+      undefined,
+      new Set(['gk1'])
+    )
+    expect(result[1].playerIds).toContain('gk1')
+    expect(result.map(t => t.playerIds.length)).toEqual([2, 2])
+  })
+
   it('does not treat current roster skew as implied transfers', () => {
     const baseline = [
       { teamNumber: 1, playerIds: ['p1', 'p2', 'p3', 'p4'] },

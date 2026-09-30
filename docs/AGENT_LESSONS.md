@@ -38,6 +38,14 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-09-30 — Carry invariant metadata through every roster update path
+
+- **Source:** PR #108 · Macroscope
+- **Gap:** Keeper protection was added to incremental RSVP updates and rebalance, but forced regeneration still called capacity enforcement without keeper IDs. Restoring a saved pin could eject the sole keeper again.
+- **Going forward:** When a shared allocator gains metadata needed to preserve an invariant, trace every caller and wrapper through to persistence. Cover incremental assignment, rebalance, and forced regeneration with saved assignments and both RSVP positions and legacy profile fallback.
+- **Pointers:** `lib/teams/expandTeamsForMatch.ts`, `lib/utils/teamGenerator.ts`, `app/api/teams/rebalance/route.ts`
+
+
 ### 2026-09-29 — Summary text inside a button becomes its accessible name
 
 - **Source:** PR #103 · Macroscope

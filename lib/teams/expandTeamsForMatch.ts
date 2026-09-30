@@ -13,6 +13,7 @@ import {
   assignUnassignedPlayersToTeams,
   computeTeamCountForRSVPCount,
   generateTeamsWithReplacements,
+  isGoalkeeper,
   mergeBaselineWithManualTransfers,
 } from '@/lib/utils/teamGenerator'
 import type { TeamAssignment } from '@/lib/utils/teamGenerator'
@@ -41,6 +42,19 @@ interface ExistingTeamDoc {
   name: string
   color: string
   playerIds: string[]
+}
+
+function getGoalkeeperIds(rsvps: RSVP[], users: User[]): Set<string> {
+  const userById = new Map(users.map(user => [user.uid, user]))
+  return new Set(
+    rsvps
+      .filter(rsvp =>
+        isGoalkeeper(
+          rsvp.position ?? userById.get(rsvp.userId)?.position ?? null
+        )
+      )
+      .map(rsvp => rsvp.userId)
+  )
 }
 
 async function incrementallyAssignUnassignedPlayers(
@@ -101,7 +115,8 @@ async function incrementallyAssignUnassignedPlayers(
           updatedAssignments,
           persisted,
           maxSizeByTeamNumber,
-          rsvpAtByUserId
+          rsvpAtByUserId,
+          getGoalkeeperIds(rsvpsToUse, users)
         )
       : updatedAssignments
 
@@ -212,7 +227,11 @@ async function fullyRegenerateTeams(
     currentAssignments,
     baselineTeams,
     persisted,
-    { maxSizeByTeamNumber, rsvpAtByUserId }
+    {
+      maxSizeByTeamNumber,
+      rsvpAtByUserId,
+      goalkeeperIds: getGoalkeeperIds(rsvpsToUse, users),
+    }
   )
 
   const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
