@@ -515,6 +515,49 @@ describe('expandTeamsForMatch', () => {
     }
   )
 
+  it.each([true, false])(
+    'preserves the sole keeper during forced regeneration (RSVP position: %s)',
+    async useRsvpPosition => {
+      const team1 = [
+        'gk1',
+        ...Array.from({ length: 10 }, (_, i) => `p${i + 1}`),
+      ]
+      const outfield2 = Array.from({ length: 11 }, (_, i) => `p${i + 11}`)
+      const ids = [...team1, ...outfield2, 'gk2', 'gk3']
+      const { adminDb, getTeams } = createMockFirestore({
+        rsvps: ids.map((id, index) =>
+          makeRsvpDoc(
+            `r${index}`,
+            id,
+            new Date(Date.UTC(2024, 0, 1, 0, index)),
+            'match1',
+            useRsvpPosition ? (id.startsWith('gk') ? 'GK' : 'ST') : null
+          )
+        ),
+        users: ids.map(id =>
+          makeUserDoc(id, !useRsvpPosition && id.startsWith('gk') ? 'GK' : 'ST')
+        ),
+        teams: [
+          makeTeamDoc('team1', 1, team1),
+          makeTeamDoc('team2', 2, [...outfield2.slice(0, 10), 'gk2']),
+          makeTeamDoc('team3', 3, ['p21', 'gk3']),
+        ],
+        match: { id: 'match1', data: { manualTeamAssignments: { p21: 2 } } },
+      })
+      await expandTeamsForMatch(adminDb, 'match1', { forceRegenerate: true })
+      const rosters = getTeams()
+        .sort((a, b) => Number(a.data.teamNumber) - Number(b.data.teamNumber))
+        .map(t => t.data.playerIds as string[])
+      expect(rosters[1]).toContain('gk2')
+      expect(rosters[1]).toContain('p21')
+      expect(rosters.map(ids => ids.length)).toEqual([11, 11, 2])
+      expect(
+        rosters.map(ids => ids.filter(id => id.startsWith('gk')).length)
+      ).toEqual([1, 1, 1])
+      expect(rosters.flat().sort()).toEqual([...ids].sort())
+    }
+  )
+
   it('preserves explicit transfers during force regeneration', async () => {
     const { adminDb, getTeams } = createMockFirestore({
       rsvps: [

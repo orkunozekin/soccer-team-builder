@@ -387,6 +387,7 @@ export function mergeBaselineWithManualTransfers(
   options?: {
     maxSizeByTeamNumber?: Map<number, number>
     rsvpAtByUserId?: Map<string, number>
+    goalkeeperIds?: Set<string>
   }
 ): TeamAssignment[] {
   const manualTransfers = mergeManualTransfers(
@@ -400,6 +401,7 @@ export function mergeBaselineWithManualTransfers(
   return enforceTeamMaxSizes(merged, options.maxSizeByTeamNumber, {
     manualPins: manualTransfers,
     rsvpAtByUserId: options.rsvpAtByUserId,
+    goalkeeperIds: options.goalkeeperIds,
   })
 }
 
