@@ -408,7 +408,8 @@ function pickOverflowPlayerId(
   playerIds: string[],
   teamNumber: number,
   manualPins: Map<string, number>,
-  rsvpAtByUserId?: Map<string, number>
+  rsvpAtByUserId?: Map<string, number>,
+  goalkeeperIds?: Set<string>
 ): string | null {
   if (playerIds.length === 0) return null
 
@@ -422,7 +423,13 @@ function pickOverflowPlayerId(
     id => manualPins.get(id) !== teamNumber
   )
   if (unpinned.length > 0) {
-    return byLatestRsvp(unpinned)[0] ?? null
+    // Keep the sole keeper when an unpinned outfield player can make room.
+    const keepers = playerIds.filter(id => goalkeeperIds?.has(id))
+    const candidates =
+      keepers.length === 1
+        ? unpinned.filter(id => id !== keepers[0])
+        : unpinned
+    return byLatestRsvp(candidates.length > 0 ? candidates : unpinned)[0] ?? null
   }
   return byLatestRsvp(playerIds)[0] ?? null
 }
@@ -437,6 +444,7 @@ export function enforceTeamMaxSizes(
   maxSizeByTeamNumber: Map<number, number>,
   options?: {
     manualPins?: Map<string, number>
+    goalkeeperIds?: Set<string>
     rsvpAtByUserId?: Map<string, number>
   }
 ): TeamAssignment[] {
@@ -457,7 +465,8 @@ export function enforceTeamMaxSizes(
         team.playerIds,
         team.teamNumber,
         manualPins,
-        rsvpAtByUserId
+        rsvpAtByUserId,
+        options?.goalkeeperIds
       )
       if (!overflowId) break
 
@@ -498,7 +507,8 @@ export function applyPersistedTransfersKeepingBalance(
   baselineTeams: TeamAssignment[],
   persistedManualAssignments: Record<string, number> | undefined,
   maxSizeByTeamNumber: Map<number, number>,
-  rsvpAtByUserId?: Map<string, number>
+  rsvpAtByUserId?: Map<string, number>,
+  goalkeeperIds?: Set<string>
 ): TeamAssignment[] {
   const manualPins = mergeManualTransfers(new Map(), persistedManualAssignments)
   const teams = applyManualTeamTransfers(baselineTeams, manualPins).sort(
@@ -519,8 +529,11 @@ export function applyPersistedTransfersKeepingBalance(
       from: TeamAssignment,
       to: TeamAssignment
     ): boolean => {
+      const soleKeeper = from.playerIds.filter(id => goalkeeperIds?.has(id))
       const idx = from.playerIds.findIndex(
-        id => manualPins.get(id) !== from.teamNumber
+        id =>
+          manualPins.get(id) !== from.teamNumber &&
+          (soleKeeper.length !== 1 || id !== soleKeeper[0])
       )
       if (idx < 0) return false
       const [playerId] = from.playerIds.splice(idx, 1)
@@ -546,6 +559,7 @@ export function applyPersistedTransfersKeepingBalance(
   return enforceTeamMaxSizes(teams, maxSizeByTeamNumber, {
     manualPins,
     rsvpAtByUserId,
+    goalkeeperIds,
   })
 }
 

@@ -13,6 +13,7 @@ import {
   assignUnassignedPlayersToTeams,
   computeTeamCountForRSVPCount,
   generateTeamsWithReplacements,
+  isGoalkeeper,
   mergeBaselineWithManualTransfers,
 } from '@/lib/utils/teamGenerator'
 import type { TeamAssignment } from '@/lib/utils/teamGenerator'
@@ -95,13 +96,25 @@ async function incrementallyAssignUnassignedPlayers(
     rsvpsToUse.map(r => [r.userId, r.rsvpAt?.getTime() ?? 0])
   )
 
+  const userById = new Map(users.map(user => [user.uid, user]))
+  const goalkeeperIds = new Set(
+    rsvpsToUse
+      .filter(rsvp =>
+        isGoalkeeper(
+          rsvp.position ?? userById.get(rsvp.userId)?.position ?? null
+        )
+      )
+      .map(rsvp => rsvp.userId)
+  )
+
   const finalAssignments =
     Object.keys(persisted).length > 0
       ? applyPersistedTransfersKeepingBalance(
           updatedAssignments,
           persisted,
           maxSizeByTeamNumber,
-          rsvpAtByUserId
+          rsvpAtByUserId,
+          goalkeeperIds
         )
       : updatedAssignments
 

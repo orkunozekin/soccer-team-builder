@@ -466,6 +466,55 @@ describe('expandTeamsForMatch', () => {
     expect(team3?.data.playerIds).toHaveLength(1)
   })
 
+  it.each([false, true])(
+    'keeps a goalkeeper on team 2 after a late signup with an outfield pin (existing overflow keepers: %s)',
+    async existingKeepers => {
+      const team1Ids = [
+        'gk1',
+        ...Array.from({ length: 10 }, (_, i) => `p${i + 1}`),
+      ]
+      const team2Ids = Array.from({ length: 11 }, (_, i) => `p${i + 11}`)
+      const overflowIds = existingKeepers ? ['gk2', 'gk3'] : []
+      const allIds = [...team1Ids, ...team2Ids, ...overflowIds, 'gk_new']
+      const { adminDb, getTeams } = createMockFirestore({
+        rsvps: allIds.map((id, index) =>
+          makeRsvpDoc(
+            `r${index}`,
+            id,
+            new Date(2024, 0, 1, 0, index),
+            'match1',
+            id.startsWith('gk') ? 'GK' : 'ST'
+          )
+        ),
+        // The match RSVP must win over an outfield profile position.
+        users: allIds.map(id => makeUserDoc(id, 'ST')),
+        teams: [
+          makeTeamDoc('team1', 1, team1Ids),
+          makeTeamDoc('team2', 2, team2Ids),
+          makeTeamDoc('team3', 3, overflowIds),
+        ],
+        match: { id: 'match1', data: { manualTeamAssignments: { p21: 2 } } },
+      })
+
+      await expandTeamsForMatch(adminDb, 'match1')
+
+      const teams = getTeams().sort(
+        (a, b) => Number(a.data.teamNumber) - Number(b.data.teamNumber)
+      )
+      const rosters = teams.map(t => t.data.playerIds as string[])
+      expect(rosters[0]).toEqual(team1Ids)
+      expect(rosters[1]).toContain(existingKeepers ? 'gk2' : 'gk_new')
+      expect(rosters[1]).toContain('p21')
+      expect(rosters[1].filter(id => id.startsWith('gk'))).toHaveLength(1)
+      expect(rosters.map(ids => ids.length)).toEqual([
+        11,
+        11,
+        allIds.length - 22,
+      ])
+      expect(rosters.flat().sort()).toEqual([...allIds].sort())
+    }
+  )
+
   it('preserves explicit transfers during force regeneration', async () => {
     const { adminDb, getTeams } = createMockFirestore({
       rsvps: [
