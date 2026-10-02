@@ -50,8 +50,16 @@ vi.mock('@/lib/services/rsvpService', () => ({
 }))
 
 vi.mock('@/components/matches/MatchCard', () => ({
-  MatchCard: ({ match, href }: { match: { id: string }; href?: string }) => (
-    <div>
+  MatchCard: ({
+    match,
+    href,
+    index,
+  }: {
+    match: { id: string }
+    href?: string
+    index?: number
+  }) => (
+    <div data-animation-index={index}>
       MatchCard:{match.id}:{href}
     </div>
   ),
@@ -127,6 +135,28 @@ describe('ClubMatchesView', () => {
       refresh: vi.fn(),
     })
     getMatchRsvpCountMock.mockResolvedValue(0)
+  })
+
+  it('restarts match entrance animation timing on later pages', async () => {
+    const user = userEvent.setup()
+    listMatchesForViewerMock.mockResolvedValueOnce(
+      Array.from({ length: 52 }, (_, i) => ({
+        ...mockMatch(`m${i}`),
+        clubId: 'club-a',
+      }))
+    )
+    renderView()
+    await screen.findByText('MatchCard:m0:/c/alpha/matches/m0')
+    await user.click(screen.getByRole('button', { name: 'Go to page 6' }))
+    expect(
+      screen.getByText('MatchCard:m50:/c/alpha/matches/m50')
+    ).toHaveAttribute('data-animation-index', '0')
+    expect(
+      screen.getByText('MatchCard:m51:/c/alpha/matches/m51')
+    ).toHaveAttribute('data-animation-index', '1')
+    expect(
+      screen.queryByText('MatchCard:m0:/c/alpha/matches/m0')
+    ).not.toBeInTheDocument()
   })
 
   it('renders upcoming matches after a successful fetch', async () => {

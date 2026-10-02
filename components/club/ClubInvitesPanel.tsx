@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Pagination } from '@/components/ui/pagination'
 import {
   createClubInviteAPI,
   listClubInvitesAPI,
   revokeClubInviteAPI,
 } from '@/lib/api/client'
+import { useClientPagination } from '@/lib/hooks/useClientPagination'
 import type { ClubInvite } from '@/types/club'
 
 type InviteWithLink = ClubInvite & { link: string }
@@ -76,10 +78,7 @@ export function ClubInvitesPanel({
       setError(err instanceof Error ? err.message : 'Failed to load invites')
       throw err
     } finally {
-      if (
-        clubIdRef.current === requestClubId &&
-        listGenRef.current === gen
-      ) {
+      if (clubIdRef.current === requestClubId && listGenRef.current === gen) {
         setLoading(false)
       }
     }
@@ -186,6 +185,8 @@ export function ClubInvitesPanel({
     }
   }
 
+  const paged = useClientPagination(invites, clubId)
+
   const actionsLocked = busy || loading
 
   return (
@@ -263,12 +264,12 @@ export function ClubInvitesPanel({
             </p>
           ) : (
             <ul className="mt-2 space-y-2">
-              {invites.map(invite => {
+              {paged.items.map(invite => {
                 const revokeBusy = busyInviteId === invite.id
                 return (
                   <li
                     key={invite.id}
-                    className="flex flex-col gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-900"
+                    className="flex flex-col gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0 text-sm">
                       <code className="font-mono tracking-wider">
@@ -321,6 +322,9 @@ export function ClubInvitesPanel({
                 )
               })}
             </ul>
+          )}
+          {!loading && paged.pagination.totalPages > 1 && (
+            <Pagination {...paged.pagination} itemLabel="invites" />
           )}
         </div>
       )}

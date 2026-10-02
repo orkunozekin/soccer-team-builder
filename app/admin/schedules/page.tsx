@@ -13,12 +13,17 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Pagination } from '@/components/ui/pagination'
 import {
   createScheduleAPI,
   deleteScheduleAPI,
   listSchedulesAPI,
   updateScheduleAPI,
 } from '@/lib/api/client'
+import {
+  LIST_PAGE_SIZE,
+  useClientPagination,
+} from '@/lib/hooks/useClientPagination'
 import type { MatchSchedule } from '@/types/schedule'
 
 const WEEKDAY_LABELS = [
@@ -36,7 +41,7 @@ function summarizeSlots(schedule: MatchSchedule): string {
     .map(s => {
       const dayLabel =
         schedule.cadence === 'weekly'
-          ? WEEKDAY_LABELS[s.day] ?? `Day ${s.day}`
+          ? (WEEKDAY_LABELS[s.day] ?? `Day ${s.day}`)
           : `Day ${s.day}`
       const loc = s.location?.name ? ` @ ${s.location.name}` : ''
       return `${dayLabel} ${s.time}${loc}`
@@ -54,25 +59,34 @@ function serializeDates(schedule: MatchSchedule): MatchSchedule {
 
 export default function AdminSchedulesPage() {
   const [schedules, setSchedules] = useState<MatchSchedule[]>([])
+  const paged = useClientPagination(schedules)
+  const { setPage } = paged
   const [loading, setLoading] = useState(true)
   const [mode, setMode] = useState<'list' | 'create' | 'edit'>('list')
   const [editing, setEditing] = useState<MatchSchedule | null>(null)
   const [actionError, setActionError] = useState('')
 
-  const refresh = useCallback(async () => {
-    setLoading(true)
-    setActionError('')
-    try {
-      const { schedules: list } = await listSchedulesAPI()
-      setSchedules(list.map(serializeDates))
-    } catch (err) {
-      setActionError(
-        err instanceof Error ? err.message : 'Failed to load schedules'
-      )
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const refresh = useCallback(
+    async (focusId?: string) => {
+      setLoading(true)
+      setActionError('')
+      try {
+        const { schedules: list } = await listSchedulesAPI()
+        setSchedules(list.map(serializeDates))
+        if (focusId) {
+          const index = list.findIndex(item => item.id === focusId)
+          if (index >= 0) setPage(Math.floor(index / LIST_PAGE_SIZE) + 1)
+        }
+      } catch (err) {
+        setActionError(
+          err instanceof Error ? err.message : 'Failed to load schedules'
+        )
+      } finally {
+        setLoading(false)
+      }
+    },
+    [setPage]
+  )
 
   useEffect(() => {
     void refresh()
@@ -86,10 +100,11 @@ export default function AdminSchedulesPage() {
 
   const handleUpdate = async (values: ScheduleFormValues) => {
     if (!editing) return
-    await updateScheduleAPI(editing.id, values)
+    const editedId = editing.id
+    await updateScheduleAPI(editedId, values)
     setEditing(null)
     setMode('list')
-    await refresh()
+    await refresh(editedId)
   }
 
   const handleToggleActive = async (schedule: MatchSchedule) => {
@@ -207,7 +222,7 @@ export default function AdminSchedulesPage() {
               </CardContent>
             </Card>
           ) : (
-            schedules.map(schedule => (
+            paged.items.map(schedule => (
               <Card key={schedule.id}>
                 <CardHeader className="pb-2">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -266,6 +281,9 @@ export default function AdminSchedulesPage() {
                 </CardContent>
               </Card>
             ))
+          )}
+          {!loading && paged.pagination.totalPages > 1 && (
+            <Pagination {...paged.pagination} itemLabel="schedules" />
           )}
         </div>
       )}
