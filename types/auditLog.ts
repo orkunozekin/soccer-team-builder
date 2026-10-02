@@ -41,6 +41,7 @@ export type AuditAction =
   | 'cron.rsvp_auto_opened'
   | 'cron.rsvp_auto_closed'
   | 'cron.audit_retention'
+  | 'cron.invite_expired'
 
 export type AuditSource = 'api' | 'client' | 'cron'
 
@@ -139,6 +140,7 @@ export const ALL_AUDIT_ACTIONS: readonly AuditAction[] = [
   'cron.rsvp_auto_opened',
   'cron.rsvp_auto_closed',
   'cron.audit_retention',
+  'cron.invite_expired',
 ] as const
 
 export const ALL_AUDIT_SOURCES: readonly AuditSource[] = [

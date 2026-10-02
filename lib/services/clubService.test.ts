@@ -502,3 +502,167 @@ describe('clubService redeem + backfill', () => {
     expect(mocks.store.get('clubInvites/inv1')?.useCount).toBe(0)
   })
 })
+
+describe('createInvite expiry + player quota', () => {
+  const HOUR = 60 * 60 * 1000
+
+  beforeEach(() => {
+    mocks.store.clear()
+    mocks.beforeTransaction = null
+    vi.resetModules()
+  })
+
+  it('sets a 12h expiry and skips the quota for club admins', async () => {
+    const { createInvite } = await import('@/lib/services/clubService')
+
+    const first = await createInvite({
+      clubId: 'c1',
+      createdBy: 'a1',
+      createdByRole: 'club_admin',
+    })
+    await createInvite({
+      clubId: 'c1',
+      createdBy: 'a1',
+      createdByRole: 'club_admin',
+    })
+
+    expect(first.expiresAt!.getTime() - first.createdAt.getTime()).toBe(
+      12 * HOUR
+    )
+    const stored = mocks.store.get(`clubInvites/${first.id}`)
+    expect(
+      (stored?.expiresAt as { toMillis: () => number }).toMillis()
+    ).toBe(first.expiresAt!.getTime())
+    expect(mocks.store.get('clubInviteQuotas/c1_a1')).toBeUndefined()
+  })
+
+  it('limits a player to one invite per club inside the cooldown', async () => {
+    const { createInvite, InviteQuotaExceededError } = await import(
+      '@/lib/services/clubService'
+    )
+
+    const first = await createInvite({
+      clubId: 'c1',
+      createdBy: 'p1',
+      createdByRole: 'player',
+    })
+    expect(mocks.store.get('clubInviteQuotas/c1_p1')?.lastInviteId).toBe(
+      first.id
+    )
+
+    const second = createInvite({
+      clubId: 'c1',
+      createdBy: 'p1',
+      createdByRole: 'player',
+    })
+    await expect(second).rejects.toBeInstanceOf(InviteQuotaExceededError)
+    await second.catch((err: InstanceType<typeof InviteQuotaExceededError>) => {
+      expect(err.nextAllowedAt.getTime()).toBe(
+        first.createdAt.getTime() + 11 * HOUR
+      )
+    })
+
+    await expect(
+      createInvite({ clubId: 'c2', createdBy: 'p1', createdByRole: 'player' })
+    ).resolves.toMatchObject({ clubId: 'c2' })
+  })
+
+  it('frees the slot when the player invite is revoked', async () => {
+    const { createInvite, revokeInvite } = await import(
+      '@/lib/services/clubService'
+    )
+
+    const first = await createInvite({
+      clubId: 'c1',
+      createdBy: 'p1',
+      createdByRole: 'player',
+    })
+    await revokeInvite({ clubId: 'c1', inviteId: first.id })
+
+    const second = await createInvite({
+      clubId: 'c1',
+      createdBy: 'p1',
+      createdByRole: 'player',
+    })
+    expect(second.id).not.toBe(first.id)
+    expect(mocks.store.get('clubInviteQuotas/c1_p1')?.lastInviteId).toBe(
+      second.id
+    )
+  })
+
+  it('markInviteExpired marks a due invite once and ignores early or revoked ones', async () => {
+    const { Timestamp } = await import('firebase-admin/firestore')
+    const base = {
+      clubId: 'c1',
+      createdBy: 'a1',
+      createdByRole: 'club_admin',
+      expiredAt: null,
+      revokedAt: null,
+    }
+    mocks.store.set('clubInvites/due', {
+      ...base,
+      code: 'DUE111',
+      expiresAt: Timestamp.fromMillis(Date.now() - 1000),
+    })
+    mocks.store.set('clubInvites/early', {
+      ...base,
+      code: 'EARLY1',
+      expiresAt: Timestamp.fromMillis(Date.now() + HOUR),
+    })
+    mocks.store.set('clubInvites/revoked', {
+      ...base,
+      code: 'REV111',
+      expiresAt: Timestamp.fromMillis(Date.now() - 1000),
+      revokedAt: Timestamp.now(),
+    })
+    mocks.store.set('clubInvites/legacy', {
+      ...base,
+      code: 'LEG111',
+      expiresAt: null,
+    })
+
+    const { markInviteExpired } = await import('@/lib/services/clubService')
+
+    await expect(markInviteExpired('due')).resolves.toEqual({
+      changed: true,
+      clubId: 'c1',
+      code: 'DUE111',
+    })
+    expect(mocks.store.get('clubInvites/due')?.expiredAt).toBeTruthy()
+    await expect(markInviteExpired('due')).resolves.toEqual({
+      changed: false,
+    })
+
+    for (const id of ['early', 'revoked', 'legacy', 'missing']) {
+      await expect(markInviteExpired(id)).resolves.toEqual({ changed: false })
+    }
+    expect(mocks.store.get('clubInvites/early')?.expiredAt).toBeNull()
+  })
+
+  it('allows a player again once the cooldown has elapsed', async () => {
+    const { Timestamp } = await import('firebase-admin/firestore')
+    mocks.store.set('clubInvites/old', {
+      clubId: 'c1',
+      code: 'OLD111',
+      createdBy: 'p1',
+      createdByRole: 'player',
+      revokedAt: null,
+    })
+    mocks.store.set('clubInviteQuotas/c1_p1', {
+      clubId: 'c1',
+      userId: 'p1',
+      lastInviteId: 'old',
+      lastCreatedAt: Timestamp.fromMillis(Date.now() - 11 * HOUR - 1000),
+    })
+
+    const { createInvite } = await import('@/lib/services/clubService')
+    const invite = await createInvite({
+      clubId: 'c1',
+      createdBy: 'p1',
+      createdByRole: 'player',
+    })
+    expect(mocks.store.get('clubInviteQuotas/c1_p1')?.lastInviteId).toBe(
+      invite.id
+    )
+  })
+})

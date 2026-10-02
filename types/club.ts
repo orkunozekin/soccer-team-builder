@@ -40,6 +40,8 @@ export interface ClubInvite {
   maxUses: number | null
   useCount: number
   expiresAt: Date | null
+  /** Set by the expiry cron; access is still decided by `expiresAt`. */
+  expiredAt?: Date | null
   revokedAt: Date | null
   createdAt: Date
 }
