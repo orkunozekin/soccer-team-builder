@@ -211,6 +211,104 @@ describe('POST /api/teams/rebalance', () => {
     })
   })
 
+  it.each([
+    [false, false],
+    [false, true],
+    [true, false],
+    [true, true],
+  ])(
+    'preserves goalkeeper priority after rebalance (already repaired: %s, admin pin: %s)',
+    async (alreadyRepaired, hasPin) => {
+      const team1 = [
+        'gk1',
+        ...Array.from({ length: 10 }, (_, i) => `p${i + 1}`),
+      ]
+      const team2 = Array.from({ length: 11 }, (_, i) => `p${i + 11}`)
+      const overflow = ['gk2', 'gk3', 'gk_new']
+      const allIds = [...team1, ...team2, ...overflow]
+      const rsvps = allIds.map((id, index) => {
+        const rsvp = makeRsvpDoc(
+          `r${index}`,
+          id,
+          new Date(Date.UTC(2024, 0, 1, 0, index))
+        )
+        rsvp.data.position = id.startsWith('gk') ? 'GK' : 'ST'
+        return rsvp
+      })
+      const { adminDb, getTeams } = createRebalanceMockRepos({
+        rsvps,
+        users: allIds.map(id => makeUserDoc(id, 'ST')),
+        teams: [
+          makeTeamDoc('team1', 1, team1),
+          makeTeamDoc(
+            'team2',
+            2,
+            alreadyRepaired
+              ? team2.map(id => (id === 'p20' ? 'gk2' : id))
+              : team2
+          ),
+          makeTeamDoc(
+            'team3',
+            3,
+            alreadyRepaired ? ['p20', 'gk3', 'gk_new'] : overflow
+          ),
+        ],
+        match: {
+          id: 'match1',
+          data: { manualTeamAssignments: hasPin ? { p21: 2 } : {} },
+        },
+      })
+      vi.mocked(getAdminDb).mockReturnValue(adminDb as never)
+
+      const response = await POST(makeRequest())
+      const body = await response.json()
+      const rosters = getTeams().map(t => t.data.playerIds as string[])
+      expect(response.status).toBe(200)
+      expect(body.assignedCounts).toEqual([11, 11, 3])
+      expect(
+        rosters.map(ids => ids.filter(id => id.startsWith('gk')).length)
+      ).toEqual([1, 1, 2])
+      expect(rosters.flat().sort()).toEqual([...allIds].sort())
+      if (hasPin) expect(rosters[1]).toContain('p21')
+    }
+  )
+
+  it.each(['GK', null, 'ST'])(
+    'uses RSVP position %s before a goalkeeper profile and distributes early keepers',
+    async position => {
+      const ids = ['gk1', 'gk2', 'p1', 'p2', 'p3', 'p4']
+      const rsvps = ids.map((id, index) => {
+        const rsvp = makeRsvpDoc(
+          `r${index}`,
+          id,
+          new Date(Date.UTC(2024, 0, 1, 0, index))
+        )
+        rsvp.data.position = id.startsWith('gk') ? position : 'ST'
+        return rsvp
+      })
+      const { adminDb, getTeams } = createRebalanceMockRepos({
+        rsvps,
+        users: ids.map(id =>
+          makeUserDoc(id, id.startsWith('gk') ? 'GK' : 'ST')
+        ),
+        teams: [makeTeamDoc('team1', 1, ids), makeTeamDoc('team2', 2, [])],
+      })
+      vi.mocked(getAdminDb).mockReturnValue(adminDb as never)
+      const response = await POST(makeRequest())
+      expect(response.status).toBe(200)
+      const rosters = getTeams().map(t => t.data.playerIds as string[])
+      expect(rosters.map(ids => ids.length)).toEqual([3, 3])
+      expect(rosters.flat().sort()).toEqual([...ids].sort())
+      if (position === 'ST') {
+        expect(rosters[0]).toEqual(ids.slice(0, 3))
+      } else {
+        expect(
+          rosters.map(ids => ids.filter(id => id.startsWith('gk')).length)
+        ).toEqual([1, 1])
+      }
+    }
+  )
+
   it('returns 401 when not authenticated', async () => {
     vi.mocked(verifyClubAdminForMatch).mockResolvedValue({
       uid: null,
