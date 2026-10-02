@@ -9,7 +9,7 @@ Every club invite code expires 12 hours after it is created. Players can create 
 | Status | in-progress |
 | Owner session | — |
 | Last updated | 2026-09-30 |
-| Related PR / branch | `cursor/invite-expiration-3c1e` (no PR yet) |
+| Related PR / branch | [#110](https://github.com/orkunozekin/soccer-team-builder/pull/110) (draft), `cursor/invite-expiration-3c1e` |
 
 ## Goals (v1)
 
