@@ -730,7 +730,7 @@ export async function updateClubAPI(
 
 export async function createClubInviteAPI(
   clubId: string,
-  options?: { maxUses?: number | null; expiresAt?: string | null }
+  options?: { maxUses?: number | null }
 ): Promise<{ success: boolean; invite: ClubInvite; link: string }> {
   const response = await apiRequest(`/clubs/${clubId}/invites`, {
     method: 'POST',

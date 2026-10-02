@@ -56,6 +56,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Player invite rate limit; Admin SDK only.
+    match /clubInviteQuotas/{quotaId} {
+      allow read, write: if false;
+    }
+
     // RSVPs (top-level collection used by client): same policy as subcollection
     match /rsvps/{rsvpId} {
       allow read: if isSignedIn();

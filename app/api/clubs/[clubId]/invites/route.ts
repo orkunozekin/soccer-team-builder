@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyCanCreateInvite, verifyClubAdmin } from '@/lib/api/auth'
+import { PLAYER_INVITE_LIMIT_MESSAGE } from '@/lib/constants/invites'
+import { auditLog } from '@/lib/services/auditService'
 import {
+  InviteQuotaExceededError,
   createInvite,
   listActiveInvitesForClub,
+  recordInviteExpiryMessageId,
 } from '@/lib/services/clubService'
-import { auditLog } from '@/lib/services/auditService'
+import { scheduleInviteExpiry } from '@/lib/services/inviteExpiryQueue'
 
 export async function GET(
   request: NextRequest,
@@ -78,24 +82,27 @@ export async function POST(
       typeof body?.maxUses === 'number' && body.maxUses > 0
         ? body.maxUses
         : null
-    const expiresAt =
-      typeof body?.expiresAt === 'string' && body.expiresAt
-        ? new Date(body.expiresAt)
-        : null
-    if (expiresAt && isNaN(expiresAt.getTime())) {
-      return NextResponse.json(
-        { error: 'Invalid expiresAt' },
-        { status: 400 }
-      )
-    }
 
-    const invite = await createInvite({
-      clubId,
-      createdBy: uid,
-      createdByRole,
-      maxUses,
-      expiresAt,
-    })
+    let invite
+    try {
+      invite = await createInvite({
+        clubId,
+        createdBy: uid,
+        createdByRole,
+        maxUses,
+      })
+    } catch (err) {
+      if (err instanceof InviteQuotaExceededError) {
+        return NextResponse.json(
+          {
+            error: PLAYER_INVITE_LIMIT_MESSAGE,
+            nextAllowedAt: err.nextAllowedAt.toISOString(),
+          },
+          { status: 429 }
+        )
+      }
+      throw err
+    }
 
     auditLog({
       action: 'club.invite_created',
@@ -105,6 +112,24 @@ export async function POST(
       source: 'api',
       metadata: { inviteId: invite.id, code: invite.code, createdByRole },
     })
+
+    // The invite already exists; a scheduling failure must not fail the request.
+    if (invite.expiresAt) {
+      try {
+        const messageId = await scheduleInviteExpiry({
+          inviteId: invite.id,
+          expiresAt: invite.expiresAt,
+        })
+        if (messageId) {
+          await recordInviteExpiryMessageId(invite.id, messageId)
+        }
+      } catch (err) {
+        console.error(
+          'Failed to schedule invite expiry:',
+          err instanceof Error ? err.message : 'unknown error'
+        )
+      }
+    }
 
     const origin =
       request.headers.get('origin') ||

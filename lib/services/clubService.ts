@@ -1,5 +1,10 @@
 import { Timestamp } from 'firebase-admin/firestore'
+import {
+  INVITE_TTL_MS,
+  PLAYER_INVITE_LIMIT_MESSAGE,
+} from '@/lib/constants/invites'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { getInviteQuotaState } from '@/lib/utils/inviteQuota'
 import type {
   Club,
   ClubInvite,
@@ -417,6 +422,7 @@ export async function listActiveInvitesForClub(
       maxUses: (data.maxUses as number | null) ?? null,
       useCount: (data.useCount as number) ?? 0,
       expiresAt: data.expiresAt?.toDate?.() ?? null,
+      expiredAt: data.expiredAt?.toDate?.() ?? null,
       revokedAt: null,
       createdAt: data.createdAt?.toDate?.() ?? new Date(),
     })
@@ -459,6 +465,7 @@ export async function revokeInvite(input: {
       maxUses: (data.maxUses as number | null) ?? null,
       useCount: (data.useCount as number) ?? 0,
       expiresAt: data.expiresAt?.toDate?.() ?? null,
+      expiredAt: data.expiredAt?.toDate?.() ?? null,
       revokedAt: revokedAt.toDate(),
       createdAt: data.createdAt?.toDate?.() ?? new Date(),
     }
@@ -507,12 +514,28 @@ export function generateInviteCode(length = 6): string {
   return code
 }
 
+export class InviteQuotaExceededError extends Error {
+  constructor(public readonly nextAllowedAt: Date) {
+    super(PLAYER_INVITE_LIMIT_MESSAGE)
+    this.name = 'InviteQuotaExceededError'
+  }
+}
+
+export function inviteQuotaDocId(clubId: string, userId: string): string {
+  return `${clubId}_${userId}`
+}
+
+/**
+ * Create an invite that expires `INVITE_TTL_MS` after creation. Players are
+ * limited to one invite per club per cooldown window; the quota check and both
+ * writes share one transaction so concurrent creates cannot both pass.
+ * Throws `InviteQuotaExceededError` when a player is limited.
+ */
 export async function createInvite(input: {
   clubId: string
   createdBy: string
   createdByRole: ClubInviteCreatorRole
   maxUses?: number | null
-  expiresAt?: Date | null
 }): Promise<ClubInvite> {
   const adminDb = getAdminDb()
   if (!adminDb) throw new Error('Firebase Admin not configured')
@@ -530,19 +553,70 @@ export async function createInvite(input: {
   }
 
   const ref = adminDb.collection('clubInvites').doc()
-  const now = Timestamp.now()
-  const data = {
-    clubId: input.clubId,
-    code,
-    createdBy: input.createdBy,
-    createdByRole: input.createdByRole,
-    maxUses: input.maxUses ?? null,
-    useCount: 0,
-    expiresAt: input.expiresAt ? Timestamp.fromDate(input.expiresAt) : null,
-    revokedAt: null,
-    createdAt: now,
+  const quotaRef =
+    input.createdByRole === 'player'
+      ? adminDb
+          .collection('clubInviteQuotas')
+          .doc(inviteQuotaDocId(input.clubId, input.createdBy))
+      : null
+
+  const outcome = await adminDb.runTransaction(async tx => {
+    const now = Timestamp.now()
+
+    if (quotaRef) {
+      const quotaSnap = await tx.get(quotaRef)
+      const quota = quotaSnap.exists ? quotaSnap.data() : undefined
+      const lastCreatedAt: Date | null =
+        quota?.lastCreatedAt?.toDate?.() ?? null
+      let state = getInviteQuotaState({
+        lastCreatedAt,
+        lastInviteRevoked: false,
+        now: now.toDate(),
+      })
+      if (state.limited && typeof quota?.lastInviteId === 'string') {
+        const lastSnap = await tx.get(
+          adminDb.collection('clubInvites').doc(quota.lastInviteId)
+        )
+        state = getInviteQuotaState({
+          lastCreatedAt,
+          lastInviteRevoked:
+            !lastSnap.exists || Boolean(lastSnap.data()?.revokedAt),
+          now: now.toDate(),
+        })
+      }
+      if (state.limited && state.nextAllowedAt) {
+        return { ok: false as const, nextAllowedAt: state.nextAllowedAt }
+      }
+    }
+
+    const expiresAt = Timestamp.fromMillis(now.toMillis() + INVITE_TTL_MS)
+    tx.set(ref, {
+      clubId: input.clubId,
+      code,
+      createdBy: input.createdBy,
+      createdByRole: input.createdByRole,
+      maxUses: input.maxUses ?? null,
+      useCount: 0,
+      expiresAt,
+      expiredAt: null,
+      expiryMessageId: null,
+      revokedAt: null,
+      createdAt: now,
+    })
+    if (quotaRef) {
+      tx.set(quotaRef, {
+        clubId: input.clubId,
+        userId: input.createdBy,
+        lastInviteId: ref.id,
+        lastCreatedAt: now,
+      })
+    }
+    return { ok: true as const, createdAt: now, expiresAt }
+  })
+
+  if (!outcome.ok) {
+    throw new InviteQuotaExceededError(outcome.nextAllowedAt)
   }
-  await ref.set(data)
 
   return {
     id: ref.id,
@@ -552,10 +626,61 @@ export async function createInvite(input: {
     createdByRole: input.createdByRole,
     maxUses: input.maxUses ?? null,
     useCount: 0,
-    expiresAt: input.expiresAt ?? null,
+    expiresAt: outcome.expiresAt.toDate(),
+    expiredAt: null,
     revokedAt: null,
-    createdAt: now.toDate(),
+    createdAt: outcome.createdAt.toDate(),
   }
+}
+
+export async function recordInviteExpiryMessageId(
+  inviteId: string,
+  messageId: string
+): Promise<void> {
+  const adminDb = getAdminDb()
+  if (!adminDb) throw new Error('Firebase Admin not configured')
+  await adminDb
+    .collection('clubInvites')
+    .doc(inviteId)
+    .update({ expiryMessageId: messageId })
+}
+
+export type MarkInviteExpiredResult =
+  | { changed: false }
+  | { changed: true; clubId: string; code: string }
+
+/**
+ * Record that an invite has expired. Idempotent: no-op when the invite is
+ * missing, revoked, already marked, non-expiring, or not yet due (QStash can
+ * redeliver or deliver early). Access is still decided by `expiresAt`.
+ */
+export async function markInviteExpired(
+  inviteId: string
+): Promise<MarkInviteExpiredResult> {
+  const adminDb = getAdminDb()
+  if (!adminDb) throw new Error('Firebase Admin not configured')
+
+  const ref = adminDb.collection('clubInvites').doc(inviteId)
+  return adminDb.runTransaction(async tx => {
+    const snap = await tx.get(ref)
+    if (!snap.exists) return { changed: false as const }
+    const data = snap.data()!
+    const expiresAtMs: number | null = data.expiresAt?.toMillis?.() ?? null
+    if (
+      data.revokedAt ||
+      data.expiredAt ||
+      expiresAtMs == null ||
+      expiresAtMs > Date.now()
+    ) {
+      return { changed: false as const }
+    }
+    tx.update(ref, { expiredAt: Timestamp.now() })
+    return {
+      changed: true as const,
+      clubId: data.clubId as string,
+      code: data.code as string,
+    }
+  })
 }
 
 export async function findActiveInviteByCode(
@@ -596,6 +721,7 @@ export async function findActiveInviteByCode(
       maxUses: (data.maxUses as number | null) ?? null,
       useCount: (data.useCount as number) ?? 0,
       expiresAt: data.expiresAt?.toDate?.() ?? null,
+      expiredAt: data.expiredAt?.toDate?.() ?? null,
       revokedAt: data.revokedAt?.toDate?.() ?? null,
       createdAt: data.createdAt?.toDate?.() ?? new Date(),
     }
