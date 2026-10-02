@@ -50,6 +50,26 @@ const users: User[] = [
 ]
 
 describe('RsvpOrderCard', () => {
+  it('paginates confirmed players with absolute ranks and clamps after cancellations', async () => {
+    const user = userEvent.setup()
+    const rsvps = Array.from({ length: 21 }, (_, i) =>
+      makeRsvp(`r${i}`, `player-${i + 1}`, new Date(2026, 0, 1, 0, i))
+    ).reverse()
+    const { rerender } = render(<RsvpOrderCard matchRSVPs={rsvps} users={[]} />)
+    await user.click(screen.getByRole('button', { name: 'RSVP order (21)' }))
+    expect(screen.getByText('player-1')).toBeInTheDocument()
+    expect(screen.queryByText('player-11')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Go to page 3' }))
+    expect(screen.getByText('player-21')).toBeInTheDocument()
+    expect(screen.getByText('21')).toBeInTheDocument()
+    expect(screen.getByText('Showing 21–21 of 21 RSVPs')).toBeInTheDocument()
+    rerender(<RsvpOrderCard matchRSVPs={rsvps.slice(11)} users={[]} />)
+    expect(screen.getByText('player-1')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('navigation', { name: 'Pagination' })
+    ).not.toBeInTheDocument()
+  })
+
   it('shows confirmed RSVPs sorted by rsvpAt ascending', async () => {
     const user = userEvent.setup()
     const matchRSVPs = [
@@ -96,9 +116,7 @@ describe('RsvpOrderCard', () => {
   })
 
   it('is collapsed by default', () => {
-    const matchRSVPs = [
-      makeRsvp('r1', 'u1', new Date('2026-01-01T12:00:00Z')),
-    ]
+    const matchRSVPs = [makeRsvp('r1', 'u1', new Date('2026-01-01T12:00:00Z'))]
 
     render(<RsvpOrderCard matchRSVPs={matchRSVPs} users={users} />)
 

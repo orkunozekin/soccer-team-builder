@@ -14,8 +14,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Pagination } from '@/components/ui/pagination'
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { useClientPagination } from '@/lib/hooks/useClientPagination'
 import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
 import { listMatchesForViewer } from '@/lib/services/matchService'
 import { getMatchRsvpCount } from '@/lib/services/rsvpService'
@@ -212,6 +214,11 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when visible set changes
   }, [listStatus, showAdminList, visibleMatches])
 
+  const paged = useClientPagination(
+    visibleMatches,
+    JSON.stringify([clubId, userId, showAdminList, filter])
+  )
+
   const refetchMatchesAndCounts = async () => {
     const gen = ++fetchGen.current
     setListStatus('loading')
@@ -348,7 +355,7 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
             visibleMatches.length > 2 && 'lg:grid-cols-3'
           )}
         >
-          {visibleMatches.map((match, index) => {
+          {paged.items.map((match, index) => {
             const canManage = manageFlags[match.id] ?? false
             // Page-level admin list still includes unstamped matches a club
             // admin cannot delete. Those stay on the player card.
@@ -367,11 +374,14 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
                 href={matchHref(match.id)}
                 rsvpCount={rsvpCounts[match.id]}
                 isAdmin={canManage}
-                index={index}
+                index={paged.offset + index}
               />
             )
           })}
         </div>
+      )}
+      {paged.pagination.totalPages > 1 && (
+        <Pagination {...paged.pagination} itemLabel="matches" />
       )}
     </div>
   )

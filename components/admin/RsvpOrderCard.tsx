@@ -9,6 +9,8 @@ import {
   AccordionItem,
 } from '@/components/ui/accordion'
 import { Card } from '@/components/ui/card'
+import { Pagination } from '@/components/ui/pagination'
+import { useClientPagination } from '@/lib/hooks/useClientPagination'
 import type { RSVP } from '@/types/rsvp'
 import type { User } from '@/types/user'
 
@@ -28,6 +30,8 @@ export function RsvpOrderCard({ matchRSVPs, users }: RsvpOrderCardProps) {
     [matchRSVPs]
   )
 
+  const paged = useClientPagination(orderedRsvps, matchRSVPs[0]?.matchId)
+
   return (
     <Card>
       <Accordion type="single" collapsible className="w-full">
@@ -40,8 +44,8 @@ export function RsvpOrderCard({ matchRSVPs, users }: RsvpOrderCardProps) {
             {orderedRsvps.length === 0 ? (
               <p className="text-sm text-zinc-500">No confirmed RSVPs yet.</p>
             ) : (
-              <ol className="max-h-80 space-y-2 overflow-y-auto">
-                {orderedRsvps.map((rsvp, index) => {
+              <ol start={paged.offset + 1} className="space-y-2">
+                {paged.items.map((rsvp, index) => {
                   const user = usersById.get(rsvp.userId)
                   const displayName =
                     user?.displayName || user?.email || rsvp.userId
@@ -52,7 +56,7 @@ export function RsvpOrderCard({ matchRSVPs, users }: RsvpOrderCardProps) {
                       className="flex items-center gap-3 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-900/50"
                     >
                       <span className="w-6 shrink-0 text-center font-medium text-zinc-500">
-                        {index + 1}
+                        {paged.offset + index + 1}
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">
@@ -66,6 +70,9 @@ export function RsvpOrderCard({ matchRSVPs, users }: RsvpOrderCardProps) {
                   )
                 })}
               </ol>
+            )}
+            {paged.pagination.totalPages > 1 && (
+              <Pagination {...paged.pagination} itemLabel="RSVPs" />
             )}
           </AccordionContent>
         </AccordionItem>
