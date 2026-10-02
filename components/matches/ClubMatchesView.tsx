@@ -374,7 +374,7 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
                 href={matchHref(match.id)}
                 rsvpCount={rsvpCounts[match.id]}
                 isAdmin={canManage}
-                index={paged.offset + index}
+                index={index}
               />
             )
           })}

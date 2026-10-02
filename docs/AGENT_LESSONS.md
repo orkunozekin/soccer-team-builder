@@ -38,6 +38,14 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-10-01 — Pagination animation timing must use page-local positions
+
+- **Source:** PR #109 · Macroscope
+- **Gap:** Passing an absolute list offset to MatchCard's animation index hid later pages for seconds because entrance delay grows by 80ms per index.
+- **Going forward:** Inspect how child components consume row indexes when adding pagination. Use absolute offsets for semantic ranks and page-local positions for entrance animation timing; test navigation to a later page.
+- **Pointers:** `components/matches/ClubMatchesView.tsx`, `components/matches/MatchCard.tsx`
+
+
 ### 2026-09-29 — Summary text inside a button becomes its accessible name
 
 - **Source:** PR #103 · Macroscope
