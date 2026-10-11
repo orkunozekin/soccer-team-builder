@@ -296,18 +296,18 @@ describe('POST /api/teams/formation', () => {
     ] as never)
 
     // Intercept: after first RSVP query, cancel lw before tx.
-    const originalCollection = (adminDb as { collection: Function }).collection
+    const originalCollection = adminDb.collection
     let rsvpQueryCount = 0
-    ;(adminDb as { collection: Function }).collection = (path: string) => {
+    adminDb.collection = ((path: string) => {
       const col = originalCollection(path)
       if (path === 'rsvps') {
         return {
           ...col,
-          where: (...args: unknown[]) => {
-            const chain = col.where(...args)
+          where: () => {
+            const chain = col.where()
             return {
-              where: (...args2: unknown[]) => {
-                const inner = chain.where(...args2)
+              where: () => {
+                const inner = chain.where()
                 return {
                   get: async () => {
                     rsvpQueryCount += 1
@@ -326,7 +326,7 @@ describe('POST /api/teams/formation', () => {
         }
       }
       return col
-    }
+    }) as typeof adminDb.collection
 
     const res = await POST(makeRequest({ matchId: 'm1', formationId: '4-4-2' }))
     expect(res.status).toBe(200)
