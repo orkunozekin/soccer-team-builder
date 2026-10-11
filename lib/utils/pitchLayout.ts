@@ -200,9 +200,22 @@ export interface SeparatePlayersOptions {
 }
 
 /**
+ * Slots that stay locked on the midline during separation.
+ * Only GK + CM: locking every central role (CB/CDM/CAM/CF/ST too) leaves a
+ * crowded half-pitch unable to separate vertically.
+ */
+const LOCKED_MIDLINE_SLOTS = new Set(['GK', 'CM'])
+
+function isLockedMidlineSlot(assignedSlot: string): boolean {
+  return LOCKED_MIDLINE_SLOTS.has(assignedSlot.toUpperCase())
+}
+
+/**
  * Push markers apart so nodes and name labels do not overlap.
  * Uses an elliptical minimum-distance model (wider than tall) because
  * names sit under nodes and need horizontal clearance.
+ * GK and CM keep a locked x so separation never drifts the center
+ * midfielder (or keeper) off the midline.
  */
 export function separatePlayers(
   players: PlayerOnPitch[],
@@ -218,16 +231,27 @@ export function separatePlayers(
   const minSepY = options.minSepY ?? 11
   const iterations = options.iterations ?? 50
 
-  const clamp = (pos: PitchPosition): PitchPosition => ({
-    x: Math.max(minX, Math.min(maxX, pos.x)),
+  const clamp = (pos: PitchPosition, lockX?: number): PitchPosition => ({
+    x:
+      lockX != null
+        ? lockX
+        : Math.max(minX, Math.min(maxX, pos.x)),
     y: Math.max(minY, Math.min(maxY, pos.y)),
   })
 
   if (players.length === 1) {
-    return [{ ...players[0], position: clamp(players[0].position) }]
+    const lockX = isLockedMidlineSlot(players[0].assignedSlot)
+      ? players[0].position.x
+      : undefined
+    return [{ ...players[0], position: clamp(players[0].position, lockX) }]
   }
 
-  const positions = players.map(p => clamp(p.position))
+  const lockedX = players.map(p =>
+    isLockedMidlineSlot(p.assignedSlot) ? p.position.x : null
+  )
+  const positions = players.map((p, i) =>
+    clamp(p.position, lockedX[i] ?? undefined)
+  )
 
   for (let iter = 0; iter < iterations; iter++) {
     let moved = false
@@ -260,6 +284,28 @@ export function separatePlayers(
           uy *= 0.2
         }
 
+        const aLock = lockedX[i]
+        const bLock = lockedX[j]
+        if (aLock != null && bLock != null) {
+          // Two spine markers: only separate vertically.
+          ux = 0
+        } else if (aLock != null) {
+          // Locked spine absorbs no horizontal push; other marker takes it.
+          b.x = Math.max(minX, Math.min(maxX, b.x + ux * 2))
+          a.y = Math.max(minY, Math.min(maxY, a.y - uy))
+          b.y = Math.max(minY, Math.min(maxY, b.y + uy))
+          a.x = aLock
+          moved = true
+          continue
+        } else if (bLock != null) {
+          a.x = Math.max(minX, Math.min(maxX, a.x - ux * 2))
+          a.y = Math.max(minY, Math.min(maxY, a.y - uy))
+          b.y = Math.max(minY, Math.min(maxY, b.y + uy))
+          b.x = bLock
+          moved = true
+          continue
+        }
+
         a.x = Math.max(minX, Math.min(maxX, a.x - ux))
         a.y = Math.max(minY, Math.min(maxY, a.y - uy))
         b.x = Math.max(minX, Math.min(maxX, b.x + ux))
@@ -273,7 +319,7 @@ export function separatePlayers(
 
   return players.map((p, i) => ({
     ...p,
-    position: clamp(positions[i]),
+    position: clamp(positions[i], lockedX[i] ?? undefined),
   }))
 }
 
@@ -388,8 +434,9 @@ export function assignPitchSlots(
   }[] = []
 
   // Pass 1: earliest per preferred group claims the canonical slot.
-  // Multiple players at the same central role pair horizontally so
-  // duplicates stay on one band (e.g. two STs side-by-side, not stacked).
+  // Multiple players at the same central role share one horizontal band:
+  // 2 → left/right pair (LCM/RCM); 3+ → left + dead-center + right so a
+  // 4-3-3 midfielder (and 3-CB lines) keep a true center marker.
   const horizontalPairs: Record<string, readonly [string, string]> = {
     CB: ['LCB', 'RCB'],
     CDM: ['LCDM', 'RCDM'],
@@ -399,33 +446,38 @@ export function assignPitchSlots(
     ST: ['LST', 'RST'],
   }
 
+  function assignSlot(
+    user: User,
+    preferred: string,
+    slot: string
+  ): void {
+    claimedSlots.add(slotKey(slot))
+    assignments.push({
+      user,
+      preferred,
+      assignedSlot: slot,
+      position: { ...getPitchPosition(slot) },
+    })
+  }
+
   for (const [preferred, list] of Array.from(groups.entries())) {
     const pairSlots = horizontalPairs[preferred]
-    if (pairSlots && list.length >= 2) {
-      const paired = Math.min(list.length, pairSlots.length)
-      for (let i = 0; i < paired; i++) {
-        const slot = pairSlots[i]
-        claimedSlots.add(slotKey(slot))
-        assignments.push({
-          user: list[i].user,
-          preferred,
-          assignedSlot: slot,
-          position: { ...getPitchPosition(slot) },
-        })
-      }
+    if (pairSlots && list.length >= 3) {
+      // Earliest holds the spine; next two flank left/right.
+      assignSlot(list[0]!.user, preferred, preferred)
+      assignSlot(list[1]!.user, preferred, pairSlots[0])
+      assignSlot(list[2]!.user, preferred, pairSlots[1])
+      continue
+    }
+    if (pairSlots && list.length === 2) {
+      assignSlot(list[0]!.user, preferred, pairSlots[0])
+      assignSlot(list[1]!.user, preferred, pairSlots[1])
       continue
     }
 
     const earliest = list[0]
     if (!earliest) continue
-    const key = slotKey(preferred)
-    claimedSlots.add(key)
-    assignments.push({
-      user: earliest.user,
-      preferred,
-      assignedSlot: preferred,
-      position: { ...getPitchPosition(preferred) },
-    })
+    assignSlot(earliest.user, preferred, preferred)
   }
 
   // Pass 2: remaining players (global rsvpAt order) take nearest free adjacent.
@@ -433,9 +485,11 @@ export function assignPitchSlots(
   for (const [preferred, list] of Array.from(groups.entries())) {
     const pairSlots = horizontalPairs[preferred]
     const alreadyAssigned =
-      pairSlots && list.length >= 2
-        ? Math.min(list.length, pairSlots.length)
-        : 1
+      pairSlots && list.length >= 3
+        ? 3
+        : pairSlots && list.length === 2
+          ? 2
+          : 1
     for (let i = alreadyAssigned; i < list.length; i++) {
       remaining.push(list[i])
     }

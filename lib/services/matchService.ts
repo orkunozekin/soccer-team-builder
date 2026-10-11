@@ -42,6 +42,10 @@ function mapDocToMatch(match: Record<string, unknown>, id: string): Match {
       typeof match.rsvpConfirmedCount === 'number'
         ? match.rsvpConfirmedCount
         : null,
+    selectedFormation:
+      typeof match.selectedFormation === 'string'
+        ? match.selectedFormation
+        : null,
     createdAt: timestampToDate(match.createdAt as never) || new Date(),
     updatedAt: timestampToDate(match.updatedAt as never) || new Date(),
   }

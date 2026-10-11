@@ -787,6 +787,40 @@ describe('enforceTeamMaxSizes', () => {
     expect(result.find(t => t.teamNumber === 2)?.playerIds).toHaveLength(11)
     expect(result.find(t => t.teamNumber === 3)?.playerIds).toEqual(['p23'])
   })
+
+  it('fills a lower-team vacancy instead of cascading onto a new team 4', () => {
+    // Simulate one-way move from team 1 → full team 2 while teams 2+3 are full:
+    // team 1 has a hole; overflow must return there, not tumble to team 4.
+    const team1 = Array.from({ length: 10 }, (_, i) => `a${i + 1}`)
+    const team2 = Array.from({ length: 12 }, (_, i) => `b${i + 1}`)
+    const team3 = Array.from({ length: 11 }, (_, i) => `c${i + 1}`)
+    const rsvpAtByUserId = new Map<string, number>()
+    let t = 0
+    for (const id of [...team1, ...team2, ...team3]) {
+      rsvpAtByUserId.set(id, ++t)
+    }
+
+    const result = enforceTeamMaxSizes(
+      [
+        { teamNumber: 1, playerIds: team1 },
+        { teamNumber: 2, playerIds: team2 },
+        { teamNumber: 3, playerIds: team3 },
+      ],
+      new Map([
+        [1, 11],
+        [2, 11],
+        [3, 11],
+      ]),
+      { rsvpAtByUserId }
+    )
+
+    expect(result.find(t => t.teamNumber === 1)?.playerIds).toHaveLength(11)
+    expect(result.find(t => t.teamNumber === 2)?.playerIds).toHaveLength(11)
+    expect(result.find(t => t.teamNumber === 3)?.playerIds).toHaveLength(11)
+    expect(result.find(t => t.teamNumber === 4)).toBeUndefined()
+    // Latest on over-full team 2 returns to the hole on team 1
+    expect(result.find(t => t.teamNumber === 1)?.playerIds).toContain('b12')
+  })
 })
 
 describe('regeneration with manual transfers', () => {

@@ -183,11 +183,13 @@ Surfaces: RSVP confirm modal + post-RSVP edit while RSVP window allows edits.
 
 ## Non-goals (v1)
 
-- Formation picker UI (4-4-2 style)
 - Pitch-surface drag-and-drop (admin keeps list DnD)
-- Persisting auto-reassigned positions
 - Captain / yellow card / substitution overlay icons
 - Rewriting team generation to be formation-slot based
+
+## Related: admin formation picker
+
+Club admins / super users can apply a named formation (e.g. 4-4-2) from the teams panel. That flow persists closest-slot RSVP positions via [`POST /api/teams/formation`](../../app/api/teams/formation/route.ts) and is separate from the display-only pitch slot resolver.
 
 ## Implementation notes for coding agents
 

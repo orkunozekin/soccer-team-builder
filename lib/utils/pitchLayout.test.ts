@@ -180,15 +180,37 @@ describe('assignPitchSlots', () => {
     expect(result.find(p => p.user.uid === 'b')?.preferredPosition).toBe('GK')
   })
 
-  it('falls back to a horizontal nudge when preferred and adjacent slots are taken', () => {
-    // Three CMs + fill LCM/RCM band leftovers via CDM/CAM so the third nudges
-    const ids = ['cm1', 'cm2', 'cdm', 'cam', 'cm3']
+  it('places three CMs as LCM + dead-center CM + RCM', () => {
     const users = [
       makeUser('cm1', { position: 'CM' }),
       makeUser('cm2', { position: 'CM' }),
+      makeUser('cm3', { position: 'CM' }),
+    ]
+    const team = makeTeam(['cm1', 'cm2', 'cm3'])
+    const rsvps = users.map((u, i) =>
+      makeRSVP(u.uid, new Date(`2024-01-01T10:0${i}:00Z`))
+    )
+    const result = assignPitchSlots(team, users, rsvps)
+    const byId = Object.fromEntries(result.map(p => [p.user.uid, p]))
+
+    expect(byId.cm1.assignedSlot).toBe('CM')
+    expect(byId.cm1.position.x).toBe(50)
+    expect(byId.cm2.assignedSlot).toBe('LCM')
+    expect(byId.cm3.assignedSlot).toBe('RCM')
+    expect(byId.cm2.position.x).toBeLessThan(50)
+    expect(byId.cm3.position.x).toBeGreaterThan(50)
+  })
+
+  it('falls back to a horizontal nudge when preferred and adjacent slots are taken', () => {
+    // Four CMs fill LCM/CM/RCM; CDM/CAM block adjacency so the fourth nudges
+    const ids = ['cm1', 'cm2', 'cm3', 'cdm', 'cam', 'cm4']
+    const users = [
+      makeUser('cm1', { position: 'CM' }),
+      makeUser('cm2', { position: 'CM' }),
+      makeUser('cm3', { position: 'CM' }),
       makeUser('cdm', { position: 'CDM' }),
       makeUser('cam', { position: 'CAM' }),
-      makeUser('cm3', { position: 'CM' }),
+      makeUser('cm4', { position: 'CM' }),
     ]
     const team = makeTeam(ids)
     const rsvps = ids.map((id, i) =>
@@ -196,12 +218,12 @@ describe('assignPitchSlots', () => {
     )
 
     const result = assignPitchSlots(team, users, rsvps)
-    const cm3 = result.find(p => p.user.uid === 'cm3')
-    expect(cm3).toBeDefined()
-    expect(cm3!.preferredPosition).toBe('CM')
+    const cm4 = result.find(p => p.user.uid === 'cm4')
+    expect(cm4).toBeDefined()
+    expect(cm4!.preferredPosition).toBe('CM')
     // Nudge moves x away from the pure coordinate of the fallback slot
-    expect(cm3!.position.x).not.toBe(
-      POSITION_COORDINATES[cm3!.assignedSlot].x
+    expect(cm4!.position.x).not.toBe(
+      POSITION_COORDINATES[cm4!.assignedSlot].x
     )
   })
 
@@ -274,6 +296,67 @@ describe('assignPitchSlots', () => {
 })
 
 describe('separatePlayers', () => {
+  it('keeps CM locked on the midline when neighbors push', () => {
+    const users = [
+      makeUser('cm', { position: 'CM' }),
+      makeUser('lm', { position: 'LM' }),
+      makeUser('rm', { position: 'RM' }),
+    ]
+    const packed = [
+      {
+        user: users[0],
+        position: { x: 50, y: 46 },
+        assignedSlot: 'CM',
+        preferredPosition: 'CM',
+      },
+      {
+        user: users[1],
+        position: { x: 48, y: 46 },
+        assignedSlot: 'LM',
+        preferredPosition: 'LM',
+      },
+      {
+        user: users[2],
+        position: { x: 52, y: 46 },
+        assignedSlot: 'RM',
+        preferredPosition: 'RM',
+      },
+    ]
+    const result = separatePlayers(packed, { minSepX: 14, minSepY: 10 })
+    const cm = result.find(p => p.user.uid === 'cm')
+    expect(cm?.position.x).toBe(50)
+  })
+
+  it('allows non-CM central markers to move sideways when crowded', () => {
+    const users = [
+      makeUser('cm', { position: 'CM' }),
+      makeUser('st', { position: 'ST' }),
+    ]
+    const packed = [
+      {
+        user: users[0],
+        position: { x: 50, y: 50 },
+        assignedSlot: 'CM',
+        preferredPosition: 'CM',
+      },
+      {
+        user: users[1],
+        position: { x: 50, y: 50 },
+        assignedSlot: 'ST',
+        preferredPosition: 'ST',
+      },
+    ]
+    const result = separatePlayers(packed, { minSepX: 14, minSepY: 10 })
+    const cm = result.find(p => p.user.uid === 'cm')
+    const st = result.find(p => p.user.uid === 'st')
+    expect(cm?.position.x).toBe(50)
+    // ST is not midline-locked; it may move horizontally to separate.
+    expect(
+      Math.abs((st?.position.x ?? 50) - 50) > 0.1 ||
+        Math.abs((st?.position.y ?? 50) - (cm?.position.y ?? 50)) >= 8
+    ).toBe(true)
+  })
+
   it('pushes overlapping markers apart', () => {
     const users = [
       makeUser('a', { position: 'LB' }),

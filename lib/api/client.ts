@@ -370,6 +370,34 @@ export async function rebalanceTeamsAPI(matchId: string): Promise<{
   return response.json()
 }
 
+export async function applyFormationAPI(
+  matchId: string,
+  formationId: string
+): Promise<{
+  success: boolean
+  formationId: string
+  teamsUpdated: number
+  positionsChanged: number
+  assignments: Array<{
+    userId: string
+    fromPosition: string
+    toPosition: string
+    teamNumber: number
+  }>
+}> {
+  const response = await apiRequest('/teams/formation', {
+    method: 'POST',
+    body: JSON.stringify({ matchId, formationId }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to apply formation')
+  }
+
+  return response.json()
+}
+
 export async function checkInAPI(
   matchId: string,
   coords: { lat: number; lng: number; accuracy?: number | null }

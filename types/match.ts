@@ -30,6 +30,11 @@ export interface Match {
    * Maintained by RSVP API writes; may be missing on older matches.
    */
   rsvpConfirmedCount?: number | null
+  /**
+   * Last formation applied by a club admin / super user (e.g. "4-4-2").
+   * Informational; pitch layout still uses per-player RSVP positions.
+   */
+  selectedFormation?: string | null
   createdAt: Date
   updatedAt: Date
 }

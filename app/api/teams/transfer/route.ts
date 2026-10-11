@@ -194,8 +194,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, swapped: true })
     }
 
-    // One-way transfer: move in memory, then cascade overflow so no team exceeds
-    // maxSize (e.g. assigning a GK onto a full team 1 shifts the 22nd RSVP to team 3).
+    // One-way transfer: move in memory, then enforce maxSize. Overflow fills a
+    // lower-team vacancy first (so DnD between full teams 1↔2 does not tumble
+    // players onto team 4); otherwise it cascades forward (e.g. GK onto full
+    // team 1 shifts the 22nd RSVP to team 3).
     const nextAssignments = teams.map(t => ({
       teamNumber: t.teamNumber,
       playerIds: t.playerIds.filter(id => id !== playerId),
