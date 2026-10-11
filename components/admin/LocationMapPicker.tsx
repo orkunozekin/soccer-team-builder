@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { Button } from '@/components/ui/button'
@@ -43,6 +43,7 @@ export function LocationMapPicker({
   const markerRef = useRef<mapboxgl.Marker | null>(null)
   const onPinChangeRef = useRef(onPinChange)
   const disabledRef = useRef(disabled)
+  const [mapUnavailable, setMapUnavailable] = useState(false)
 
   useEffect(() => {
     onPinChangeRef.current = onPinChange
@@ -57,14 +58,25 @@ export function LocationMapPicker({
 
     mapboxgl.accessToken = token
     const startHasPin = hasCoords(lat, lng)
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: startHasPin ? [lng!, lat!] : DEFAULT_CENTER,
-      zoom: startHasPin ? PINNED_ZOOM : DEFAULT_ZOOM,
-      attributionControl: true,
-    })
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right')
+    setMapUnavailable(false)
+    let map: mapboxgl.Map
+    try {
+      map = new mapboxgl.Map({
+        container: containerRef.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: startHasPin ? [lng!, lat!] : DEFAULT_CENTER,
+        zoom: startHasPin ? PINNED_ZOOM : DEFAULT_ZOOM,
+        attributionControl: true,
+      })
+    } catch {
+      // WebGL can be unavailable even when a Mapbox token is configured.
+      setMapUnavailable(true)
+      return
+    }
+    map.addControl(
+      new mapboxgl.NavigationControl({ showCompass: false }),
+      'top-right'
+    )
     mapRef.current = map
 
     const placeMarker = (nextLat: number, nextLng: number, fly: boolean) => {
@@ -182,12 +194,19 @@ export function LocationMapPicker({
         )}
       </div>
       <p className="text-xs text-zinc-500 dark:text-zinc-400">
-        Optional. Click the map (or drag the pin) to set exact coordinates.
-        The nearest address fills in automatically; coords still win for maps
-        links and check-in.
+        Optional. Click the map (or drag the pin) to set exact coordinates. The
+        nearest address fills in automatically; coords still win for maps links
+        and check-in.
       </p>
+      {mapUnavailable && (
+        <p role="status" className="text-sm text-zinc-500 dark:text-zinc-400">
+          Map unavailable in this browser. You can still enter a location or
+          choose a saved one.
+        </p>
+      )}
       <div
         ref={containerRef}
+        hidden={mapUnavailable}
         className="h-56 w-full overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700 sm:h-64"
         aria-label="Map to pin match location"
       />
