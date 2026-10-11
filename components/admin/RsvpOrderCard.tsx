@@ -20,7 +20,7 @@ interface RsvpOrderCardProps {
   users: User[]
   /** When set with onRestoreComplete, shows the admin restore control. */
   matchId?: string
-  onRestoreComplete?: () => void
+  onRestoreComplete?: () => void | Promise<void>
 }
 
 export function RsvpOrderCard({

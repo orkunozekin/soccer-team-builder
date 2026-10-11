@@ -219,7 +219,9 @@ describe('RsvpOrderCard', () => {
       screen.getByRole('button', { name: /restore rsvp order/i })
     )
 
-    expect(mocks.generateTeamsAPIMock).toHaveBeenCalledWith('match1')
+    expect(mocks.generateTeamsAPIMock).toHaveBeenCalledWith('match1', {
+      restoreRsvpOrder: true,
+    })
     expect(onRestoreComplete).toHaveBeenCalledTimes(1)
   })
 

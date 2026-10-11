@@ -14,7 +14,7 @@ export function RestoreRsvpOrderButton({
   showError = 'inline',
 }: {
   matchId: string
-  onDone: () => void
+  onDone: () => void | Promise<void>
   disabled?: boolean
   variant?: ButtonProps['variant']
   size?: ButtonProps['size']
@@ -28,8 +28,12 @@ export function RestoreRsvpOrderButton({
     setError(null)
     setLoading(true)
     try {
-      await generateTeamsAPI(matchId)
-      onDone()
+      await generateTeamsAPI(matchId, { restoreRsvpOrder: true })
+      try {
+        await onDone()
+      } catch {
+        setError('Teams restored, but failed to refresh')
+      }
     } catch {
       setError('Failed to restore RSVP order')
     } finally {

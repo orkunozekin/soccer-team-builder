@@ -5,8 +5,11 @@ import { expandTeamsForMatch } from '@/lib/teams/expandTeamsForMatch'
 import { auditLog } from '@/lib/services/auditService'
 
 export async function POST(request: NextRequest) {
+  let restoreRsvpOrder = false
   try {
-    const { matchId } = await request.json()
+    const body = await request.json()
+    const matchId = body?.matchId as string | undefined
+    restoreRsvpOrder = body?.restoreRsvpOrder === true
 
     if (!matchId) {
       return NextResponse.json({ error: 'Match ID required' }, { status: 400 })
@@ -54,6 +57,7 @@ export async function POST(request: NextRequest) {
 
     const result = await expandTeamsForMatch(adminDb, matchId, {
       forceRegenerate: true,
+      restoreRsvpOrder,
     })
 
     const teamsSnap = await adminDb
@@ -69,6 +73,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         teamsGenerated: teamsSnap.size,
         regenerated: result.regenerated,
+        restoreRsvpOrder,
       },
     })
 
@@ -76,12 +81,20 @@ export async function POST(request: NextRequest) {
       success: true,
       teamsGenerated: teamsSnap.size,
       regenerated: result.regenerated,
+      restoreRsvpOrder,
     })
   } catch (error: any) {
     console.error('Error generating teams:', error)
     const { sanitizeErrorForClient } = await import('@/lib/api/sanitizeError')
     return NextResponse.json(
-      { error: sanitizeErrorForClient(error, 'Failed to generate teams') },
+      {
+        error: sanitizeErrorForClient(
+          error,
+          restoreRsvpOrder
+            ? 'Failed to restore RSVP order'
+            : 'Failed to generate teams'
+        ),
+      },
       { status: 500 }
     )
   }

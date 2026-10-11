@@ -9,12 +9,15 @@ import type { Firestore, QuerySnapshot } from 'firebase-admin/firestore'
 import { getUsersByIdsAdmin } from '@/lib/users/getUsersByIdsAdmin'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import {
+  applyManualTeamTransfers,
   applyPersistedTransfersKeepingBalance,
   assignUnassignedPlayersToTeams,
   computeTeamCountForRSVPCount,
+  enforceTeamMaxSizes,
   generateTeamsWithReplacements,
   isGoalkeeper,
   mergeBaselineWithManualTransfers,
+  mergeManualTransfers,
 } from '@/lib/utils/teamGenerator'
 import type { TeamAssignment } from '@/lib/utils/teamGenerator'
 import type { RSVP } from '@/types/rsvp'
@@ -186,7 +189,8 @@ async function fullyRegenerateTeams(
   existingTeamsSnap: QuerySnapshot,
   rsvpsToUse: RSVP[],
   users: User[],
-  desiredTeamCount: number
+  desiredTeamCount: number,
+  options?: { onlyPersistedTransfers?: boolean }
 ): Promise<void> {
   const currentAssignments: TeamAssignment[] = existingTeamsSnap.docs
     .map(d => {
@@ -222,17 +226,36 @@ async function fullyRegenerateTeams(
   const rsvpAtByUserId = new Map(
     rsvpsToUse.map(r => [r.userId, r.rsvpAt?.getTime() ?? 0])
   )
+  const goalkeeperIds = getGoalkeeperIds(rsvpsToUse, users)
 
-  const teamAssignments = mergeBaselineWithManualTransfers(
-    currentAssignments,
-    baselineTeams,
-    persisted,
-    {
+  // Restore RSVP order must ignore current roster skew (e.g. after rebalance)
+  // and re-apply only saved admin pins — not pair rebalancing and not implied
+  // diffs from the current teams. Other force-regenerate callers still merge
+  // implied diffs so in-progress manual moves without a pin are kept.
+  let teamAssignments: TeamAssignment[]
+  if (options?.onlyPersistedTransfers) {
+    const manualPins = mergeManualTransfers(new Map(), persisted)
+    teamAssignments = enforceTeamMaxSizes(
+      applyManualTeamTransfers(baselineTeams, manualPins),
       maxSizeByTeamNumber,
-      rsvpAtByUserId,
-      goalkeeperIds: getGoalkeeperIds(rsvpsToUse, users),
-    }
-  )
+      {
+        manualPins,
+        rsvpAtByUserId,
+        goalkeeperIds,
+      }
+    )
+  } else {
+    teamAssignments = mergeBaselineWithManualTransfers(
+      currentAssignments,
+      baselineTeams,
+      persisted,
+      {
+        maxSizeByTeamNumber,
+        rsvpAtByUserId,
+        goalkeeperIds,
+      }
+    )
+  }
 
   const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
 
@@ -280,7 +303,7 @@ async function fullyRegenerateTeams(
 export async function expandTeamsForMatch(
   adminDb: Firestore,
   matchId: string,
-  options?: { forceRegenerate?: boolean }
+  options?: { forceRegenerate?: boolean; restoreRsvpOrder?: boolean }
 ): Promise<{ regenerated: boolean }> {
   const rsvpSnap = await adminDb
     .collection('rsvps')
@@ -326,7 +349,9 @@ export async function expandTeamsForMatch(
       : computeTeamCountForRSVPCount(rsvpsToUse.length, 11, 2)
   const needMoreTeams = currentTeamCount < desiredTeamCount
   const hasUnassignedRsvps = totalAssigned < rsvpsToUse.length
-  const forceRegenerate = options?.forceRegenerate === true
+  const restoreRsvpOrder = options?.restoreRsvpOrder === true
+  const forceRegenerate =
+    options?.forceRegenerate === true || restoreRsvpOrder
 
   if (!forceRegenerate && !needMoreTeams && !hasUnassignedRsvps) {
     return { regenerated: false }
@@ -344,7 +369,8 @@ export async function expandTeamsForMatch(
       existingTeamsSnap,
       rsvpsToUse,
       users,
-      desiredTeamCount
+      desiredTeamCount,
+      { onlyPersistedTransfers: restoreRsvpOrder }
     )
     return { regenerated: true }
   }

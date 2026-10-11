@@ -1,6 +1,6 @@
 ---
 name: address-pr-feedback
-description: Fetch PR review comments, triage and fix feedback (AI review bots first, then humans), reply/resolve threads, and record durable lessons. Use when the user runs /address-pr-feedback, asks to address PR comments, fix Greptile/Bugbot/review feedback, or resolve review threads on a pull request.
+description: Fetch PR review comments, triage and fix feedback (AI review bots first, then humans), reply/resolve threads, record durable lessons, and re-tag @greptileai after Greptile feedback is addressed. Use when the user runs /address-pr-feedback, asks to address PR comments, fix Greptile/Bugbot/review feedback, or resolve review threads on a pull request.
 ---
 
 # /address-pr-feedback
@@ -37,9 +37,11 @@ PR feedback progress:
 - [ ] 2. Collect review comments
 - [ ] 3. Triage (bots → humans)
 - [ ] 4. Implement fixes
-- [ ] 5. Reply / resolve threads
-- [ ] 6. Record durable lessons
-- [ ] 7. Commit, push, summarize
+- [ ] 5. Record durable lessons
+- [ ] 6. Commit and push
+- [ ] 7. Reply / resolve threads
+- [ ] 8. Re-tag @greptileai (when Greptile feedback was addressed)
+- [ ] 9. Summarize
 ```
 
 ### 1. Resolve the PR
@@ -86,20 +88,9 @@ Batch confirmation questions when several items need operator input. Do not bloc
 - Add or update tests when the feedback touches pure logic already covered by tests
 - Do not expand into unrelated refactors
 
-### 5. Reply / resolve threads
+### 5. Record durable lessons
 
-After a fix lands (or after deciding no code change):
-
-| Author | Reply | Resolve |
-|--------|-------|---------|
-| Bot | Short note of what changed (or why not) | **Yes**, once addressed or intentionally declined with reason |
-| Human | Short note of what changed (or clarifying question) | **Only** if the operator explicitly asked to resolve |
-
-Never resolve a human thread by default.
-
-### 6. Record durable lessons
-
-When feedback caught a **real** bug, safety gap, or improvement that slipped past normal coding — and the lesson will help future agents — append to [`docs/AGENT_LESSONS.md`](../../../docs/AGENT_LESSONS.md).
+When feedback caught a **real** bug, safety gap, or improvement that slipped past normal coding — and the lesson will help future agents — append to [`docs/AGENT_LESSONS.md`](../../../docs/AGENT_LESSONS.md) in the **same** change set as the fix (so it ships in the commit below).
 
 Do **not** log one-off typos, pure style nits, or PR-specific noise.
 
@@ -121,15 +112,51 @@ Entry shape (append under Lessons):
 - **Pointers:** `path/` or pattern to remember
 ```
 
-### 7. Commit, push, summarize
+### 6. Commit and push
 
-1. Commit with a clear message focused on the feedback addressed
-2. Push the PR branch
-3. Reply to the operator with: PR link, items fixed, items skipped/declined, items waiting on confirmation, lessons appended (if any)
+1. Commit with a clear message focused on the feedback addressed (include any `AGENT_LESSONS.md` / skill updates)
+2. Push the PR branch so the fix is **visible on the PR** before any thread is marked resolved
+
+Do not reply-to-resolve bot threads until this push has succeeded.
+
+### 7. Reply / resolve threads
+
+Only after the fix (or an intentional no-change decision) is on the PR remote:
+
+| Author | Reply | Resolve |
+|--------|-------|---------|
+| Bot | Short note of what changed (or why not), with commit/PR context when useful | **Yes**, once the pushed change addresses it or it was intentionally declined with reason |
+| Human | Short note of what changed (or clarifying question) | **Only** if the operator explicitly asked to resolve |
+
+Never resolve a human thread by default. Never resolve a bot thread for a code fix that is still only local / unpushed.
+
+### 8. Re-tag @greptileai
+
+When this run addressed **any** Greptile feedback (fixed, declined with reason, or clarified), post a top-level PR comment that mentions `@greptileai` so Greptile re-reviews the latest push.
+
+Do this **after** commit/push and bot thread replies/resolves.
+
+Comment shape (keep it short):
+
+```markdown
+@greptileai please re-review — addressed prior Greptile feedback on this PR.
+```
+
+Optionally add one line naming what changed (e.g. “restore now uses only persisted transfers; button awaits refresh”).
+
+Skip this step only when Greptile left no comments on the PR (or all Greptile threads were already obsolete/outdated with no action taken).
+
+Prefer the host’s PR comment tool (`ManagePullRequest` `post_comment`, or `gh pr comment`) so the mention is a real PR issue comment, not an inline review reply.
+
+### 9. Summarize
+
+Reply to the operator with: PR link, items fixed, items skipped/declined, items waiting on confirmation, lessons appended (if any), and whether `@greptileai` was re-tagged.
 
 ## Anti-patterns
 
 - Resolving human comments without an explicit ask
+- Resolving bot threads before the fix is committed and pushed to the PR
+- Addressing Greptile feedback without posting a follow-up `@greptileai` re-review comment
 - Blindly applying every bot suggestion (especially if it fights AuthZ, emulators-only, or sanitize-error rules)
 - Huge refactors justified as “addressing review”
 - Skipping `AGENT_LESSONS.md` when a real recurring gap was found
@@ -140,6 +167,6 @@ Entry shape (append under Lessons):
 
 ```
 /start → … implement on a PR …
-/address-pr-feedback → fix review threads + lessons
+/address-pr-feedback → fix review threads + lessons + @greptileai re-tag
 /handoff → (optional) refresh feature plan if the PR is feature work
 ```
