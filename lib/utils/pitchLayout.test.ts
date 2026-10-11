@@ -296,6 +296,37 @@ describe('assignPitchSlots', () => {
 })
 
 describe('separatePlayers', () => {
+  it('keeps spine CM locked on the midline when neighbors push', () => {
+    const users = [
+      makeUser('cm', { position: 'CM' }),
+      makeUser('lm', { position: 'LM' }),
+      makeUser('rm', { position: 'RM' }),
+    ]
+    const packed = [
+      {
+        user: users[0],
+        position: { x: 50, y: 46 },
+        assignedSlot: 'CM',
+        preferredPosition: 'CM',
+      },
+      {
+        user: users[1],
+        position: { x: 48, y: 46 },
+        assignedSlot: 'LM',
+        preferredPosition: 'LM',
+      },
+      {
+        user: users[2],
+        position: { x: 52, y: 46 },
+        assignedSlot: 'RM',
+        preferredPosition: 'RM',
+      },
+    ]
+    const result = separatePlayers(packed, { minSepX: 14, minSepY: 10 })
+    const cm = result.find(p => p.user.uid === 'cm')
+    expect(cm?.position.x).toBe(50)
+  })
+
   it('pushes overlapping markers apart', () => {
     const users = [
       makeUser('a', { position: 'LB' }),

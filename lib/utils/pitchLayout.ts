@@ -199,10 +199,27 @@ export interface SeparatePlayersOptions {
   iterations?: number
 }
 
+/** Central spine slots that must stay on the pitch midline (x = 50). */
+const SPINE_SLOTS = new Set([
+  'GK',
+  'CB',
+  'CDM',
+  'CM',
+  'CAM',
+  'CF',
+  'ST',
+])
+
+function isSpineSlot(assignedSlot: string): boolean {
+  return SPINE_SLOTS.has(assignedSlot.toUpperCase())
+}
+
 /**
  * Push markers apart so nodes and name labels do not overlap.
  * Uses an elliptical minimum-distance model (wider than tall) because
  * names sit under nodes and need horizontal clearance.
+ * Spine slots (GK/CM/ST/…) keep a locked x so separation never drifts
+ * the center midfielder off the midline.
  */
 export function separatePlayers(
   players: PlayerOnPitch[],
@@ -218,16 +235,27 @@ export function separatePlayers(
   const minSepY = options.minSepY ?? 11
   const iterations = options.iterations ?? 50
 
-  const clamp = (pos: PitchPosition): PitchPosition => ({
-    x: Math.max(minX, Math.min(maxX, pos.x)),
+  const clamp = (pos: PitchPosition, lockX?: number): PitchPosition => ({
+    x:
+      lockX != null
+        ? lockX
+        : Math.max(minX, Math.min(maxX, pos.x)),
     y: Math.max(minY, Math.min(maxY, pos.y)),
   })
 
   if (players.length === 1) {
-    return [{ ...players[0], position: clamp(players[0].position) }]
+    const lockX = isSpineSlot(players[0].assignedSlot)
+      ? players[0].position.x
+      : undefined
+    return [{ ...players[0], position: clamp(players[0].position, lockX) }]
   }
 
-  const positions = players.map(p => clamp(p.position))
+  const lockedX = players.map(p =>
+    isSpineSlot(p.assignedSlot) ? p.position.x : null
+  )
+  const positions = players.map((p, i) =>
+    clamp(p.position, lockedX[i] ?? undefined)
+  )
 
   for (let iter = 0; iter < iterations; iter++) {
     let moved = false
@@ -260,6 +288,28 @@ export function separatePlayers(
           uy *= 0.2
         }
 
+        const aLock = lockedX[i]
+        const bLock = lockedX[j]
+        if (aLock != null && bLock != null) {
+          // Two spine markers: only separate vertically.
+          ux = 0
+        } else if (aLock != null) {
+          // Locked spine absorbs no horizontal push; other marker takes it.
+          b.x = Math.max(minX, Math.min(maxX, b.x + ux * 2))
+          a.y = Math.max(minY, Math.min(maxY, a.y - uy))
+          b.y = Math.max(minY, Math.min(maxY, b.y + uy))
+          a.x = aLock
+          moved = true
+          continue
+        } else if (bLock != null) {
+          a.x = Math.max(minX, Math.min(maxX, a.x - ux * 2))
+          a.y = Math.max(minY, Math.min(maxY, a.y - uy))
+          b.y = Math.max(minY, Math.min(maxY, b.y + uy))
+          b.x = bLock
+          moved = true
+          continue
+        }
+
         a.x = Math.max(minX, Math.min(maxX, a.x - ux))
         a.y = Math.max(minY, Math.min(maxY, a.y - uy))
         b.x = Math.max(minX, Math.min(maxX, b.x + ux))
@@ -273,7 +323,7 @@ export function separatePlayers(
 
   return players.map((p, i) => ({
     ...p,
-    position: clamp(positions[i]),
+    position: clamp(positions[i], lockedX[i] ?? undefined),
   }))
 }
 
