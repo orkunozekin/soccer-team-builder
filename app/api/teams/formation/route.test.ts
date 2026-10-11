@@ -297,35 +297,47 @@ describe('POST /api/teams/formation', () => {
 
     // Intercept: after first RSVP query, cancel lw before tx.
     const originalCollection = adminDb.collection
-    let rsvpQueryCount = 0
-    adminDb.collection = ((path: string) => {
-      const col = originalCollection(path)
-      if (path === 'rsvps') {
-        return {
-          ...col,
-          where: () => {
-            const chain = col.where()
-            return {
-              where: () => {
-                const inner = chain.where()
-                return {
-                  get: async () => {
-                    rsvpQueryCount += 1
-                    const snap = await inner.get()
-                    if (rsvpQueryCount === 1) {
-                      const lw = getRsvps().find(r => r.id === 'r_lw')
-                      if (lw) lw.data.status = 'cancelled'
-                    }
-                    return snap
-                  },
-                }
-              },
-            }
-          },
-          doc: col.doc,
+    type RsvpCollection = {
+      where: () => {
+        where: () => {
+          get: () => Promise<ReturnType<typeof makeQuerySnap>>
         }
       }
-      return col
+      doc: (id: string) => {
+        id: string
+        path: string
+        update: (data: Record<string, unknown>) => Promise<void>
+      }
+    }
+    const rsvpCollection = originalCollection('rsvps') as RsvpCollection
+    let rsvpQueryCount = 0
+    adminDb.collection = ((path: string) => {
+      if (path !== 'rsvps') {
+        return originalCollection(path)
+      }
+      return {
+        ...rsvpCollection,
+        where: () => {
+          const chain = rsvpCollection.where()
+          return {
+            where: () => {
+              const inner = chain.where()
+              return {
+                get: async () => {
+                  rsvpQueryCount += 1
+                  const snap = await inner.get()
+                  if (rsvpQueryCount === 1) {
+                    const lw = getRsvps().find(r => r.id === 'r_lw')
+                    if (lw) lw.data.status = 'cancelled'
+                  }
+                  return snap
+                },
+              }
+            },
+          }
+        },
+        doc: rsvpCollection.doc,
+      }
     }) as typeof adminDb.collection
 
     const res = await POST(makeRequest({ matchId: 'm1', formationId: '4-4-2' }))
