@@ -28,6 +28,7 @@ export type AuditAction =
   | 'team.generated'
   | 'team.transferred'
   | 'team.rebalanced'
+  | 'team.formation_applied'
   | 'location.created'
   | 'location.updated'
   | 'location.deleted'
@@ -127,6 +128,7 @@ export const ALL_AUDIT_ACTIONS: readonly AuditAction[] = [
   'team.generated',
   'team.transferred',
   'team.rebalanced',
+  'team.formation_applied',
   'location.created',
   'location.updated',
   'location.deleted',

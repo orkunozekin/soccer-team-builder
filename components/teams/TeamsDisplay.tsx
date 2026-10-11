@@ -16,6 +16,7 @@ import {
   PlayerTile,
   CheckInStatusLegend,
 } from './DroppableTeamCard'
+import { FormationSelect } from './FormationSelect'
 import { SoccerPitch } from './SoccerPitch'
 import {
   AlertDialog,
@@ -66,6 +67,8 @@ interface TeamsDisplayProps {
   matchTime?: string | null
   /** When false, hide admin cancel-RSVP actions (e.g. after kickoff) */
   allowCancelRsvp?: boolean
+  /** Last applied formation id (e.g. 4-4-2), shown in the admin dropdown */
+  selectedFormation?: string | null
 }
 
 function movePlayerBetweenTeams(
@@ -104,6 +107,7 @@ export function TeamsDisplay({
   matchDate = null,
   matchTime = null,
   allowCancelRsvp = true,
+  selectedFormation = null,
 }: TeamsDisplayProps) {
   const showPitchFlag = useFeatureFlag('pitch-lineup-view')
   const dndEnabled = Boolean(isAdmin && matchId && onTeamsChanged)
@@ -448,32 +452,41 @@ export function TeamsDisplay({
         </div>
       </div>
 
-      {showPitchFlag ? (
-        <div className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-          <div
-            className="inline-flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-700"
-            role="group"
-            aria-label="Teams view"
-          >
-            <Button
-              type="button"
-              size="sm"
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              className="h-8 px-3"
-              onClick={() => setViewMode('list')}
+      {showPitchFlag || (isAdmin && matchId && teamsSorted.length > 0) ? (
+        <div className="flex flex-wrap items-center gap-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+          {showPitchFlag ? (
+            <div
+              className="inline-flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-700"
+              role="group"
+              aria-label="Teams view"
             >
-              List
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={viewMode === 'pitch' ? 'default' : 'ghost'}
-              className="h-8 px-3"
-              onClick={() => setViewMode('pitch')}
-            >
-              Pitch
-            </Button>
-          </div>
+              <Button
+                type="button"
+                size="sm"
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                className="h-8 px-3"
+                onClick={() => setViewMode('list')}
+              >
+                List
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={viewMode === 'pitch' ? 'default' : 'ghost'}
+                className="h-8 px-3"
+                onClick={() => setViewMode('pitch')}
+              >
+                Pitch
+              </Button>
+            </div>
+          ) : null}
+          {isAdmin && matchId && teamsSorted.length > 0 ? (
+            <FormationSelect
+              matchId={matchId}
+              value={selectedFormation}
+              onApplied={() => onTeamsChanged?.()}
+            />
+          ) : null}
         </div>
       ) : null}
 

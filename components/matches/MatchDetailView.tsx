@@ -267,6 +267,7 @@ export function MatchDetailView({
                 matchRSVPs={matchRSVPs}
                 matchDate={match.date}
                 matchTime={match.time}
+                selectedFormation={match.selectedFormation}
                 headerActions={
                   canManageMatch && teams.length >= 2 ? (
                     <RebalanceTeamsButton
