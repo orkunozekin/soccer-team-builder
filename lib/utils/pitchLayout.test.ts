@@ -296,7 +296,7 @@ describe('assignPitchSlots', () => {
 })
 
 describe('separatePlayers', () => {
-  it('keeps spine CM locked on the midline when neighbors push', () => {
+  it('keeps CM locked on the midline when neighbors push', () => {
     const users = [
       makeUser('cm', { position: 'CM' }),
       makeUser('lm', { position: 'LM' }),
@@ -325,6 +325,36 @@ describe('separatePlayers', () => {
     const result = separatePlayers(packed, { minSepX: 14, minSepY: 10 })
     const cm = result.find(p => p.user.uid === 'cm')
     expect(cm?.position.x).toBe(50)
+  })
+
+  it('allows non-CM central markers to move sideways when crowded', () => {
+    const users = [
+      makeUser('cm', { position: 'CM' }),
+      makeUser('st', { position: 'ST' }),
+    ]
+    const packed = [
+      {
+        user: users[0],
+        position: { x: 50, y: 50 },
+        assignedSlot: 'CM',
+        preferredPosition: 'CM',
+      },
+      {
+        user: users[1],
+        position: { x: 50, y: 50 },
+        assignedSlot: 'ST',
+        preferredPosition: 'ST',
+      },
+    ]
+    const result = separatePlayers(packed, { minSepX: 14, minSepY: 10 })
+    const cm = result.find(p => p.user.uid === 'cm')
+    const st = result.find(p => p.user.uid === 'st')
+    expect(cm?.position.x).toBe(50)
+    // ST is not midline-locked; it may move horizontally to separate.
+    expect(
+      Math.abs((st?.position.x ?? 50) - 50) > 0.1 ||
+        Math.abs((st?.position.y ?? 50) - (cm?.position.y ?? 50)) >= 8
+    ).toBe(true)
   })
 
   it('pushes overlapping markers apart', () => {

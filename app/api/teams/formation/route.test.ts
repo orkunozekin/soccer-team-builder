@@ -76,6 +76,7 @@ function createFormationMockDb(initial: {
           }),
           doc: (id: string) => ({
             id,
+            path: `rsvps/${id}`,
             update: async (data: Record<string, unknown>) => {
               const idx = rsvps.findIndex(r => r.id === id)
               if (idx >= 0) {
@@ -91,6 +92,7 @@ function createFormationMockDb(initial: {
       if (path === 'matches') {
         return {
           doc: (matchId: string) => ({
+            path: `matches/${matchId}`,
             collection: (sub: string) => {
               if (sub === '_state') {
                 return {
@@ -113,29 +115,52 @@ function createFormationMockDb(initial: {
     },
     runTransaction: async (
       fn: (tx: {
-        get: (ref: { path?: string }) => Promise<{
+        get: (ref: { id?: string; path?: string }) => Promise<{
           exists: boolean
+          ref: { id?: string; path?: string }
           data: () => Record<string, unknown>
         }>
-        update: (ref: { id?: string }, data: Record<string, unknown>) => void
+        update: (
+          ref: { id?: string; path?: string },
+          data: Record<string, unknown>
+        ) => void
         set: (
           ref: unknown,
           data: Record<string, unknown>,
           opts?: unknown
         ) => void
-      }) => Promise<void>
+      }) => Promise<unknown>
     ) => {
       const pendingUpdates: Array<{
         id: string
         data: Record<string, unknown>
       }> = []
       const tx = {
-        get: async () => ({
-          exists: true,
-          data: () => stateData,
-        }),
-        update: (ref: { id?: string }, data: Record<string, unknown>) => {
-          if (ref.id) pendingUpdates.push({ id: ref.id, data })
+        get: async (ref: { id?: string; path?: string }) => {
+          if (ref.path?.includes('/_state/')) {
+            return {
+              exists: true,
+              ref,
+              data: () => stateData,
+            }
+          }
+          if (ref.path?.startsWith('rsvps/') || ref.id) {
+            const id = ref.id ?? ref.path!.split('/')[1]!
+            const doc = rsvps.find(r => r.id === id)
+            return {
+              exists: doc != null,
+              ref: { id, path: `rsvps/${id}` },
+              data: () => doc?.data ?? {},
+            }
+          }
+          return { exists: false, ref, data: () => ({}) }
+        },
+        update: (
+          ref: { id?: string; path?: string },
+          data: Record<string, unknown>
+        ) => {
+          const id = ref.id ?? ref.path?.split('/')[1]
+          if (id) pendingUpdates.push({ id, data })
         },
         set: (
           _ref: unknown,
@@ -149,7 +174,7 @@ function createFormationMockDb(initial: {
           }
         },
       }
-      await fn(tx)
+      const result = await fn(tx)
       for (const u of pendingUpdates) {
         const idx = rsvps.findIndex(r => r.id === u.id)
         if (idx >= 0) {
@@ -159,6 +184,7 @@ function createFormationMockDb(initial: {
           }
         }
       }
+      return result
     },
   }
 
@@ -220,6 +246,135 @@ describe('POST /api/teams/formation', () => {
       makeRequest({ matchId: 'm1', formationId: '9-9-9' })
     )
     expect(res.status).toBe(400)
+  })
+
+  it('skips cancelled RSVPs when committing formation writes', async () => {
+    vi.mocked(verifyClubAdminForMatch).mockResolvedValueOnce({
+      uid: 'admin1',
+      error: null,
+      isClubAdmin: true,
+      matchExists: true,
+    } as never)
+
+    const { adminDb, getRsvps } = createFormationMockDb({
+      teams: [
+        {
+          id: 't1',
+          data: { teamNumber: 1, playerIds: ['gk', 'lw'] },
+        },
+      ],
+      rsvps: [
+        {
+          id: 'r_gk',
+          data: {
+            userId: 'gk',
+            position: 'GK',
+            status: 'confirmed',
+            matchId: 'm1',
+          },
+        },
+        {
+          id: 'r_lw',
+          data: {
+            userId: 'lw',
+            position: 'LW',
+            status: 'confirmed',
+            matchId: 'm1',
+          },
+        },
+      ],
+      users: [],
+    })
+
+    // Cancel after the pre-tx query would have seen confirmed — simulate by
+    // flipping status before the transaction re-read path runs. The mock
+    // re-reads live rsvp docs inside the transaction.
+    vi.mocked(getAdminDb).mockReturnValue(adminDb as never)
+    vi.mocked(getUsersByIdsAdmin).mockResolvedValueOnce([
+      { uid: 'gk', position: 'GK' },
+      { uid: 'lw', position: 'LW' },
+    ] as never)
+
+    // Intercept: after first RSVP query, cancel lw before tx.
+    const originalCollection = (adminDb as { collection: Function }).collection
+    let rsvpQueryCount = 0
+    ;(adminDb as { collection: Function }).collection = (path: string) => {
+      const col = originalCollection(path)
+      if (path === 'rsvps') {
+        return {
+          ...col,
+          where: (...args: unknown[]) => {
+            const chain = col.where(...args)
+            return {
+              where: (...args2: unknown[]) => {
+                const inner = chain.where(...args2)
+                return {
+                  get: async () => {
+                    rsvpQueryCount += 1
+                    const snap = await inner.get()
+                    if (rsvpQueryCount === 1) {
+                      const lw = getRsvps().find(r => r.id === 'r_lw')
+                      if (lw) lw.data.status = 'cancelled'
+                    }
+                    return snap
+                  },
+                }
+              },
+            }
+          },
+          doc: col.doc,
+        }
+      }
+      return col
+    }
+
+    const res = await POST(makeRequest({ matchId: 'm1', formationId: '4-4-2' }))
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    expect(json.success).toBe(true)
+    const lw = getRsvps().find(r => r.id === 'r_lw')
+    expect(lw?.data.position).toBe('LW')
+    expect(json.assignments.every((a: { userId: string }) => a.userId !== 'lw')).toBe(
+      true
+    )
+  })
+
+  it('persists formation onto legacy RSVPs with null position', async () => {
+    vi.mocked(verifyClubAdminForMatch).mockResolvedValueOnce({
+      uid: 'admin1',
+      error: null,
+      isClubAdmin: true,
+      matchExists: true,
+    } as never)
+
+    const { adminDb, getRsvps } = createFormationMockDb({
+      teams: [
+        {
+          id: 't1',
+          data: { teamNumber: 1, playerIds: ['p1'] },
+        },
+      ],
+      rsvps: [
+        {
+          id: 'r1',
+          data: {
+            userId: 'p1',
+            position: null,
+            status: 'confirmed',
+            matchId: 'm1',
+          },
+        },
+      ],
+      users: [],
+    })
+    vi.mocked(getAdminDb).mockReturnValue(adminDb as never)
+    vi.mocked(getUsersByIdsAdmin).mockResolvedValueOnce([
+      { uid: 'p1', position: 'CM' },
+    ] as never)
+
+    const res = await POST(makeRequest({ matchId: 'm1', formationId: '4-4-2' }))
+    expect(res.status).toBe(200)
+    expect(getRsvps()[0]?.data.position).toBeTruthy()
   })
 
   it('applies formation positions for club admins', async () => {

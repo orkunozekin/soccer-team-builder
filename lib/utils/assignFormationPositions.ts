@@ -1,4 +1,5 @@
 import { getPitchPosition } from '@/lib/utils/pitchLayout'
+import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 
 export interface FormationPlayerInput {
   userId: string
@@ -12,10 +13,45 @@ export interface FormationAssignment {
   toPosition: string
 }
 
+/** Codes that exist on the pitch map (preferred + display pair slots). */
+const POSITION_KNOWN = new Set([
+  'GK',
+  'LB',
+  'RB',
+  'CB',
+  'LCB',
+  'RCB',
+  'LWB',
+  'RWB',
+  'CDM',
+  'LCDM',
+  'RCDM',
+  'CM',
+  'LCM',
+  'RCM',
+  'CAM',
+  'LCAM',
+  'RCAM',
+  'LM',
+  'RM',
+  'LW',
+  'RW',
+  'CF',
+  'LCF',
+  'RCF',
+  'ST',
+  'LST',
+  'RST',
+])
+
 function normalizePosition(position: string | null | undefined): string {
   if (!position) return 'CM'
+  // Match isGoalkeeper aliases (Goalkeeper / Goalie / Keeper) to GK so
+  // formation distance does not treat them as unknown midfield.
+  if (isGoalkeeper(position)) return 'GK'
   const upper = position.trim().toUpperCase()
-  return upper || 'CM'
+  if (!upper) return 'CM'
+  return POSITION_KNOWN.has(upper) ? upper : 'CM'
 }
 
 /** Euclidean distance between two position codes on the pitch coordinate map. */

@@ -199,27 +199,23 @@ export interface SeparatePlayersOptions {
   iterations?: number
 }
 
-/** Central spine slots that must stay on the pitch midline (x = 50). */
-const SPINE_SLOTS = new Set([
-  'GK',
-  'CB',
-  'CDM',
-  'CM',
-  'CAM',
-  'CF',
-  'ST',
-])
+/**
+ * Slots that stay locked on the midline during separation.
+ * Only GK + CM: locking every central role (CB/CDM/CAM/CF/ST too) leaves a
+ * crowded half-pitch unable to separate vertically.
+ */
+const LOCKED_MIDLINE_SLOTS = new Set(['GK', 'CM'])
 
-function isSpineSlot(assignedSlot: string): boolean {
-  return SPINE_SLOTS.has(assignedSlot.toUpperCase())
+function isLockedMidlineSlot(assignedSlot: string): boolean {
+  return LOCKED_MIDLINE_SLOTS.has(assignedSlot.toUpperCase())
 }
 
 /**
  * Push markers apart so nodes and name labels do not overlap.
  * Uses an elliptical minimum-distance model (wider than tall) because
  * names sit under nodes and need horizontal clearance.
- * Spine slots (GK/CM/ST/…) keep a locked x so separation never drifts
- * the center midfielder off the midline.
+ * GK and CM keep a locked x so separation never drifts the center
+ * midfielder (or keeper) off the midline.
  */
 export function separatePlayers(
   players: PlayerOnPitch[],
@@ -244,14 +240,14 @@ export function separatePlayers(
   })
 
   if (players.length === 1) {
-    const lockX = isSpineSlot(players[0].assignedSlot)
+    const lockX = isLockedMidlineSlot(players[0].assignedSlot)
       ? players[0].position.x
       : undefined
     return [{ ...players[0], position: clamp(players[0].position, lockX) }]
   }
 
   const lockedX = players.map(p =>
-    isSpineSlot(p.assignedSlot) ? p.position.x : null
+    isLockedMidlineSlot(p.assignedSlot) ? p.position.x : null
   )
   const positions = players.map((p, i) =>
     clamp(p.position, lockedX[i] ?? undefined)

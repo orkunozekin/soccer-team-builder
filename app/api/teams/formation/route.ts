@@ -115,12 +115,15 @@ export async function POST(request: NextRequest) {
     const users = await getUsersByIdsAdmin(adminDb, allPlayerIds)
     const userById = new Map(users.map(u => [u.uid, u]))
 
-    const assignments: Array<{
+    const planned: Array<{
       userId: string
       rsvpId: string
+      /** Effective position used for closest-slot matching (RSVP or profile). */
       fromPosition: string
       toPosition: string
       teamNumber: number
+      /** Stored RSVP.position before apply (may be null on legacy docs). */
+      storedPosition: string | null
     }> = []
 
     for (const team of teams) {
@@ -140,13 +143,16 @@ export async function POST(request: NextRequest) {
       for (const a of mapped) {
         const rsvp = rsvpByUserId.get(a.userId)
         if (!rsvp) continue
-        if (a.fromPosition === a.toPosition) continue
-        assignments.push({
+        // Persist when the stored RSVP value differs (including null → assigned),
+        // not when the profile fallback already matched the target role.
+        if (rsvp.position === a.toPosition) continue
+        planned.push({
           userId: a.userId,
           rsvpId: rsvp.id,
           fromPosition: a.fromPosition,
           toPosition: a.toPosition,
           teamNumber: team.teamNumber,
+          storedPosition: rsvp.position,
         })
       }
     }
@@ -155,21 +161,43 @@ export async function POST(request: NextRequest) {
     const matchRef = adminDb.collection('matches').doc(matchId)
     const stateRef = matchRef.collection('_state').doc('rsvp')
 
-    await adminDb.runTransaction(async tx => {
+    const applied = await adminDb.runTransaction(async tx => {
       const stateSnap = await tx.get(stateRef)
       let gkCount = stateSnap.exists
         ? ((stateSnap.data()?.gkCount as number) ?? 0)
         : 0
 
-      for (const a of assignments) {
-        const oldIsGk = isGoalkeeper(a.fromPosition)
+      const committed: typeof planned = []
+
+      // All reads before writes (Firestore transaction rule).
+      const rsvpSnaps = await Promise.all(
+        planned.map(a => tx.get(adminDb.collection('rsvps').doc(a.rsvpId)))
+      )
+
+      for (let i = 0; i < planned.length; i++) {
+        const a = planned[i]!
+        const snap = rsvpSnaps[i]!
+        if (!snap.exists) continue
+        const data = snap.data() ?? {}
+        if (data.status !== 'confirmed') continue
+        if ((data.matchId as string | undefined) !== matchId) continue
+
+        const currentPos = (data.position as string | null | undefined) ?? null
+        if (currentPos === a.toPosition) continue
+
+        const oldIsGk = isGoalkeeper(currentPos)
         const newIsGk = isGoalkeeper(a.toPosition)
         if (oldIsGk && !newIsGk) gkCount -= 1
         else if (!oldIsGk && newIsGk) gkCount += 1
 
-        tx.update(adminDb.collection('rsvps').doc(a.rsvpId), {
+        tx.update(snap.ref, {
           position: a.toPosition,
           updatedAt: now,
+        })
+        committed.push({
+          ...a,
+          fromPosition: currentPos ?? a.fromPosition,
+          storedPosition: currentPos,
         })
       }
 
@@ -189,10 +217,16 @@ export async function POST(request: NextRequest) {
         },
         { merge: true }
       )
+
+      return committed
     })
 
     // Clear GK replacement pins that no longer apply after bulk reshuffle.
-    if (assignments.some(a => isGoalkeeper(a.fromPosition) || isGoalkeeper(a.toPosition))) {
+    if (
+      applied.some(
+        a => isGoalkeeper(a.fromPosition) || isGoalkeeper(a.toPosition)
+      )
+    ) {
       await matchRef.set(
         { gkReplacements: FieldValue.delete(), updatedAt: now },
         { merge: true }
@@ -208,7 +242,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         formationId,
         teamsUpdated: teams.length,
-        positionsChanged: assignments.length,
+        positionsChanged: applied.length,
       },
     })
 
@@ -216,8 +250,8 @@ export async function POST(request: NextRequest) {
       success: true,
       formationId,
       teamsUpdated: teams.length,
-      positionsChanged: assignments.length,
-      assignments: assignments.map(a => ({
+      positionsChanged: applied.length,
+      assignments: applied.map(a => ({
         userId: a.userId,
         fromPosition: a.fromPosition,
         toPosition: a.toPosition,

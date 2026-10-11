@@ -14,6 +14,25 @@ describe('positionDistance', () => {
   it('treats GK as closer to CB than to ST', () => {
     expect(positionDistance('GK', 'CB')).toBeLessThan(positionDistance('GK', 'ST'))
   })
+
+  it('treats Goalkeeper aliases as GK for distance', () => {
+    expect(positionDistance('Goalkeeper', 'GK')).toBe(0)
+    expect(positionDistance('Goalie', 'CB')).toBe(positionDistance('GK', 'CB'))
+  })
+})
+
+describe('assignPlayersToFormation keepers', () => {
+  it('keeps Goalkeeper aliases on GK when applying 4-3-3', () => {
+    const formation = getFormationById('4-3-3')!
+    const result = assignPlayersToFormation(
+      [
+        { userId: 'gk', position: 'Goalkeeper' },
+        { userId: 'st', position: 'ST' },
+      ],
+      formation.slots
+    )
+    expect(result.find(r => r.userId === 'gk')?.toPosition).toBe('GK')
+  })
 })
 
 describe('minCostAssignment', () => {

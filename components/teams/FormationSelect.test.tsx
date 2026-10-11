@@ -47,6 +47,29 @@ describe('FormationSelect', () => {
     expect(onApplied).toHaveBeenCalledWith('4-3-3')
   })
 
+  it('reapplies the current formation via Apply', async () => {
+    const user = userEvent.setup()
+    const onApplied = vi.fn()
+    applyFormationAPIMock.mockResolvedValue({
+      success: true,
+      formationId: '4-4-2',
+      teamsUpdated: 2,
+      positionsChanged: 0,
+      assignments: [],
+    })
+
+    render(
+      <FormationSelect matchId="m1" onApplied={onApplied} value="4-4-2" />
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Apply' }))
+
+    await waitFor(() => {
+      expect(applyFormationAPIMock).toHaveBeenCalledWith('m1', '4-4-2')
+    })
+    expect(onApplied).toHaveBeenCalledWith('4-4-2')
+  })
+
   it('shows an error and restores prior value when the API fails', async () => {
     const user = userEvent.setup()
     applyFormationAPIMock.mockRejectedValueOnce(new Error('Nope'))

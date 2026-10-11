@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -32,7 +33,7 @@ export function FormationSelect({
     setLocalValue(value ?? '')
   }, [value])
 
-  const handleChange = async (formationId: string) => {
+  const applyFormation = async (formationId: string) => {
     if (!formationId || busy) return
     const previous = localValue
     setLocalValue(formationId)
@@ -59,7 +60,10 @@ export function FormationSelect({
         </span>
         <Select
           value={localValue || undefined}
-          onValueChange={handleChange}
+          onValueChange={id => {
+            setLocalValue(id)
+            void applyFormation(id)
+          }}
           disabled={disabled || busy}
         >
           <SelectTrigger
@@ -76,6 +80,16 @@ export function FormationSelect({
             ))}
           </SelectContent>
         </Select>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-8"
+          disabled={disabled || busy || !localValue}
+          onClick={() => void applyFormation(localValue)}
+        >
+          {busy ? 'Applying…' : 'Apply'}
+        </Button>
       </div>
       {error ? (
         <p className="text-xs text-red-700 dark:text-red-400">{error}</p>

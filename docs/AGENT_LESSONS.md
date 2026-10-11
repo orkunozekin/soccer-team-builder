@@ -38,6 +38,28 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-10-11 — Bulk RSVP position writes must re-read status in the transaction
+
+- **Source:** PR #111 · Greptile
+- **Gap:** Formation apply planned RSVP updates from a pre-tx query, then wrote them inside `runTransaction` without re-reading each RSVP. A cancel between the query and commit could still change a cancelled player's position and skew `gkCount`.
+- **Going forward:** For any bulk RSVP mutation, `tx.get` each source doc, re-check `status === 'confirmed'` (and `matchId`), and compute counter deltas from the live fields. Return the committed subset from the transaction.
+- **Pointers:** `app/api/teams/formation/route.ts`
+- **Promoted:** AGENT_CONTEXT.md → §3 Async state, races, and transactions
+
+### 2026-10-11 — One-way team overflow must fill lower vacancies before cascading
+
+- **Source:** PR #111 · human (repro) / agent fix
+- **Gap:** `enforceTeamMaxSizes` always pushed overflow to the next higher team. A DnD/Move onto full team 2 with full team 3 created team 4 even when team 1 had a vacancy from the move.
+- **Going forward:** When enforcing max size after transfers, prefer under-capacity lower-numbered teams before cascading forward. Keep forward cascade for GK-onto-full-team-1. Cover with a transfer route test that asserts no team 4.
+- **Pointers:** `lib/utils/teamGenerator.ts` (`enforceTeamMaxSizes`), `app/api/teams/transfer/route.ts`
+
+### 2026-10-11 — Formation distance must normalize keeper aliases to GK
+
+- **Source:** PR #111 · Greptile
+- **Gap:** `normalizePosition` in the formation assigner left `Goalkeeper`/`Goalie`/`Keeper` as unknown codes, so distance treated them as midfield and could save `CM` over a keeper.
+- **Going forward:** Any path that maps free-text positions onto pitch coordinates must run `isGoalkeeper` (or equivalent) before falling back to `CM`.
+- **Pointers:** `lib/utils/assignFormationPositions.ts`, `lib/utils/teamGenerator.ts` (`isGoalkeeper`)
+
 ### 2026-10-01 — Pagination animation timing must use page-local positions
 
 - **Source:** PR #109 · Macroscope
