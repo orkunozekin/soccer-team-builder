@@ -459,9 +459,13 @@ function pickOverflowPlayerId(
 }
 
 /**
- * Cascade players off any over-capacity team onto the next team (creating it if
- * needed). Used after GK shift-down + pin re-application so a pinned 22nd RSVP
- * (or a newly assigned GK) cannot leave team 1/2 with 12 players.
+ * Cascade players off any over-capacity team.
+ *
+ * Prefer filling a vacancy on a *lower* team number first (e.g. after a
+ * one-way move from team 1 → full team 2, the displaced player returns to
+ * team 1 instead of tumbling through team 3 onto a new team 4). When no
+ * lower hole exists, cascade forward onto the next team (creating it if
+ * needed) — same as the GK-onto-full-team-1 path.
  */
 export function enforceTeamMaxSizes(
   teams: TeamAssignment[],
@@ -478,11 +482,14 @@ export function enforceTeamMaxSizes(
     .map(t => ({ teamNumber: t.teamNumber, playerIds: [...t.playerIds] }))
     .sort((a, b) => a.teamNumber - b.teamNumber)
 
+  const capOf = (teamNumber: number) =>
+    maxSizeByTeamNumber.get(teamNumber) ?? 11
+
   // Iterate with index growth so newly created overflow teams are also enforced.
   for (let i = 0; i < result.length; i++) {
     const team = result[i]
     if (!team) continue
-    const cap = maxSizeByTeamNumber.get(team.teamNumber) ?? 11
+    const cap = capOf(team.teamNumber)
 
     while (team.playerIds.length > cap) {
       const overflowId = pickOverflowPlayerId(
@@ -495,6 +502,19 @@ export function enforceTeamMaxSizes(
       if (!overflowId) break
 
       team.playerIds = team.playerIds.filter(id => id !== overflowId)
+
+      // Fill holes behind us before cascading forward through full teams.
+      const lowerHole = result.find(
+        t =>
+          t.teamNumber < team.teamNumber &&
+          t.playerIds.length < capOf(t.teamNumber)
+      )
+      if (lowerHole) {
+        if (!lowerHole.playerIds.includes(overflowId)) {
+          lowerHole.playerIds.push(overflowId)
+        }
+        continue
+      }
 
       let next = result[i + 1]
       if (!next) {

@@ -369,6 +369,62 @@ describe('POST /api/teams/transfer', () => {
     expect(json.error).toMatch(/not found on target team/i)
   })
 
+  it('does not cascade a 1→2 move onto a new team 4 when team 1 has a vacancy', async () => {
+    const team1Ids = Array.from({ length: 11 }, (_, i) => `a${i + 1}`)
+    const team2Ids = Array.from({ length: 11 }, (_, i) => `b${i + 1}`)
+    const team3Ids = Array.from({ length: 11 }, (_, i) => `c${i + 1}`)
+    const allIds = [...team1Ids, ...team2Ids, ...team3Ids]
+    const rsvps = allIds.map((id, index) => ({
+      id: `r_${id}`,
+      data: {
+        matchId: 'm1',
+        userId: id,
+        status: 'confirmed',
+        rsvpAt: { toDate: () => new Date(2024, 0, 1, 0, index) },
+      },
+    }))
+
+    const { adminDb, getTeams, getTeamSets } = createTransferMockDb({
+      teams: [
+        {
+          id: 't1',
+          data: { teamNumber: 1, playerIds: team1Ids, maxSize: 11 },
+        },
+        {
+          id: 't2',
+          data: { teamNumber: 2, playerIds: team2Ids, maxSize: 11 },
+        },
+        {
+          id: 't3',
+          data: { teamNumber: 3, playerIds: team3Ids, maxSize: 11 },
+        },
+      ],
+      rsvps,
+      match: { id: 'm1', data: { manualTeamAssignments: {} } },
+    })
+    vi.mocked(getAdminDb).mockReturnValue(adminDb as never)
+
+    // DnD / one-way move from team 1 onto full team 2
+    const res = await POST(
+      makeRequest({
+        matchId: 'm1',
+        playerId: 'a1',
+        targetTeamId: 't2',
+        currentTeamId: 't1',
+      })
+    )
+    expect(res.status).toBe(200)
+
+    const teams = getTeams()
+    expect(teams.find(t => t.id === 't1')?.data.playerIds).toHaveLength(11)
+    expect(teams.find(t => t.id === 't2')?.data.playerIds).toHaveLength(11)
+    expect(teams.find(t => t.id === 't3')?.data.playerIds).toHaveLength(11)
+    expect(teams.find(t => t.id === 't2')?.data.playerIds).toContain('a1')
+    // No fourth team created by cascading through full team 3
+    expect(getTeamSets().some(s => s.data.teamNumber === 4)).toBe(false)
+    expect(teams.some(t => t.data.teamNumber === 4)).toBe(false)
+  })
+
   it('shifts the 22nd RSVP to team 3 when assigning a GK onto full team 1', async () => {
     const team1Ids = Array.from({ length: 11 }, (_, i) => `p${i + 1}`)
     const team2Ids = Array.from({ length: 11 }, (_, i) => `p${i + 12}`)
