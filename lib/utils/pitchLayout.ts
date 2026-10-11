@@ -388,8 +388,9 @@ export function assignPitchSlots(
   }[] = []
 
   // Pass 1: earliest per preferred group claims the canonical slot.
-  // Multiple players at the same central role pair horizontally so
-  // duplicates stay on one band (e.g. two STs side-by-side, not stacked).
+  // Multiple players at the same central role share one horizontal band:
+  // 2 → left/right pair (LCM/RCM); 3+ → left + dead-center + right so a
+  // 4-3-3 midfielder (and 3-CB lines) keep a true center marker.
   const horizontalPairs: Record<string, readonly [string, string]> = {
     CB: ['LCB', 'RCB'],
     CDM: ['LCDM', 'RCDM'],
@@ -399,33 +400,38 @@ export function assignPitchSlots(
     ST: ['LST', 'RST'],
   }
 
+  function assignSlot(
+    user: User,
+    preferred: string,
+    slot: string
+  ): void {
+    claimedSlots.add(slotKey(slot))
+    assignments.push({
+      user,
+      preferred,
+      assignedSlot: slot,
+      position: { ...getPitchPosition(slot) },
+    })
+  }
+
   for (const [preferred, list] of Array.from(groups.entries())) {
     const pairSlots = horizontalPairs[preferred]
-    if (pairSlots && list.length >= 2) {
-      const paired = Math.min(list.length, pairSlots.length)
-      for (let i = 0; i < paired; i++) {
-        const slot = pairSlots[i]
-        claimedSlots.add(slotKey(slot))
-        assignments.push({
-          user: list[i].user,
-          preferred,
-          assignedSlot: slot,
-          position: { ...getPitchPosition(slot) },
-        })
-      }
+    if (pairSlots && list.length >= 3) {
+      // Earliest holds the spine; next two flank left/right.
+      assignSlot(list[0]!.user, preferred, preferred)
+      assignSlot(list[1]!.user, preferred, pairSlots[0])
+      assignSlot(list[2]!.user, preferred, pairSlots[1])
+      continue
+    }
+    if (pairSlots && list.length === 2) {
+      assignSlot(list[0]!.user, preferred, pairSlots[0])
+      assignSlot(list[1]!.user, preferred, pairSlots[1])
       continue
     }
 
     const earliest = list[0]
     if (!earliest) continue
-    const key = slotKey(preferred)
-    claimedSlots.add(key)
-    assignments.push({
-      user: earliest.user,
-      preferred,
-      assignedSlot: preferred,
-      position: { ...getPitchPosition(preferred) },
-    })
+    assignSlot(earliest.user, preferred, preferred)
   }
 
   // Pass 2: remaining players (global rsvpAt order) take nearest free adjacent.
@@ -433,9 +439,11 @@ export function assignPitchSlots(
   for (const [preferred, list] of Array.from(groups.entries())) {
     const pairSlots = horizontalPairs[preferred]
     const alreadyAssigned =
-      pairSlots && list.length >= 2
-        ? Math.min(list.length, pairSlots.length)
-        : 1
+      pairSlots && list.length >= 3
+        ? 3
+        : pairSlots && list.length === 2
+          ? 2
+          : 1
     for (let i = alreadyAssigned; i < list.length; i++) {
       remaining.push(list[i])
     }
