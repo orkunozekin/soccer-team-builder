@@ -593,4 +593,87 @@ describe('expandTeamsForMatch', () => {
     expect(team1?.data.playerIds).not.toContain('p1')
     expect(team2?.data.playerIds).toContain('p1')
   })
+
+  it('restoreRsvpOrder undoes rebalance skew; force-regenerate keeps it', async () => {
+    const ids = Array.from({ length: 14 }, (_, i) => `p${i + 1}`)
+    const rebalancedTeam1 = ids.slice(0, 7)
+    const rebalancedTeam2 = ids.slice(7)
+    const { adminDb, getTeams } = createMockFirestore({
+      rsvps: ids.map((id, index) =>
+        makeRsvpDoc(
+          `r${index + 1}`,
+          id,
+          new Date(Date.UTC(2024, 0, 1, 10, index))
+        )
+      ),
+      users: ids.map(id => makeUserDoc(id)),
+      teams: [
+        makeTeamDoc('team1', 1, rebalancedTeam1),
+        makeTeamDoc('team2', 2, rebalancedTeam2),
+      ],
+      match: {
+        id: 'match1',
+        data: { manualTeamAssignments: {} },
+      },
+    })
+
+    // Plain force-regenerate treats 7/7 as implied transfers and keeps it.
+    await expandTeamsForMatch(adminDb, 'match1', { forceRegenerate: true })
+    expect(
+      getTeams()
+        .sort((a, b) => Number(a.data.teamNumber) - Number(b.data.teamNumber))
+        .map(t => (t.data.playerIds as string[]).length)
+    ).toEqual([7, 7])
+
+    const result = await expandTeamsForMatch(adminDb, 'match1', {
+      restoreRsvpOrder: true,
+    })
+    expect(result).toEqual({ regenerated: true })
+
+    const teams = getTeams().sort(
+      (a, b) => Number(a.data.teamNumber) - Number(b.data.teamNumber)
+    )
+    expect(teams.map(t => (t.data.playerIds as string[]).length)).toEqual([
+      11, 3,
+    ])
+    expect(teams[0]?.data.playerIds).toEqual(ids.slice(0, 11))
+    expect(teams[1]?.data.playerIds).toEqual(ids.slice(11))
+  })
+
+  it('restoreRsvpOrder re-applies saved pins onto RSVP-order baseline', async () => {
+    const ids = Array.from({ length: 14 }, (_, i) => `p${i + 1}`)
+    const { adminDb, getTeams } = createMockFirestore({
+      rsvps: ids.map((id, index) =>
+        makeRsvpDoc(
+          `r${index + 1}`,
+          id,
+          new Date(Date.UTC(2024, 0, 1, 10, index))
+        )
+      ),
+      users: ids.map(id => makeUserDoc(id)),
+      teams: [
+        makeTeamDoc('team1', 1, ids.slice(0, 7)),
+        makeTeamDoc('team2', 2, ids.slice(7)),
+      ],
+      match: {
+        id: 'match1',
+        data: { manualTeamAssignments: { p14: 1 } },
+      },
+    })
+
+    const result = await expandTeamsForMatch(adminDb, 'match1', {
+      restoreRsvpOrder: true,
+    })
+    expect(result).toEqual({ regenerated: true })
+
+    const teams = getTeams().sort(
+      (a, b) => Number(a.data.teamNumber) - Number(b.data.teamNumber)
+    )
+    const team1 = teams[0]?.data.playerIds as string[]
+    const team2 = teams[1]?.data.playerIds as string[]
+    expect(team1).toContain('p14')
+    expect(team2).not.toContain('p14')
+    expect(team1).toHaveLength(11)
+    expect(team2).toHaveLength(3)
+  })
 })

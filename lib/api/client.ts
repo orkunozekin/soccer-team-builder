@@ -58,18 +58,28 @@ async function apiRequest(
   })
 }
 
-export async function generateTeamsAPI(matchId: string): Promise<{
+export async function generateTeamsAPI(
+  matchId: string,
+  options?: { restoreRsvpOrder?: boolean }
+): Promise<{
   success: boolean
   teamsGenerated: number
+  restoreRsvpOrder?: boolean
 }> {
+  const restoreRsvpOrder = options?.restoreRsvpOrder === true
   const response = await apiRequest('/teams/generate', {
     method: 'POST',
-    body: JSON.stringify({ matchId }),
+    body: JSON.stringify({ matchId, restoreRsvpOrder }),
   })
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.error || 'Failed to generate teams')
+    throw new Error(
+      error.error ||
+        (restoreRsvpOrder
+          ? 'Failed to restore RSVP order'
+          : 'Failed to generate teams')
+    )
   }
 
   return response.json()

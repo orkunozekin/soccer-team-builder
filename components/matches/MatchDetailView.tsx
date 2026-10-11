@@ -291,9 +291,14 @@ export function MatchDetailView({
           )}
         </div>
 
-        {canManageMatch && (
+        {canManageMatch && matchId && (
           <div className="mt-4">
-            <RsvpOrderCard matchRSVPs={matchRSVPs} users={rosterUsers} />
+            <RsvpOrderCard
+              matchId={matchId}
+              matchRSVPs={matchRSVPs}
+              users={rosterUsers}
+              onRestoreComplete={refetchMatchRoster}
+            />
           </div>
         )}
       </div>

@@ -1,9 +1,17 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RsvpOrderCard } from './RsvpOrderCard'
 import type { RSVP } from '@/types/rsvp'
 import type { User } from '@/types/user'
+
+const mocks = vi.hoisted(() => ({
+  generateTeamsAPIMock: vi.fn(),
+}))
+
+vi.mock('@/lib/api/client', () => ({
+  generateTeamsAPI: (...args: unknown[]) => mocks.generateTeamsAPIMock(...args),
+}))
 
 function makeRsvp(
   id: string,
@@ -50,6 +58,10 @@ const users: User[] = [
 ]
 
 describe('RsvpOrderCard', () => {
+  beforeEach(() => {
+    mocks.generateTeamsAPIMock.mockReset()
+  })
+
   it('paginates confirmed players with absolute ranks and clamps after cancellations', async () => {
     const user = userEvent.setup()
     const rsvps = Array.from({ length: 21 }, (_, i) =>
@@ -160,5 +172,74 @@ describe('RsvpOrderCard', () => {
     expect(
       screen.getByText(/teams are filled in this order/i)
     ).toBeInTheDocument()
+  })
+
+  it('hides restore control when matchId/onRestoreComplete are omitted', async () => {
+    const user = userEvent.setup()
+    const matchRSVPs = [
+      makeRsvp('r1', 'u1', new Date('2026-01-01T12:00:00Z')),
+      makeRsvp('r2', 'u2', new Date('2026-01-02T12:00:00Z')),
+    ]
+
+    render(<RsvpOrderCard matchRSVPs={matchRSVPs} users={users} />)
+    await user.click(screen.getByRole('button', { name: /rsvp order \(2\)/i }))
+
+    expect(
+      screen.queryByRole('button', { name: /restore rsvp order/i })
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows restore control for admins and calls onRestoreComplete', async () => {
+    const user = userEvent.setup()
+    const onRestoreComplete = vi.fn()
+    mocks.generateTeamsAPIMock.mockResolvedValueOnce({
+      success: true,
+      teamsGenerated: 2,
+    })
+    const matchRSVPs = [
+      makeRsvp('r1', 'u1', new Date('2026-01-01T12:00:00Z')),
+      makeRsvp('r2', 'u2', new Date('2026-01-02T12:00:00Z')),
+    ]
+
+    render(
+      <RsvpOrderCard
+        matchId="match1"
+        matchRSVPs={matchRSVPs}
+        users={users}
+        onRestoreComplete={onRestoreComplete}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /rsvp order \(2\)/i }))
+
+    expect(
+      screen.getByText(/saved admin transfers are re-applied/i)
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: /restore rsvp order/i })
+    )
+
+    expect(mocks.generateTeamsAPIMock).toHaveBeenCalledWith('match1', {
+      restoreRsvpOrder: true,
+    })
+    expect(onRestoreComplete).toHaveBeenCalledTimes(1)
+  })
+
+  it('disables restore when fewer than two confirmed RSVPs', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <RsvpOrderCard
+        matchId="match1"
+        matchRSVPs={[makeRsvp('r1', 'u1', new Date('2026-01-01T12:00:00Z'))]}
+        users={users}
+        onRestoreComplete={vi.fn()}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /rsvp order \(1\)/i }))
+
+    expect(
+      screen.getByRole('button', { name: /restore rsvp order/i })
+    ).toBeDisabled()
   })
 })

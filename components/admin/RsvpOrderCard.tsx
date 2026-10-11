@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { format } from 'date-fns'
+import { RestoreRsvpOrderButton } from '@/components/admin/RestoreRsvpOrderButton'
 import { SectionAccordionTrigger } from '@/components/admin/SectionAccordionTrigger'
 import {
   Accordion,
@@ -17,9 +18,17 @@ import type { User } from '@/types/user'
 interface RsvpOrderCardProps {
   matchRSVPs: RSVP[]
   users: User[]
+  /** When set with onRestoreComplete, shows the admin restore control. */
+  matchId?: string
+  onRestoreComplete?: () => void | Promise<void>
 }
 
-export function RsvpOrderCard({ matchRSVPs, users }: RsvpOrderCardProps) {
+export function RsvpOrderCard({
+  matchRSVPs,
+  users,
+  matchId,
+  onRestoreComplete,
+}: RsvpOrderCardProps) {
   const usersById = useMemo(() => new Map(users.map(u => [u.uid, u])), [users])
 
   const orderedRsvps = useMemo(
@@ -31,6 +40,8 @@ export function RsvpOrderCard({ matchRSVPs, users }: RsvpOrderCardProps) {
   )
 
   const paged = useClientPagination(orderedRsvps, matchRSVPs[0]?.matchId)
+  const canRestore =
+    Boolean(matchId && onRestoreComplete) && orderedRsvps.length >= 2
 
   return (
     <Card>
@@ -73,6 +84,20 @@ export function RsvpOrderCard({ matchRSVPs, users }: RsvpOrderCardProps) {
             )}
             {paged.pagination.totalPages > 1 && (
               <Pagination {...paged.pagination} itemLabel="RSVPs" />
+            )}
+            {matchId && onRestoreComplete && (
+              <div className="mt-4 space-y-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  Rebuild teams from this RSVP order and goalkeeper priority.
+                  Saved admin transfers are re-applied afterward.
+                </p>
+                <RestoreRsvpOrderButton
+                  matchId={matchId}
+                  onDone={onRestoreComplete}
+                  disabled={!canRestore}
+                  className="h-11 w-full sm:h-9 sm:w-auto"
+                />
+              </div>
             )}
           </AccordionContent>
         </AccordionItem>

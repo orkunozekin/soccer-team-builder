@@ -38,6 +38,13 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-10-11 — Restore RSVP order must ignore implied roster diffs
+
+- **Source:** PR #112 · Greptile
+- **Gap:** The restore button called force-regenerate, which merges `deriveManualTransfers(current, baseline)`. After rebalance (e.g. 7/7 with no saved pins), those implied diffs were treated as admin transfers, so restore kept the rebalanced sizes instead of true RSVP order.
+- **Going forward:** A “restore RSVP order” path must rebuild from RSVP/GK baseline and re-apply only `manualTeamAssignments`. Do not use `mergeBaselineWithManualTransfers` / `deriveManualTransfers`, and do not use `applyPersistedTransfersKeepingBalance` (it re-evens pair sizes). Cover with a rebalance-then-restore test.
+- **Pointers:** `lib/teams/expandTeamsForMatch.ts` (`restoreRsvpOrder` / `onlyPersistedTransfers`), `components/admin/RestoreRsvpOrderButton.tsx`
+
 ### 2026-10-11 — Bulk RSVP position writes must re-read status in the transaction
 
 - **Source:** PR #111 · Greptile
