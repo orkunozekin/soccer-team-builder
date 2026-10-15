@@ -81,7 +81,6 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 - **Going forward:** When a shared allocator gains metadata needed to preserve an invariant, trace every caller and wrapper through to persistence. Cover incremental assignment, rebalance, and forced regeneration with saved assignments and both RSVP positions and legacy profile fallback.
 - **Pointers:** `lib/teams/expandTeamsForMatch.ts`, `lib/utils/teamGenerator.ts`, `app/api/teams/rebalance/route.ts`
 
-
 ### 2026-09-29 — Summary text inside a button becomes its accessible name
 
 - **Source:** PR #103 · Macroscope
@@ -232,3 +231,10 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 - **Going forward:** Any UI that depends on “current club” (sub-nav, match list, create eligibility, create API `clubId`) must share one resolver (`resolveEffectiveActiveClubId` / `resolveSelectedClubMembership`). Show membership load and switch errors with retry/alert; do not redirect away from platform pages (`/profile`, `/admin`, auth) when switching clubs.
 - **Pointers:** `lib/utils/resolveSelectedClub.ts`, `app/matches/page.tsx`, `components/layout/ClubSubNav.tsx`
 - **Promoted:** AGENT_CONTEXT.md → §3 Auth, roles, and club context (one resolver)
+
+### 2026-10-14 — Query only the active RSVP roster during cancellation cleanup
+
+- **Source:** PR #114 · Greptile
+- **Gap:** Transactional cancellation cleanup queried all retained RSVP history and filtered cancelled records in memory, unnecessarily reading and locking old records on every cancellation or retry.
+- **Going forward:** Query confirmed RSVPs at the database boundary for roster operations; retaining cancellation history does not make it part of the active roster. Reuse the existing matchId/status query and index contract.
+- **Pointers:** `lib/teams/removeUserFromMatchTeams.ts`, `lib/teams/expandTeamsForMatch.ts`

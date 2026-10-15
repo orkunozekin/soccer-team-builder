@@ -79,11 +79,16 @@ async function incrementallyAssignUnassignedPlayers(
 
   const matchRef = adminDb.collection('matches').doc(matchId)
   const matchSnap = await matchRef.get()
-  const persisted = matchSnap.exists
+  const savedAssignments = matchSnap.exists
     ? ((matchSnap.data()?.manualTeamAssignments as
         | Record<string, number>
         | undefined) ?? {})
     : {}
+  const confirmedIds = new Set(rsvpsToUse.map(rsvp => rsvp.userId))
+  const persisted = Object.fromEntries(
+    Object.entries(savedAssignments).filter(([id]) => confirmedIds.has(id))
+  )
+
   const userById = new Map(users.map(user => [user.uid, user]))
   const existingAssignments = compactTeamVacancies(
     existingTeams,
@@ -213,11 +218,16 @@ async function fullyRegenerateTeams(
     })
 
   const matchSnap = await adminDb.collection('matches').doc(matchId).get()
-  const persisted = matchSnap.exists
+  const savedAssignments = matchSnap.exists
     ? ((matchSnap.data()?.manualTeamAssignments as
         | Record<string, number>
         | undefined) ?? {})
     : {}
+
+  const confirmedIds = new Set(rsvpsToUse.map(rsvp => rsvp.userId))
+  const persisted = Object.fromEntries(
+    Object.entries(savedAssignments).filter(([id]) => confirmedIds.has(id))
+  )
 
   const maxSizeByTeamNumber = new Map<number, number>()
   for (const team of baselineTeams) {

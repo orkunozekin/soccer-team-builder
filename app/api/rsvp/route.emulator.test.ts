@@ -147,6 +147,18 @@ describe.skipIf(!emulator)(
       expect(final[0]).not.toContain(ids[12])
     })
 
+    it('never resurrects a cancelled player through a retained manual pin on later arrival', async () => {
+      await db
+        .doc(`matches/${matchId}`)
+        .update({ manualTeamAssignments: { [ids[0]]: 1 } })
+      expect((await cancel()).status).toBe(200)
+      expect((await arrive()).status).toBe(200)
+      const final = await rosters()
+      expect(final.flat().sort()).toEqual(ids.slice(1).sort())
+      expect(final[2]).toContain(ids[24])
+      expect(await count()).toBe(24)
+    })
+
     it('removes all teams when the last player cancels and retains the cancelled record', async () => {
       const batch = db.batch()
       ids.slice(1, 24).forEach(id =>

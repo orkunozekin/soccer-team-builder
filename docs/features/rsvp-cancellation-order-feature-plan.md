@@ -62,15 +62,15 @@ Implement the smallest cohesive change to cancellation backfill and the assignme
 
 ## Acceptance criteria
 
-- [ ] With full Teams 1 and 2 and existing Team 3 players, cancelling from Team 1 promotes the earliest eligible later RSVP and continues filling the donor vacancy. A later arrival cannot enter Teams 1 or 2 ahead of eligible existing Team 3 players.
-- [ ] The equivalent Team 2 cancellation and a four-team cascade pass.
-- [ ] A direct Team 1 vacancy followed by a later arrival is tested, matching Lance's reported symptom without claiming a historical reconstruction.
-- [ ] Empty source/destination teams, last-player cancellation, last-team cancellation, no eligible donor, equal timestamps, missing timestamps, and stale/cancelled roster members have deterministic safe outcomes.
-- [ ] Goalkeeper placement and intentional manual assignments remain valid; unaffected player assignments remain stable.
-- [ ] Concurrent cancellation/arrival, duplicate cancellation, lock contention, and cleanup failure/retry tests prove no lost/duplicate players, no double counter decrement, and no permanently skipped cleanup.
-- [ ] Cancelled RSVP documents and their original RSVP timestamps remain intact.
+- [x] With full Teams 1 and 2 and existing Team 3 players, cancelling from Team 1 promotes the earliest eligible later RSVP and continues filling the donor vacancy. A later arrival cannot enter Teams 1 or 2 ahead of eligible existing Team 3 players.
+- [x] The equivalent Team 2 cancellation and a four-team cascade pass.
+- [x] A direct Team 1 vacancy followed by a later arrival is tested, matching Lance's reported symptom without claiming a historical reconstruction.
+- [x] Empty source/destination teams, last-player cancellation, last-team cancellation, no eligible donor, equal timestamps, missing timestamps, and stale/cancelled roster members have deterministic safe outcomes.
+- [x] Goalkeeper placement and intentional manual assignments remain valid; unaffected player assignments remain stable.
+- [x] Concurrent cancellation/arrival, duplicate cancellation, lock contention, and cleanup failure/retry tests prove no lost/duplicate players, no double counter decrement, and no permanently skipped cleanup.
+- [x] Cancelled RSVP documents and their original RSVP timestamps remain intact.
 - [ ] Focused tests, `yarn test:run`, and appropriate type/lint checks pass. Emulator-backed flow validation uses local Auth/Firestore only. Any environment limitation is recorded accurately.
-- [ ] Capture and inspect the changed roster behavior in the Codex in-app browser using emulator data, and attach evidence to the PR as required by `/implement-feature`. Preserve evidence provenance after review fixes according to current repository rules.
+- [x] Capture and inspect the changed roster behavior in the Codex in-app browser using emulator data, and attach evidence to the PR as required by `/implement-feature`. Preserve evidence provenance after review fixes according to current repository rules.
 - [ ] A regular PR against main has fresh Greptile 5/5 attributable to its current head, relevant passing CI, addressed actionable bot feedback, and required human approvals before coordinator squash merge.
 
 ## Handoff
@@ -81,19 +81,19 @@ Implement the smallest cohesive change to cancellation backfill and the assignme
 - Implemented shared deterministic vacancy cascading, confirmed-only roster cleanup, transactional cancellation roster persistence, and atomic incremental arrival writes. Cancellation fills only removed-player/donor vacancies; arrival compacts earlier vacancies before assigning unassigned RSVPs.
 - Preserved pinned team assignments, first-two-team goalkeeper limits, roster order, retained cancelled RSVP timestamps, and cancellation counters. Renumbered pin targets atomically with emptied teams. Existing team fields remain untouched.
 - Moved POST lock acquisition before duplicate lookup and RSVP creation, and cancellation lock acquisition before mutation. Already-cancelled retries repair cleanup; old cancellation retries preserve a current confirmed rejoin and do not create cancellation audit events. Lock release checks ownership transactionally.
-- Validation: 524 unit tests passed; 11 emulator integration tests passed on local Firestore, including cancellation/arrival races, duplicate cancellation, busy lock, cleanup failure/retry, atomic roster-write failure, old cancellation after rejoin, manual pins, goalkeeper limits, last-player removal and renumbering. Six pure vacancy tests include four-team cascading, equal/missing timestamps, empty teams and stale/duplicate members. Changed-file ESLint passes; repository lint passes with pre-existing warnings. TypeScript has 20 existing test-fixture errors, independently reproduced on verified main with identical normalized diagnostics.
-- Used the Codex in-app browser against this checkout's Next dev server on port 3107 and demo project `demo-rsvp-cascade`, with Auth 9099 and Firestore 8080 only. Cancelled Player 01 through the UI, inspected Player 12 on Team 1 and Player 23 on Team 2, then added Player 25 through admin RSVP and inspected Player 24/25 on Team 3. Three inspected captures are attached in PR #114 description under UI evidence, from dirty implementation state that became `1a249d552d09ba8c67e1ae803e95e5ac4df34fea`. Originals and SHA-256 hashes are preserved in the chat visualization artifact folder.
+- Validation: final complete emulator-enabled suite passed 536 tests across 108 files; 12 emulator integration tests passed on local Firestore, including cancellation/arrival races, duplicate cancellation, busy lock, cleanup failure/retry, atomic roster-write failure, old cancellation after rejoin, cancelled manual pins not resurrected on arrival, manual pins, goalkeeper limits, last-player removal and renumbering. Six pure vacancy tests include four-team cascading, equal/missing timestamps, empty teams and stale/duplicate members. Changed-file ESLint passes; repository lint passes with pre-existing warnings. TypeScript has 20 existing test-fixture errors, independently reproduced on verified main with identical normalized diagnostics.
+- Used the Codex in-app browser against this checkout's Next dev server on port 3107 and demo project `demo-rsvp-cascade`, with Auth 9099 and Firestore 8080 only. Cancelled Player 01 through the UI, inspected Player 12 on Team 1 and Player 23 on Team 2, then added Player 25 through admin RSVP and inspected Player 24/25 on Team 3. Review fixes narrow query reads and exclude inactive pins; they do not change the ordinary confirmed-roster states captured. Three inspected captures are attached in PR #114 description under UI evidence, from dirty implementation state that became `1a249d552d09ba8c67e1ae803e95e5ac4df34fea`. Originals and SHA-256 hashes are preserved in the chat visualization artifact folder.
 
 ### Remaining work
 
-1. Complete `/address-pr-feedback` on regular PR #114 through fresh current-head Greptile 5/5 and relevant passing CI. Evidence is attached and GitHub UI confirms subscription through repository watching.
+1. Push review fixes, reply and resolve the Greptile bot thread, then post a new `@greptileai` re-review comment. Complete regular PR #114 through fresh current-head Greptile 5/5 and relevant passing CI. Evidence is attached and GitHub UI confirms subscription through repository watching.
 2. Coordinator independently verifies current head, unresolved threads, evidence and review gates, then squash merges if all gates pass. Worker must not merge or enable auto-merge.
 3. Confirm remote merge and record the resulting merge commit through normal plan updates. No further implementation step is authorized here.
 
 ### Blockers / risks
 
 - TypeScript is not green on main: 20 existing test-fixture errors remain unchanged. Do not report a successful repository typecheck.
-- Greptile and unit-test CI are running; Macroscope checks were skipped for exhausted credits and are not approval. Preview deployment passed.
+- Initial Greptile review of `1a249d552d09ba8c67e1ae803e95e5ac4df34fea` scored 4/5. Its confirmed-only query finding is fixed and logged in `docs/AGENT_LESSONS.md`; a fresh current-head review is required. CI and preview passed for documentation head `0f8d5731860f58cab2c6e224d10c8059c50fd3ab`; checks on the review-fix push are pending. Macroscope was skipped for exhausted credits and is not approval.
 - Local emulator route tests mock authentication identity and audit sink but exercise real Firestore transactions, lock and roster logic. Browser validation uses actual Auth emulator tokens and the real API route.
 
 ### Run ledger

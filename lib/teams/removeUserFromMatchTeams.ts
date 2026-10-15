@@ -11,7 +11,10 @@ export async function removeUserFromMatchTeams(
 ): Promise<{ removed: boolean; teamDeleted: boolean; backfilled: boolean }> {
   const matchRef = adminDb.collection('matches').doc(matchId)
   const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
-  const rsvpsQuery = adminDb.collection('rsvps').where('matchId', '==', matchId)
+  const rsvpsQuery = adminDb
+    .collection('rsvps')
+    .where('matchId', '==', matchId)
+    .where('status', '==', 'confirmed')
   // One atomic roster write: a failed commit leaves the original vacancy source
   // available to a retry, even though the RSVP cancellation already committed.
   return adminDb.runTransaction(async tx => {
