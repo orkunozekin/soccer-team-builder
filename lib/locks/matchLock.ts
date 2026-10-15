@@ -48,12 +48,11 @@ export async function acquireMatchLock(
       : `lock_${Date.now()}_${Math.random().toString(36).slice(2)}`
 
   const ref = lockRef(adminDb, matchId)
-  const now = Timestamp.now()
-  const expiryCutoff = new Date(now.toMillis() - ttlSeconds * 1000)
-
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const acquired = await adminDb.runTransaction(async tx => {
+        const now = Timestamp.now()
+        const expiryCutoff = new Date(now.toMillis() - ttlSeconds * 1000)
         const snap = await tx.get(ref)
         const data = snap.data()
         if (
@@ -68,10 +67,12 @@ export async function acquireMatchLock(
       if (acquired) {
         return {
           release: async () => {
-            const snap = await ref.get()
-            if (snap.exists && snap.data()?.holder === holderId) {
-              await ref.delete()
-            }
+            await adminDb.runTransaction(async tx => {
+              const snap = await tx.get(ref)
+              if (snap.exists && snap.data()?.holder === holderId) {
+                tx.delete(ref)
+              }
+            })
           },
         }
       }

@@ -1,149 +1,100 @@
-/**
- * Server-only: remove a user from their team for a match. If that team becomes
- * empty, delete the team and renumber remaining teams (1, 2, 3, ...).
- * If the vacated spot was on any team, the earliest-RSVP'd player from the next
- * team(s) (team N+1, N+2, ...) is moved into that spot (e.g. team 3 vacancy → fill from team 4+).
- */
-
-import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore'
+/** Server-only. Caller holds the per-match lock across RSVP mutation and cleanup. */
+import type { Firestore } from 'firebase-admin/firestore'
 import { Timestamp } from 'firebase-admin/firestore'
-
-function timestampToMs(
-  t: Timestamp | Date | { toDate?: () => Date } | null | undefined
-): number {
-  if (!t) return 0
-  if (t instanceof Date) return t.getTime()
-  const withToDate = t as { toDate: () => Date }
-  if (typeof withToDate.toDate === 'function') {
-    return withToDate.toDate().getTime()
-  }
-  return 0
-}
+import { compactTeamVacancies } from './compactTeamVacancies'
 
 export async function removeUserFromMatchTeams(
   adminDb: Firestore,
   matchId: string,
-  userId: string
+  userId: string,
+  options: { preserveConfirmedUser?: boolean } = {}
 ): Promise<{ removed: boolean; teamDeleted: boolean; backfilled: boolean }> {
+  const matchRef = adminDb.collection('matches').doc(matchId)
   const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
-  const teamsSnap = await teamsCol.get()
-
-  let teamDocToUpdate: QueryDocumentSnapshot | null = null
-  for (const d of teamsSnap.docs) {
-    const playerIds = (d.data().playerIds as string[]) ?? []
-    if (playerIds.includes(userId)) {
-      teamDocToUpdate = d
-      break
-    }
-  }
-
-  if (!teamDocToUpdate) {
-    return { removed: false, teamDeleted: false, backfilled: false }
-  }
-
-  const data = teamDocToUpdate.data()
-  const vacatedTeamNumber = (data.teamNumber as number) ?? 0
-  const playerIds: string[] = (data.playerIds ?? []).filter(
-    (id: string) => id !== userId
-  )
-  const teamDeleted = playerIds.length === 0
-
-  if (teamDeleted) {
-    await teamDocToUpdate.ref.delete()
-  } else {
-    await teamDocToUpdate.ref.update({
-      playerIds,
-      updatedAt: Timestamp.now(),
-    })
-  }
-
-  // If we didn't delete the team, backfill from the next team(s): earliest RSVP from teams with number > vacatedTeamNumber
-  let backfilled = false
-  if (!teamDeleted) {
-    const rsvpsSnap = await adminDb
-      .collection('rsvps')
-      .where('matchId', '==', matchId)
-      .where('status', '==', 'confirmed')
-      .get()
-    const rsvpAtByUserId = new Map<string, number>()
-    rsvpsSnap.docs.forEach(d => {
-      const ddata = d.data()
-      rsvpAtByUserId.set(
-        ddata.userId as string,
-        timestampToMs(ddata.rsvpAt ?? ddata.updatedAt)
-      )
-    })
-
-    const teamsSnap2 = await teamsCol.get()
-    const overflowPlayers: {
-      userId: string
-      teamDoc: QueryDocumentSnapshot
-    }[] = []
-    for (const d of teamsSnap2.docs) {
-      const tdata = d.data()
-      const num = (tdata.teamNumber as number) ?? 0
-      if (num > vacatedTeamNumber) {
-        const ids = (tdata.playerIds as string[]) ?? []
-        ids.forEach(uid => overflowPlayers.push({ userId: uid, teamDoc: d }))
+  const rsvpsQuery = adminDb
+    .collection('rsvps')
+    .where('matchId', '==', matchId)
+    .where('status', '==', 'confirmed')
+  // One atomic roster write: a failed commit leaves the original vacancy source
+  // available to a retry, even though the RSVP cancellation already committed.
+  return adminDb.runTransaction(async tx => {
+    const teamsSnap = await tx.get(teamsCol)
+    const rsvpsSnap = await tx.get(rsvpsQuery)
+    const matchSnap = await tx.get(matchRef)
+    const confirmed = rsvpsSnap.docs.filter(
+      d =>
+        d.data().status === 'confirmed' &&
+        (options.preserveConfirmedUser || d.data().userId !== userId)
+    )
+    const userRefs = confirmed.map(d =>
+      adminDb.collection('users').doc(d.data().userId)
+    )
+    const users = userRefs.length > 0 ? await tx.getAll(...userRefs) : []
+    const positions = new Map(
+      users.map(d => [d.id, d.data()?.position ?? null])
+    )
+    const players = confirmed.map(d => {
+      const data = d.data()
+      return {
+        userId: data.userId as string,
+        rsvpAt:
+          data.rsvpAt?.toDate?.() ??
+          (data.rsvpAt instanceof Date ? data.rsvpAt : null),
+        position: data.position ?? positions.get(data.userId) ?? null,
       }
-    }
-    if (overflowPlayers.length > 0) {
-      overflowPlayers.sort(
-        (a, b) =>
-          (rsvpAtByUserId.get(a.userId) ?? 0) -
-          (rsvpAtByUserId.get(b.userId) ?? 0)
-      )
-      const promote = overflowPlayers[0]
-      const vacatedTeamRef = teamDocToUpdate.ref
-      const promoteTeamRef = promote.teamDoc.ref
-
-      await vacatedTeamRef.update({
-        playerIds: [...playerIds, promote.userId],
-        updatedAt: Timestamp.now(),
-      })
-
-      const promoteTeamData = promote.teamDoc.data()
-      const promoteTeamIds = (
-        (promoteTeamData.playerIds as string[]) ?? []
-      ).filter((id: string) => id !== promote.userId)
-      if (promoteTeamIds.length === 0) {
-        await promoteTeamRef.delete()
-        const remainingSnap = await teamsCol.orderBy('teamNumber').get()
-        const batch = adminDb.batch()
-        remainingSnap.docs.forEach((d, index) => {
-          batch.update(d.ref, {
-            teamNumber: index + 1,
-            updatedAt: Timestamp.now(),
-          })
-        })
-        await batch.commit()
-      } else {
-        await promoteTeamRef.update({
-          playerIds: promoteTeamIds,
-          updatedAt: Timestamp.now(),
+    })
+    const original = teamsSnap.docs.map(d => ({
+      id: d.id,
+      teamNumber: (d.data().teamNumber as number) ?? 0,
+      playerIds: (d.data().playerIds as string[]) ?? [],
+      maxSize: (d.data().maxSize as number) ?? 11,
+    }))
+    const manualAssignments = (matchSnap.data()?.manualTeamAssignments ??
+      {}) as Record<string, number>
+    const updated = compactTeamVacancies(original, players, {
+      manualAssignments,
+      capacities: new Map(original.map(t => [t.teamNumber, t.maxSize])),
+      // Fill only vacancies caused by removal of cancelled/stale players and
+      // the donor vacancies they create, preserving pre-existing partial teams.
+      targets: new Map(original.map(t => [t.teamNumber, t.playerIds.length])),
+    })
+    const remaining = updated.filter(t => t.playerIds.length > 0)
+    const numbers = new Map(remaining.map((t, i) => [t.teamNumber, i + 1]))
+    const now = Timestamp.now()
+    let backfilled = false
+    for (const team of updated) {
+      const before = original.find(t => t.teamNumber === team.teamNumber)!
+      if (team.playerIds.some(id => !before.playerIds.includes(id)))
+        backfilled = true
+      if (team.playerIds.length === 0) {
+        tx.delete(teamsCol.doc(before.id))
+      } else if (
+        numbers.get(team.teamNumber) !== team.teamNumber ||
+        JSON.stringify(before.playerIds) !== JSON.stringify(team.playerIds)
+      ) {
+        tx.update(teamsCol.doc(before.id), {
+          playerIds: team.playerIds,
+          teamNumber: numbers.get(team.teamNumber),
+          updatedAt: now,
         })
       }
-      backfilled = true
     }
-  }
-
-  if (!teamDeleted && !backfilled) {
-    return { removed: true, teamDeleted: false, backfilled: false }
-  }
-  if (!teamDeleted) {
-    return { removed: true, teamDeleted: false, backfilled: true }
-  }
-
-  // Renumber remaining teams so we don't have gaps (e.g. 1, 2, 4 -> 1, 2, 3)
-  const remainingSnap = await teamsCol.orderBy('teamNumber').get()
-  const batch = adminDb.batch()
-  remainingSnap.docs.forEach((d, index) => {
-    batch.update(d.ref, {
-      teamNumber: index + 1,
-      updatedAt: Timestamp.now(),
-    })
+    // Team numbers are persisted pin targets, so renumber them together with rosters.
+    const remapped = Object.fromEntries(
+      Object.entries(manualAssignments).map(([id, number]) => [
+        id,
+        numbers.get(number) ?? number,
+      ])
+    )
+    if (JSON.stringify(remapped) !== JSON.stringify(manualAssignments)) {
+      tx.update(matchRef, { manualTeamAssignments: remapped, updatedAt: now })
+    }
+    return {
+      removed:
+        original.some(t => t.playerIds.includes(userId)) &&
+        !updated.some(t => t.playerIds.includes(userId)),
+      teamDeleted: remaining.length < original.length,
+      backfilled,
+    }
   })
-  await batch.commit()
-
-  return { removed: true, teamDeleted: true, backfilled: false }
 }

@@ -6,11 +6,11 @@
 
 import { Timestamp } from 'firebase-admin/firestore'
 import type { Firestore, QuerySnapshot } from 'firebase-admin/firestore'
+import { compactTeamVacancies } from './compactTeamVacancies'
 import { getUsersByIdsAdmin } from '@/lib/users/getUsersByIdsAdmin'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import {
   applyManualTeamTransfers,
-  applyPersistedTransfersKeepingBalance,
   assignUnassignedPlayersToTeams,
   computeTeamCountForRSVPCount,
   enforceTeamMaxSizes,
@@ -77,10 +77,28 @@ async function incrementallyAssignUnassignedPlayers(
     return
   }
 
-  const existingAssignments = existingTeams.map(t => ({
-    teamNumber: t.teamNumber,
-    playerIds: t.playerIds,
-  }))
+  const matchRef = adminDb.collection('matches').doc(matchId)
+  const matchSnap = await matchRef.get()
+  const savedAssignments = matchSnap.exists
+    ? ((matchSnap.data()?.manualTeamAssignments as
+        | Record<string, number>
+        | undefined) ?? {})
+    : {}
+  const confirmedIds = new Set(rsvpsToUse.map(rsvp => rsvp.userId))
+  const persisted = Object.fromEntries(
+    Object.entries(savedAssignments).filter(([id]) => confirmedIds.has(id))
+  )
+
+  const userById = new Map(users.map(user => [user.uid, user]))
+  const existingAssignments = compactTeamVacancies(
+    existingTeams,
+    rsvpsToUse.map(rsvp => ({
+      userId: rsvp.userId,
+      rsvpAt: rsvp.rsvpAt,
+      position: rsvp.position ?? userById.get(rsvp.userId)?.position ?? null,
+    })),
+    { manualAssignments: persisted }
+  )
   const { teams: updatedAssignments, gkReplacements } =
     assignUnassignedPlayersToTeams(
       existingAssignments,
@@ -90,14 +108,6 @@ async function incrementallyAssignUnassignedPlayers(
       11,
       desiredTeamCount
     )
-
-  const matchRef = adminDb.collection('matches').doc(matchId)
-  const matchSnap = await matchRef.get()
-  const persisted = matchSnap.exists
-    ? ((matchSnap.data()?.manualTeamAssignments as
-        | Record<string, number>
-        | undefined) ?? {})
-    : {}
 
   const maxSizeByTeamNumber = new Map(
     existingTeams.map(t => [t.teamNumber, 11] as const)
@@ -114,19 +124,24 @@ async function incrementallyAssignUnassignedPlayers(
 
   const finalAssignments =
     Object.keys(persisted).length > 0
-      ? applyPersistedTransfersKeepingBalance(
-          updatedAssignments,
-          persisted,
+      ? enforceTeamMaxSizes(
+          applyManualTeamTransfers(
+            updatedAssignments,
+            mergeManualTransfers(new Map(), persisted)
+          ),
           maxSizeByTeamNumber,
-          rsvpAtByUserId,
-          getGoalkeeperIds(rsvpsToUse, users)
+          {
+            manualPins: mergeManualTransfers(new Map(), persisted),
+            rsvpAtByUserId,
+            goalkeeperIds: getGoalkeeperIds(rsvpsToUse, users),
+          }
         )
       : updatedAssignments
 
   const teamsCol = adminDb.collection(`matches/${matchId}/teams`)
   const existingByNumber = new Map(existingTeams.map(t => [t.teamNumber, t]))
   const now = Timestamp.now()
-  const writes: Promise<unknown>[] = []
+  const batch = adminDb.batch()
 
   if (gkReplacements.length > 0) {
     const existing = matchSnap.exists
@@ -138,11 +153,10 @@ async function incrementallyAssignUnassignedPlayers(
     for (const r of gkReplacements) {
       gkReplacementsMap[r.insertedGK] = r.removedPlayer
     }
-    writes.push(
-      matchRef.set(
-        { gkReplacements: gkReplacementsMap, updatedAt: now },
-        { merge: true }
-      )
+    batch.set(
+      matchRef,
+      { gkReplacements: gkReplacementsMap, updatedAt: now },
+      { merge: true }
     )
   }
 
@@ -154,33 +168,29 @@ async function incrementallyAssignUnassignedPlayers(
         existing.playerIds.length !== assignment.playerIds.length ||
         existing.playerIds.some((id, idx) => id !== assignment.playerIds[idx])
       if (playerIdsChanged) {
-        writes.push(
-          teamsCol.doc(existing.id).update({
-            playerIds: assignment.playerIds,
-            updatedAt: now,
-          })
-        )
+        batch.update(teamsCol.doc(existing.id), {
+          playerIds: assignment.playerIds,
+          updatedAt: now,
+        })
       }
       continue
     }
 
     const teamId = `team_${matchId}_${assignment.teamNumber}_${Date.now()}`
-    writes.push(
-      teamsCol.doc(teamId).set({
-        matchId,
-        teamNumber: assignment.teamNumber,
-        name:
-          TEAM_NAMES[i % TEAM_NAMES.length] ?? `Team ${assignment.teamNumber}`,
-        color: TEAM_COLORS[i % TEAM_COLORS.length] ?? '#3b82f6',
-        playerIds: assignment.playerIds,
-        maxSize: 11,
-        createdAt: now,
-        updatedAt: now,
-      })
-    )
+    batch.set(teamsCol.doc(teamId), {
+      matchId,
+      teamNumber: assignment.teamNumber,
+      name:
+        TEAM_NAMES[i % TEAM_NAMES.length] ?? `Team ${assignment.teamNumber}`,
+      color: TEAM_COLORS[i % TEAM_COLORS.length] ?? '#3b82f6',
+      playerIds: assignment.playerIds,
+      maxSize: 11,
+      createdAt: now,
+      updatedAt: now,
+    })
   }
 
-  await Promise.all(writes)
+  await batch.commit()
 }
 
 async function fullyRegenerateTeams(
@@ -208,11 +218,16 @@ async function fullyRegenerateTeams(
     })
 
   const matchSnap = await adminDb.collection('matches').doc(matchId).get()
-  const persisted = matchSnap.exists
+  const savedAssignments = matchSnap.exists
     ? ((matchSnap.data()?.manualTeamAssignments as
         | Record<string, number>
         | undefined) ?? {})
     : {}
+
+  const confirmedIds = new Set(rsvpsToUse.map(rsvp => rsvp.userId))
+  const persisted = Object.fromEntries(
+    Object.entries(savedAssignments).filter(([id]) => confirmedIds.has(id))
+  )
 
   const maxSizeByTeamNumber = new Map<number, number>()
   for (const team of baselineTeams) {
@@ -325,7 +340,7 @@ export async function expandTeamsForMatch(
         ? timestampToDate(data.checkedInAt) || null
         : null,
       checkInMethod: data.checkInMethod ?? null,
-      rsvpAt: timestampToDate(data.rsvpAt) || new Date(),
+      rsvpAt: timestampToDate(data.rsvpAt) || new Date(8640000000000000),
       updatedAt: timestampToDate(data.updatedAt) || new Date(),
     }
   })
@@ -338,9 +353,8 @@ export async function expandTeamsForMatch(
     .collection(`matches/${matchId}/teams`)
     .get()
   const currentTeamCount = existingTeamsSnap.size
-  const totalAssigned = existingTeamsSnap.docs.reduce(
-    (sum, d) => sum + ((d.data().playerIds as string[])?.length ?? 0),
-    0
+  const assignedIds = new Set(
+    existingTeamsSnap.docs.flatMap(d => (d.data().playerIds as string[]) ?? [])
   )
 
   const desiredTeamCount =
@@ -348,10 +362,11 @@ export async function expandTeamsForMatch(
       ? 1
       : computeTeamCountForRSVPCount(rsvpsToUse.length, 11, 2)
   const needMoreTeams = currentTeamCount < desiredTeamCount
-  const hasUnassignedRsvps = totalAssigned < rsvpsToUse.length
+  const hasUnassignedRsvps = rsvpsToUse.some(
+    rsvp => !assignedIds.has(rsvp.userId)
+  )
   const restoreRsvpOrder = options?.restoreRsvpOrder === true
-  const forceRegenerate =
-    options?.forceRegenerate === true || restoreRsvpOrder
+  const forceRegenerate = options?.forceRegenerate === true || restoreRsvpOrder
 
   if (!forceRegenerate && !needMoreTeams && !hasUnassignedRsvps) {
     return { regenerated: false }

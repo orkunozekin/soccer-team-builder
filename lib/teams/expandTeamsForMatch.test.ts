@@ -78,6 +78,7 @@ function createMockFirestore(initial: {
         return {
           get: async () => makeQuerySnap(teams),
           doc: (id: string) => ({
+            id,
             update: async (data: Record<string, unknown>) => {
               teamUpdates.push({ id, data })
               teams = teams.map(team =>
@@ -100,6 +101,7 @@ function createMockFirestore(initial: {
       if (path === 'matches') {
         return {
           doc: (matchId: string) => ({
+            id: matchId,
             get: async () => makeDocSnap(match),
             set: async (data: Record<string, unknown>, _opts?: unknown) => {
               match = {
@@ -120,11 +122,21 @@ function createMockFirestore(initial: {
       }),
     batch: () => {
       const pendingDeletes: string[] = []
+      const pendingWrites: Array<() => Promise<void>> = []
       return {
+        update: (
+          ref: { update: (data: Record<string, unknown>) => Promise<void> },
+          data: Record<string, unknown>
+        ) => pendingWrites.push(() => ref.update(data)),
+        set: (
+          ref: { set: (data: Record<string, unknown>) => Promise<void> },
+          data: Record<string, unknown>
+        ) => pendingWrites.push(() => ref.set(data)),
         delete: (ref: { id: string }) => {
           pendingDeletes.push(ref.id)
         },
         commit: async () => {
+          for (const write of pendingWrites) await write()
           deletedTeamIds.push(...pendingDeletes)
           teams = teams.filter(team => !pendingDeletes.includes(team.id))
         },
@@ -272,6 +284,30 @@ describe('expandTeamsForMatch', () => {
       'p3',
     ])
     expect(getTeams().find(t => t.id === 'team2')?.data.playerIds).toEqual([])
+  })
+
+  it('fills a direct Team 1 hole from assigned later RSVPs before a new arrival', async () => {
+    const ids = Array.from({ length: 24 }, (_, i) => `p${i + 1}`)
+    const { adminDb, getTeams } = createMockFirestore({
+      rsvps: ids.map((id, i) =>
+        makeRsvpDoc(id, id, new Date(2024, 0, 1, 0, i))
+      ),
+      users: ids.map(id => makeUserDoc(id)),
+      teams: [
+        makeTeamDoc('team1', 1, ids.slice(0, 10)),
+        makeTeamDoc('team2', 2, ids.slice(10, 21)),
+        makeTeamDoc('team3', 3, ids.slice(21, 23)),
+      ],
+    })
+    await expandTeamsForMatch(adminDb, 'match1')
+    const teams = getTeams().sort(
+      (a, b) => Number(a.data.teamNumber) - Number(b.data.teamNumber)
+    )
+    expect(teams.map(t => t.data.playerIds)).toEqual([
+      [...ids.slice(0, 10), 'p11'],
+      [...ids.slice(11, 21), 'p22'],
+      ['p23', 'p24'],
+    ])
   })
 
   it('promotes a late GK onto team 1 when teams 1 and 2 are full without a GK', async () => {
