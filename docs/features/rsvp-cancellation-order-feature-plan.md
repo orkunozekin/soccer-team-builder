@@ -4,13 +4,13 @@ Fill vacancies on earlier teams from eligible existing RSVPs before assigning a 
 
 ## Status
 
-| Field               | Value                                                                                                    |
-| ------------------- | -------------------------------------------------------------------------------------------------------- |
-| Status              | in-progress                                                                                              |
-| Last updated        | 2026-10-14                                                                                               |
-| Verified base       | main at `706550781b7d729d1d019f85a119a5b832c9ce3c`                                                       |
-| Related PR / branch | [PR #114](https://github.com/orkunozekin/soccer-team-builder/pull/114) / `codex/rsvp-cancellation-order` |
-| Execution           | Step 1 authorized and implemented in isolated chat; review and coordinator merge pending                 |
+| Field               | Value                                                                                                           |
+| ------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Status              | in-progress                                                                                                     |
+| Last updated        | 2026-10-14                                                                                                      |
+| Verified base       | main at `706550781b7d729d1d019f85a119a5b832c9ce3c`                                                              |
+| Related PR / branch | [PR #114](https://github.com/orkunozekin/soccer-team-builder/pull/114) / `codex/rsvp-cancellation-order`        |
+| Execution           | Step 1 implemented; implementation head passed review, final handoff verification and coordinator merge pending |
 
 ## Goals
 
@@ -86,14 +86,14 @@ Implement the smallest cohesive change to cancellation backfill and the assignme
 
 ### Remaining work
 
-1. Push review fixes, reply and resolve the Greptile bot thread, then post a new `@greptileai` re-review comment. Complete regular PR #114 through fresh current-head Greptile 5/5 and relevant passing CI. Evidence is attached and GitHub UI confirms subscription through repository watching.
+1. Verify the final handoff documentation commit receives fresh current-head Greptile 5/5 and relevant passing CI before coordinator merge. Implementation head `f03c3a89f1aa8ea0f058713e46dd4366b90d71cf` received 5/5 with zero new comments and passing unit-test CI/preview. The addressed bot thread is resolved; the fresh re-review request is recorded at PR comment `6183602653`. Evidence is attached and GitHub UI confirms subscription through repository watching.
 2. Coordinator independently verifies current head, unresolved threads, evidence and review gates, then squash merges if all gates pass. Worker must not merge or enable auto-merge.
 3. Confirm remote merge and record the resulting merge commit through normal plan updates. No further implementation step is authorized here.
 
 ### Blockers / risks
 
 - TypeScript is not green on main: 20 existing test-fixture errors remain unchanged. Do not report a successful repository typecheck.
-- Initial Greptile review of `1a249d552d09ba8c67e1ae803e95e5ac4df34fea` scored 4/5. Its confirmed-only query finding is fixed and logged in `docs/AGENT_LESSONS.md`; a fresh current-head review is required. CI and preview passed for documentation head `0f8d5731860f58cab2c6e224d10c8059c50fd3ab`; checks on the review-fix push are pending. Macroscope was skipped for exhausted credits and is not approval.
+- Implementation head `f03c3a89f1aa8ea0f058713e46dd4366b90d71cf` passed fresh Greptile 5/5 with zero new comments, unit-test CI and preview. Initial 4/5 query feedback is fixed, replied to, resolved and logged in `docs/AGENT_LESSONS.md`. This final handoff documentation commit requires its own current-head verification. Macroscope was skipped for exhausted credits and is not approval.
 - Local emulator route tests mock authentication identity and audit sink but exercise real Firestore transactions, lock and roster logic. Browser validation uses actual Auth emulator tokens and the real API route.
 
 ### Run ledger
