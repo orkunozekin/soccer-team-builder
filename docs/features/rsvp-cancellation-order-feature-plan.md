@@ -4,13 +4,13 @@ Fill vacancies on earlier teams from eligible existing RSVPs before assigning a 
 
 ## Status
 
-| Field               | Value                                                                                    |
-| ------------------- | ---------------------------------------------------------------------------------------- |
-| Status              | in-progress                                                                              |
-| Last updated        | 2026-10-14                                                                               |
-| Verified base       | main at `706550781b7d729d1d019f85a119a5b832c9ce3c`                                       |
-| Related PR / branch | `codex/rsvp-cancellation-order`, PR publication pending                                  |
-| Execution           | Step 1 authorized and implemented in isolated chat; review and coordinator merge pending |
+| Field               | Value                                                                                                    |
+| ------------------- | -------------------------------------------------------------------------------------------------------- |
+| Status              | in-progress                                                                                              |
+| Last updated        | 2026-10-14                                                                                               |
+| Verified base       | main at `706550781b7d729d1d019f85a119a5b832c9ce3c`                                                       |
+| Related PR / branch | [PR #114](https://github.com/orkunozekin/soccer-team-builder/pull/114) / `codex/rsvp-cancellation-order` |
+| Execution           | Step 1 authorized and implemented in isolated chat; review and coordinator merge pending                 |
 
 ## Goals
 
@@ -82,18 +82,18 @@ Implement the smallest cohesive change to cancellation backfill and the assignme
 - Preserved pinned team assignments, first-two-team goalkeeper limits, roster order, retained cancelled RSVP timestamps, and cancellation counters. Renumbered pin targets atomically with emptied teams. Existing team fields remain untouched.
 - Moved POST lock acquisition before duplicate lookup and RSVP creation, and cancellation lock acquisition before mutation. Already-cancelled retries repair cleanup; old cancellation retries preserve a current confirmed rejoin and do not create cancellation audit events. Lock release checks ownership transactionally.
 - Validation: 524 unit tests passed; 11 emulator integration tests passed on local Firestore, including cancellation/arrival races, duplicate cancellation, busy lock, cleanup failure/retry, atomic roster-write failure, old cancellation after rejoin, manual pins, goalkeeper limits, last-player removal and renumbering. Six pure vacancy tests include four-team cascading, equal/missing timestamps, empty teams and stale/duplicate members. Changed-file ESLint passes; repository lint passes with pre-existing warnings. TypeScript has 20 existing test-fixture errors, independently reproduced on verified main with identical normalized diagnostics.
-- Used the Codex in-app browser against this checkout's Next dev server on port 3107 and demo project `demo-rsvp-cascade`, with Auth 9099 and Firestore 8080 only. Cancelled Player 01 through the UI, inspected Player 12 on Team 1 and Player 23 on Team 2, then added Player 25 through admin RSVP and inspected Player 24/25 on Team 3. Captures are local pending PR attachment, from dirty implementation state before first commit.
+- Used the Codex in-app browser against this checkout's Next dev server on port 3107 and demo project `demo-rsvp-cascade`, with Auth 9099 and Firestore 8080 only. Cancelled Player 01 through the UI, inspected Player 12 on Team 1 and Player 23 on Team 2, then added Player 25 through admin RSVP and inspected Player 24/25 on Team 3. Three inspected captures are attached in PR #114 description under UI evidence, from dirty implementation state that became `1a249d552d09ba8c67e1ae803e95e5ac4df34fea`. Originals and SHA-256 hashes are preserved in the chat visualization artifact folder.
 
 ### Remaining work
 
-1. Publish the regular Step 1 PR, attach the inspected UI evidence, subscribe, and complete `/address-pr-feedback` through fresh current-head Greptile 5/5 and relevant passing CI.
+1. Complete `/address-pr-feedback` on regular PR #114 through fresh current-head Greptile 5/5 and relevant passing CI. Evidence is attached and GitHub UI confirms subscription through repository watching.
 2. Coordinator independently verifies current head, unresolved threads, evidence and review gates, then squash merges if all gates pass. Worker must not merge or enable auto-merge.
 3. Confirm remote merge and record the resulting merge commit through normal plan updates. No further implementation step is authorized here.
 
 ### Blockers / risks
 
 - TypeScript is not green on main: 20 existing test-fixture errors remain unchanged. Do not report a successful repository typecheck.
-- UI evidence attachment and remote review gates remain pending; local success does not satisfy them.
+- Greptile and unit-test CI are running; Macroscope checks were skipped for exhausted credits and are not approval. Preview deployment passed.
 - Local emulator route tests mock authentication identity and audit sink but exercise real Firestore transactions, lock and roster logic. Browser validation uses actual Auth emulator tokens and the real API route.
 
 ### Run ledger
