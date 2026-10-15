@@ -1,10 +1,11 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyClubAdminForMatch, verifyAuth } from '@/lib/api/auth'
+import { verifyAuth, verifyClubAdminForMatch } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
+import { logUserError, userErrorResponse } from '@/lib/audit/logUserError'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { acquireMatchLock } from '@/lib/locks/matchLock'
-import { logUserError, userErrorResponse } from '@/lib/audit/logUserError'
+import { ensureMatchRsvpStateSeeded } from '@/lib/matches/syncMatchRsvpCounts'
 import { auditLog } from '@/lib/services/auditService'
 import { expandTeamsForMatch } from '@/lib/teams/expandTeamsForMatch'
 import { placeGkOnTeamWithoutGk } from '@/lib/teams/placeGkOnTeamWithoutGk'
@@ -13,7 +14,6 @@ import {
   performGkSwap,
   swapGkWithLowerPriority,
 } from '@/lib/teams/swapGkWithLowerTeam'
-import { ensureMatchRsvpStateSeeded } from '@/lib/matches/syncMatchRsvpCounts'
 import { getUserPositionsByIdsAdmin } from '@/lib/users/getUsersByIdsAdmin'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import { hasMatchStarted } from '@/lib/utils/rsvpScheduler'
@@ -134,30 +134,34 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const existing = await adminDb
-      .collection('rsvps')
-      .where('matchId', '==', matchId)
-      .where('userId', '==', effectiveUid)
-      .where('status', '==', 'confirmed')
-      .limit(1)
-      .get()
+    const lock = await acquireMatchLock(adminDb, matchId)
+    if (!lock) {
+      return rsvpFailed(
+        uid,
+        503,
+        'Team update is busy. Please try again in a moment.',
+        {
+          code: 'LOCK_BUSY',
+          matchId,
+          targetUid: effectiveUid,
+        }
+      )
+    }
+    try {
+      const existing = await adminDb
+        .collection('rsvps')
+        .where('matchId', '==', matchId)
+        .where('userId', '==', effectiveUid)
+        .where('status', '==', 'confirmed')
+        .limit(1)
+        .get()
 
-    let rsvpId: string
-    if (!existing.empty) {
-      const existingDoc = existing.docs[0]
-      rsvpId = existingDoc.id
-      const existingPosition =
-        (existingDoc.data()?.position as string | null) ?? null
-      const lock = await acquireMatchLock(adminDb, matchId)
-      if (!lock) {
-        return rsvpFailed(
-          uid,
-          503,
-          'Team update is busy. Please try again in a moment.',
-          { code: 'LOCK_BUSY', matchId, targetUid: effectiveUid }
-        )
-      }
-      try {
+      let rsvpId: string
+      if (!existing.empty) {
+        const existingDoc = existing.docs[0]
+        rsvpId = existingDoc.id
+        const existingPosition =
+          (existingDoc.data()?.position as string | null) ?? null
         const { regenerated } = await expandTeamsForMatch(adminDb, matchId)
         return NextResponse.json({
           rsvpId,
@@ -167,121 +171,106 @@ export async function POST(request: NextRequest) {
             normalizeJerseyNumber(existingDoc.data()?.jerseyNumber) ??
             jerseyNumber,
         })
-      } finally {
-        await lock.release()
       }
-    }
 
-    // Atomic GK cap + RSVP create using a single per-match state doc (minimal read set for less transaction contention).
-    // Retry on Firestore transaction abort.
-    const stateRef = adminDb
-      .collection('matches')
-      .doc(matchId)
-      .collection('_state')
-      .doc('rsvp')
-    // Legacy matches may lack `_state/rsvp`; seed from existing confirmed RSVPs
-    // so the first increment does not publish rsvpConfirmedCount: 1 incorrectly.
-    await ensureMatchRsvpStateSeeded(adminDb, matchId)
-    const TX_MAX_ATTEMPTS = 7
-    const TX_BACKOFF_BASE_MS = 80
-    const TX_BACKOFF_JITTER_MS = 120
-    let txError: unknown
-    rsvpId = `rsvp_${matchId}_${effectiveUid}_${Date.now()}`
-    for (let attempt = 1; attempt <= TX_MAX_ATTEMPTS; attempt++) {
+      // Atomic GK cap + RSVP create using a single per-match state doc (minimal read set for less transaction contention).
+      // Retry on Firestore transaction abort.
+      const stateRef = adminDb
+        .collection('matches')
+        .doc(matchId)
+        .collection('_state')
+        .doc('rsvp')
+      // Legacy matches may lack `_state/rsvp`; seed from existing confirmed RSVPs
+      // so the first increment does not publish rsvpConfirmedCount: 1 incorrectly.
+      await ensureMatchRsvpStateSeeded(adminDb, matchId)
+      const TX_MAX_ATTEMPTS = 7
+      const TX_BACKOFF_BASE_MS = 80
+      const TX_BACKOFF_JITTER_MS = 120
+      let txError: unknown
       rsvpId = `rsvp_${matchId}_${effectiveUid}_${Date.now()}`
-      const now = Timestamp.now()
-      const rsvpRef = adminDb.collection('rsvps').doc(rsvpId)
-      const rsvpData = {
+      for (let attempt = 1; attempt <= TX_MAX_ATTEMPTS; attempt++) {
+        rsvpId = `rsvp_${matchId}_${effectiveUid}_${Date.now()}`
+        const now = Timestamp.now()
+        const rsvpRef = adminDb.collection('rsvps').doc(rsvpId)
+        const rsvpData = {
+          matchId,
+          userId: effectiveUid,
+          status: 'confirmed' as const,
+          position: position ?? null,
+          jerseyNumber,
+          attended: null,
+          checkedInAt: null,
+          checkInMethod: null,
+          rsvpAt: now,
+          updatedAt: now,
+        }
+        try {
+          await adminDb.runTransaction(async tx => {
+            const stateSnap = await tx.get(stateRef)
+            const state = stateSnap.data() ?? {}
+            const confirmedCount = (state.confirmedCount as number) ?? 0
+            const gkCount = (state.gkCount as number) ?? 0
+            const newConfirmedCount = confirmedCount + 1
+            const newGkCount = gkCount + (isGoalkeeper(position) ? 1 : 0)
+            const matchRef = adminDb.collection('matches').doc(matchId)
+            tx.set(stateRef, {
+              confirmedCount: newConfirmedCount,
+              gkCount: newGkCount,
+              updatedAt: now,
+            })
+            tx.set(rsvpRef, rsvpData)
+            // Denormalize onto the match doc so list UIs need zero extra reads.
+            tx.set(
+              matchRef,
+              { rsvpConfirmedCount: newConfirmedCount, updatedAt: now },
+              { merge: true }
+            )
+          })
+          txError = null
+          break
+        } catch (e: unknown) {
+          txError = e
+          const msg = String((e as { message?: string })?.message ?? e)
+          const isAbort =
+            msg.includes('ABORTED') ||
+            msg.includes('Transaction') ||
+            msg.includes('lock timeout')
+          if (!isAbort || attempt === TX_MAX_ATTEMPTS) throw e
+          const delay =
+            TX_BACKOFF_BASE_MS * attempt +
+            Math.floor(Math.random() * (TX_BACKOFF_JITTER_MS + 1))
+          await new Promise(r => setTimeout(r, delay))
+        }
+      }
+      if (txError) throw txError
+
+      const { regenerated } = await expandTeamsForMatch(adminDb, matchId)
+
+      auditLog({
+        action: impersonateUserId ? 'rsvp.impersonated' : 'rsvp.confirmed',
+        actorUid: uid,
+        targetUid: effectiveUid,
         matchId,
-        userId: effectiveUid,
-        status: 'confirmed' as const,
+        entityType: 'rsvp',
+        entityId: rsvpId,
+        source: 'api',
+        metadata: {
+          position: position ?? null,
+          jerseyNumber,
+          regenerated,
+          impersonated: Boolean(impersonateUserId),
+        },
+      })
+
+      return NextResponse.json({
+        rsvpId,
+        regenerated,
         position: position ?? null,
         jerseyNumber,
-        attended: null,
-        checkedInAt: null,
-        checkInMethod: null,
-        rsvpAt: now,
-        updatedAt: now,
-      }
-      try {
-        await adminDb.runTransaction(async tx => {
-          const stateSnap = await tx.get(stateRef)
-          const state = stateSnap.data() ?? {}
-          const confirmedCount = (state.confirmedCount as number) ?? 0
-          const gkCount = (state.gkCount as number) ?? 0
-          const newConfirmedCount = confirmedCount + 1
-          const newGkCount = gkCount + (isGoalkeeper(position) ? 1 : 0)
-          const matchRef = adminDb.collection('matches').doc(matchId)
-          tx.set(stateRef, {
-            confirmedCount: newConfirmedCount,
-            gkCount: newGkCount,
-            updatedAt: now,
-          })
-          tx.set(rsvpRef, rsvpData)
-          // Denormalize onto the match doc so list UIs need zero extra reads.
-          tx.set(
-            matchRef,
-            { rsvpConfirmedCount: newConfirmedCount, updatedAt: now },
-            { merge: true }
-          )
-        })
-        txError = null
-        break
-      } catch (e: unknown) {
-        txError = e
-        const msg = String((e as { message?: string })?.message ?? e)
-        const isAbort =
-          msg.includes('ABORTED') ||
-          msg.includes('Transaction') ||
-          msg.includes('lock timeout')
-        if (!isAbort || attempt === TX_MAX_ATTEMPTS) throw e
-        const delay =
-          TX_BACKOFF_BASE_MS * attempt +
-          Math.floor(Math.random() * (TX_BACKOFF_JITTER_MS + 1))
-        await new Promise(r => setTimeout(r, delay))
-      }
-    }
-    if (txError) throw txError
-
-    const lock = await acquireMatchLock(adminDb, matchId)
-    if (!lock) {
-      return rsvpFailed(
-        uid,
-        503,
-        'Team update is busy. Please try again in a moment.',
-        { code: 'LOCK_BUSY', matchId, targetUid: effectiveUid }
-      )
-    }
-    let regenerated = false
-    try {
-      const result = await expandTeamsForMatch(adminDb, matchId)
-      regenerated = result.regenerated
+      })
     } finally {
       await lock.release()
     }
-
-    auditLog({
-      action: impersonateUserId ? 'rsvp.impersonated' : 'rsvp.confirmed',
-      actorUid: uid,
-      targetUid: effectiveUid,
-      matchId,
-      entityType: 'rsvp',
-      entityId: rsvpId,
-      source: 'api',
-      metadata: {
-        position: position ?? null,
-        jerseyNumber,
-        regenerated,
-        impersonated: Boolean(impersonateUserId),
-      },
-    })
-
-    return NextResponse.json({
-      rsvpId,
-      regenerated,
-      position: position ?? null,
-      jerseyNumber,
-    })
   } catch (error: any) {
     console.error('Error creating RSVP:', error)
     const msg = error?.message ?? ''
@@ -363,7 +352,7 @@ export async function PATCH(request: NextRequest) {
         })
       }
     }
-    if (data.status === 'cancelled') {
+    if (data.status === 'cancelled' && positionFromBody !== undefined) {
       return NextResponse.json({ cancelled: true, teamsUpdated: false })
     }
 
@@ -590,7 +579,10 @@ export async function PATCH(request: NextRequest) {
       typeof matchDataForCancel.time === 'string'
         ? matchDataForCancel.time
         : null
-    if (hasMatchStarted(matchDateForCancel, matchTimeForCancel)) {
+    if (
+      data.status !== 'cancelled' &&
+      hasMatchStarted(matchDateForCancel, matchTimeForCancel)
+    ) {
       if (!requesterIsAdmin) {
         const { isClubAdmin } = await verifyClubAdminForMatch(request, matchId)
         requesterIsAdmin = isClubAdmin
@@ -605,108 +597,118 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    const stateRefForCancel = adminDb
-      .collection('matches')
-      .doc(matchId)
-      .collection('_state')
-      .doc('rsvp')
-    const now = Timestamp.now()
-    const matchRefForCancel = adminDb.collection('matches').doc(matchId)
-    // The callback may run more than once; only the committed attempt's return
-    // value decides whether team cleanup runs.
-    const cancelledInTx = await adminDb.runTransaction(async tx => {
-      // Re-check status inside the transaction so concurrent cancels cannot
-      // double-decrement `_state` / rsvpConfirmedCount.
-      const latestRsvpSnap = await tx.get(rsvpRef)
-      if (!latestRsvpSnap.exists) return false
-      const latestRsvp = latestRsvpSnap.data() ?? {}
-      if (latestRsvp.status !== 'confirmed') return false
-
-      const stateSnap = await tx.get(stateRefForCancel)
-      const matchSnap = await tx.get(matchRefForCancel)
-      const wasGk = isGoalkeeper((latestRsvp.position as string | null) ?? null)
-      let newConfirmedCount: number | null = null
-      let newGkCount: number | null = null
-      if (stateSnap.exists) {
-        const state = stateSnap.data() ?? {}
-        newConfirmedCount = Math.max(
-          0,
-          ((state.confirmedCount as number) ?? 0) - 1
-        )
-        newGkCount = Math.max(
-          0,
-          ((state.gkCount as number) ?? 0) - (wasGk ? 1 : 0)
-        )
-      } else {
-        const current = matchSnap.data()?.rsvpConfirmedCount
-        if (typeof current === 'number') {
-          newConfirmedCount = Math.max(0, current - 1)
+    const lock = await acquireMatchLock(adminDb, matchId)
+    if (!lock) {
+      return rsvpFailed(
+        uid,
+        503,
+        'Team update is busy. Please try again in a moment.',
+        {
+          code: 'LOCK_BUSY',
+          matchId,
+          targetUid: userId,
+          entityId: rsvpId,
         }
-      }
+      )
+    }
+    try {
+      await ensureMatchRsvpStateSeeded(adminDb, matchId)
+      const stateRefForCancel = adminDb
+        .collection('matches')
+        .doc(matchId)
+        .collection('_state')
+        .doc('rsvp')
+      const now = Timestamp.now()
+      const matchRefForCancel = adminDb.collection('matches').doc(matchId)
+      // Repeated cancellations still repair the roster after a failed cleanup.
+      const cancelledInTx = await adminDb.runTransaction(async tx => {
+        // Re-check status inside the transaction so concurrent cancels cannot
+        // double-decrement `_state` / rsvpConfirmedCount.
+        const latestRsvpSnap = await tx.get(rsvpRef)
+        if (!latestRsvpSnap.exists) return false
+        const latestRsvp = latestRsvpSnap.data() ?? {}
+        if (latestRsvp.status !== 'confirmed') return false
 
-      tx.update(rsvpRef, { status: 'cancelled', updatedAt: now })
-      if (stateSnap.exists && newConfirmedCount != null && newGkCount != null) {
-        tx.set(
-          stateRefForCancel,
-          {
-            confirmedCount: newConfirmedCount,
-            gkCount: newGkCount,
-            updatedAt: now,
+        const stateSnap = await tx.get(stateRefForCancel)
+        const matchSnap = await tx.get(matchRefForCancel)
+        const wasGk = isGoalkeeper(
+          (latestRsvp.position as string | null) ?? null
+        )
+        let newConfirmedCount: number | null = null
+        let newGkCount: number | null = null
+        if (stateSnap.exists) {
+          const state = stateSnap.data() ?? {}
+          newConfirmedCount = Math.max(
+            0,
+            ((state.confirmedCount as number) ?? 0) - 1
+          )
+          newGkCount = Math.max(
+            0,
+            ((state.gkCount as number) ?? 0) - (wasGk ? 1 : 0)
+          )
+        } else {
+          const current = matchSnap.data()?.rsvpConfirmedCount
+          if (typeof current === 'number') {
+            newConfirmedCount = Math.max(0, current - 1)
+          }
+        }
+
+        tx.update(rsvpRef, { status: 'cancelled', updatedAt: now })
+        if (
+          stateSnap.exists &&
+          newConfirmedCount != null &&
+          newGkCount != null
+        ) {
+          tx.set(
+            stateRefForCancel,
+            {
+              confirmedCount: newConfirmedCount,
+              gkCount: newGkCount,
+              updatedAt: now,
+            },
+            { merge: true }
+          )
+        }
+        if (newConfirmedCount != null) {
+          tx.set(
+            matchRefForCancel,
+            { rsvpConfirmedCount: newConfirmedCount, updatedAt: now },
+            { merge: true }
+          )
+        }
+        return true
+      })
+
+      const { removed } = await removeUserFromMatchTeams(
+        adminDb,
+        matchId,
+        userId,
+        { preserveConfirmedUser: true }
+      )
+
+      if (cancelledInTx) {
+        auditLog({
+          action: 'rsvp.cancelled',
+          actorUid: uid,
+          targetUid: userId,
+          matchId,
+          entityType: 'rsvp',
+          entityId: rsvpId,
+          source: 'api',
+          metadata: {
+            cancelledByAdmin: !isOwner,
+            teamsUpdated: removed,
           },
-          { merge: true }
-        )
+        })
       }
-      if (newConfirmedCount != null) {
-        tx.set(
-          matchRefForCancel,
-          { rsvpConfirmedCount: newConfirmedCount, updatedAt: now },
-          { merge: true }
-        )
-      }
-      return true
-    })
-    if (!cancelledInTx) {
-      return NextResponse.json({ cancelled: true, teamsUpdated: false })
-    }
 
-    const { removed } = await removeUserFromMatchTeams(adminDb, matchId, userId)
-
-    // When the last person cancels, ensure all teams are removed (safeguard in case user wasn't in a team doc)
-    const confirmedAfter = await adminDb
-      .collection('rsvps')
-      .where('matchId', '==', matchId)
-      .where('status', '==', 'confirmed')
-      .limit(1)
-      .get()
-    if (confirmedAfter.empty) {
-      const teamsSnap = await adminDb
-        .collection(`matches/${matchId}/teams`)
-        .get()
-      if (!teamsSnap.empty) {
-        const batch = adminDb.batch()
-        teamsSnap.docs.forEach(d => batch.delete(d.ref))
-        await batch.commit()
-      }
-    }
-
-    auditLog({
-      action: 'rsvp.cancelled',
-      actorUid: uid,
-      targetUid: userId,
-      matchId,
-      entityType: 'rsvp',
-      entityId: rsvpId,
-      source: 'api',
-      metadata: {
-        cancelledByAdmin: !isOwner,
+      return NextResponse.json({
+        cancelled: true,
         teamsUpdated: removed,
-      },
-    })
-
-    return NextResponse.json({
-      cancelled: true,
-      teamsUpdated: removed,
-    })
+      })
+    } finally {
+      await lock.release()
+    }
   } catch (error: any) {
     console.error('Error updating/cancelling RSVP:', error)
     const message = sanitizeErrorForClient(error, 'Failed to cancel RSVP')
