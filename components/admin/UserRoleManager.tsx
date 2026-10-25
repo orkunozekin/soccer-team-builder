@@ -33,17 +33,42 @@ import {
   searchUsersAPI,
   updateUserRoleAPI,
 } from '@/lib/api/client'
+import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
-import { getUsersCount, getUsersPaginated } from '@/lib/services/userService'
+import {
+  LIST_PAGE_SIZE,
+  useClientPagination,
+} from '@/lib/hooks/useClientPagination'
+import {
+  getClubAdminUserIds,
+  getUsersCount,
+  getUsersForAdminFilter,
+  getUsersPaginated,
+} from '@/lib/services/userService'
+import { cn } from '@/lib/utils'
+import {
+  ADMIN_USER_FILTERS,
+  type AdminUserFilter,
+  matchesAdminUserFilter,
+} from '@/lib/utils/adminUserFilters'
 import { User, UserRole } from '@/types/user'
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = LIST_PAGE_SIZE
 
 type UserRow = Pick<User, 'uid' | 'email' | 'displayName' | 'role'>
 
 type UsersPageData = {
   users: UserRow[]
   nextCursor: string | null
+}
+
+function toUserRow(u: User): UserRow {
+  return {
+    uid: u.uid,
+    email: u.email,
+    displayName: u.displayName,
+    role: u.role,
+  }
 }
 
 function adminUsersPageKey(uid: string, page: number, cursor: string | null) {
@@ -54,6 +79,10 @@ function adminUsersCountKey(uid: string) {
   return ['admin-users-count', uid] as const
 }
 
+function adminUsersFilterKey(uid: string, filter: AdminUserFilter) {
+  return ['admin-users-filter', uid, filter] as const
+}
+
 function isAdminUsersPageKey(
   key: unknown
 ): key is ReturnType<typeof adminUsersPageKey> {
@@ -62,8 +91,19 @@ function isAdminUsersPageKey(
   )
 }
 
+function isAdminUsersFilterKey(
+  key: unknown
+): key is ReturnType<typeof adminUsersFilterKey> {
+  return (
+    Array.isArray(key) &&
+    key[0] === 'admin-users-filter' &&
+    typeof key[1] === 'string'
+  )
+}
+
 export function UserRoleManager() {
   const { user: currentUser } = useAuth()
+  const { isSuperUser } = useAdmin()
   const { mutate: globalMutate } = useSWRConfig()
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchUsers, setSearchUsers] = useState<UserRow[] | null>(null)
@@ -76,17 +116,26 @@ export function UserRoleManager() {
   const [success, setSuccess] = useState(false)
   const [page, setPage] = useState(1)
   const [query, setQuery] = useState('')
+  const [roleFilter, setRoleFilter] = useState<AdminUserFilter>('users')
   // cursors[i] = cursor to request page i+1 (cursors[0] = cursor for page 2)
   const [cursors, setCursors] = useState<(string | null)[]>([null])
 
   const browsing = query.trim() === ''
   const adminUid = currentUser?.uid ?? null
+  const showRoleFilter = Boolean(isSuperUser)
+  const useFilteredFetch = showRoleFilter
   const cursorForPage = page === 1 ? null : (cursors[page - 2] ?? null)
+
   // Scope by admin uid so a later sign-in cannot reuse another session's cache
   // (revalidateIfStale: false would otherwise serve stale pages/counts).
   const pageKey =
-    browsing && adminUid
+    browsing && adminUid && !useFilteredFetch
       ? adminUsersPageKey(adminUid, page, cursorForPage)
+      : null
+
+  const filterKey =
+    browsing && adminUid && useFilteredFetch
+      ? adminUsersFilterKey(adminUid, roleFilter)
       : null
 
   const { data: pageData, isLoading: pageLoading } = useSWR(
@@ -99,12 +148,7 @@ export function UserRoleManager() {
     ]) => {
       const result = await getUsersPaginated(PAGE_SIZE, cursor ?? undefined)
       return {
-        users: result.users.map(u => ({
-          uid: u.uid,
-          email: u.email,
-          displayName: u.displayName,
-          role: u.role,
-        })),
+        users: result.users.map(toUserRow),
         nextCursor: result.nextCursor,
       } satisfies UsersPageData
     },
@@ -116,22 +160,57 @@ export function UserRoleManager() {
     }
   )
 
+  const {
+    data: filteredUsers = [],
+    isLoading: filterLoading,
+    mutate: mutateFiltered,
+  } = useSWR(
+    filterKey,
+    async ([, , filter]: readonly [
+      'admin-users-filter',
+      string,
+      AdminUserFilter,
+    ]) => {
+      const users = await getUsersForAdminFilter(filter)
+      return users.map(toUserRow)
+    },
+    {
+      revalidateIfStale: false,
+      revalidateOnReconnect: false,
+    }
+  )
+
   const { data: totalCount = 0, mutate: mutateCount } = useSWR(
-    browsing && adminUid ? adminUsersCountKey(adminUid) : null,
+    browsing && adminUid && !useFilteredFetch
+      ? adminUsersCountKey(adminUid)
+      : null,
     () => getUsersCount(),
     { revalidateIfStale: false, revalidateOnReconnect: false }
   )
 
+  const { data: clubAdminIds = [] } = useSWR(
+    showRoleFilter && roleFilter === 'club_admins' && adminUid
+      ? (['admin-club-admin-ids', adminUid] as const)
+      : null,
+    () => getClubAdminUserIds(),
+    { revalidateIfStale: false, revalidateOnReconnect: false }
+  )
+
+  const clubAdminUidSet = useMemo(
+    () => new Set(clubAdminIds),
+    [clubAdminIds]
+  )
+
   // Remember forward cursors so page N+1 can be requested.
   useEffect(() => {
-    if (!pageData) return
+    if (!pageData || useFilteredFetch) return
     setCursors(prev => {
       const next = [...prev]
       if (next[page - 1] === pageData.nextCursor) return prev
       next[page - 1] = pageData.nextCursor
       return next
     })
-  }, [page, pageData])
+  }, [page, pageData, useFilteredFetch])
 
   // Backend search (debounced) so we search the entire DB.
   useEffect(() => {
@@ -167,15 +246,47 @@ export function UserRoleManager() {
     }
   }, [query])
 
-  const baseUsers = searchUsers ?? pageData?.users ?? []
+  const baseUsers = useMemo(() => {
+    if (searchUsers) {
+      if (!showRoleFilter) return searchUsers
+      return searchUsers.filter(u =>
+        matchesAdminUserFilter(u, roleFilter, clubAdminUidSet)
+      )
+    }
+    if (useFilteredFetch) return filteredUsers
+    return pageData?.users ?? []
+  }, [
+    searchUsers,
+    showRoleFilter,
+    useFilteredFetch,
+    roleFilter,
+    clubAdminUidSet,
+    filteredUsers,
+    pageData?.users,
+  ])
 
-  const visibleUsers = useMemo(() => {
+  const withoutSelf = useMemo(() => {
     if (!currentUser?.uid) return baseUsers
     return baseUsers.filter(u => u.uid !== currentUser.uid)
   }, [baseUsers, currentUser?.uid])
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
-  const showPagination = browsing && totalCount > PAGE_SIZE
+  const filteredScope = useFilteredFetch
+    ? `${adminUid ?? ''}:${roleFilter}:${query.trim()}`
+    : ''
+  const pagedFiltered = useClientPagination(
+    useFilteredFetch && browsing ? withoutSelf : [],
+    filteredScope
+  )
+
+  const visibleUsers =
+    useFilteredFetch && browsing ? pagedFiltered.items : withoutSelf
+
+  const unfilteredTotalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+  const showPagination = browsing
+    ? useFilteredFetch
+      ? pagedFiltered.pagination.totalCount > PAGE_SIZE
+      : totalCount > PAGE_SIZE
+    : false
 
   const patchUserInSwrCache = (userId: string, patch: Partial<UserRow>) => {
     setSearchUsers(prev =>
@@ -192,6 +303,15 @@ export function UserRoleManager() {
             u.uid === userId ? { ...u, ...patch } : u
           ),
         }
+      },
+      { revalidate: false }
+    )
+    void globalMutate(
+      (key: unknown) =>
+        isAdminUsersFilterKey(key) && (!adminUid || key[1] === adminUid),
+      (current: UserRow[] | undefined) => {
+        if (!current) return current
+        return current.map(u => (u.uid === userId ? { ...u, ...patch } : u))
       },
       { revalidate: false }
     )
@@ -222,6 +342,10 @@ export function UserRoleManager() {
       { revalidate: false }
     )
     setCursors(prev => prev.slice(0, page))
+    void mutateFiltered(
+      prev => (prev ? prev.filter(u => u.uid !== userId) : prev),
+      { revalidate: false }
+    )
   }
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
@@ -232,6 +356,10 @@ export function UserRoleManager() {
     try {
       await updateUserRoleAPI(userId, newRole)
       patchUserInSwrCache(userId, { role: newRole })
+      // Role may move the row out of the active filter; refresh that list.
+      if (useFilteredFetch) {
+        await mutateFiltered()
+      }
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
@@ -250,12 +378,14 @@ export function UserRoleManager() {
       await deleteUserAPI(userId)
 
       removeUserFromSwrCache(userId)
-      await mutateCount(prev => Math.max(0, (prev ?? 0) - 1), {
-        revalidate: false,
-      })
+      if (!useFilteredFetch) {
+        await mutateCount(prev => Math.max(0, (prev ?? 0) - 1), {
+          revalidate: false,
+        })
+      }
       setDeleteDialogUserId(null)
 
-      if (visibleUsers.length <= 1 && page > 1) {
+      if (visibleUsers.length <= 1 && page > 1 && !useFilteredFetch) {
         setPage(p => Math.max(1, p - 1))
       }
 
@@ -268,9 +398,31 @@ export function UserRoleManager() {
     }
   }
 
-  if (browsing && pageLoading && !pageData) {
+  const listLoading = useFilteredFetch
+    ? browsing && filterLoading && filteredUsers.length === 0
+    : browsing && pageLoading && !pageData
+
+  if (listLoading) {
     return <CardLoadingSkeleton />
   }
+
+  const pagination = useFilteredFetch
+    ? pagedFiltered.pagination
+    : {
+        page,
+        totalPages: unfilteredTotalPages,
+        totalCount,
+        pageSize: PAGE_SIZE,
+        onPrevious: () => setPage(p => Math.max(1, p - 1)),
+        onNext: () => {
+          setCursors(prev => {
+            const next = [...prev]
+            next[page - 1] = pageData?.nextCursor ?? next[page - 1] ?? null
+            return next
+          })
+          setPage(p => p + 1)
+        },
+      }
 
   return (
     <div className="space-y-4">
@@ -286,6 +438,35 @@ export function UserRoleManager() {
         </div>
       )}
 
+      {showRoleFilter ? (
+        <div
+          role="tablist"
+          aria-label="Filter users"
+          className="flex flex-wrap gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900/50"
+        >
+          {ADMIN_USER_FILTERS.map(option => {
+            const active = roleFilter === option.value
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setRoleFilter(option.value)}
+                className={cn(
+                  'rounded-md px-3 py-1.5 text-sm font-semibold transition-colors',
+                  active
+                    ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100'
+                    : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+                )}
+              >
+                {option.label}
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
+
       <Input
         value={query}
         onChange={e => setQuery(e.target.value)}
@@ -294,7 +475,9 @@ export function UserRoleManager() {
       />
 
       {searchLoading ||
-      (browsing && pageLoading && visibleUsers.length === 0) ? (
+      (browsing &&
+        (useFilteredFetch ? filterLoading : pageLoading) &&
+        visibleUsers.length === 0) ? (
         <Card className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
           {searchLoading ? 'Searching…' : 'Loading…'}
         </Card>
@@ -359,20 +542,12 @@ export function UserRoleManager() {
           {showPagination && (
             <Pagination
               className="mt-0 border-zinc-100 px-4 py-3 dark:border-zinc-800"
-              page={page}
-              totalPages={totalPages}
-              totalCount={totalCount}
-              pageSize={PAGE_SIZE}
-              onPrevious={() => setPage(p => Math.max(1, p - 1))}
-              onNext={() => {
-                setCursors(prev => {
-                  const next = [...prev]
-                  next[page - 1] =
-                    pageData?.nextCursor ?? next[page - 1] ?? null
-                  return next
-                })
-                setPage(p => p + 1)
-              }}
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              totalCount={pagination.totalCount}
+              pageSize={pagination.pageSize}
+              onPrevious={pagination.onPrevious}
+              onNext={pagination.onNext}
               itemLabel="users"
             />
           )}
