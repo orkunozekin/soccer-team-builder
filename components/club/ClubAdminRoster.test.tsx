@@ -190,4 +190,76 @@ describe('ClubAdminRoster', () => {
     render(<ClubAdminRoster clubId="c1" currentUserId="u1" />)
     expect(await screen.findByText('Nope')).toBeInTheDocument()
   })
+
+  it('filters the roster to club admins', async () => {
+    const user = userEvent.setup()
+    render(<ClubAdminRoster clubId="c1" currentUserId="u1" />)
+
+    expect(await screen.findByText('Player Two')).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'Club admins' }))
+
+    expect(screen.getByText('Admin Self')).toBeInTheDocument()
+    expect(screen.queryByText('Player Two')).not.toBeInTheDocument()
+    expect(screen.getByText('1 of 2')).toBeInTheDocument()
+  })
+
+  it('searches members by name or email', async () => {
+    const user = userEvent.setup()
+    render(<ClubAdminRoster clubId="c1" currentUserId="u1" />)
+
+    expect(await screen.findByText('Player Two')).toBeInTheDocument()
+    await user.type(
+      screen.getByRole('textbox', { name: 'Search members' }),
+      'p@example'
+    )
+
+    expect(screen.getByText('Player Two')).toBeInTheDocument()
+    expect(screen.queryByText('Admin Self')).not.toBeInTheDocument()
+    expect(screen.getByText('1 of 2')).toBeInTheDocument()
+  })
+
+  it('shows an empty match state when filters exclude everyone', async () => {
+    const user = userEvent.setup()
+    render(<ClubAdminRoster clubId="c1" currentUserId="u1" />)
+
+    expect(await screen.findByText('Player Two')).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'Players' }))
+    await user.type(
+      screen.getByRole('textbox', { name: 'Search members' }),
+      'nobody'
+    )
+
+    expect(screen.getByText('No members match.')).toBeInTheDocument()
+  })
+
+  it('resets to page 1 when the role filter changes', async () => {
+    const user = userEvent.setup()
+    vi.mocked(listClubMembersAPI).mockResolvedValue({
+      success: true,
+      members: Array.from({ length: 12 }, (_, i) => ({
+        id: `m${i}`,
+        clubId: 'c1',
+        userId: `u${i}`,
+        role: i < 2 ? ('club_admin' as const) : ('player' as const),
+        status: 'active' as const,
+        joinedAt: new Date(),
+        updatedAt: new Date(),
+        displayName: `Member ${String(i + 1).padStart(2, '0')}`,
+        email: `m${i}@example.com`,
+      })),
+    })
+    render(<ClubAdminRoster clubId="c1" currentUserId="u0" />)
+
+    expect(await screen.findByText('Member 01')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }))
+    expect(screen.getByText('Member 11')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: 'Players' }))
+    expect(screen.getByText('Member 03')).toBeInTheDocument()
+    expect(screen.queryByText('Member 01')).not.toBeInTheDocument()
+    expect(screen.getByText('10 of 12')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('navigation', { name: 'Pagination' })
+    ).not.toBeInTheDocument()
+  })
 })
