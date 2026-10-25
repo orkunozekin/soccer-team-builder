@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { InitialsAvatar } from '@/components/ui/initials-avatar'
+import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/pagination'
 import {
   Select,
@@ -14,6 +15,12 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { listClubMembersAPI, updateClubMemberRoleAPI } from '@/lib/api/client'
+import { cn } from '@/lib/utils'
+import {
+  CLUB_ROSTER_ROLE_FILTERS,
+  type ClubRosterRoleFilter,
+  filterClubRosterMembers,
+} from '@/lib/utils/clubRosterFilters'
 import type { ClubMembershipRole, ClubMembershipWithUser } from '@/types/club'
 
 const PAGE_SIZE = 10
@@ -30,8 +37,14 @@ export function ClubAdminRoster({
   const [busyUserId, setBusyUserId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState('')
+  const [roleFilter, setRoleFilter] = useState<ClubRosterRoleFilter>('all')
   const clubIdRef = useRef(clubId)
+  const queryRef = useRef(query)
+  const roleFilterRef = useRef(roleFilter)
   clubIdRef.current = clubId
+  queryRef.current = query
+  roleFilterRef.current = roleFilter
 
   useEffect(() => {
     let cancelled = false
@@ -40,6 +53,8 @@ export function ClubAdminRoster({
     setMembers([])
     setBusyUserId(null)
     setPage(1)
+    setQuery('')
+    setRoleFilter('all')
 
     void listClubMembersAPI(clubId)
       .then(membersRes => {
@@ -61,7 +76,12 @@ export function ClubAdminRoster({
     }
   }, [clubId])
 
+  useEffect(() => {
+    setPage(1)
+  }, [query, roleFilter])
+
   const adminCount = members.filter(m => m.role === 'club_admin').length
+  const filteredMembers = filterClubRosterMembers(members, roleFilter, query)
 
   const handleRoleChange = async (userId: string, role: ClubMembershipRole) => {
     const targetClubId = clubId
@@ -79,9 +99,19 @@ export function ClubAdminRoster({
             }
             return a.displayName.localeCompare(b.displayName)
           })
-        const index = next.findIndex(m => m.userId === userId)
+        // Read live filter/search so a mid-flight tab/search change cannot
+        // move the page using the values captured when the request started.
+        const visible = filterClubRosterMembers(
+          next,
+          roleFilterRef.current,
+          queryRef.current
+        )
+        const index = visible.findIndex(m => m.userId === userId)
         if (index >= 0) {
           setPage(Math.floor(index / PAGE_SIZE) + 1)
+        } else {
+          const lastPage = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
+          setPage(p => Math.min(p, lastPage))
         }
         return next
       })
@@ -95,12 +125,13 @@ export function ClubAdminRoster({
     }
   }
 
-  const totalPages = Math.max(1, Math.ceil(members.length / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(filteredMembers.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
-  const pageMembers = members.slice(
+  const pageMembers = filteredMembers.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE
   )
+  const filtersActive = roleFilter !== 'all' || query.trim() !== ''
 
   const header = (
     <div className="flex items-start justify-between gap-4">
@@ -114,9 +145,48 @@ export function ClubAdminRoster({
       </div>
       {!loading && members.length > 0 && (
         <Badge variant="secondary" className="shrink-0 font-medium">
-          {members.length} {members.length === 1 ? 'member' : 'members'}
+          {filtersActive
+            ? `${filteredMembers.length} of ${members.length}`
+            : `${members.length} ${members.length === 1 ? 'member' : 'members'}`}
         </Badge>
       )}
+    </div>
+  )
+
+  const filters = !loading && members.length > 0 && (
+    <div className="space-y-3">
+      <div
+        role="group"
+        aria-label="Filter roster by role"
+        className="flex flex-wrap gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900/50"
+      >
+        {CLUB_ROSTER_ROLE_FILTERS.map(option => {
+          const active = roleFilter === option.value
+          return (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setRoleFilter(option.value)}
+              className={cn(
+                'rounded-md px-3 py-1.5 text-sm font-semibold transition-colors',
+                active
+                  ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100'
+                  : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+              )}
+            >
+              {option.label}
+            </button>
+          )
+        })}
+      </div>
+      <Input
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        placeholder="Search members by name or email…"
+        aria-label="Search members"
+        className="h-11 text-base sm:h-9 sm:text-sm"
+      />
     </div>
   )
 
@@ -151,10 +221,15 @@ export function ClubAdminRoster({
       )}
 
       {header}
+      {filters}
 
       {members.length === 0 ? (
         <Card className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
           No members yet.
+        </Card>
+      ) : filteredMembers.length === 0 ? (
+        <Card className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
+          No members match.
         </Card>
       ) : (
         <Card className="overflow-hidden">
@@ -231,7 +306,7 @@ export function ClubAdminRoster({
               className="mt-0 border-zinc-100 px-4 py-3 dark:border-zinc-800"
               page={currentPage}
               totalPages={totalPages}
-              totalCount={members.length}
+              totalCount={filteredMembers.length}
               pageSize={PAGE_SIZE}
               itemLabel="members"
               onPrevious={() => setPage(Math.max(1, currentPage - 1))}
