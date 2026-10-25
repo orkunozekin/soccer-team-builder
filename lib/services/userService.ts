@@ -1,3 +1,4 @@
+import { where } from 'firebase/firestore/lite'
 import {
   createDocument,
   getCollectionCount,
@@ -7,6 +8,7 @@ import {
   timestampToDate,
   updateDocument,
 } from '@/lib/firebase/firestore'
+import type { AdminUserFilter } from '@/lib/utils/adminUserFilters'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import { User, UserFirestore, normalizeUserRole } from '@/types/user'
 
@@ -100,6 +102,57 @@ export const getUsersPaginated = async (
 
 export const getUsersCount = async (): Promise<number> => {
   return getCollectionCount('users')
+}
+
+function sortUsersByName(users: User[]): User[] {
+  return [...users].sort((a, b) =>
+    (a.displayName || a.email).localeCompare(b.displayName || b.email)
+  )
+}
+
+/** Active club_admin membership user ids (deduped). */
+export const getClubAdminUserIds = async (): Promise<string[]> => {
+  const memberships = await queryDocuments('clubMemberships', [
+    where('role', '==', 'club_admin'),
+  ])
+  const ids = new Set<string>()
+  for (const membership of memberships) {
+    if (membership.status != null && membership.status !== 'active') continue
+    const userId = membership.userId
+    if (typeof userId === 'string' && userId.length > 0) ids.add(userId)
+  }
+  return Array.from(ids)
+}
+
+/**
+ * Load users for an admin users page role filter.
+ * Equality-only queries + in-memory sort (no composite index required).
+ */
+export const getUsersForAdminFilter = async (
+  filter: AdminUserFilter
+): Promise<User[]> => {
+  if (filter === 'club_admins') {
+    const ids = await getClubAdminUserIds()
+    return sortUsersByName(await getUsersByIds(ids))
+  }
+
+  if (filter === 'super_users') {
+    const [modern, legacy] = await Promise.all([
+      queryDocuments('users', [where('role', '==', 'super_user')]),
+      queryDocuments('users', [where('role', '==', 'admin')]),
+    ])
+    const byUid = new Map<string, User>()
+    for (const doc of [...modern, ...legacy]) {
+      const user = mapDocToUser(doc as Record<string, unknown>)
+      byUid.set(user.uid, user)
+    }
+    return sortUsersByName(Array.from(byUid.values()))
+  }
+
+  const docs = await queryDocuments('users', [where('role', '==', 'user')])
+  return sortUsersByName(
+    docs.map(doc => mapDocToUser(doc as Record<string, unknown>))
+  )
 }
 
 export const updateUser = async (

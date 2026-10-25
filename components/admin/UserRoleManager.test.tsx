@@ -9,15 +9,24 @@ vi.mock('@/lib/hooks/useAuth', () => ({
   useAuth: () => useAuthMock(),
 }))
 
+const useAdminMock = vi.fn()
+vi.mock('@/lib/hooks/useAdmin', () => ({
+  useAdmin: () => useAdminMock(),
+}))
+
 const mocks = vi.hoisted(() => {
   const getUsersPaginatedMock = vi.fn()
   const getUsersCountMock = vi.fn()
+  const getUsersForAdminFilterMock = vi.fn()
+  const getClubAdminUserIdsMock = vi.fn()
   const updateUserMock = vi.fn()
   const searchUsersAPIMock = vi.fn()
   const deleteUserAPIMock = vi.fn()
   return {
     getUsersPaginatedMock,
     getUsersCountMock,
+    getUsersForAdminFilterMock,
+    getClubAdminUserIdsMock,
     updateUserMock,
     searchUsersAPIMock,
     deleteUserAPIMock,
@@ -28,6 +37,10 @@ vi.mock('@/lib/services/userService', () => ({
   getUsersPaginated: (...args: unknown[]) =>
     mocks.getUsersPaginatedMock(...args),
   getUsersCount: (...args: unknown[]) => mocks.getUsersCountMock(...args),
+  getUsersForAdminFilter: (...args: unknown[]) =>
+    mocks.getUsersForAdminFilterMock(...args),
+  getClubAdminUserIds: (...args: unknown[]) =>
+    mocks.getClubAdminUserIdsMock(...args),
   updateUser: (...args: unknown[]) => mocks.updateUserMock(...args),
 }))
 
@@ -49,9 +62,12 @@ describe('UserRoleManager', () => {
   beforeEach(() => {
     mocks.getUsersPaginatedMock.mockReset()
     mocks.getUsersCountMock.mockReset()
+    mocks.getUsersForAdminFilterMock.mockReset()
+    mocks.getClubAdminUserIdsMock.mockReset()
     mocks.updateUserMock.mockReset()
     mocks.searchUsersAPIMock.mockReset()
     mocks.deleteUserAPIMock.mockReset()
+    useAdminMock.mockReturnValue({ isSuperUser: false })
   })
 
   it('hides the current user from the list', async () => {
@@ -222,5 +238,107 @@ describe('UserRoleManager', () => {
       expect(mocks.deleteUserAPIMock).toHaveBeenCalledWith('u-del')
       expect(screen.queryByText(/delete me/i)).not.toBeInTheDocument()
     })
+  })
+
+  it('hides the role filter from non-super users', async () => {
+    useAuthMock.mockReturnValue({
+      user: { uid: 'current' },
+    })
+    useAdminMock.mockReturnValue({ isSuperUser: false })
+
+    mocks.getUsersPaginatedMock.mockResolvedValue({
+      users: [
+        {
+          uid: 'u1',
+          email: 'u1@example.com',
+          displayName: 'Regular User',
+          role: 'user',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+      nextCursor: null,
+    })
+    mocks.getUsersCountMock.mockResolvedValue(1)
+
+    renderUserRoleManager()
+
+    expect(await screen.findByText(/regular user/i)).toBeInTheDocument()
+    expect(
+      screen.queryByRole('tablist', { name: /filter users/i })
+    ).not.toBeInTheDocument()
+    expect(mocks.getUsersForAdminFilterMock).not.toHaveBeenCalled()
+  })
+
+  it('shows the role filter for super users and switches lists', async () => {
+    useAuthMock.mockReturnValue({
+      user: { uid: 'current' },
+    })
+    useAdminMock.mockReturnValue({ isSuperUser: true })
+
+    mocks.getUsersForAdminFilterMock
+      .mockResolvedValueOnce([
+        {
+          uid: 'u1',
+          email: 'u1@example.com',
+          displayName: 'Plain User',
+          role: 'user',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          uid: 's1',
+          email: 's1@example.com',
+          displayName: 'Super Person',
+          role: 'super_user',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          uid: 'c1',
+          email: 'c1@example.com',
+          displayName: 'Club Admin Person',
+          role: 'user',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ])
+    mocks.getClubAdminUserIdsMock.mockResolvedValue(['c1'])
+
+    const user = userEvent.setup()
+    renderUserRoleManager()
+
+    const filterTabs = await screen.findByRole('tablist', {
+      name: /filter users/i,
+    })
+    expect(filterTabs).toBeInTheDocument()
+    expect(
+      screen.getByRole('tab', { name: /^club admins$/i })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('tab', { name: /^super users$/i })
+    ).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /^users$/i })).toBeInTheDocument()
+
+    expect(await screen.findByText(/plain user/i)).toBeInTheDocument()
+    expect(mocks.getUsersForAdminFilterMock).toHaveBeenCalledWith('users')
+    expect(mocks.getUsersPaginatedMock).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('tab', { name: /^super users$/i }))
+    expect(await screen.findByText(/super person/i)).toBeInTheDocument()
+    expect(screen.queryByText(/plain user/i)).not.toBeInTheDocument()
+    expect(mocks.getUsersForAdminFilterMock).toHaveBeenCalledWith(
+      'super_users'
+    )
+
+    await user.click(screen.getByRole('tab', { name: /^club admins$/i }))
+    expect(await screen.findByText(/club admin person/i)).toBeInTheDocument()
+    expect(mocks.getUsersForAdminFilterMock).toHaveBeenCalledWith(
+      'club_admins'
+    )
   })
 })
