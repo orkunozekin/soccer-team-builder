@@ -15,8 +15,8 @@ function member(
     status: 'active',
     joinedAt: new Date(),
     updatedAt: new Date(),
-    email: partial.email,
     ...partial,
+    email: partial.email ?? '',
   }
 }
 

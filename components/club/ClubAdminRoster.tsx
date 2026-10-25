@@ -40,7 +40,11 @@ export function ClubAdminRoster({
   const [query, setQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<ClubRosterRoleFilter>('all')
   const clubIdRef = useRef(clubId)
+  const queryRef = useRef(query)
+  const roleFilterRef = useRef(roleFilter)
   clubIdRef.current = clubId
+  queryRef.current = query
+  roleFilterRef.current = roleFilter
 
   useEffect(() => {
     let cancelled = false
@@ -95,7 +99,13 @@ export function ClubAdminRoster({
             }
             return a.displayName.localeCompare(b.displayName)
           })
-        const visible = filterClubRosterMembers(next, roleFilter, query)
+        // Read live filter/search so a mid-flight tab/search change cannot
+        // move the page using the values captured when the request started.
+        const visible = filterClubRosterMembers(
+          next,
+          roleFilterRef.current,
+          queryRef.current
+        )
         const index = visible.findIndex(m => m.userId === userId)
         if (index >= 0) {
           setPage(Math.floor(index / PAGE_SIZE) + 1)
@@ -146,7 +156,7 @@ export function ClubAdminRoster({
   const filters = !loading && members.length > 0 && (
     <div className="space-y-3">
       <div
-        role="tablist"
+        role="group"
         aria-label="Filter roster by role"
         className="flex flex-wrap gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900/50"
       >
@@ -156,8 +166,7 @@ export function ClubAdminRoster({
             <button
               key={option.value}
               type="button"
-              role="tab"
-              aria-selected={active}
+              aria-pressed={active}
               onClick={() => setRoleFilter(option.value)}
               className={cn(
                 'rounded-md px-3 py-1.5 text-sm font-semibold transition-colors',

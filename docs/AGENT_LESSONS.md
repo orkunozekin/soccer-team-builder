@@ -38,6 +38,20 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-10-25 — Post-mutation page sync must read live filters
+
+- **Source:** PR #116 · Greptile
+- **Gap:** `ClubAdminRoster` followed the edited member using `roleFilter` / `query` closed over when the role request started. Switching tabs or search while the request was in flight moved the page as if the old All view were still active.
+- **Going forward:** When an async mutation later adjusts pagination from a filtered list, read the current filter/search from refs (or skip the page move if filters changed). Cover with a delayed-response test that changes the filter mid-flight.
+- **Pointers:** `components/club/ClubAdminRoster.tsx` (`roleFilterRef` / `queryRef`)
+
+### 2026-10-25 — Filter chip groups need pressed state, not bare tabs
+
+- **Source:** PR #116 · Greptile
+- **Gap:** Roster role filters used `role="tab"` / `aria-selected` without arrow-key roving tabindex, so the announced control did not match keyboard behavior.
+- **Going forward:** For mutually exclusive filter chips, prefer plain buttons with `aria-pressed` (and `role="group"`), or implement full tablist keyboard support. Do not copy `role="tab"` from nearby UIs unless the keyboard contract is complete.
+- **Pointers:** `components/club/ClubAdminRoster.tsx`
+
 ### 2026-10-11 — Restore RSVP order must ignore implied roster diffs
 
 - **Source:** PR #112 · Greptile

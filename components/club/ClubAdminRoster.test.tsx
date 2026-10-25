@@ -196,11 +196,19 @@ describe('ClubAdminRoster', () => {
     render(<ClubAdminRoster clubId="c1" currentUserId="u1" />)
 
     expect(await screen.findByText('Player Two')).toBeInTheDocument()
-    await user.click(screen.getByRole('tab', { name: 'Club admins' }))
+    await user.click(screen.getByRole('button', { name: 'Club admins' }))
 
     expect(screen.getByText('Admin Self')).toBeInTheDocument()
     expect(screen.queryByText('Player Two')).not.toBeInTheDocument()
     expect(screen.getByText('1 of 2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Club admins' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
   })
 
   it('searches members by name or email', async () => {
@@ -223,7 +231,7 @@ describe('ClubAdminRoster', () => {
     render(<ClubAdminRoster clubId="c1" currentUserId="u1" />)
 
     expect(await screen.findByText('Player Two')).toBeInTheDocument()
-    await user.click(screen.getByRole('tab', { name: 'Players' }))
+    await user.click(screen.getByRole('button', { name: 'Players' }))
     await user.type(
       screen.getByRole('textbox', { name: 'Search members' }),
       'nobody'
@@ -254,12 +262,82 @@ describe('ClubAdminRoster', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }))
     expect(screen.getByText('Member 11')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'Players' }))
+    await user.click(screen.getByRole('button', { name: 'Players' }))
     expect(screen.getByText('Member 03')).toBeInTheDocument()
     expect(screen.queryByText('Member 01')).not.toBeInTheDocument()
     expect(screen.getByText('10 of 12')).toBeInTheDocument()
     expect(
       screen.queryByRole('navigation', { name: 'Pagination' })
     ).not.toBeInTheDocument()
+  })
+
+  it('keeps the live filter page after a delayed role change', async () => {
+    const user = userEvent.setup()
+    let resolveRole!: (value: {
+      success: boolean
+      membership: { id: string; role: 'player' }
+    }) => void
+    const pending = new Promise<{
+      success: boolean
+      membership: { id: string; role: 'player' }
+    }>(resolve => {
+      resolveRole = resolve
+    })
+    vi.mocked(updateClubMemberRoleAPI).mockReturnValue(pending as never)
+    vi.mocked(listClubMembersAPI).mockResolvedValue({
+      success: true,
+      members: [
+        ...Array.from({ length: 25 }, (_, i) => ({
+          id: `a${i}`,
+          clubId: 'c1',
+          userId: `admin-${i}`,
+          role: 'club_admin' as const,
+          status: 'active' as const,
+          joinedAt: new Date(),
+          updatedAt: new Date(),
+          displayName: `Admin ${String(i + 1).padStart(2, '0')}`,
+          email: `admin${i}@example.com`,
+        })),
+        ...Array.from({ length: 5 }, (_, i) => ({
+          id: `p${i}`,
+          clubId: 'c1',
+          userId: `player-${i}`,
+          role: 'player' as const,
+          status: 'active' as const,
+          joinedAt: new Date(),
+          updatedAt: new Date(),
+          displayName: `Player ${String(i + 1).padStart(2, '0')}`,
+          email: `player${i}@example.com`,
+        })),
+      ],
+    })
+    render(<ClubAdminRoster clubId="c1" currentUserId="admin-0" />)
+
+    expect(await screen.findByText('Admin 01')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Go to page 2' }))
+    expect(screen.getByText('Admin 15')).toBeInTheDocument()
+
+    await user.click(screen.getByLabelText('Role for Admin 15'))
+    await user.click(await screen.findByRole('option', { name: 'Player' }))
+
+    await user.click(screen.getByRole('button', { name: 'Club admins' }))
+    expect(screen.getByText('Admin 01')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Go to page 1' })
+    ).toHaveAttribute('aria-current', 'page')
+
+    resolveRole({
+      success: true,
+      membership: { id: 'a14', role: 'player' },
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByText('Admin 15')).not.toBeInTheDocument()
+    })
+    expect(screen.getByText('Admin 01')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Go to page 1' })
+    ).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByText('24 of 30')).toBeInTheDocument()
   })
 })
