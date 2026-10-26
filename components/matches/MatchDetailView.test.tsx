@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { MatchDetailView } from './MatchDetailView'
 
@@ -24,6 +24,7 @@ vi.mock('@/lib/hooks/useAdmin', () => ({
 }))
 
 const useIsClubAdminMock = vi.fn()
+const refreshClubMembershipsMock = vi.fn()
 vi.mock('@/lib/hooks/useClubMemberships', () => ({
   useIsClubAdmin: (...args: unknown[]) => useIsClubAdminMock(...args),
   useClubMemberships: () => ({
@@ -160,6 +161,8 @@ describe('MatchDetailView', () => {
       isClubAdmin: false,
       isSuperUser: false,
       loading: false,
+      error: null,
+      refresh: refreshClubMembershipsMock,
     })
   })
 
@@ -181,6 +184,8 @@ describe('MatchDetailView', () => {
       isClubAdmin: true,
       isSuperUser: true,
       loading: false,
+      error: null,
+      refresh: refreshClubMembershipsMock,
     })
 
     getMatchMock.mockResolvedValueOnce(mockMatch())
@@ -207,6 +212,30 @@ describe('MatchDetailView', () => {
     await waitFor(() => {
       expect(screen.getByText('PlayerTransferMock')).toBeInTheDocument()
     })
+  })
+
+  it('surfaces a retry when club permissions cannot be loaded', async () => {
+    useIsClubAdminMock.mockReturnValue({
+      isClubAdmin: false,
+      isSuperUser: false,
+      loading: false,
+      error: 'Failed to load clubs',
+      refresh: refreshClubMembershipsMock,
+    })
+    getMatchMock.mockResolvedValueOnce({ ...mockMatch(), clubId: 'club1' })
+    getMatchRSVPsMock.mockResolvedValueOnce([])
+    getMatchTeamsMock.mockResolvedValueOnce([])
+    getUsersByIdsMock.mockResolvedValueOnce([])
+
+    render(<MatchDetailView backLink={backLink} />)
+
+    expect(
+      await screen.findByText(/couldn't verify your club permissions/i)
+    ).toBeInTheDocument()
+    expect(screen.queryByText('EditMatchCardMock')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /try again/i }))
+    expect(refreshClubMembershipsMock).toHaveBeenCalledTimes(1)
   })
 
   it('keeps pitch roster placeholders when profile fetch never resolves', async () => {
