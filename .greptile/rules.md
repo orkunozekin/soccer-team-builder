@@ -24,6 +24,7 @@ Companion to [`docs/AGENT_CONTEXT.md`](../docs/AGENT_CONTEXT.md), root [`AGENTS.
 - `runTransaction` callbacks that set outer variables instead of returning the outcome, or denormalized counters updated outside the transaction that changes the source doc
 - Admin redirects gated on auth `loading` instead of `rolePending` / `profileReady`
 - New or changed Firestore compound queries (`where` + `orderBy`, multi-field filters) without a matching entry in `firestore.indexes.json`, or without an explicit note that production indexes must be deployed/`Enabled` before traffic uses that query (emulators often skip this check)
+- Regression tests that mock away the hook, cache, provider, overlay, or other state boundary whose recovery behavior the test claims to cover
 
 ## Do not nitpick
 

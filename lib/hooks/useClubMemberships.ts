@@ -57,9 +57,12 @@ export function useClubMemberships() {
       return res.memberships
     },
     {
-      // Shared across routes; refresh() / mutate after join or settings changes.
-      revalidateIfStale: false,
+      // Role changes can be made from another browser/session. Revalidate when
+      // club-scoped screens mount so a stale player role cannot hide admin UI.
+      revalidateOnMount: true,
       revalidateOnReconnect: false,
+      shouldRetryOnError: true,
+      errorRetryCount: 1,
     }
   )
 
@@ -69,7 +72,10 @@ export function useClubMemberships() {
 
   return {
     memberships: (data ?? []) as ClubMembershipWithClub[],
-    loading: Boolean(uid) && ((isLoading && data === undefined) || (isValidating && data === undefined)),
+    loading:
+      Boolean(uid) &&
+      ((isLoading && data === undefined) ||
+        (isValidating && data === undefined)),
     error: error
       ? error instanceof Error
         ? error.message
@@ -85,15 +91,27 @@ export function useClubMemberships() {
  */
 export function useIsClubAdmin(clubId: string | null | undefined) {
   const { userData } = useAuth()
-  const { memberships, loading } = useClubMemberships()
+  const { memberships, loading, error, refresh } = useClubMemberships()
   const isSuperUser = normalizeUserRole(userData?.role) === 'super_user'
 
   if (isSuperUser) {
-    return { isClubAdmin: true, isSuperUser: true, loading: false }
+    return {
+      isClubAdmin: true,
+      isSuperUser: true,
+      loading: false,
+      error: null,
+      refresh,
+    }
   }
 
   if (!clubId) {
-    return { isClubAdmin: false, isSuperUser: false, loading }
+    return {
+      isClubAdmin: false,
+      isSuperUser: false,
+      loading,
+      error,
+      refresh,
+    }
   }
 
   const membership = memberships.find(
@@ -103,5 +121,7 @@ export function useIsClubAdmin(clubId: string | null | undefined) {
     isClubAdmin: membership?.role === 'club_admin',
     isSuperUser: false,
     loading,
+    error,
+    refresh,
   }
 }

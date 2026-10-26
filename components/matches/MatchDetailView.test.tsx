@@ -24,6 +24,7 @@ vi.mock('@/lib/hooks/useAdmin', () => ({
 }))
 
 const useIsClubAdminMock = vi.fn()
+const refreshClubMembershipsMock = vi.fn()
 vi.mock('@/lib/hooks/useClubMemberships', () => ({
   useIsClubAdmin: (...args: unknown[]) => useIsClubAdminMock(...args),
   useClubMemberships: () => ({
@@ -160,6 +161,8 @@ describe('MatchDetailView', () => {
       isClubAdmin: false,
       isSuperUser: false,
       loading: false,
+      error: null,
+      refresh: refreshClubMembershipsMock,
     })
   })
 
@@ -181,6 +184,8 @@ describe('MatchDetailView', () => {
       isClubAdmin: true,
       isSuperUser: true,
       loading: false,
+      error: null,
+      refresh: refreshClubMembershipsMock,
     })
 
     getMatchMock.mockResolvedValueOnce(mockMatch())

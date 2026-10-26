@@ -65,7 +65,11 @@ export function MatchDetailView({
   const match =
     currentMatch && matchId && currentMatch.id === matchId ? currentMatch : null
   // Super users and club_admins for this match's club; not global isAdmin alone.
-  const { isClubAdmin: canManageMatch } = useIsClubAdmin(match?.clubId)
+  const {
+    isClubAdmin: canManageMatch,
+    error: clubPermissionError,
+    refresh: refreshClubPermissions,
+  } = useIsClubAdmin(match?.clubId)
   const userRsvp = userId
     ? (matchRSVPs.find(r => r.userId === userId) ?? null)
     : null
@@ -237,6 +241,25 @@ export function MatchDetailView({
               rosterUsers={usersWithMatchPosition}
               currentUserId={userId}
             />
+
+            {match.clubId && clubPermissionError && (
+              <div
+                role="alert"
+                className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300"
+              >
+                <p>
+                  We couldn&apos;t verify your club permissions. Match
+                  management controls may be unavailable until this reloads.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void refreshClubPermissions()}
+                  className="mt-2 font-semibold underline underline-offset-2"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
 
             {canManageMatch && (
               <>
