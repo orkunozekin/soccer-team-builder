@@ -119,6 +119,7 @@ Repeated review findings; treat these as defaults.
 
 - Colocate unit tests as `*.test.ts` / `*.test.tsx` next to the code (existing pattern under `lib/`).
 - Add or update tests when changing pure logic (team generation, geo/check-in windows, schedulers, auth helpers, sanitization).
+- Regression tests must exercise the state boundary that caused the bug. When recovery depends on a hook, cache, provider, or overlay, keep that boundary real in at least one test with isolated state; do not mock the recovery mechanism itself away.
 - Run `yarn test:run` for changed logic before considering work done when feasible.
 - CI runs unit tests on PRs to `main` (`.github/workflows/test.yml`).
 

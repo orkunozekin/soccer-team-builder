@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { MatchDetailView } from './MatchDetailView'
 
@@ -212,30 +212,6 @@ describe('MatchDetailView', () => {
     await waitFor(() => {
       expect(screen.getByText('PlayerTransferMock')).toBeInTheDocument()
     })
-  })
-
-  it('surfaces a retry when club permissions cannot be loaded', async () => {
-    useIsClubAdminMock.mockReturnValue({
-      isClubAdmin: false,
-      isSuperUser: false,
-      loading: false,
-      error: 'Failed to load clubs',
-      refresh: refreshClubMembershipsMock,
-    })
-    getMatchMock.mockResolvedValueOnce({ ...mockMatch(), clubId: 'club1' })
-    getMatchRSVPsMock.mockResolvedValueOnce([])
-    getMatchTeamsMock.mockResolvedValueOnce([])
-    getUsersByIdsMock.mockResolvedValueOnce([])
-
-    render(<MatchDetailView backLink={backLink} />)
-
-    expect(
-      await screen.findByText(/couldn't verify your club permissions/i)
-    ).toBeInTheDocument()
-    expect(screen.queryByText('EditMatchCardMock')).not.toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /try again/i }))
-    expect(refreshClubMembershipsMock).toHaveBeenCalledTimes(1)
   })
 
   it('keeps pitch roster placeholders when profile fetch never resolves', async () => {

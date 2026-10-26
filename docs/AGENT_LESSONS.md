@@ -38,6 +38,14 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 <!-- Append newest entries at the top of this section. -->
 
+### 2026-10-26 — Permission recovery tests must cross the real cache boundary
+
+- **Source:** PR #117 · Greptile
+- **Gap:** The club-admin recovery test mocked `useIsClubAdmin`, so it proved only that the retry button called a mock. It could not catch removal of SWR mount revalidation or automatic retry, the mechanisms meant to restore hidden admin controls.
+- **Going forward:** When a regression depends on hook, cache, or provider state, keep that boundary real in at least one test and isolate its backing cache/provider. Prove stale-cache refresh, automatic retry, and user-triggered recovery instead of mocking the recovery mechanism away.
+- **Pointers:** `components/matches/MatchDetailView.permissions.test.tsx`, `lib/hooks/useClubMemberships.ts`
+- **Promoted:** AGENT_CONTEXT.md → §3 Testing; `.greptile/rules.md` → Must flag
+
 ### 2026-10-25 — Post-mutation page sync must read live filters
 
 - **Source:** PR #116 · Greptile
@@ -157,6 +165,7 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 - **Going forward:** When a control lives inside a dialog, sheet, or dropdown that locks the page, the regression test must open that overlay, trigger the action from inside it, and assert both that the overlay closed and that body pointer / scroll locks are gone.
 - **Pointers:** `components/layout/AppShell.tsx` (mobile `Sheet` + `AccountMenu`), `components/layout/AppShell.test.tsx`
 - **Promoted:** AGENT_CONTEXT.md → §3 React / Next.js (overlays)
+- **Promoted:** AGENT_CONTEXT.md → §3 Testing; `.greptile/rules.md` → Must flag
 
 ### 2026-09-27 — Stale auth callbacks must not publish a profile
 
