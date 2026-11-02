@@ -34,17 +34,14 @@ export function LocationLink({
   }
 
   return (
-    <p
-      className={cn(
-        'flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400',
-        className
+    <p className={cn('flex items-center gap-1.5 text-sm text-fog', className)}>
+      {showIcon && (
+        <MapPin className="h-3.5 w-3.5 shrink-0 text-lime" aria-hidden />
       )}
-    >
-      {showIcon && <MapPin className="h-3.5 w-3.5 shrink-0 text-red-50" />}
       <button
         type="button"
         className={cn(
-          'truncate text-left font-medium text-red-60 underline-offset-2 hover:underline dark:text-red-40',
+          'truncate text-left font-medium text-chalk underline decoration-line underline-offset-4 hover:decoration-chalk',
           linkClassName
         )}
         onClick={openMaps}

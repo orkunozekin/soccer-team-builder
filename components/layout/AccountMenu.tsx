@@ -59,16 +59,14 @@ export function AccountMenu({
 
   return (
     <div className={cn('flex w-full flex-col gap-2', className)}>
-      <p className="truncate px-1 text-base font-semibold text-white">
-        {label}
-      </p>
+      <p className="truncate px-1 text-sm font-semibold text-chalk">{label}</p>
       <button
         type="button"
         aria-label="Sign out"
         onClick={() => {
           void handleLogout()
         }}
-        className="inline-flex h-9 w-full items-center justify-center rounded-md border border-white px-2 text-sm font-medium text-white outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white"
+        className="inline-flex h-10 w-full items-center justify-center rounded-full border border-line px-3 text-sm font-semibold text-[#B9C2BD] outline-none hover:bg-turf hover:text-chalk focus-visible:ring-2 focus-visible:ring-ring"
       >
         Sign out
       </button>

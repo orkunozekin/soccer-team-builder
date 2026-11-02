@@ -13,7 +13,7 @@ const buttonVariants = cva(
         destructive:
           'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
         outline:
-          'border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground',
+          'border border-input bg-transparent shadow-sm hover:bg-accent hover:text-accent-foreground',
         secondary:
           'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
         ghost: 'hover:bg-accent hover:text-accent-foreground',
@@ -24,6 +24,8 @@ const buttonVariants = cva(
         sm: 'h-8 rounded-md px-3 text-sm',
         lg: 'h-10 rounded-md px-8',
         icon: 'h-9 w-9',
+        // Primary call to action (RSVP, sign in): condensed display type.
+        hero: 'h-14 rounded-2xl px-6 font-display text-2xl font-black uppercase tracking-[0.04em] sm:h-[60px]',
       },
     },
     defaultVariants: {

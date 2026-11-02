@@ -421,7 +421,9 @@ export function TeamsDisplay({
       </AlertDialog>
 
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <h2 className="min-w-0 truncate text-2xl font-bold">Teams</h2>
+        <h2 className="min-w-0 truncate font-display text-3xl font-extrabold uppercase tracking-[0.02em]">
+          Teams
+        </h2>
         <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
           {pages.length > 1
             ? pages.map((p, i) => (

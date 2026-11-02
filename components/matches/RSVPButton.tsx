@@ -17,9 +17,10 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { cancelRSVPAPI, confirmRSVPAPI } from '@/lib/api/client'
-import { useIsClubAdmin } from '@/lib/hooks/useClubMemberships'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { useIsClubAdmin } from '@/lib/hooks/useClubMemberships'
 import { getUserRSVP } from '@/lib/services/rsvpService'
+import { cn } from '@/lib/utils'
 import { getTeamPositionOccupancy } from '@/lib/utils/pitchLayout'
 import { isProfileComplete } from '@/lib/utils/profile'
 import { hasMatchStarted } from '@/lib/utils/rsvpScheduler'
@@ -69,9 +70,7 @@ export function RSVPButton({
   const dismissCelebration = useCallback(() => setShowCelebration(false), [])
 
   const uid = currentUserId ?? user?.uid ?? null
-  const userTeam = uid
-    ? teams.find(t => t.playerIds.includes(uid))
-    : undefined
+  const userTeam = uid ? teams.find(t => t.playerIds.includes(uid)) : undefined
   const positionOccupancy = useMemo(
     () => getTeamPositionOccupancy(userTeam, rosterUsers),
     [userTeam, rosterUsers]
@@ -194,9 +193,7 @@ export function RSVPButton({
         await onTeamsRegenerated()
       }
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to update RSVP'
-      )
+      setError(err instanceof Error ? err.message : 'Failed to update RSVP')
     } finally {
       setLoading(false)
     }
@@ -308,11 +305,14 @@ export function RSVPButton({
           disabled={!user}
           loading={loading}
           variant={hasRSVPed ? 'outline' : 'default'}
-          className={`h-11 w-full text-base transition-all duration-300 sm:h-9 sm:text-sm ${
-            justRsvped ? 'animate-rsvp-glow' : ''
-          }`}
+          size={hasRSVPed ? 'lg' : 'hero'}
+          className={cn(
+            'w-full transition-all duration-300',
+            hasRSVPed && 'h-12 rounded-2xl text-base',
+            justRsvped && 'animate-rsvp-glow'
+          )}
         >
-          {hasRSVPed ? 'Cancel RSVP' : 'RSVP to Match'}
+          {hasRSVPed ? 'Cancel RSVP' : "I'm in"}
         </Button>
       )}
       {error && !showPositionPickerForGkBlock && (

@@ -82,7 +82,12 @@ const baseMatch: Match = {
   id: 'match1',
   date: new Date('2099-06-15T00:00:00Z'),
   time: '19:00',
-  location: { name: 'Test field', address: 'Test field', lat: 30.0, lng: -97.0 },
+  location: {
+    name: 'Test field',
+    address: 'Test field',
+    lat: 30.0,
+    lng: -97.0,
+  },
   rsvpOpen: true,
   rsvpOpenAt: null,
   rsvpCloseAt: null,
@@ -106,9 +111,7 @@ describe('RSVPButton', () => {
 
     render(<RSVPButton match={baseMatch} />)
 
-    expect(
-      screen.getByRole('button', { name: /rsvp to match/i })
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /i'm in/i })).toBeInTheDocument()
   })
 
   it('opens profile modal when profile is incomplete', async () => {
@@ -128,7 +131,7 @@ describe('RSVPButton', () => {
 
     render(<RSVPButton match={baseMatch} />)
 
-    await user.click(screen.getByRole('button', { name: /rsvp to match/i }))
+    await user.click(screen.getByRole('button', { name: /i'm in/i }))
 
     expect(screen.getByText(/profile modal open/i)).toBeInTheDocument()
   })
@@ -155,7 +158,7 @@ describe('RSVPButton', () => {
 
     render(<RSVPButton match={baseMatch} />)
 
-    await user.click(screen.getByRole('button', { name: /rsvp to match/i }))
+    await user.click(screen.getByRole('button', { name: /i'm in/i }))
     expect(screen.getByText(/position modal open/i)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /confirm rsvp/i }))

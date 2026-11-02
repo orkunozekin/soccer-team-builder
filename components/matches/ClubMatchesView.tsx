@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AdminMatchCard } from '@/components/admin/AdminMatchCard'
 import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
-import { SoccerBallIcon } from '@/components/icons/SoccerBallIcon'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { MatchCard } from '@/components/matches/MatchCard'
 import { Button } from '@/components/ui/button'
@@ -272,19 +271,16 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
   }
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8">
-      <div className="mb-6 animate-slide-up-fade">
-        <div className="flex items-center gap-3">
-          <SoccerBallIcon className="h-10 w-10 animate-float text-red-50" />
-          <div>
-            <h1 className="text-3xl font-bold text-red-50">Matches</h1>
-            <p className="text-zinc-600 dark:text-zinc-400">
-              {showAdminList
-                ? 'Create matches and manage RSVPs, teams, and attendance'
-                : 'View and RSVP to upcoming matches'}
-            </p>
-          </div>
-        </div>
+    <div className="container mx-auto max-w-5xl px-4 py-8 sm:py-10">
+      <div className="mb-8 animate-slide-up-fade">
+        <h1 className="font-display text-6xl font-black uppercase leading-[0.9] sm:text-7xl">
+          Matches
+        </h1>
+        <p className="mt-2 text-fog">
+          {showAdminList
+            ? 'Create matches and manage RSVPs, teams, and attendance'
+            : 'View and RSVP to upcoming matches'}
+        </p>
       </div>
 
       {canCreateMatch && (
@@ -300,7 +296,7 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
         <div
           role="tablist"
           aria-label="Filter matches"
-          className="mb-4 flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900/50"
+          className="mb-5 flex flex-wrap gap-2"
         >
           {ADMIN_FILTERS.map(option => {
             const active = filter === option.value
@@ -312,10 +308,10 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
                 aria-selected={active}
                 onClick={() => setFilter(option.value)}
                 className={cn(
-                  'rounded-md px-3 py-1.5 text-sm font-semibold transition-colors',
+                  'h-9 rounded-full px-4 text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
                   active
-                    ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100'
-                    : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+                    ? 'bg-chalk text-ink'
+                    : 'border border-line text-[#B9C2BD] hover:text-chalk'
                 )}
               >
                 {option.label}
@@ -350,9 +346,8 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
       ) : (
         <div
           className={cn(
-            'grid gap-4',
-            visibleMatches.length > 1 && 'sm:grid-cols-2',
-            visibleMatches.length > 2 && 'lg:grid-cols-3'
+            'grid grid-cols-1 gap-4',
+            visibleMatches.length > 1 && 'md:grid-cols-2'
           )}
         >
           {paged.items.map((match, index) => {

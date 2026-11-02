@@ -10,6 +10,7 @@ import { ClubNav } from '@/components/layout/ClubNav'
 import { ClubWorkspaceStatus } from '@/components/layout/ClubWorkspaceStatus'
 import { Navigation } from '@/components/layout/Navigation'
 import { PlatformAdminNav } from '@/components/layout/PlatformAdminNav'
+import { Wordmark } from '@/components/layout/Wordmark'
 import { NavLoadingSkeleton } from '@/components/LoadingSkeleton'
 import {
   Sheet,
@@ -77,18 +78,19 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   return (
     <div className="flex min-h-dvh w-full">
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col self-start border-r border-red-40 bg-red-50 text-white md:flex">
-        <div className="px-4 pb-2 pt-4">
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col self-start border-r border-line/60 bg-rail text-chalk md:flex">
+        <div className="px-5 pb-4 pt-6">
           <Link
             href={brandHref}
-            className="text-sm font-bold text-white hover:opacity-80"
+            aria-label="Soccerville"
+            className="rounded-md text-chalk outline-none hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
           >
-            Soccerville
+            <Wordmark />
           </Link>
         </div>
-        <div className="px-3">{switcher}</div>
-        <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <div className="flex flex-col gap-3 px-2 pb-3">
+        <div className="px-4">{switcher}</div>
+        <div className="mt-5 flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <div className="flex flex-col gap-4 px-3 pb-3">
             {club ? (
               <ClubNav
                 sections={workspace.sections}
@@ -97,7 +99,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             ) : null}
             {isAdmin ? <PlatformAdminNav /> : null}
           </div>
-          <div className="mt-auto flex flex-col gap-3 border-t border-white/20 p-3">
+          <div className="mt-auto flex flex-col gap-3 border-t border-line/60 p-4">
             <AccountNav className="-mx-1" />
             <AccountMenu />
           </div>
@@ -105,25 +107,29 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-red-40 bg-red-50 px-2 py-2 text-white shadow-md md:hidden">
+        <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-line/60 bg-rail/95 px-3 py-2 text-chalk backdrop-blur md:hidden">
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
               <button
                 type="button"
                 aria-label="Open club menu"
-                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-white hover:bg-white/10"
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line/60 bg-turf text-chalk outline-none hover:bg-turf-raised focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <HamburgerMenuIcon className="h-5 w-5" />
               </button>
             </SheetTrigger>
             <SheetContent
               side="left"
-              className="flex w-72 flex-col gap-0 border-red-40 bg-red-50 p-0 text-white"
+              className="flex w-[19rem] flex-col gap-0 border-line/60 bg-rail p-0 text-chalk"
             >
-              <SheetHeader className="border-b border-white/20 px-4 py-4 pr-12 text-left">
-                <SheetTitle className="text-sm font-bold text-white">
-                  <Link href={brandHref} onClick={() => setSheetOpen(false)}>
-                    Soccerville
+              <SheetHeader className="px-5 py-5 pr-12 text-left">
+                <SheetTitle className="text-chalk">
+                  <Link
+                    href={brandHref}
+                    aria-label="Soccerville"
+                    onClick={() => setSheetOpen(false)}
+                  >
+                    <Wordmark />
                   </Link>
                 </SheetTitle>
                 <SheetDescription className="sr-only">
@@ -131,7 +137,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                 </SheetDescription>
               </SheetHeader>
               <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-                <div className="flex flex-col gap-3 px-2 py-3">
+                <div className="flex flex-col gap-4 px-3 py-2">
                   {club ? (
                     <ClubNav
                       sections={workspace.sections}
@@ -150,7 +156,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                     <PlatformAdminNav onNavigate={() => setSheetOpen(false)} />
                   ) : null}
                 </div>
-                <div className="mt-auto flex flex-col gap-3 border-t border-white/20 p-3">
+                <div className="mt-auto flex flex-col gap-3 border-t border-line/60 p-4">
                   <AccountNav
                     className="-mx-1"
                     onNavigate={() => setSheetOpen(false)}
@@ -163,10 +169,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           <div className="min-w-0 flex-1">{switcher}</div>
         </header>
         {workspace.switchError ? (
-          <p
-            role="alert"
-            className="px-4 pt-3 text-sm text-red-700 dark:text-red-400"
-          >
+          <p role="alert" className="px-4 pt-3 text-sm text-flare">
             {workspace.switchError}
           </p>
         ) : null}

@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import {
+  Big_Shoulders_Display,
+  Inter_Tight,
+  JetBrains_Mono,
+} from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 import { EmulatorAuthGate } from '@/components/auth/EmulatorAuthGate'
@@ -10,10 +14,23 @@ import { MobileViewportFix } from '@/components/layout/MobileViewportFix'
 import { SwrProvider } from '@/components/providers/SwrProvider'
 import { cn } from '@/lib/utils'
 
-// Use the Google Inter font from next/font
-const inter = Inter({
+const sans = Inter_Tight({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-sans',
+})
+
+// Condensed display face for dates, headlines and primary calls to action.
+const display = Big_Shoulders_Display({
+  subsets: ['latin'],
+  weight: ['700', '800', '900'],
+  variable: '--font-display',
+})
+
+// Statuses, counts and jersey numbers.
+const mono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['500', '700'],
+  variable: '--font-mono',
 })
 
 export const metadata: Metadata = {
@@ -42,8 +59,15 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className={cn(inter.variable, 'font-sans antialiased')}>
+    <html lang="en" className="dark">
+      <body
+        className={cn(
+          sans.variable,
+          display.variable,
+          mono.variable,
+          'font-sans antialiased'
+        )}
+      >
         <EmulatorAuthGate>
           <AuthProvider>
             <SwrProvider>

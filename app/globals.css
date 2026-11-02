@@ -19,12 +19,11 @@
   }
 
   .dark .pitch-bg {
-    background-color: hsl(240 10% 10%);
-    background-image: linear-gradient(
-      to bottom,
-      hsl(240 10% 12%) 0%,
-      hsl(0 20% 12%) 60%,
-      hsl(0 25% 14%) 100%
+    background-color: #0b0f0d;
+    background-image: radial-gradient(
+      120% 60% at 50% -10%,
+      rgba(186, 232, 123, 0.06) 0%,
+      rgba(11, 15, 13, 0) 60%
     );
   }
 
@@ -40,8 +39,22 @@
     }
   }
 
+  /* Auth hero band: striped turf that fades into the page. */
+  .pitch-stripes {
+    background-image: repeating-linear-gradient(
+      90deg,
+      #102619 0,
+      #102619 48px,
+      #133020 48px,
+      #133020 96px
+    );
+    -webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent);
+    mask-image: linear-gradient(to bottom, #000 30%, transparent);
+  }
+
+  /* Kept as a hook for match/hero cards; Floodlight drops the red top rule. */
   .card-soccer-accent {
-    border-top: 3px solid #cc0000;
+    border-radius: 1.25rem;
   }
 }
 
@@ -78,31 +91,37 @@
     --pitch-markings: #f5faf5;
     --pitch-border: #ffffff;
   }
+  /* Floodlight: the app renders dark (see <html class="dark"> in layout). */
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 100% 28%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --background: 150 15% 5%; /* ink #0B0F0D */
+    --foreground: 45 26% 94%; /* chalk #F3F1EA */
+    --card: 147 15% 9%; /* turf #131A16 */
+    --card-foreground: 45 26% 94%;
+    --popover: 147 15% 9%;
+    --popover-foreground: 45 26% 94%;
+    --primary: 5 77% 48%; /* card red #D72A1C */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 150 13% 13%; /* turf raised #1C2420 */
+    --secondary-foreground: 45 26% 94%;
+    --muted: 150 13% 13%;
+    --muted-foreground: 144 6% 63%; /* fog #9AA59F */
+    --accent: 150 13% 13%;
+    --accent-foreground: 45 26% 94%;
+    --destructive: 5 77% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 148 10% 15%;
+    --input: 148 10% 21%; /* line #2F3A34 */
+    --ring: 5 100% 64%; /* flare #FF5A4A */
+    --radius: 0.875rem;
+    --chart-1: 5 100% 64%;
+    --chart-2: 22 100% 63%;
+    --chart-3: 198 54% 70%;
+    --chart-4: 85 70% 70%;
+    --chart-5: 45 26% 94%;
+    --pitch-surface: #123020;
+    --pitch-surface-alt: #15371f;
+    --pitch-markings: rgba(243, 241, 234, 0.55);
+    --pitch-border: #22402e;
   }
 }
 
@@ -117,7 +136,8 @@
     background-color: #fff3f2;
   }
   html.dark {
-    background-color: hsl(240 10% 10%);
+    background-color: #0b0f0d;
+    color-scheme: dark;
   }
   body {
     /* pitch-bg owns the page background; do not layer bg-background (white). */
