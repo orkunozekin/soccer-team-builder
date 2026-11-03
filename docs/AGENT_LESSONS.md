@@ -284,3 +284,10 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 - **Gap:** A failed theme save restored the theme captured at click time. If the `light-theme` flag turned off while the save was pending, `ThemeSync` had already forced dark, and the rollback put light back with nothing left to correct it.
 - **Going forward:** When state has a resolver (flag + profile → theme), roll back by asking the resolver again (or nudging it to re-run), not by restoring a snapshot that may be stale. Test a rollback with one of the resolver's inputs changed mid-request.
 - **Pointers:** `lib/theme/saveThemePreference.ts`, `store/themeSaveStore.ts` (`resyncCount`), `components/providers/ThemeSync.tsx`
+
+### 2026-11-03 — Form sync effects must key on the fields they show
+
+- **Source:** PR #132 · Codex
+- **Gap:** `ProfileForm` reset its inputs from an effect keyed on the whole `userData` object. Once the sidebar theme toggle started merging `themePreference` into `userData`, a theme switch on `/profile` wiped any unsaved name, jersey or position edits.
+- **Going forward:** When a form mirrors shared state, depend on the specific fields it edits, not the parent object. Before adding a new writer to a shared store, check every effect keyed on that object.
+- **Pointers:** `components/profile/ProfileForm.tsx`, `components/profile/ProfileForm.test.tsx`, `lib/theme/saveThemePreference.ts`
