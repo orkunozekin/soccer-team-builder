@@ -9,7 +9,7 @@ Let each signed-in user pick a dark or light theme. The choice is saved on their
 | Status | in-progress |
 | Owner session | Orchestrated: one agent session and one PR per implementation step (below) |
 | Last updated | 2026-11-03 |
-| Related PR / branch | Plan: [#126](https://github.com/orkunozekin/soccer-team-builder/pull/126). Step 1: [#128](https://github.com/orkunozekin/soccer-team-builder/pull/128) (`orkun/theme-step-1-preference-plumbing`). Step 2: [#129](https://github.com/orkunozekin/soccer-team-builder/pull/129) (`orkun/theme-step-2-color-tokens`). Step 3: [#130](https://github.com/orkunozekin/soccer-team-builder/pull/130) (`orkun/theme-step-3-hardcoded-colors`) |
+| Related PR / branch | Plan: [#126](https://github.com/orkunozekin/soccer-team-builder/pull/126). Step 1: [#128](https://github.com/orkunozekin/soccer-team-builder/pull/128) (`orkun/theme-step-1-preference-plumbing`). Step 2: [#129](https://github.com/orkunozekin/soccer-team-builder/pull/129) (`orkun/theme-step-2-color-tokens`). Step 3: [#130](https://github.com/orkunozekin/soccer-team-builder/pull/130) (`orkun/theme-step-3-hardcoded-colors`). Step 4: [#131](https://github.com/orkunozekin/soccer-team-builder/pull/131) (`orkun/theme-step-4-theme-runtime`) |
 
 ## Goals (v1)
 
@@ -243,10 +243,18 @@ shadcn HSL tokens in `:root` follow the same values: `--background` = ink, `--ca
   - Dark verified pixel-identical vs `main` on emulators: `/login`, `/register`, `/forgot-password`, `/join`, `/matches`, match detail, `/profile`, club settings, roster (375 + 1280).
   - Left for step 6 (readable enough or decorative): ~35 other `text-red-400` error lines and `bg-red-900/20` banners (swap to `text-danger` then), `text-red-200` / `text-red-300` on `bg-red-950/40` alerts (`TeamsDisplay`, `PlayerTransfer`, `MatchDetailView`), white confetti pieces in `RSVPSuccessCelebration`, `ring-chalk` on the current-user `PlayerMarker` (dark ring on the pitch in light), the flare glow `rgba(255,90,74,…)` on the live dot. Fixed fills with white text (`BenchList` zinc, `PlayerRsvpHistory` emerald/red, team colors) and `bg-black/60–80` overlays are fine.
 
+- **Step 4: theme runtime** ([#131](https://github.com/orkunozekin/soccer-team-builder/pull/131), todos 7–8 + `ThemeSync` tests):
+  - `next-themes` 0.4.6. `components/providers/ThemeProvider.tsx` wraps it (`attribute="class"`, `themes={['dark','light']}`, `defaultTheme="dark"`, `enableSystem={false}`, `storageKey="sv-theme"`, `disableTransitionOnChange`). Use `useTheme()` from `next-themes` for `theme` / `setTheme`. `THEME_STORAGE_KEY` is exported.
+  - `app/layout.tsx`: no hardcoded `dark`, `suppressHydrationWarning` on `<html>`, `ThemeProvider` wraps everything in `<body>`. `ThemeSync` is mounted inside `AuthProvider` + `LaunchDarklyProvider`.
+  - `components/providers/ThemeSync.tsx`: once signed in, `profileReady` and flags ready, it sets dark (flag off) or `normalizeThemePreference(userData.themePreference)` (flag on). It only applies a profile whose `uid` matches the auth uid. Signed out, pending profile or loading flags → no change (the cached value stays).
+  - Flags readiness: `FeatureFlagsReadyContext` (default `true`) + `useFeatureFlagReady(key)` in `lib/flags/useFeatureFlag.ts`. `LaunchDarklyProvider` tracks readiness per LD context key (uid / `anonymous`). It's fail-closed: no client ID, init error/timeout, or a 12 s fallback timer count as ready. A local `NEXT_PUBLIC_FF_*` override is always ready.
+  - next-themes puts `dark` or `light` on `<html>`. No CSS targets `.light`, so light comes from `:root` alone.
+  - Verified: dark pixel-identical vs `main` on the step 3 routes (375 + 1280, production builds, emulators). No hydration or console warnings. With `NEXT_PUBLIC_FF_LIGHT_THEME=true` (only honored by `next dev`) and a cached `sv-theme=light`, a light user is light from first paint with no dark flash, and a user without a preference ends dark.
+
 ### Remaining work
 
-1. **Step 4: theme runtime** (todos 7, 8 + `ThemeSync` tests): `next-themes`, `ThemeProvider`, `ThemeSync`, `app/layout.tsx` changes.
-2. Steps 5–6 (table above), in order, one PR each.
+1. **Step 5: sidebar toggle** (todo 9 + toggle tests): `ThemeToggle` in the `AccountMenu` username row. Use `useTheme().setTheme` for the optimistic switch. `ThemeSync` won't fight it, because it only re-applies when the uid, the flag/readiness or `userData.themePreference` changes. So merge the saved value into `userData` after the API succeeds, and revert `setTheme` on failure. Render theme-dependent icons/pressed state only after mount (hydration).
+2. Step 6 (table above), one PR.
 
 Each step's agent updates this Handoff in its own PR: it adds the PR link under Done so far and moves the next step to the top of Remaining work.
 

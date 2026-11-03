@@ -12,6 +12,8 @@ import { LaunchDarklyProvider } from '@/components/flags/LaunchDarklyProvider'
 import { AppShell } from '@/components/layout/AppShell'
 import { MobileViewportFix } from '@/components/layout/MobileViewportFix'
 import { SwrProvider } from '@/components/providers/SwrProvider'
+import { ThemeProvider } from '@/components/providers/ThemeProvider'
+import { ThemeSync } from '@/components/providers/ThemeSync'
 import { cn } from '@/lib/utils'
 
 const sans = Inter_Tight({
@@ -59,7 +61,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark">
+    // next-themes sets the theme class on <html> before hydration.
+    <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
           sans.variable,
@@ -68,17 +71,20 @@ export default function RootLayout({
           'font-sans antialiased'
         )}
       >
-        <EmulatorAuthGate>
-          <AuthProvider>
-            <SwrProvider>
-              <LaunchDarklyProvider>
-                <MobileViewportFix />
-                <AppShell>{children}</AppShell>
-                <AdminUiToggle />
-              </LaunchDarklyProvider>
-            </SwrProvider>
-          </AuthProvider>
-        </EmulatorAuthGate>
+        <ThemeProvider>
+          <EmulatorAuthGate>
+            <AuthProvider>
+              <SwrProvider>
+                <LaunchDarklyProvider>
+                  <ThemeSync />
+                  <MobileViewportFix />
+                  <AppShell>{children}</AppShell>
+                  <AdminUiToggle />
+                </LaunchDarklyProvider>
+              </SwrProvider>
+            </AuthProvider>
+          </EmulatorAuthGate>
+        </ThemeProvider>
       </body>
     </html>
   )
