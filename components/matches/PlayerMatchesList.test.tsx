@@ -80,6 +80,34 @@ describe('PlayerMatchesList', () => {
     expect(within(rows[0]).getByText(/Field b/)).toBeInTheDocument()
   })
 
+  it('keeps a maps link for venues of rows and heroes that cannot be opened', async () => {
+    const user = userEvent.setup()
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+    renderList([makeMatch('next', 1, false), makeMatch('b', 3, true)])
+
+    // Closed hero: no detail link, but the venue opens in maps.
+    expect(
+      screen.queryByRole('link', { name: /^Next up:/ })
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Field next' }))
+    expect(open).toHaveBeenCalledOnce()
+
+    // Open row: the whole row links to details, with no nested maps button.
+    const [row] = rowsOf()
+    expect(within(row).getByRole('link')).toBeInTheDocument()
+    expect(within(row).queryByRole('button')).not.toBeInTheDocument()
+    open.mockRestore()
+  })
+
+  it('shows a maps link on rows that cannot be opened', () => {
+    renderList([makeMatch('next', 1, true), makeMatch('b', 3, false)])
+    const [row] = rowsOf()
+    expect(within(row).queryByRole('link')).not.toBeInTheDocument()
+    expect(
+      within(row).getByRole('button', { name: 'Field b' })
+    ).toBeInTheDocument()
+  })
+
   it('filters rows to matches the player is in and shows their spot', async () => {
     const user = userEvent.setup()
     renderList(

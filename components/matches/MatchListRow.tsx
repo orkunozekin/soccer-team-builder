@@ -1,6 +1,7 @@
 import { format } from 'date-fns'
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
+import { LocationLink } from '@/components/matches/LocationLink'
 import { MatchDateBlock } from '@/components/matches/MatchDateBlock'
 import { MATCH_STATUS_TEXT_CLASS } from '@/components/matches/matchStatusText'
 import { cn } from '@/lib/utils'
@@ -8,7 +9,11 @@ import { locationDisplayName } from '@/lib/utils/location'
 import type { MatchRsvpStatus } from '@/lib/utils/matchStatus'
 import type { Match } from '@/types/match'
 
-/** Compact fixture row: date tile, kickoff · venue, and a status line. */
+/**
+ * Compact fixture row: date tile, kickoff · venue, and a status line.
+ * Rows that cannot be opened keep a maps link for the venue (opened rows
+ * reach it on the detail page; a button inside the row link would nest).
+ */
 export function MatchListRow({
   match,
   href,
@@ -24,6 +29,7 @@ export function MatchListRow({
   const locationName = match.location
     ? locationDisplayName(match.location)
     : null
+  const showMapsLink = !clickable && match.location && locationName
 
   const content = (
     <>
@@ -32,8 +38,11 @@ export function MatchListRow({
         <p className="truncate text-[15px] font-semibold text-chalk">
           <span className="sr-only">{format(matchDate, 'EEEE, MMM d')} · </span>
           {format(matchDate, 'h:mm a')}
-          {locationName ? ` · ${locationName}` : ''}
+          {locationName && !showMapsLink ? ` · ${locationName}` : ''}
         </p>
+        {showMapsLink && match.location ? (
+          <LocationLink location={match.location} className="text-[13px]" />
+        ) : null}
         <p className={cn('text-sm', MATCH_STATUS_TEXT_CLASS[status.tone])}>
           {status.label}
         </p>

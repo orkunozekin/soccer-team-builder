@@ -1,6 +1,7 @@
 import { format } from 'date-fns'
 import { ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import { LocationLink } from '@/components/matches/LocationLink'
 import { cn } from '@/lib/utils'
 import { locationDisplayName } from '@/lib/utils/location'
 import { getKickoffLabelForMatch } from '@/lib/utils/matchStatus'
@@ -34,6 +35,8 @@ export function NextMatchHero({
     : null
   const cta = myRsvp ? 'View' : match.rsvpOpen ? 'RSVP' : 'Details'
   const fill = rsvpCount !== undefined ? getRosterFill(rsvpCount) : null
+  // Without a detail link, keep a maps link so the venue stays reachable.
+  const showMapsLink = !clickable && match.location && locationName
 
   const body = (
     <article
@@ -74,8 +77,11 @@ export function NextMatchHero({
         </h2>
         <p className="mt-2 font-display text-2xl font-extrabold uppercase sm:text-3xl">
           {format(matchDate, 'h:mm a')}
-          {locationName ? ` · ${locationName}` : ''}
+          {locationName && !showMapsLink ? ` · ${locationName}` : ''}
         </p>
+        {showMapsLink && match.location ? (
+          <LocationLink location={match.location} className="mt-2 text-base" />
+        ) : null}
       </div>
 
       <div
