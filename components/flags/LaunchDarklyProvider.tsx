@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { LDProvider, useLDClient } from 'launchdarkly-react-client-sdk'
-import { FeatureFlagContext } from '@/components/flags/FeatureFlagContext'
+import {
+  FeatureFlagContext,
+  FeatureFlagsReadyContext,
+} from '@/components/flags/FeatureFlagContext'
 import {
   FEATURE_FLAG_DEFAULTS,
   FEATURE_FLAG_KEYS,
@@ -14,6 +17,20 @@ import { useAuth } from '@/lib/hooks/useAuth'
 
 const CLIENT_SIDE_ID =
   process.env.NEXT_PUBLIC_LAUNCHDARKLY_CLIENT_ID?.trim() ?? ''
+
+/** LD init timeout (seconds) passed to the provider and the bridge. */
+const LD_TIMEOUT_S = 5
+
+/**
+ * Backstop for "flags ready": if the LD client never reaches the bridge (for
+ * example `initialize` throws), stop waiting and treat flags as settled at
+ * their fail-closed values.
+ */
+const FLAGS_READY_FALLBACK_MS = (LD_TIMEOUT_S * 2 + 2) * 1000
+
+function flagsContextKey(uid: string | null | undefined): string {
+  return uid ?? 'anonymous'
+}
 
 function readTypedFlags(
   raw: Record<string, unknown>
@@ -43,13 +60,17 @@ function closedFlags(): Partial<Record<FeatureFlagKey, boolean>> {
  */
 function LaunchDarklyBridge({
   onFlags,
+  onReady,
 }: {
   onFlags: (flags: Partial<Record<FeatureFlagKey, boolean>>) => void
+  /** Called with the context key once flags have settled (or failed). */
+  onReady: (key: string) => void
 }) {
   const ldClient = useLDClient()
   const { user } = useAuth()
   const userId = user?.uid
   const userEmail = user?.email ?? null
+  const contextKey = flagsContextKey(userId)
 
   const applyFlags = useCallback(
     (raw: Record<string, unknown>) => {
@@ -71,10 +92,13 @@ function LaunchDarklyBridge({
     }
 
     void ldClient
-      .waitForInitialization(5)
+      .waitForInitialization(LD_TIMEOUT_S)
       .then(syncFromClient)
       .catch(() => {
         // Fail-closed: leave defaults
+      })
+      .finally(() => {
+        if (!cancelled) onReady(contextKey)
       })
 
     ldClient.on('change', syncFromClient)
@@ -83,14 +107,12 @@ function LaunchDarklyBridge({
       cancelled = true
       ldClient.off('change', syncFromClient)
     }
-  }, [ldClient, applyFlags])
+  }, [ldClient, applyFlags, onReady, contextKey])
 
   useEffect(() => {
     if (!ldClient) return
     let cancelled = false
-    const ctx = userId
-      ? contextFromAuth(userId, userEmail)
-      : anonymousContext()
+    const ctx = userId ? contextFromAuth(userId, userEmail) : anonymousContext()
 
     void ldClient
       .identify(ctx)
@@ -121,11 +143,27 @@ function LaunchDarklyBridge({
 export function LaunchDarklyProvider({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth()
   const [typedFlags, setTypedFlags] = useState(closedFlags)
+  // Flags are per user: after an account switch the previous user's values
+  // linger in `typedFlags` until LD answers for the new one, so readiness is
+  // tracked per context key rather than as a single boolean.
+  const [readyKey, setReadyKey] = useState<string | null>(null)
+  const contextKey = flagsContextKey(user?.uid)
+
+  useEffect(() => {
+    if (!CLIENT_SIDE_ID || loading) return
+    const timer = setTimeout(
+      () => setReadyKey(contextKey),
+      FLAGS_READY_FALLBACK_MS
+    )
+    return () => clearTimeout(timer)
+  }, [contextKey, loading])
 
   if (!CLIENT_SIDE_ID) {
     return (
       <FeatureFlagContext.Provider value={closedFlags()}>
-        {children}
+        <FeatureFlagsReadyContext.Provider value>
+          {children}
+        </FeatureFlagsReadyContext.Provider>
       </FeatureFlagContext.Provider>
     )
   }
@@ -136,26 +174,30 @@ export function LaunchDarklyProvider({ children }: { children: ReactNode }) {
 
   return (
     <FeatureFlagContext.Provider value={typedFlags}>
-      {!loading ? (
-        <LDProvider
-          key={user?.uid ?? 'anonymous'}
-          clientSideID={CLIENT_SIDE_ID}
-          context={context}
-          options={{
-            // Avoid localStorage bootstrap: a cached `false` from before targeting
-            // was configured can stick and race with identify().
-            streaming: true,
-          }}
-          reactOptions={{
-            // Keep dashboard keys as-is (e.g. pitch-lineup-view).
-            useCamelCaseFlagKeys: false,
-          }}
-          timeout={5}
-        >
-          <LaunchDarklyBridge onFlags={setTypedFlags} />
-        </LDProvider>
-      ) : null}
-      {children}
+      <FeatureFlagsReadyContext.Provider
+        value={!loading && readyKey === contextKey}
+      >
+        {!loading ? (
+          <LDProvider
+            key={user?.uid ?? 'anonymous'}
+            clientSideID={CLIENT_SIDE_ID}
+            context={context}
+            options={{
+              // Avoid localStorage bootstrap: a cached `false` from before targeting
+              // was configured can stick and race with identify().
+              streaming: true,
+            }}
+            reactOptions={{
+              // Keep dashboard keys as-is (e.g. pitch-lineup-view).
+              useCamelCaseFlagKeys: false,
+            }}
+            timeout={LD_TIMEOUT_S}
+          >
+            <LaunchDarklyBridge onFlags={setTypedFlags} onReady={setReadyKey} />
+          </LDProvider>
+        ) : null}
+        {children}
+      </FeatureFlagsReadyContext.Provider>
     </FeatureFlagContext.Provider>
   )
 }

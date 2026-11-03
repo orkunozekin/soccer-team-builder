@@ -120,7 +120,7 @@
     --pitch-stripe-a: #dce9d6;
     --pitch-stripe-b: #d1e2ca;
   }
-  /* Floodlight: the app renders dark (see <html class="dark"> in layout). */
+  /* Floodlight: next-themes puts `dark` on <html> (the default theme). */
   .dark {
     --background: 150 15% 5%; /* ink #0B0F0D */
     --foreground: 45 26% 94%; /* chalk #F3F1EA */
