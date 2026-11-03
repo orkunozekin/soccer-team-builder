@@ -36,7 +36,7 @@ export function MatchesList({
   onRetryMyRsvps,
   paginationScope,
   includePast = false,
-  rowActions,
+  matchActions,
 }: {
   matches: Match[]
   rsvpCounts: Record<string, number>
@@ -46,8 +46,11 @@ export function MatchesList({
   paginationScope: string
   /** Offer the Past filter (club admins and super users). */
   includePast?: boolean
-  /** Per-row controls, e.g. a Delete button for matches the viewer manages. */
-  rowActions?: (match: Match) => ReactNode
+  /**
+   * Per-match controls (e.g. Delete for matches the viewer manages), shown on
+   * the Next up hero and on every row, always outside their links.
+   */
+  matchActions?: (match: Match) => ReactNode
 }) {
   const [filter, setFilter] = useState<PlayerMatchFilter>('upcoming')
   const { next, rows } = useMemo(
@@ -55,16 +58,22 @@ export function MatchesList({
     [matches, filter, myRsvps.byMatchId]
   )
   const paged = useClientPagination(rows, `${paginationScope}:${filter}`)
+  const heroActions = next ? matchActions?.(next) : null
 
   return (
     <div className="space-y-6">
       {next ? (
-        <NextMatchHero
-          match={next}
-          href={hrefFor(next.id)}
-          rsvpCount={rsvpCounts[next.id]}
-          myRsvp={myRsvps.byMatchId.get(next.id)}
-        />
+        <div className="space-y-2">
+          <NextMatchHero
+            match={next}
+            href={hrefFor(next.id)}
+            rsvpCount={rsvpCounts[next.id]}
+            myRsvp={myRsvps.byMatchId.get(next.id)}
+          />
+          {heroActions ? (
+            <div className="flex justify-end gap-2">{heroActions}</div>
+          ) : null}
+        </div>
       ) : (
         <p className="rounded-2xl border border-border bg-card px-5 py-6 text-fog">
           No upcoming matches yet.
@@ -113,7 +122,7 @@ export function MatchesList({
                   myRsvp: myRsvps.byMatchId.get(match.id),
                   rsvpCount: rsvpCounts[match.id],
                 })}
-                actions={rowActions?.(match)}
+                actions={matchActions?.(match)}
               />
             ))}
           </ul>

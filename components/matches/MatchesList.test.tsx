@@ -147,7 +147,7 @@ describe('MatchesList', () => {
         onRetryMyRsvps={vi.fn()}
         paginationScope="club"
         includePast
-        rowActions={m => <button type="button">Delete {m.id}</button>}
+        matchActions={m => <button type="button">Delete {m.id}</button>}
       />
     )
 
@@ -160,6 +160,25 @@ describe('MatchesList', () => {
     // The action sits beside the row link, not inside it.
     const action = within(rows[0]).getByRole('button', { name: 'Delete old' })
     expect(within(rows[0]).getByRole('link')).not.toContainElement(action)
+  })
+
+  it('offers match actions for the Next up match too, outside its link', () => {
+    render(
+      <MatchesList
+        matches={[makeMatch('next', 1, true)]}
+        rsvpCounts={{}}
+        hrefFor={id => `/c/club/matches/${id}`}
+        myRsvps={ready()}
+        onRetryMyRsvps={vi.fn()}
+        paginationScope="club"
+        includePast
+        matchActions={m => <button type="button">Delete {m.id}</button>}
+      />
+    )
+    const action = screen.getByRole('button', { name: 'Delete next' })
+    expect(
+      screen.getByRole('link', { name: /^Next up:/ })
+    ).not.toContainElement(action)
   })
 
   it('hides the Past filter from players', () => {

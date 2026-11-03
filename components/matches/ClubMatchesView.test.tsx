@@ -55,13 +55,13 @@ vi.mock('@/components/matches/MatchesList', () => ({
     hrefFor,
     rsvpCounts,
     includePast,
-    rowActions,
+    matchActions,
   }: {
     matches: { id: string }[]
     hrefFor: (id: string) => string
     rsvpCounts: Record<string, number>
     includePast?: boolean
-    rowActions?: (match: { id: string }) => unknown
+    matchActions?: (match: { id: string }) => unknown
   }) => (
     <>
       <div>includePast:{String(!!includePast)}</div>
@@ -69,7 +69,7 @@ vi.mock('@/components/matches/MatchesList', () => ({
         <div
           key={m.id}
           data-rsvp-count={rsvpCounts[m.id]}
-          data-delete={String(Boolean(rowActions?.(m)))}
+          data-delete={String(Boolean(matchActions?.(m)))}
         >
           Row:{m.id}:{hrefFor(m.id)}
         </div>

@@ -274,7 +274,7 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
           onRetryMyRsvps={() => void myRsvps.retry()}
           paginationScope={JSON.stringify([clubId, userId])}
           includePast={showAdminList}
-          rowActions={match =>
+          matchActions={match =>
             // Page-level admin lists can include unstamped matches a club
             // admin cannot delete; only offer Delete where they can.
             showAdminList && manageFlags[match.id] ? (
