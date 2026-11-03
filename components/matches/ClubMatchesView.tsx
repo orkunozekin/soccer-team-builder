@@ -6,6 +6,7 @@ import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { MatchCard } from '@/components/matches/MatchCard'
+import { PlayerMatchesList } from '@/components/matches/PlayerMatchesList'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -20,6 +21,7 @@ import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useClientPagination } from '@/lib/hooks/useClientPagination'
 import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
+import { useMyMatchRsvps } from '@/lib/hooks/useMyMatchRsvps'
 import { listMatchesForViewer } from '@/lib/services/matchService'
 import { getMatchRsvpCount } from '@/lib/services/rsvpService'
 import { cn } from '@/lib/utils'
@@ -87,6 +89,11 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     })
   /** Super users and club admins get the manage list (past matches, delete). */
   const showAdminList = !!isSuperUser || canCreateMatch
+  // Players see "You're in" lines and an "I'm in" filter; admins do not.
+  const myRsvps = useMyMatchRsvps(
+    userId,
+    !showAdminList && !authLoading && !membershipsLoading
+  )
 
   const matchHref = (matchId: string) => {
     if (clubSlug) return clubMatchPath(clubSlug, matchId)
@@ -339,6 +346,16 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
             </p>
           </CardContent>
         </Card>
+      ) : !showAdminList ? (
+        <PlayerMatchesList
+          matches={visibleMatches}
+          rsvpCounts={rsvpCounts}
+          hrefFor={matchHref}
+          canOpen={match => (manageFlags[match.id] ?? false) || match.rsvpOpen}
+          myRsvps={myRsvps}
+          onRetryMyRsvps={() => void myRsvps.retry()}
+          paginationScope={JSON.stringify([clubId, userId])}
+        />
       ) : (
         <div
           className={cn(
@@ -372,7 +389,7 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
           })}
         </div>
       )}
-      {paged.pagination.totalPages > 1 && (
+      {showAdminList && paged.pagination.totalPages > 1 && (
         <Pagination {...paged.pagination} itemLabel="matches" />
       )}
     </div>

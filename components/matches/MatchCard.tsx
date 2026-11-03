@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import { ChevronRight, MapPin, Users } from 'lucide-react'
 import Link from 'next/link'
 import { LocationLink } from '@/components/matches/LocationLink'
+import { MatchDateBlock } from '@/components/matches/MatchDateBlock'
 import { StatusPill } from '@/components/ui/status-pill'
 import { cn } from '@/lib/utils'
 import { locationDisplayName } from '@/lib/utils/location'
@@ -52,20 +53,7 @@ export function MatchCard({
         match.rsvpOpen && 'border-[#4A1E19]'
       )}
     >
-      <div
-        aria-hidden
-        className="flex w-14 shrink-0 flex-col items-center rounded-xl border border-border bg-background py-2"
-      >
-        <span className="font-mono text-[10px] tracking-[0.12em] text-fog">
-          {format(matchDate, 'EEE').toUpperCase()}
-        </span>
-        <span className="font-display text-[28px] font-black leading-none">
-          {format(matchDate, 'd')}
-        </span>
-        <span className="font-mono text-[10px] tracking-[0.12em] text-fog">
-          {format(matchDate, 'MMM').toUpperCase()}
-        </span>
-      </div>
+      <MatchDateBlock date={matchDate} />
 
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <h3 className="font-display text-2xl font-extrabold uppercase leading-none tracking-[0.01em]">

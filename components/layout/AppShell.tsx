@@ -10,6 +10,7 @@ import { ClubNav } from '@/components/layout/ClubNav'
 import { ClubWorkspaceStatus } from '@/components/layout/ClubWorkspaceStatus'
 import { Navigation } from '@/components/layout/Navigation'
 import { PlatformAdminNav } from '@/components/layout/PlatformAdminNav'
+import { ProfileBadge } from '@/components/layout/ProfileBadge'
 import { Wordmark } from '@/components/layout/Wordmark'
 import { NavLoadingSkeleton } from '@/components/LoadingSkeleton'
 import {
@@ -30,7 +31,7 @@ import { clubMatchesPath } from '@/lib/utils/clubPaths'
  * mobile sheet) and a sign-out footer. Signed-out users keep the centered header.
  */
 export function AppShell({ children }: { children?: React.ReactNode }) {
-  const { user, loading } = useAuth()
+  const { user, userData, loading } = useAuth()
   const { isAdmin } = useAdmin()
   const workspace = useClubWorkspace()
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -167,6 +168,10 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             </SheetContent>
           </Sheet>
           <div className="min-w-0 flex-1">{switcher}</div>
+          <ProfileBadge
+            displayName={userData?.displayName}
+            jerseyNumber={userData?.jerseyNumber}
+          />
         </header>
         {workspace.switchError ? (
           <p role="alert" className="px-4 pt-3 text-sm text-flare">
