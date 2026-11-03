@@ -35,9 +35,15 @@ Let each signed-in user pick a dark or light theme. The choice is saved on their
 7. Theme runtime: add `next-themes` (`attribute="class"`, `themes={['dark','light']}`, `defaultTheme="dark"`, `enableSystem={false}`, `storageKey="sv-theme"`). Wrap it in a `ThemeProvider` under `components/providers/`, remove the hardcoded `className="dark"` from [`app/layout.tsx`](../../app/layout.tsx), and add `suppressHydrationWarning` on `<html>`.
 8. `ThemeSync` client component (mounted inside `AuthProvider` + `LaunchDarklyProvider`): once `profileReady`, call `setTheme(flagOn ? userData.themePreference ?? 'dark' : 'dark')`. Generation-guard on uid so a fast account switch can't apply the previous user's theme.
 9. `AppearanceSettings` component on [`app/profile/page.tsx`](../../app/profile/page.tsx): a two-option segmented control (Dark / Light). Optimistic `setTheme` + `updateProfileAPI({ themePreference })` + `setUserData` merge. On failure, revert to the previous theme and show a sanitized error.
-10. Audit hard-coded colors that break on light: `bg-white` in [`RSVPSuccessCelebration.tsx`](../../components/matches/RSVPSuccessCelebration.tsx), `text-white` / `bg-zinc-500` in [`BenchList.tsx`](../../components/teams/BenchList.tsx), [`TeamsDisplay.tsx`](../../components/teams/TeamsDisplay.tsx), [`PlayerRsvpHistory.tsx`](../../components/admin/PlayerRsvpHistory.tsx), the `shadow-[inset_…red.50]` rail in [`SidenavLink.tsx`](../../components/layout/SidenavLink.tsx), and the `bg-black/60` overlays (probably fine as they are). Fix only what's actually unreadable.
-11. Visual QA in both themes at 320px / tablet / desktop: login, match list, match detail, RSVP flow, teams, admin pages, dialogs/sheets.
-12. Tests: route validation, `normalizeThemePreference`, `ThemeSync` (flag off → dark; flag on → stored value; uid change resets), `AppearanceSettings` (optimistic switch + revert on API error).
+10. Tokenize the arbitrary hex classes that the Tailwind remap won't catch (found while designing):
+    - `text-[#B9C2BD]` (~20 uses: `PageHeader`, `SidenavLink`, `filter-pill`, `status-pill`, `AuthPageShell`, `LoginForm`, `MatchDetails`, `RosterFillMeter`, `TeamToggle`, …) → new `mist` token.
+    - `text-[#6F7B74]` in [`RosterFillMeter.tsx`](../../components/matches/RosterFillMeter.tsx) → new `dim` token.
+    - `text-[#FFB3AA]` (live status) in [`matchStatusText.ts`](../../components/matches/matchStatusText.ts) and [`status-pill.tsx`](../../components/ui/status-pill.tsx), plus the pill fills/borders `#1E1412` / `#4A1E19` / `#1A2A12` / `#3B5A22` (also in [`MatchDetails.tsx`](../../components/matches/MatchDetails.tsx)) → `live-text`, `live-pill`, `ok-pill` tokens.
+    - `text-ink` on surfaces that **don't** flip (the white RSVP pill in [`NextMatchHero.tsx`](../../components/matches/NextMatchHero.tsx), the orange [`ProfileBadge.tsx`](../../components/layout/ProfileBadge.tsx)) → new fixed `on-bright` (#0B0F0D). Once `ink` flips, these would be light text on a light fill. `bg-chalk text-ink` pairs (filter pill, hero non-live pill) flip together and are fine.
+    - `shadow-2xl shadow-black/40` on the auth panel ([`AuthPageShell.tsx`](../../components/auth/AuthPageShell.tsx)) is too heavy on light; use a softer shadow in light.
+11. Audit the remaining hard-coded colors: `bg-white` in [`RSVPSuccessCelebration.tsx`](../../components/matches/RSVPSuccessCelebration.tsx), `text-white` / `bg-zinc-500` in [`BenchList.tsx`](../../components/teams/BenchList.tsx), [`TeamsDisplay.tsx`](../../components/teams/TeamsDisplay.tsx), [`PlayerRsvpHistory.tsx`](../../components/admin/PlayerRsvpHistory.tsx), `text-red-400` / `bg-red-900/40` in `AuditEventLog.tsx`, and the `bg-black/60` overlays (probably fine as they are). Fix only what's actually unreadable.
+12. Visual QA in both themes at 320px / tablet / desktop: login, match list, match detail, RSVP flow, teams, admin pages, dialogs/sheets.
+13. Tests: route validation, `normalizeThemePreference`, `ThemeSync` (flag off → dark; flag on → stored value; uid change resets), `AppearanceSettings` (optimistic switch + revert on API error).
 
 ## Current state
 
@@ -97,10 +103,10 @@ Use one set of names that both themes define, instead of adding `dark:` classes 
 
 ```css
 :root {            /* Daylight */
-  --fl-ink: 246 245 240;   /* page ground */
-  --fl-chalk: 17 21 19;    /* primary text */
-  --fl-fog: 92 102 97;     /* secondary text */
-  /* turf, turf-raised, rail, line, flare, lime … */
+  --fl-ink: 245 244 238;   /* #F5F4EE page ground */
+  --fl-chalk: 18 24 21;    /* #121815 primary text */
+  --fl-fog: 86 97 91;      /* #56615B secondary text */
+  /* turf, turf-raised, rail, line, flare, lime … (table below) */
 }
 .dark {            /* Floodlight (existing hex values, as RGB triplets) */
   --fl-ink: 11 15 13;      /* #0B0F0D */
@@ -113,7 +119,31 @@ Use one set of names that both themes define, instead of adding `dark:` classes 
 chalk: 'rgb(var(--fl-chalk) / <alpha-value>)',
 ```
 
-The Daylight values above are placeholders. The final palette needs a design pass (todo 6) that checks WCAG AA contrast for text tokens on the `card` / `turf` surfaces, and that `flare` and the brand red still read correctly on a light ground.
+**Proposed Daylight palette** (from the design canvas: [Soccerville Daylight Theme](https://claude.ai/artifact/WxiJNNTkc7f14wSQaSCiaj)). Contrast is against `#F5F4EE`; every text token passes AA.
+
+| Token | Role | Floodlight | Daylight | Contrast |
+|-------|------|-----------|----------|----------|
+| `ink` | page ground, `html` bg | `#0B0F0D` | `#F5F4EE` | — |
+| `rail` | side rail, mobile header, sheets | `#0F1411` | `#ECEAE2` | decor |
+| `turf` | cards, hover wash | `#131A16` | `#FFFFFF` | decor |
+| `turf-raised` | active nav, raised chips | `#1C2420` | `#EEF0EA` | decor |
+| `line` | borders, dashed dividers | `#2F3A34` | `#D3D8D1` | decor |
+| `chalk` | primary text | `#F3F1EA` | `#121815` | 16.3:1 |
+| `mist` (new) | lede, nav labels | `#B9C2BD` | `#3F4A44` | 8.4:1 |
+| `fog` | secondary text, eyebrows | `#9AA59F` | `#56615B` | 5.8:1 |
+| `dim` (new) | roster capacity | `#6F7B74` | `#636D67` | 4.9:1 |
+| `flare` | errors, focus ring, outline button | `#FF5A4A` | `#C42617` | 5.2:1 |
+| `lime` | success text, location pin | `#BAE87B` | `#3B7A0F` | 4.8:1 |
+| `live-text` (new) | live status line | `#FFB3AA` | `#B42318` | 6.0:1 |
+| `live-pill` bg / border (new) | status pill | `#1E1412` / `#4A1E19` | `#FCE9E6` / `#F3C2BB` | text 5.6:1 |
+| `ok-pill` bg / border (new) | success pill | `#1A2A12` / `#3B5A22` | `#EAF3E0` / `#BFD8A6` | text 4.6:1 |
+| `pitch-stripes` | auth hero band | `#102619` / `#133020` | `#DCE9D6` / `#D1E2CA` | decor |
+| `primary` | card red (unchanged) | `#D72A1C` | `#D72A1C` | white on it 5.0:1 |
+| `on-bright` (new, fixed) | dark text on white/orange pills | `#0B0F0D` | `#0B0F0D` | — |
+
+shadcn HSL tokens in `:root` follow the same values: `--background` = ink, `--card`/`--popover` = turf, `--border` `#E1E4DE`, `--input` `#CDD3CC`, `--muted-foreground` = fog, `--ring` = `#D72A1C`.
+
+These values still need sign-off from whoever owns the brand, but they're no longer placeholders.
 
 `chalk` now means "foreground" rather than literal chalk in light mode. That's an accepted naming wart for v1. Renaming to semantic names is a separate refactor (see Later).
 
@@ -151,7 +181,7 @@ The Daylight values above are placeholders. The final palette needs a design pas
 | `components/providers/ThemeSync.tsx` (new, + test) | profile → theme sync |
 | `components/profile/AppearanceSettings.tsx` (new, + test) | switch UI |
 | [`app/profile/page.tsx`](../../app/profile/page.tsx) | render `AppearanceSettings` |
-| Hard-coded color spots (todo 10) | targeted fixes only |
+| Hard-coded color spots (todos 10–11) | new tokens + targeted fixes only |
 | [`docs/TECH_STACK.md`](../TECH_STACK.md) | note `next-themes` + token approach |
 
 ## Acceptance criteria
@@ -178,14 +208,15 @@ The Daylight values above are placeholders. The final palette needs a design pas
 ### Done so far
 
 - Plan written. No code changes yet.
+- Design canvas published: [Soccerville Daylight Theme](https://claude.ai/artifact/WxiJNNTkc7f14wSQaSCiaj). It has the token map, Matches (Floodlight vs Daylight), Profile → Appearance (interactive) and Sign in (Daylight). The link is private to the owner until it's shared.
 
 ### Remaining work
 
-- All Todos (1–12). Start with 5–6 (tokenizing + Daylight palette): it's the largest risk and can be checked visually by temporarily removing `dark` from `<html>`, before any preference plumbing.
+- All Todos (1–13). Start with 5, 6 and 10 (tokenizing + Daylight palette): it's the largest risk and can be checked visually by temporarily removing `dark` from `<html>`, before any preference plumbing.
 
 ### Blockers / risks
 
-- The Daylight palette needs design sign-off. The values in this doc are placeholders.
+- The Daylight palette (Design → table) needs sign-off before it ships.
 - The `light-theme` flag has to be created in the LaunchDarkly dashboard (both environments) before the toggle can show outside local overrides.
 
 ### Pointers for the next agent
