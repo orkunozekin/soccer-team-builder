@@ -1,13 +1,17 @@
 'use client'
 
 import { useState } from 'react'
+import { Settings, Ticket, Users } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { InitialsAvatar } from '@/components/ui/initials-avatar'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { StatusPill } from '@/components/ui/status-pill'
 import { updateProfileAPI } from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
+import { cn } from '@/lib/utils'
 import {
   clubInvitesPath,
   clubRosterPath,
@@ -58,12 +62,15 @@ export function ProfileClubsSection() {
         </div>
       )}
 
-      <div>
-        <h3 className="text-sm font-semibold text-foreground">
-          Clubs I&apos;m in
-        </h3>
+      <section aria-labelledby="your-clubs-heading">
+        <h2
+          id="your-clubs-heading"
+          className="text-sm font-semibold text-foreground"
+        >
+          Your clubs
+        </h2>
         {memberships.length === 0 ? (
-          <div className="mt-2 space-y-3">
+          <div className="mt-3 space-y-4 rounded-2xl border border-border bg-card p-5">
             <p className="text-sm text-muted-foreground">
               You are not a member of any club yet. Enter an invite code below,
               or open the{' '}
@@ -75,37 +82,85 @@ export function ProfileClubsSection() {
             <JoinClubForm onJoined={() => void refresh()} />
           </div>
         ) : (
-          <ul className="mt-2 space-y-2">
+          <ul className="mt-3 space-y-4">
             {memberships.map(m => {
               const isActive = activeClubId === m.clubId
+              const isAdmin = m.role === 'club_admin'
               return (
                 <li
                   key={m.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
+                  className={cn(
+                    'rounded-2xl border bg-card p-4 sm:p-5',
+                    isActive ? 'border-emerald-800/60' : 'border-border'
+                  )}
                 >
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span className="truncate font-medium text-foreground">
-                      {m.club.name}
-                    </span>
-                    <span className="shrink-0 rounded-md bg-accent px-2 py-0.5 text-xs font-medium text-[#B9C2BD]">
-                      {formatMembershipRole(m.role)}
-                    </span>
-                    {isActive && (
-                      <span className="shrink-0 rounded-md bg-emerald-900/40 px-2 py-0.5 text-xs font-medium text-emerald-300">
-                        active
-                      </span>
+                  <div className="flex items-center gap-3">
+                    <InitialsAvatar
+                      name={m.club.name}
+                      className="h-11 w-11 text-sm"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-base font-semibold text-foreground">
+                        {m.club.name}
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <StatusPill tone="neutral">
+                          {formatMembershipRole(m.role)}
+                        </StatusPill>
+                        {isActive && (
+                          <StatusPill tone="success">Active</StatusPill>
+                        )}
+                      </div>
+                    </div>
+                    {!isActive && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0"
+                        disabled={activeBusy}
+                        onClick={() => handleSetActiveClub(m.clubId)}
+                      >
+                        {activeBusy ? 'Saving…' : 'Set as active'}
+                      </Button>
                     )}
                   </div>
-                  {!isActive && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={activeBusy}
-                      onClick={() => handleSetActiveClub(m.clubId)}
+
+                  {isAdmin && (
+                    <nav
+                      aria-label={`Manage ${m.club.name}`}
+                      className="mt-4 grid grid-cols-3 gap-2"
                     >
-                      {activeBusy ? 'Saving…' : 'Set as active'}
-                    </Button>
+                      {[
+                        {
+                          label: 'Roster',
+                          href: clubRosterPath(m.club.slug),
+                          Icon: Users,
+                        },
+                        {
+                          label: 'Invites',
+                          href: clubInvitesPath(m.club.slug),
+                          Icon: Ticket,
+                        },
+                        {
+                          label: 'Settings',
+                          href: clubSettingsPath(m.club.slug),
+                          Icon: Settings,
+                        },
+                      ].map(({ label, href, Icon }) => (
+                        <Link
+                          key={label}
+                          href={href}
+                          className="group flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-accent/40 px-2 py-3 text-sm font-medium text-foreground transition-colors hover:border-emerald-700/60 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]"
+                        >
+                          <Icon
+                            aria-hidden
+                            className="h-5 w-5 text-emerald-300 transition-transform group-hover:scale-110"
+                          />
+                          {label}
+                        </Link>
+                      ))}
+                    </nav>
                   )}
                 </li>
               )
@@ -113,53 +168,12 @@ export function ProfileClubsSection() {
           </ul>
         )}
         {memberships.length > 1 && activeClubId && (
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className="mt-3 text-xs text-muted-foreground">
             Match lists and new matches use your active club. You can also
             switch from the club bar.
           </p>
         )}
-      </div>
-
-      {adminClubs.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">
-            Clubs I manage
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Roster, invites, and settings live on the club bar for each club.
-          </p>
-          <ul className="mt-2 space-y-2">
-            {adminClubs.map(m => (
-              <li
-                key={`admin-${m.id}`}
-                className="rounded-lg border border-border px-3 py-2"
-              >
-                <div className="font-medium text-foreground">{m.club.name}</div>
-                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
-                  <Link
-                    href={clubRosterPath(m.club.slug)}
-                    className="font-medium text-[#B9C2BD] underline-offset-2 hover:underline"
-                  >
-                    Roster
-                  </Link>
-                  <Link
-                    href={clubInvitesPath(m.club.slug)}
-                    className="font-medium text-[#B9C2BD] underline-offset-2 hover:underline"
-                  >
-                    Invites
-                  </Link>
-                  <Link
-                    href={clubSettingsPath(m.club.slug)}
-                    className="font-medium text-[#B9C2BD] underline-offset-2 hover:underline"
-                  >
-                    Settings
-                  </Link>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      </section>
 
       {memberships.length > 0 && adminClubs.length === 0 && (
         <p className="text-sm text-muted-foreground">
