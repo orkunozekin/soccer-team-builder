@@ -3,6 +3,8 @@ import {
   filterPlayerMatches,
   getPlayerMatchStatus,
   indexConfirmedRsvps,
+  getMatchListFilters,
+  selectMatchList,
   splitNextMatch,
 } from './playerMatchList'
 import type { RSVP } from '@/types/rsvp'
@@ -63,6 +65,16 @@ describe('getPlayerMatchStatus', () => {
     ).toEqual({ tone: 'success', label: "You're in · ST · 12/22" })
   })
 
+  it('reports a past match as ended even for a confirmed player', () => {
+    expect(
+      getPlayerMatchStatus({
+        match: match('a', '2030-01-10'),
+        myRsvp: { position: 'ST' },
+        now: new Date('2030-01-20T00:00:00Z'),
+      })
+    ).toEqual({ tone: 'muted', label: 'Match ended' })
+  })
+
   it('omits unknown position and count', () => {
     expect(
       getPlayerMatchStatus({
@@ -79,5 +91,47 @@ describe('getPlayerMatchStatus', () => {
     })
     expect(status.tone).toBe('live')
     expect(status.label).toMatch(/^RSVP open/)
+  })
+})
+
+describe('getMatchListFilters', () => {
+  it('offers Past only to people who manage matches', () => {
+    expect(getMatchListFilters(false).map(f => f.label)).toEqual([
+      'Upcoming',
+      "I'm in",
+    ])
+    expect(getMatchListFilters(true).map(f => f.label)).toEqual([
+      'Upcoming',
+      "I'm in",
+      'Past',
+    ])
+  })
+})
+
+describe('selectMatchList', () => {
+  const now = new Date('2030-01-15T12:00:00Z')
+  const all = [
+    match('old', '2030-01-05'),
+    match('older', '2030-01-01'),
+    match('next', '2030-01-16'),
+    match('later', '2030-01-20'),
+  ]
+
+  it('features the soonest upcoming match and lists the rest', () => {
+    const { next, rows } = selectMatchList(all, 'upcoming', new Map(), now)
+    expect(next?.id).toBe('next')
+    expect(rows.map(m => m.id)).toEqual(['later'])
+  })
+
+  it('lists past matches newest first, keeping the upcoming hero', () => {
+    const { next, rows } = selectMatchList(all, 'past', new Map(), now)
+    expect(next?.id).toBe('next')
+    expect(rows.map(m => m.id)).toEqual(['old', 'older'])
+  })
+
+  it('has no hero when nothing is upcoming', () => {
+    expect(
+      selectMatchList(all.slice(0, 2), 'upcoming', new Map(), now)
+    ).toEqual({ next: null, rows: [] })
   })
 })

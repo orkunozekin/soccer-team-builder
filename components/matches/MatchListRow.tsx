@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { format } from 'date-fns'
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
@@ -13,10 +14,13 @@ export function MatchListRow({
   match,
   href,
   status,
+  actions,
 }: {
   match: Match
   href: string
   status: MatchRsvpStatus
+  /** Controls (e.g. admin Delete) placed beside the row link, never inside it. */
+  actions?: ReactNode
 }) {
   const matchDate = new Date(match.date)
   const locationName = match.location
@@ -24,10 +28,10 @@ export function MatchListRow({
     : null
 
   return (
-    <li>
+    <li className="flex items-center gap-2 border-b border-border">
       <Link
         href={href}
-        className="flex items-center gap-4 rounded-lg border-b border-border py-3.5 outline-none transition-colors hover:bg-turf/60 focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex min-w-0 flex-1 items-center gap-4 rounded-lg py-3.5 outline-none transition-colors hover:bg-turf/60 focus-visible:ring-2 focus-visible:ring-ring"
       >
         <MatchDateBlock date={matchDate} showMonth={false} />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -44,6 +48,7 @@ export function MatchListRow({
         </div>
         <ChevronRight className="h-4 w-4 shrink-0 text-fog" aria-hidden />
       </Link>
+      {actions}
     </li>
   )
 }

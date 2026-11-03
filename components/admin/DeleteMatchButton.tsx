@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { format } from 'date-fns'
+import { Trash2 } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,29 +13,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { MatchCard } from '@/components/matches/MatchCard'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { ButtonSpinner } from '@/components/ui/button-spinner'
 import { deleteMatchAPI } from '@/lib/api/client'
-import { Match } from '@/types/match'
+import type { Match } from '@/types/match'
 
-interface AdminMatchCardProps {
-  match: Match
-  rsvpCount?: number
-  onDeleted?: () => void
-  /** Detail URL. Defaults to the legacy admin match route. */
-  href?: string
-  /** Index for staggered entrance animation */
-  index?: number
-}
-
-export function AdminMatchCard({
+/** Icon button that soft-deletes a match after a confirmation dialog. */
+export function DeleteMatchButton({
   match,
-  rsvpCount,
   onDeleted,
-  href,
-  index,
-}: AdminMatchCardProps) {
+}: {
+  match: Pick<Match, 'id' | 'date'>
+  onDeleted?: () => void
+}) {
   const [open, setOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -52,26 +44,20 @@ export function AdminMatchCard({
 
   return (
     <>
-      <MatchCard
-        match={match}
-        rsvpCount={rsvpCount}
-        href={href ?? `/admin/matches/${match.id}`}
-        index={index}
-        actions={
-          <Button
-            variant="destructive"
-            size="sm"
-            className="h-9 rounded-full px-4"
-            loading={deleting}
-            onClick={() => setOpen(true)}
-          >
-            Delete
-          </Button>
-        }
-      />
+      <Button
+        type="button"
+        variant="destructive"
+        size="icon"
+        className="h-10 w-10 shrink-0 rounded-full"
+        aria-label={`Delete match on ${format(new Date(match.date), 'EEEE, MMM d')}`}
+        loading={deleting}
+        onClick={() => setOpen(true)}
+      >
+        <Trash2 className="h-4 w-4" aria-hidden />
+      </Button>
 
       <AlertDialog open={open} onOpenChange={setOpen}>
-        <AlertDialogContent onClick={e => e.stopPropagation()}>
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete match?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -84,7 +70,7 @@ export function AdminMatchCard({
             <AlertDialogAction
               onClick={e => {
                 e.preventDefault()
-                handleConfirmDelete()
+                void handleConfirmDelete()
               }}
               disabled={deleting}
               className={buttonVariants({ variant: 'destructive' })}
