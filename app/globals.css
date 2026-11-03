@@ -51,11 +51,6 @@
     -webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent);
     mask-image: linear-gradient(to bottom, #000 30%, transparent);
   }
-
-  /* Kept as a hook for match/hero cards; Floodlight drops the red top rule. */
-  .card-soccer-accent {
-    border-radius: 1.25rem;
-  }
 }
 
 @layer base {
