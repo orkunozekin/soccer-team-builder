@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountMenu } from './AccountMenu'
+import { FeatureFlagContext } from '@/components/flags/FeatureFlagContext'
 
 const replace = vi.fn()
 const logoutUser = vi.fn()
@@ -11,6 +12,10 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/lib/hooks/useAuth', () => ({
   useAuth: () => ({ user: { uid: 'u1', email: 'a@b.c' }, userData: null }),
+}))
+
+vi.mock('@/lib/api/client', () => ({
+  updateProfileAPI: vi.fn(),
 }))
 
 vi.mock('@/lib/firebase/auth', () => ({
@@ -42,5 +47,27 @@ describe('AccountMenu', () => {
     expect(document.body.classList.contains('block-interactivity-1')).toBe(
       false
     )
+  })
+
+  it('has no theme toggle while the light-theme flag is off', () => {
+    render(<AccountMenu />)
+    expect(screen.getByText('a@b.c')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('group', { name: 'Theme' })
+    ).not.toBeInTheDocument()
+  })
+
+  it('puts the theme toggle on the user name row without squeezing it', () => {
+    render(
+      <FeatureFlagContext.Provider value={{ 'light-theme': true }}>
+        <AccountMenu />
+      </FeatureFlagContext.Provider>
+    )
+    const name = screen.getByText('a@b.c')
+    const group = screen.getByRole('group', { name: 'Theme' })
+    expect(group.parentElement).toBe(name.parentElement)
+    expect(name).toHaveClass('min-w-0', 'flex-1', 'truncate')
+    expect(group).toHaveClass('shrink-0')
+    expect(name.parentElement).toHaveClass('flex-wrap')
   })
 })

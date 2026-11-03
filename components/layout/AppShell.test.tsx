@@ -58,6 +58,7 @@ vi.mock('@/lib/hooks/useClubSlugAccess', () => ({
 
 vi.mock('@/lib/flags/useFeatureFlag', () => ({
   useFeatureFlag: (key: string) => useFeatureFlagMock(key),
+  useFeatureFlagReady: () => true,
 }))
 
 vi.mock('@/store/authStore', () => ({
@@ -268,6 +269,37 @@ describe('AppShell', () => {
     expect(
       within(sheetScroll).getByRole('navigation', { name: 'Club sections' })
     ).toBeInTheDocument()
+  })
+
+  it('shows the theme toggle by the user name in the rail and the sheet when the flag is on', async () => {
+    const user = userEvent.setup()
+    useFeatureFlagMock.mockImplementation(key => key === 'light-theme')
+    render(<AppShell />)
+
+    const railGroup = rail().getByRole('group', { name: 'Theme' })
+    expect(railGroup.parentElement).toHaveTextContent('Pat Player')
+    expect(
+      within(railGroup).getByRole('button', { name: 'Dark theme' })
+    ).toBeInTheDocument()
+    expect(
+      within(railGroup).getByRole('button', { name: 'Light theme' })
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByLabelText('Open club menu'))
+    const sheetGroup = within(screen.getByRole('dialog')).getByRole('group', {
+      name: 'Theme',
+    })
+    expect(sheetGroup.parentElement).toHaveTextContent('Pat Player')
+    expect(
+      within(sheetGroup).getByRole('button', { name: 'Light theme' })
+    ).toBeInTheDocument()
+  })
+
+  it('hides the theme toggle when the flag is off', () => {
+    render(<AppShell />)
+    expect(
+      screen.queryByRole('group', { name: 'Theme' })
+    ).not.toBeInTheDocument()
   })
 
   it('hides admin sections for non super users', () => {
