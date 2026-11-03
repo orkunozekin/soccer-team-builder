@@ -9,6 +9,7 @@ import type { ClubMembershipWithClub } from '@/types/club'
 const pushMock = vi.fn()
 const replaceMock = vi.fn()
 const setUserDataMock = vi.fn()
+const mergeUserDataMock = vi.fn()
 const useAuthMock = vi.fn()
 const useAdminMock = vi.fn()
 const useClubMembershipsMock = vi.fn()
@@ -63,8 +64,15 @@ vi.mock('@/lib/flags/useFeatureFlag', () => ({
 
 vi.mock('@/store/authStore', () => ({
   useAuthStore: (
-    selector: (s: { setUserData: typeof setUserDataMock }) => unknown
-  ) => selector({ setUserData: setUserDataMock }),
+    selector: (s: {
+      setUserData: typeof setUserDataMock
+      mergeUserData: typeof mergeUserDataMock
+    }) => unknown
+  ) =>
+    selector({
+      setUserData: setUserDataMock,
+      mergeUserData: mergeUserDataMock,
+    }),
 }))
 
 vi.mock('@/lib/api/client', () => ({
@@ -431,9 +439,9 @@ describe('AppShell', () => {
     await waitFor(() => {
       expect(updateProfileAPI).toHaveBeenCalledWith({ activeClubId: 'beta' })
     })
-    expect(setUserDataMock).toHaveBeenCalledWith(
-      expect.objectContaining({ activeClubId: 'beta' })
-    )
+    expect(mergeUserDataMock).toHaveBeenCalledWith('u1', {
+      activeClubId: 'beta',
+    })
     expect(pushMock).toHaveBeenCalledWith('/c/beta/matches')
   })
 

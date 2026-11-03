@@ -31,7 +31,7 @@ function ProfileFormInner({
   user: import('firebase/auth').User
   userData: User
 }) {
-  const setUserData = useAuthStore(state => state.setUserData)
+  const mergeUserData = useAuthStore(state => state.mergeUserData)
   const [displayName, setDisplayName] = useState(userData.displayName)
   const [jerseyNumber, setJerseyNumber] = useState<string>(
     userData.jerseyNumber?.toString() || ''
@@ -116,12 +116,9 @@ function ProfileFormInner({
 
       await updateProfileAPI(updates)
 
-      // Update local state
-      const updatedUserData: User = {
-        ...userData,
-        ...updates,
-      }
-      setUserData(updatedUserData)
+      // Merge into the current profile, not the pre-request snapshot, so a
+      // concurrent theme or club change saved meanwhile is kept.
+      mergeUserData(userData.uid, updates)
 
       const updated: string[] = []
       if (trimmedName !== initialValues.displayName)

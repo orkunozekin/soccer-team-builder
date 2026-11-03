@@ -27,10 +27,7 @@ export async function saveThemePreference({
   try {
     await updateProfileAPI({ themePreference: next })
     if (!isLatest()) return
-    const { user, userData, setUserData } = useAuthStore.getState()
-    if (user?.uid === uid && userData?.uid === uid) {
-      setUserData({ ...userData, themePreference: next })
-    }
+    useAuthStore.getState().mergeUserData(uid, { themePreference: next })
   } catch {
     if (!isLatest()) return
     if (useAuthStore.getState().user?.uid !== uid) return

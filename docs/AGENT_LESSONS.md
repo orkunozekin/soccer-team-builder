@@ -291,3 +291,11 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 - **Gap:** `ProfileForm` reset its inputs from an effect keyed on the whole `userData` object. Once the sidebar theme toggle started merging `themePreference` into `userData`, a theme switch on `/profile` wiped any unsaved name, jersey or position edits.
 - **Going forward:** When a form mirrors shared state, depend on the specific fields it edits, not the parent object. Before adding a new writer to a shared store, check every effect keyed on that object.
 - **Pointers:** `components/profile/ProfileForm.tsx`, `components/profile/ProfileForm.test.tsx`, `lib/theme/saveThemePreference.ts`
+
+### 2026-11-03 — Merge profile writes into current state, not a pre-await snapshot
+
+- **Source:** PR #132 · Codex
+- **Gap:** `ProfileForm` (and the club switchers) wrote back `{ ...userData, ...updates }` using the `userData` captured before `await updateProfileAPI`. Once the sidebar theme toggle could save at the same time, a profile submit that finished second restored the old `themePreference`, and `ThemeSync` flipped the UI back.
+- **Going forward:** After an async profile write, merge with `useAuthStore.getState().mergeUserData(uid, patch)`. It merges into the profile as it is now, and only if it still belongs to `uid`. Never write back a spread of a snapshot taken before an `await`.
+- **Pointers:** `store/authStore.ts` (`mergeUserData`), `components/profile/ProfileForm.tsx`, `components/profile/ProfileClubsSection.tsx`, `lib/hooks/useClubWorkspace.ts`, `lib/theme/saveThemePreference.ts`
+- **Promoted:** AGENT_CONTEXT.md → §3 Async state, races, and transactions; `.greptile/rules.md`

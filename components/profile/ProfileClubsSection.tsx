@@ -22,7 +22,7 @@ import { useAuthStore } from '@/store/authStore'
 
 export function ProfileClubsSection() {
   const { userData } = useAuth()
-  const setUserData = useAuthStore(state => state.setUserData)
+  const mergeUserData = useAuthStore(state => state.mergeUserData)
   const { memberships, loading, error, refresh } = useClubMemberships()
   const [activeBusy, setActiveBusy] = useState(false)
   const [actionError, setActionError] = useState('')
@@ -36,7 +36,7 @@ export function ProfileClubsSection() {
     setActionError('')
     try {
       await updateProfileAPI({ activeClubId: clubId })
-      setUserData({ ...userData, activeClubId: clubId })
+      mergeUserData(userData.uid, { activeClubId: clubId })
     } catch (err) {
       setActionError(
         err instanceof Error ? err.message : 'Failed to set active club'

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import type { User as FirebaseUser } from 'firebase/auth'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProfileForm } from './ProfileForm'
+import { updateProfileAPI } from '@/lib/api/client'
 import { useAuthStore } from '@/store/authStore'
 import type { User } from '@/types/user'
 
@@ -64,5 +65,34 @@ describe('ProfileForm', () => {
     })
 
     expect(name).toHaveValue('Renamed Elsewhere')
+  })
+
+  it('keeps a theme saved while the profile submit was in flight', async () => {
+    const user = userEvent.setup()
+    let finishSubmit!: (value: { success: boolean }) => void
+    vi.mocked(updateProfileAPI).mockReturnValue(
+      new Promise(resolve => {
+        finishSubmit = resolve
+      })
+    )
+    render(<ProfileForm />)
+    const name = screen.getByLabelText(/name/i)
+    await user.clear(name)
+    await user.type(name, 'Pat Edited')
+    await user.click(screen.getByRole('button', { name: /update profile/i }))
+
+    // The sidebar theme save lands before the profile request returns.
+    act(() => {
+      useAuthStore.getState().mergeUserData('u1', { themePreference: 'light' })
+    })
+    await act(async () => {
+      finishSubmit({ success: true })
+    })
+
+    expect(useAuthStore.getState().userData).toMatchObject({
+      displayName: 'Pat Edited',
+      jerseyNumber: 7,
+      themePreference: 'light',
+    })
   })
 })

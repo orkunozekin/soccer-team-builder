@@ -59,7 +59,7 @@ function isPlatformPath(pathname: string): boolean {
 export function useClubWorkspace() {
   const { user, userData } = useAuth()
   const { isSuperUser } = useAdmin()
-  const setUserData = useAuthStore(state => state.setUserData)
+  const mergeUserData = useAuthStore(state => state.mergeUserData)
   const {
     memberships,
     loading: membershipsLoading,
@@ -127,18 +127,17 @@ export function useClubWorkspace() {
     })
   }, [displayClub, displayRole, isSuperUser])
 
-  const activeSectionHref =
-    sections.find(s => {
-      if (s.id === 'matches') {
-        return (
-          pathname === s.href ||
-          pathname.startsWith(`${s.href}/`) ||
-          pathname === '/matches' ||
-          pathname.startsWith('/matches/')
-        )
-      }
-      return pathname === s.href || pathname.startsWith(`${s.href}/`)
-    })?.href
+  const activeSectionHref = sections.find(s => {
+    if (s.id === 'matches') {
+      return (
+        pathname === s.href ||
+        pathname.startsWith(`${s.href}/`) ||
+        pathname === '/matches' ||
+        pathname.startsWith('/matches/')
+      )
+    }
+    return pathname === s.href || pathname.startsWith(`${s.href}/`)
+  })?.href
 
   const activeMemberships = useMemo(
     () => memberships.filter(m => m.status === 'active'),
@@ -183,7 +182,7 @@ export function useClubWorkspace() {
     setSwitchError('')
     try {
       await updateProfileAPI({ activeClubId: clubId })
-      setUserData({ ...userData, activeClubId: clubId })
+      mergeUserData(userData.uid, { activeClubId: clubId })
 
       // Stay on platform pages (profile/admin/auth). On club sections, keep
       // the same section when the new role allows it; otherwise land on Matches.
