@@ -149,7 +149,7 @@ export function ClubAdminRoster({
       className="mb-0"
       eyebrow="Club admin"
       title="Roster"
-      description="Promote or demote members. The last club admin cannot be demoted."
+      description="Select a member to view their profile and attendance, or change their role. The last club admin cannot be demoted."
       actions={
         !loading && members.length > 0 ? (
           <StatusPill tone="neutral">
