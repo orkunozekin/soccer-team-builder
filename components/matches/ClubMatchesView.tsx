@@ -1,12 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AdminMatchCard } from '@/components/admin/AdminMatchCard'
 import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
+import { DeleteMatchButton } from '@/components/admin/DeleteMatchButton'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
-import { MatchCard } from '@/components/matches/MatchCard'
-import { PlayerMatchesList } from '@/components/matches/PlayerMatchesList'
+import { MatchesList } from '@/components/matches/MatchesList'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -15,17 +14,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { FilterPill } from '@/components/ui/filter-pill'
-import { Pagination } from '@/components/ui/pagination'
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
-import { useClientPagination } from '@/lib/hooks/useClientPagination'
 import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
 import { useMyMatchRsvps } from '@/lib/hooks/useMyMatchRsvps'
 import { listMatchesForViewer } from '@/lib/services/matchService'
 import { getMatchRsvpCount } from '@/lib/services/rsvpService'
-import { cn } from '@/lib/utils'
-import { type MatchFilter, filterMatches } from '@/lib/utils/adminMatchFilters'
 import {
   canCreateClubMatches,
   canManageMatchClub,
@@ -35,12 +29,6 @@ import { clubMatchPath } from '@/lib/utils/clubPaths'
 import { isMatchPast } from '@/lib/utils/rsvpScheduler'
 import { useMatchStore } from '@/store/matchStore'
 import type { Match } from '@/types/match'
-
-const ADMIN_FILTERS: { value: MatchFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'upcoming', label: 'Upcoming' },
-  { value: 'past', label: 'Past' },
-]
 
 export type ClubMatchesViewProps = {
   /** Club to scope the list. `null` = all clubs (super_user legacy `/matches`). */
@@ -71,14 +59,11 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
   const { memberships, loading: membershipsLoading } = useClubMemberships()
   const { matches, setMatches } = useMatchStore()
   const [rsvpCounts, setRsvpCounts] = useState<Record<string, number>>({})
-  const [filter, setFilter] = useState<MatchFilter>('upcoming')
   const [listStatus, setListStatus] = useState<'loading' | 'ready' | 'error'>(
     'loading'
   )
   const fetchGen = useRef(0)
   const countsGen = useRef(0)
-  /** Avoid re-requesting counts for the same match after a failure. */
-  const attemptedCountIds = useRef(new Set<string>())
 
   const canCreateMatch =
     Boolean(clubId) &&
@@ -87,13 +72,10 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
       activeClubId: clubId,
       isSuperUser: !!isSuperUser,
     })
-  /** Super users and club admins get the manage list (past matches, delete). */
+  /** Super users and club admins also load past matches (Past filter). */
   const showAdminList = !!isSuperUser || canCreateMatch
-  // Players see "You're in" lines and an "I'm in" filter; admins do not.
-  const myRsvps = useMyMatchRsvps(
-    userId,
-    !showAdminList && !authLoading && !membershipsLoading
-  )
+  // Everyone gets "You're in" lines and the I'm in filter.
+  const myRsvps = useMyMatchRsvps(userId, !authLoading && !membershipsLoading)
 
   const matchHref = (matchId: string) => {
     if (clubSlug) return clubMatchPath(clubSlug, matchId)
@@ -140,14 +122,13 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
       // queries error (e.g. missing composite index).
       setListStatus('ready')
 
-      // Only count currently relevant cards: upcoming by default (admin Past
-      // tab lazy-loads counts when opened). Prefer denormalized match fields.
+      // Counts are shown for upcoming matches only (hero and "You're in"
+      // lines). Prefer denormalized match fields.
       const initialForCounts = listed.filter(m => !isMatchPast(m.date, m.time))
       const countGen = ++countsGen.current
       const seeded: Record<string, number> = {}
       const needsFetch: Match[] = []
       for (const m of initialForCounts) {
-        attemptedCountIds.current.add(m.id)
         const denormalized = resolveRsvpCount(m)
         if (denormalized != null) seeded[m.id] = denormalized
         else needsFetch.push(m)
@@ -158,7 +139,6 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
           await loadCountsForMatches(needsFetch, countGen)
         } catch (countError) {
           console.error('Error fetching RSVP counts:', countError)
-          for (const m of needsFetch) attemptedCountIds.current.delete(m.id)
         }
       }
     } catch (error) {
@@ -177,7 +157,6 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     setListStatus('loading')
     setMatches([])
     setRsvpCounts({})
-    attemptedCountIds.current = new Set()
 
     void loadMatchesAndCounts(gen)
     return () => {
@@ -197,42 +176,11 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
     setMatches,
   ])
 
-  const visibleMatches = useMemo(() => {
-    if (!showAdminList) return matches
-    return filterMatches(matches, filter)
-  }, [matches, filter, showAdminList])
-
-  // Lazy-load counts when an admin opens Past / All and cards lack counts.
-  // Do not bump countsGen here — that would discard in-flight upcoming counts
-  // while leaving their IDs marked attempted (blank cards until full refetch).
-  useEffect(() => {
-    if (listStatus !== 'ready' || !showAdminList) return
-    const missing = visibleMatches.filter(
-      m =>
-        rsvpCounts[m.id] === undefined && !attemptedCountIds.current.has(m.id)
-    )
-    if (missing.length === 0) return
-    for (const m of missing) attemptedCountIds.current.add(m.id)
-    const gen = countsGen.current
-    void loadCountsForMatches(missing, gen).catch(countError => {
-      console.error('Error fetching RSVP counts:', countError)
-      // Allow a later retry if this lazy fetch failed.
-      for (const m of missing) attemptedCountIds.current.delete(m.id)
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when visible set changes
-  }, [listStatus, showAdminList, visibleMatches])
-
-  const paged = useClientPagination(
-    visibleMatches,
-    JSON.stringify([clubId, userId, showAdminList, filter])
-  )
-
   const refetchMatchesAndCounts = async () => {
     const gen = ++fetchGen.current
     setListStatus('loading')
     setMatches([])
     setRsvpCounts({})
-    attemptedCountIds.current = new Set()
     await loadMatchesAndCounts(gen)
   }
 
@@ -301,30 +249,7 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
         </div>
       )}
 
-      {showAdminList ? (
-        <div
-          role="tablist"
-          aria-label="Filter matches"
-          className="mb-5 flex flex-wrap gap-2"
-        >
-          {ADMIN_FILTERS.map(option => {
-            const active = filter === option.value
-            return (
-              <FilterPill
-                key={option.value}
-                active={active}
-                role="tab"
-                aria-selected={active}
-                onClick={() => setFilter(option.value)}
-              >
-                {option.label}
-              </FilterPill>
-            )
-          })}
-        </div>
-      ) : null}
-
-      {visibleMatches.length === 0 ? (
+      {matches.length === 0 ? (
         <Card>
           <CardHeader>
             <CardTitle>No Matches</CardTitle>
@@ -334,61 +259,32 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              {showAdminList
-                ? filter === 'past'
-                  ? 'No past matches.'
-                  : filter === 'upcoming'
-                    ? 'No upcoming matches.'
-                    : canCreateMatch
-                      ? 'Create a match using the form above.'
-                      : 'No matches yet.'
+              {canCreateMatch
+                ? 'Create a match using the form above.'
                 : 'Check back soon for upcoming matches!'}
             </p>
           </CardContent>
         </Card>
-      ) : !showAdminList ? (
-        <PlayerMatchesList
-          matches={visibleMatches}
+      ) : (
+        <MatchesList
+          matches={matches}
           rsvpCounts={rsvpCounts}
           hrefFor={matchHref}
           myRsvps={myRsvps}
           onRetryMyRsvps={() => void myRsvps.retry()}
           paginationScope={JSON.stringify([clubId, userId])}
-        />
-      ) : (
-        <div
-          className={cn(
-            'grid grid-cols-1 gap-4',
-            visibleMatches.length > 1 && 'md:grid-cols-2'
-          )}
-        >
-          {paged.items.map((match, index) => {
-            const canManage = manageFlags[match.id] ?? false
-            // Page-level admin list still includes unstamped matches a club
-            // admin cannot delete. Those stay on the player card.
-            return showAdminList && canManage ? (
-              <AdminMatchCard
-                key={match.id}
+          includePast={showAdminList}
+          rowActions={match =>
+            // Page-level admin lists can include unstamped matches a club
+            // admin cannot delete; only offer Delete where they can.
+            showAdminList && manageFlags[match.id] ? (
+              <DeleteMatchButton
                 match={match}
-                href={matchHref(match.id)}
-                rsvpCount={rsvpCounts[match.id]}
                 onDeleted={refetchMatchesAndCounts}
-                index={index}
               />
-            ) : (
-              <MatchCard
-                key={match.id}
-                match={match}
-                href={matchHref(match.id)}
-                rsvpCount={rsvpCounts[match.id]}
-                index={index}
-              />
-            )
-          })}
-        </div>
-      )}
-      {showAdminList && paged.pagination.totalPages > 1 && (
-        <Pagination {...paged.pagination} itemLabel="matches" />
+            ) : null
+          }
+        />
       )}
     </div>
   )

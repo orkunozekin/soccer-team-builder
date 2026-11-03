@@ -5,7 +5,10 @@ import { HamburgerMenuIcon } from '@radix-ui/react-icons'
 import Link from 'next/link'
 import { AccountMenu } from '@/components/layout/AccountMenu'
 import { AccountNav } from '@/components/layout/AccountNav'
-import { ClubContextSwitcher } from '@/components/layout/ClubContextSwitcher'
+import {
+  ClubContextSwitcher,
+  type ClubSwitcherVariant,
+} from '@/components/layout/ClubContextSwitcher'
 import { ClubNav } from '@/components/layout/ClubNav'
 import { ClubWorkspaceStatus } from '@/components/layout/ClubWorkspaceStatus'
 import { Navigation } from '@/components/layout/Navigation'
@@ -61,21 +64,23 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const club = workspace.status.kind === 'ready' ? workspace.displayClub : null
   const brandHref = club ? clubMatchesPath(club.slug) : '/join'
 
-  const switcher = club ? (
-    <ClubContextSwitcher
-      clubName={club.name}
-      role={workspace.displayRole}
-      clubId={club.id}
-      memberships={workspace.activeMemberships}
-      switching={workspace.switching}
-      showCreateClub={workspace.showCreateClub}
-      onSwitch={clubId => {
-        void workspace.switchClub(clubId)
-      }}
-    />
-  ) : (
-    <ClubWorkspaceStatus status={workspace.status} />
-  )
+  const renderSwitcher = (variant: ClubSwitcherVariant) =>
+    club ? (
+      <ClubContextSwitcher
+        variant={variant}
+        clubName={club.name}
+        role={workspace.displayRole}
+        clubId={club.id}
+        memberships={workspace.activeMemberships}
+        switching={workspace.switching}
+        showCreateClub={workspace.showCreateClub}
+        onSwitch={clubId => {
+          void workspace.switchClub(clubId)
+        }}
+      />
+    ) : (
+      <ClubWorkspaceStatus status={workspace.status} />
+    )
 
   return (
     <div className="flex min-h-dvh w-full">
@@ -89,7 +94,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             <Wordmark />
           </Link>
         </div>
-        <div className="px-4">{switcher}</div>
+        <div className="px-4">{renderSwitcher('card')}</div>
         <div className="mt-5 flex min-h-0 flex-1 flex-col overflow-y-auto">
           <div className="flex flex-col gap-4 px-3 pb-3">
             {club ? (
@@ -167,7 +172,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
               </div>
             </SheetContent>
           </Sheet>
-          <div className="min-w-0 flex-1">{switcher}</div>
+          <div className="min-w-0 flex-1">{renderSwitcher('inline')}</div>
           <ProfileBadge
             displayName={userData?.displayName}
             jerseyNumber={userData?.jerseyNumber}

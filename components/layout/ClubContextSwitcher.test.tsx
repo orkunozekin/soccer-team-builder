@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ClubContextSwitcher } from './ClubContextSwitcher'
@@ -59,6 +59,28 @@ describe('ClubContextSwitcher', () => {
     const trigger = screen.getByLabelText('Switch club')
     expect(trigger).toHaveTextContent('Alpha FC')
     expect(trigger).toHaveTextContent('Player')
+  })
+
+  it('shows a club badge with initials on the card trigger', () => {
+    renderSwitcher()
+    const trigger = screen.getByLabelText('Switch club')
+    expect(within(trigger).getByTestId('club-badge')).toHaveTextContent('AF')
+  })
+
+  it('renders the inline (mobile header) trigger as badge, name and chevron only', () => {
+    renderSwitcher({ variant: 'inline' })
+    const trigger = screen.getByLabelText('Switch club')
+    expect(within(trigger).getByTestId('club-badge')).toHaveTextContent('AF')
+    expect(trigger).toHaveTextContent('Alpha FC')
+    expect(trigger).not.toHaveTextContent('Player')
+  })
+
+  it('shows each club badge in the menu', async () => {
+    const user = userEvent.setup()
+    renderSwitcher({ variant: 'inline' })
+    await user.click(screen.getByLabelText('Switch club'))
+    const beta = screen.getByRole('button', { name: /beta united/i })
+    expect(within(beta).getByTestId('club-badge')).toHaveTextContent('BU')
   })
 
   it('lists memberships with a checkmark on the current club', async () => {

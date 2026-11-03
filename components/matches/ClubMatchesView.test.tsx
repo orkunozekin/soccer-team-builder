@@ -49,40 +49,37 @@ vi.mock('@/lib/services/rsvpService', () => ({
   getMatchRsvpCount: (...args: unknown[]) => getMatchRsvpCountMock(...args),
 }))
 
-vi.mock('@/components/matches/MatchCard', () => ({
-  MatchCard: ({
-    match,
-    href,
-    index,
-  }: {
-    match: { id: string }
-    href?: string
-    index?: number
-  }) => (
-    <div data-animation-index={index}>
-      MatchCard:{match.id}:{href}
-    </div>
-  ),
-}))
-
-vi.mock('@/components/matches/PlayerMatchesList', () => ({
-  PlayerMatchesList: ({
+vi.mock('@/components/matches/MatchesList', () => ({
+  MatchesList: ({
     matches,
     hrefFor,
     rsvpCounts,
+    includePast,
+    rowActions,
   }: {
     matches: { id: string }[]
     hrefFor: (id: string) => string
     rsvpCounts: Record<string, number>
+    includePast?: boolean
+    rowActions?: (match: { id: string }) => unknown
   }) => (
     <>
+      <div>includePast:{String(!!includePast)}</div>
       {matches.map(m => (
-        <div key={m.id} data-rsvp-count={rsvpCounts[m.id]}>
-          PlayerRow:{m.id}:{hrefFor(m.id)}
+        <div
+          key={m.id}
+          data-rsvp-count={rsvpCounts[m.id]}
+          data-delete={String(Boolean(rowActions?.(m)))}
+        >
+          Row:{m.id}:{hrefFor(m.id)}
         </div>
       ))}
     </>
   ),
+}))
+
+vi.mock('@/components/admin/DeleteMatchButton', () => ({
+  DeleteMatchButton: () => <button>DeleteMock</button>,
 }))
 
 const useMyMatchRsvpsMock = vi.fn()
@@ -92,20 +89,6 @@ vi.mock('@/lib/hooks/useMyMatchRsvps', () => ({
 
 vi.mock('@/components/admin/CreateMatchCard', () => ({
   CreateMatchCard: () => <div>CreateMatchCardMock</div>,
-}))
-
-vi.mock('@/components/admin/AdminMatchCard', () => ({
-  AdminMatchCard: ({
-    match,
-    href,
-  }: {
-    match: { id: string }
-    href?: string
-  }) => (
-    <div>
-      AdminMatchCard:{match.id}:{href}
-    </div>
-  ),
 }))
 
 function mockMatch(id: string, hoursFromNow = 24) {
@@ -167,10 +150,10 @@ describe('ClubMatchesView', () => {
     })
   })
 
-  it('loads the player RSVPs only for the player list', async () => {
+  it("loads the viewer's RSVPs for the list", async () => {
     listMatchesForViewerMock.mockResolvedValueOnce([mockMatch('m1')])
     renderView()
-    await screen.findByText('PlayerRow:m1:/c/alpha/matches/m1')
+    await screen.findByText('Row:m1:/c/alpha/matches/m1')
     expect(useMyMatchRsvpsMock).toHaveBeenLastCalledWith('user1', true)
   })
 
@@ -180,7 +163,7 @@ describe('ClubMatchesView', () => {
     renderView()
 
     expect(
-      await screen.findByText('PlayerRow:m1:/c/alpha/matches/m1')
+      await screen.findByText('Row:m1:/c/alpha/matches/m1')
     ).toBeInTheDocument()
     expect(screen.queryByText('No Matches')).not.toBeInTheDocument()
   })
@@ -196,11 +179,11 @@ describe('ClubMatchesView', () => {
     renderView()
 
     expect(screen.queryByText('No Matches')).not.toBeInTheDocument()
-    expect(screen.queryByText(/PlayerRow:m1/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Row:m1/)).not.toBeInTheDocument()
 
     resolveMatches([mockMatch('m1')])
     expect(
-      await screen.findByText('PlayerRow:m1:/c/alpha/matches/m1')
+      await screen.findByText('Row:m1:/c/alpha/matches/m1')
     ).toBeInTheDocument()
   })
 
@@ -238,7 +221,7 @@ describe('ClubMatchesView', () => {
 
     resolveSecond([mockMatch('m2')])
     expect(
-      await screen.findByText('PlayerRow:m2:/c/alpha/matches/m2')
+      await screen.findByText('Row:m2:/c/alpha/matches/m2')
     ).toBeInTheDocument()
   })
 
@@ -256,9 +239,7 @@ describe('ClubMatchesView', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
 
     await waitFor(() => {
-      expect(
-        screen.getByText('PlayerRow:m3:/c/alpha/matches/m3')
-      ).toBeInTheDocument()
+      expect(screen.getByText('Row:m3:/c/alpha/matches/m3')).toBeInTheDocument()
     })
   })
 
@@ -269,7 +250,7 @@ describe('ClubMatchesView', () => {
     renderView()
 
     expect(
-      await screen.findByText('PlayerRow:m-ok:/c/alpha/matches/m-ok')
+      await screen.findByText('Row:m-ok:/c/alpha/matches/m-ok')
     ).toBeInTheDocument()
     expect(screen.queryByText('Could not load matches')).not.toBeInTheDocument()
   })
@@ -284,12 +265,12 @@ describe('ClubMatchesView', () => {
     renderView('club-a', 'alpha')
 
     expect(
-      await screen.findByText('PlayerRow:m-a:/c/alpha/matches/m-a')
+      await screen.findByText('Row:m-a:/c/alpha/matches/m-a')
     ).toBeInTheDocument()
     expect(
-      screen.getByText('PlayerRow:m-null:/c/alpha/matches/m-null')
+      screen.getByText('Row:m-null:/c/alpha/matches/m-null')
     ).toBeInTheDocument()
-    expect(screen.queryByText(/PlayerRow:m-b/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Row:m-b/)).not.toBeInTheDocument()
   })
 
   it('links all-clubs cards back to the admin list', async () => {
@@ -299,7 +280,7 @@ describe('ClubMatchesView', () => {
     render(<ClubMatchesView clubId={null} clubSlug={null} />)
 
     expect(
-      await screen.findByText('AdminMatchCard:m-all:/admin/matches/m-all')
+      await screen.findByText('Row:m-all:/admin/matches/m-all')
     ).toBeInTheDocument()
   })
 
@@ -312,8 +293,9 @@ describe('ClubMatchesView', () => {
     expect(await screen.findByText('No Matches')).toBeInTheDocument()
     expect(screen.queryByText('CreateMatchCardMock')).not.toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('tab', { name: 'All' }))
-    expect(screen.getByText('No matches yet.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Check back soon for upcoming matches!')
+    ).toBeInTheDocument()
     expect(
       screen.queryByText('Create a match using the form above.')
     ).not.toBeInTheDocument()
@@ -396,12 +378,11 @@ describe('ClubMatchesView', () => {
     renderView('club-a', 'alpha')
 
     expect(
-      await screen.findByText('AdminMatchCard:owned:/c/alpha/matches/owned')
-    ).toBeInTheDocument()
+      await screen.findByText('Row:owned:/c/alpha/matches/owned')
+    ).toHaveAttribute('data-delete', 'true')
     expect(
-      screen.getByText('MatchCard:legacy:/c/alpha/matches/legacy')
-    ).toBeInTheDocument()
-    expect(screen.queryByText(/AdminMatchCard:legacy:/)).not.toBeInTheDocument()
+      screen.getByText('Row:legacy:/c/alpha/matches/legacy')
+    ).toHaveAttribute('data-delete', 'false')
   })
 
   it('shows create match when the user is club_admin of this club', async () => {
@@ -447,13 +428,8 @@ describe('ClubMatchesView', () => {
     renderView('club-b', 'beta')
 
     expect(await screen.findByText('CreateMatchCardMock')).toBeInTheDocument()
-    // Admins get the manage list, so the player RSVP lookup stays off.
-    expect(useMyMatchRsvpsMock).toHaveBeenLastCalledWith('user1', false)
-    expect(screen.getByRole('tab', { name: 'Upcoming' })).toHaveAttribute(
-      'aria-selected',
-      'true'
-    )
-    expect(screen.queryByText(/^MatchCard:/)).not.toBeInTheDocument()
+    // Admins get the same list, so their own RSVPs load too.
+    expect(useMyMatchRsvpsMock).toHaveBeenLastCalledWith('user1', true)
   })
 
   it('shows past matches on the admin list for club admins', async () => {
@@ -486,25 +462,17 @@ describe('ClubMatchesView', () => {
 
     renderView('club-a', 'alpha')
 
+    // The list itself splits upcoming vs Past (see MatchesList tests).
     expect(
-      await screen.findByText(
-        'AdminMatchCard:upcoming:/c/alpha/matches/upcoming'
-      )
+      await screen.findByText('Row:upcoming:/c/alpha/matches/upcoming')
     ).toBeInTheDocument()
     expect(
-      screen.queryByText('AdminMatchCard:past:/c/alpha/matches/past')
-    ).not.toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('tab', { name: 'Past' }))
-    expect(
-      screen.getByText('AdminMatchCard:past:/c/alpha/matches/past')
+      screen.getByText('Row:past:/c/alpha/matches/past')
     ).toBeInTheDocument()
-    expect(
-      screen.queryByText('AdminMatchCard:upcoming:/c/alpha/matches/upcoming')
-    ).not.toBeInTheDocument()
+    expect(screen.getByText('includePast:true')).toBeInTheDocument()
   })
 
-  it('counts only upcoming matches on initial admin load, then past on tab open', async () => {
+  it('counts only upcoming matches for an admin', async () => {
     useClubMembershipsMock.mockReturnValue({
       memberships: [
         {
@@ -534,16 +502,26 @@ describe('ClubMatchesView', () => {
 
     renderView('club-a', 'alpha')
 
-    await screen.findByText('AdminMatchCard:upcoming:/c/alpha/matches/upcoming')
+    await screen.findByText('Row:upcoming:/c/alpha/matches/upcoming')
     await waitFor(() => {
       expect(getMatchRsvpCountMock).toHaveBeenCalledWith('upcoming')
     })
     expect(getMatchRsvpCountMock).not.toHaveBeenCalledWith('past')
+  })
 
-    await userEvent.click(screen.getByRole('tab', { name: 'Past' }))
-    await waitFor(() => {
-      expect(getMatchRsvpCountMock).toHaveBeenCalledWith('past')
-    })
+  it('never gives players past matches or the Past filter', async () => {
+    listMatchesForViewerMock.mockResolvedValueOnce([
+      mockMatch('soon', 24),
+      mockMatch('gone', -48),
+    ])
+
+    renderView()
+
+    expect(
+      await screen.findByText('Row:soon:/c/alpha/matches/soon')
+    ).toHaveAttribute('data-delete', 'false')
+    expect(screen.queryByText(/Row:gone/)).not.toBeInTheDocument()
+    expect(screen.getByText('includePast:false')).toBeInTheDocument()
   })
 
   it('uses denormalized rsvpConfirmedCount without querying RSVPs', async () => {
@@ -554,7 +532,7 @@ describe('ClubMatchesView', () => {
     renderView()
 
     expect(
-      await screen.findByText('PlayerRow:m-denorm:/c/alpha/matches/m-denorm')
+      await screen.findByText('Row:m-denorm:/c/alpha/matches/m-denorm')
     ).toBeInTheDocument()
     expect(getMatchRsvpCountMock).not.toHaveBeenCalled()
   })

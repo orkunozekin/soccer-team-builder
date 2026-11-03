@@ -1,19 +1,30 @@
-import { getRsvpStatusForMatch } from '@/lib/utils/matchStatus'
+import {
+  MATCH_ENDED_STATUS,
+  getRsvpStatusForMatch,
+} from '@/lib/utils/matchStatus'
 import type { MatchRsvpStatus } from '@/lib/utils/matchStatus'
 import { getRosterFill } from '@/lib/utils/rosterFill'
-import { getMatchStart } from '@/lib/utils/rsvpScheduler'
+import { getMatchStart, isMatchPast } from '@/lib/utils/rsvpScheduler'
 import type { Match } from '@/types/match'
 import type { RSVP } from '@/types/rsvp'
 
-export type PlayerMatchFilter = 'upcoming' | 'mine'
+export type PlayerMatchFilter = 'upcoming' | 'mine' | 'past'
 
-export const PLAYER_MATCH_FILTERS: {
-  value: PlayerMatchFilter
-  label: string
-}[] = [
+const FILTER_OPTIONS: { value: PlayerMatchFilter; label: string }[] = [
   { value: 'upcoming', label: 'Upcoming' },
   { value: 'mine', label: "I'm in" },
+  { value: 'past', label: 'Past' },
 ]
+
+/**
+ * Filter pills for the matches list. Past is offered only to people who can
+ * manage matches: player lists never contain past matches.
+ */
+export function getMatchListFilters(includePast: boolean) {
+  return includePast
+    ? FILTER_OPTIONS
+    : FILTER_OPTIONS.filter(option => option.value !== 'past')
+}
 
 const kickoffTime = (match: Pick<Match, 'date' | 'time'>) =>
   getMatchStart(new Date(match.date), match.time).getTime()
@@ -44,11 +55,30 @@ export function indexConfirmedRsvps(rsvps: readonly RSVP[]): Map<string, RSVP> {
 
 export function filterPlayerMatches<T extends Pick<Match, 'id'>>(
   matches: readonly T[],
-  filter: PlayerMatchFilter,
+  filter: Exclude<PlayerMatchFilter, 'past'>,
   myRsvps: ReadonlyMap<string, RSVP>
 ): T[] {
   if (filter === 'mine') return matches.filter(m => myRsvps.has(m.id))
   return [...matches]
+}
+
+/**
+ * Splits a list into the "Next up" hero (soonest upcoming match) and the rows
+ * for the chosen filter: remaining upcoming matches, the ones I'm in, or past
+ * matches newest first.
+ */
+export function selectMatchList<T extends Pick<Match, 'id' | 'date' | 'time'>>(
+  matches: readonly T[],
+  filter: PlayerMatchFilter,
+  myRsvps: ReadonlyMap<string, RSVP>,
+  now: Date = new Date()
+): { next: T | null; rows: T[] } {
+  const isPast = (m: T) => isMatchPast(new Date(m.date), m.time, now)
+  const { next, rest } = splitNextMatch(matches.filter(m => !isPast(m)))
+  if (filter === 'past') {
+    return { next, rows: sortByKickoff(matches.filter(isPast)).reverse() }
+  }
+  return { next, rows: filterPlayerMatches(rest, filter, myRsvps) }
 }
 
 /**
@@ -66,7 +96,9 @@ export function getPlayerMatchStatus({
   rsvpCount?: number
   now?: Date
 }): MatchRsvpStatus {
-  if (!myRsvp) return getRsvpStatusForMatch(match, now)
+  if (!myRsvp || isMatchPast(new Date(match.date), match.time, now)) {
+    return getRsvpStatusForMatch(match, now)
+  }
   const parts = ["You're in"]
   if (myRsvp.position) parts.push(myRsvp.position)
   if (rsvpCount !== undefined) {

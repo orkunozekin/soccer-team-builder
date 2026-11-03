@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { CheckIcon, ChevronDownIcon } from '@radix-ui/react-icons'
 import Link from 'next/link'
+import { ClubBadge } from '@/components/layout/ClubBadge'
 import { Input } from '@/components/ui/input'
 import {
   Popover,
@@ -16,6 +17,17 @@ import type { ClubMembershipRole, ClubMembershipWithClub } from '@/types/club'
 /** Show the find field once the membership list is long enough to scan. */
 const CLUB_SEARCH_MIN = 5
 
+/**
+ * - `card` (desktop rail): boxed trigger with badge, club name and your role.
+ * - `inline` (mobile header): borderless badge, club name and chevron.
+ */
+export type ClubSwitcherVariant = 'card' | 'inline'
+
+const TRIGGER_CLASS: Record<ClubSwitcherVariant, string> = {
+  card: 'w-full gap-3 rounded-xl border border-line/70 bg-turf px-3 py-2 hover:bg-turf-raised',
+  inline: 'max-w-full gap-2.5 rounded-xl px-1 py-1 hover:bg-turf/60',
+}
+
 export function ClubContextSwitcher({
   clubName,
   role,
@@ -24,6 +36,7 @@ export function ClubContextSwitcher({
   switching,
   showCreateClub,
   onSwitch,
+  variant = 'card',
   className,
 }: {
   clubName: string
@@ -33,6 +46,7 @@ export function ClubContextSwitcher({
   switching: boolean
   showCreateClub: boolean
   onSwitch: (clubId: string) => void
+  variant?: ClubSwitcherVariant
   className?: string
 }) {
   const [open, setOpen] = useState(false)
@@ -61,17 +75,23 @@ export function ClubContextSwitcher({
         disabled={switching}
         aria-label="Switch club"
         className={cn(
-          'inline-flex min-h-11 w-full min-w-0 items-center gap-2 rounded-xl border border-line/70 bg-turf px-3 py-2 text-left text-sm font-semibold text-chalk outline-none hover:bg-turf-raised focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60',
+          'inline-flex min-h-11 min-w-0 items-center text-left font-semibold text-chalk outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60',
+          TRIGGER_CLASS[variant],
           className
         )}
       >
-        <span className="min-w-0 flex-1">
-          <span className="block truncate">{clubName}</span>
-          <span className="block truncate text-xs font-normal text-fog">
-            {formatMembershipRole(role)}
+        <ClubBadge name={clubName} size={variant === 'inline' ? 'sm' : 'md'} />
+        {variant === 'card' ? (
+          <span className="min-w-0 flex-1 text-sm">
+            <span className="block truncate">{clubName}</span>
+            <span className="block truncate text-xs font-normal text-fog">
+              {formatMembershipRole(role)}
+            </span>
           </span>
-        </span>
-        <ChevronDownIcon className="h-4 w-4 shrink-0 opacity-70" />
+        ) : (
+          <span className="min-w-0 truncate text-[15px]">{clubName}</span>
+        )}
+        <ChevronDownIcon className="h-4 w-4 shrink-0 text-fog" />
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-0">
         {showSearch ? (
@@ -102,8 +122,9 @@ export function ClubContextSwitcher({
                       closeSwitcher()
                       onSwitch(membership.clubId)
                     }}
-                    className="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm hover:bg-accent disabled:opacity-60"
+                    className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm hover:bg-accent disabled:opacity-60"
                   >
+                    <ClubBadge name={membership.club.name} size="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">
                         {membership.club.name}

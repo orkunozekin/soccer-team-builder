@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { MyMatchRsvpsState } from '@/lib/hooks/useMyMatchRsvps'
 import type { Match } from '@/types/match'
 import type { RSVP } from '@/types/rsvp'
-import { PlayerMatchesList } from './PlayerMatchesList'
+import { MatchesList } from './MatchesList'
 
 function makeMatch(id: string, daysAhead: number, rsvpOpen = false): Match {
   const date = new Date(2030, 0, 10 + daysAhead, 19, 30)
@@ -50,7 +50,7 @@ function renderList(
   onRetryMyRsvps = vi.fn()
 ) {
   return render(
-    <PlayerMatchesList
+    <MatchesList
       matches={matches}
       rsvpCounts={{ next: 18, b: 12 }}
       hrefFor={id => `/c/club/matches/${id}`}
@@ -61,7 +61,7 @@ function renderList(
   )
 }
 
-describe('PlayerMatchesList', () => {
+describe('MatchesList', () => {
   it('features the soonest match as the Next up hero', () => {
     renderList([makeMatch('b', 3), makeMatch('next', 1, true)])
     const hero = screen.getByRole('link', { name: /^Next up:/ })
@@ -127,8 +127,53 @@ describe('PlayerMatchesList', () => {
     expect(rowsOf()).toHaveLength(2)
   })
 
-  it('renders nothing without matches', () => {
-    const { container } = renderList([])
-    expect(container).toBeEmptyDOMElement()
+  it('gives admins a Past filter with newest matches first and row actions', async () => {
+    const user = userEvent.setup()
+    // Fixtures are in 2030; these two finished long before.
+    const pastMatch = (id: string, day: number): Match => ({
+      ...makeMatch(id, 0),
+      date: new Date(2020, 0, day, 19, 30),
+    })
+    render(
+      <MatchesList
+        matches={[
+          makeMatch('next', 1, true),
+          pastMatch('older', 1),
+          pastMatch('old', 5),
+        ]}
+        rsvpCounts={{}}
+        hrefFor={id => `/c/club/matches/${id}`}
+        myRsvps={ready()}
+        onRetryMyRsvps={vi.fn()}
+        paginationScope="club"
+        includePast
+        rowActions={m => <button type="button">Delete {m.id}</button>}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Past' }))
+    const rows = rowsOf()
+    expect(
+      rows.map(r => within(r).getByRole('link').getAttribute('href'))
+    ).toEqual(['/c/club/matches/old', '/c/club/matches/older'])
+    expect(within(rows[0]).getByText('Match ended')).toBeInTheDocument()
+    // The action sits beside the row link, not inside it.
+    const action = within(rows[0]).getByRole('button', { name: 'Delete old' })
+    expect(within(rows[0]).getByRole('link')).not.toContainElement(action)
+  })
+
+  it('hides the Past filter from players', () => {
+    renderList([makeMatch('next', 1, true), makeMatch('b', 3)])
+    expect(
+      screen.queryByRole('button', { name: 'Past' })
+    ).not.toBeInTheDocument()
+  })
+
+  it('explains when nothing is upcoming', () => {
+    renderList([])
+    expect(screen.getByText('No upcoming matches yet.')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: /^Next up:/ })
+    ).not.toBeInTheDocument()
   })
 })
