@@ -31,7 +31,7 @@ function ProfileFormInner({
   user: import('firebase/auth').User
   userData: User
 }) {
-  const setUserData = useAuthStore(state => state.setUserData)
+  const mergeUserData = useAuthStore(state => state.mergeUserData)
   const [displayName, setDisplayName] = useState(userData.displayName)
   const [jerseyNumber, setJerseyNumber] = useState<string>(
     userData.jerseyNumber?.toString() || ''
@@ -43,21 +43,27 @@ function ProfileFormInner({
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
+  const savedDisplayName = userData.displayName
+  const savedJerseyNumber = userData.jerseyNumber
+  const savedPosition = userData.position ?? null
+
   const initialValues = useMemo(
     () => ({
-      displayName: userData.displayName,
-      jerseyNumber: userData.jerseyNumber?.toString() ?? '',
-      position: userData.position ?? null,
+      displayName: savedDisplayName,
+      jerseyNumber: savedJerseyNumber?.toString() ?? '',
+      position: savedPosition,
     }),
-    [userData]
+    [savedDisplayName, savedJerseyNumber, savedPosition]
   )
 
-  // Sync form when userData changes (e.g. after refetch or another tab)
+  // Sync the form when these saved fields change (e.g. after refetch or
+  // another tab). Keyed on the fields, not the whole profile object, so an
+  // unrelated profile update (the sidebar theme toggle) keeps unsaved edits.
   useEffect(() => {
-    setDisplayName(userData.displayName)
-    setJerseyNumber(userData.jerseyNumber?.toString() || '')
-    setPosition(userData.position ?? null)
-  }, [userData])
+    setDisplayName(savedDisplayName)
+    setJerseyNumber(savedJerseyNumber?.toString() || '')
+    setPosition(savedPosition)
+  }, [savedDisplayName, savedJerseyNumber, savedPosition])
 
   const currentJerseyNormalized = jerseyNumber.trim()
     ? (() => {
@@ -110,12 +116,9 @@ function ProfileFormInner({
 
       await updateProfileAPI(updates)
 
-      // Update local state
-      const updatedUserData: User = {
-        ...userData,
-        ...updates,
-      }
-      setUserData(updatedUserData)
+      // Merge into the current profile, not the pre-request snapshot, so a
+      // concurrent theme or club change saved meanwhile is kept.
+      mergeUserData(userData.uid, updates)
 
       const updated: string[] = []
       if (trimmedName !== initialValues.displayName)

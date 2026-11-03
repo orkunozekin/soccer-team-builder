@@ -9,6 +9,7 @@ import type { ClubMembershipWithClub } from '@/types/club'
 const pushMock = vi.fn()
 const replaceMock = vi.fn()
 const setUserDataMock = vi.fn()
+const mergeUserDataMock = vi.fn()
 const useAuthMock = vi.fn()
 const useAdminMock = vi.fn()
 const useClubMembershipsMock = vi.fn()
@@ -58,12 +59,20 @@ vi.mock('@/lib/hooks/useClubSlugAccess', () => ({
 
 vi.mock('@/lib/flags/useFeatureFlag', () => ({
   useFeatureFlag: (key: string) => useFeatureFlagMock(key),
+  useFeatureFlagReady: () => true,
 }))
 
 vi.mock('@/store/authStore', () => ({
   useAuthStore: (
-    selector: (s: { setUserData: typeof setUserDataMock }) => unknown
-  ) => selector({ setUserData: setUserDataMock }),
+    selector: (s: {
+      setUserData: typeof setUserDataMock
+      mergeUserData: typeof mergeUserDataMock
+    }) => unknown
+  ) =>
+    selector({
+      setUserData: setUserDataMock,
+      mergeUserData: mergeUserDataMock,
+    }),
 }))
 
 vi.mock('@/lib/api/client', () => ({
@@ -270,6 +279,37 @@ describe('AppShell', () => {
     ).toBeInTheDocument()
   })
 
+  it('shows the theme toggle by the user name in the rail and the sheet when the flag is on', async () => {
+    const user = userEvent.setup()
+    useFeatureFlagMock.mockImplementation(key => key === 'light-theme')
+    render(<AppShell />)
+
+    const railGroup = rail().getByRole('group', { name: 'Theme' })
+    expect(railGroup.parentElement).toHaveTextContent('Pat Player')
+    expect(
+      within(railGroup).getByRole('button', { name: 'Dark theme' })
+    ).toBeInTheDocument()
+    expect(
+      within(railGroup).getByRole('button', { name: 'Light theme' })
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByLabelText('Open club menu'))
+    const sheetGroup = within(screen.getByRole('dialog')).getByRole('group', {
+      name: 'Theme',
+    })
+    expect(sheetGroup.parentElement).toHaveTextContent('Pat Player')
+    expect(
+      within(sheetGroup).getByRole('button', { name: 'Light theme' })
+    ).toBeInTheDocument()
+  })
+
+  it('hides the theme toggle when the flag is off', () => {
+    render(<AppShell />)
+    expect(
+      screen.queryByRole('group', { name: 'Theme' })
+    ).not.toBeInTheDocument()
+  })
+
   it('hides admin sections for non super users', () => {
     render(<AppShell />)
     expect(
@@ -399,9 +439,9 @@ describe('AppShell', () => {
     await waitFor(() => {
       expect(updateProfileAPI).toHaveBeenCalledWith({ activeClubId: 'beta' })
     })
-    expect(setUserDataMock).toHaveBeenCalledWith(
-      expect.objectContaining({ activeClubId: 'beta' })
-    )
+    expect(mergeUserDataMock).toHaveBeenCalledWith('u1', {
+      activeClubId: 'beta',
+    })
     expect(pushMock).toHaveBeenCalledWith('/c/beta/matches')
   })
 

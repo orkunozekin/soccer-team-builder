@@ -25,7 +25,7 @@ export function ProfileCompleteModal({
   onSaved,
 }: ProfileCompleteModalProps) {
   const { user, userData } = useAuth()
-  const setUserData = useAuthStore(state => state.setUserData)
+  const mergeUserData = useAuthStore(state => state.mergeUserData)
   const [displayName, setDisplayName] = useState('')
   const [jerseyNumber, setJerseyNumber] = useState('')
   const [position, setPosition] = useState<string | null>(null)
@@ -34,13 +34,20 @@ export function ProfileCompleteModal({
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
+  const hasProfile = userData != null
+  const savedDisplayName = userData?.displayName
+  const savedJerseyNumber = userData?.jerseyNumber
+  const savedPosition = userData?.position
+
+  // Keyed on the fields shown, not the whole profile, so an unrelated
+  // profile update (the sidebar theme toggle) keeps in-progress edits.
   useEffect(() => {
-    if (userData) {
-      setDisplayName(userData.displayName ?? '')
-      setJerseyNumber(userData.jerseyNumber?.toString() ?? '')
-      setPosition(userData.position ?? null)
+    if (hasProfile) {
+      setDisplayName(savedDisplayName ?? '')
+      setJerseyNumber(savedJerseyNumber?.toString() ?? '')
+      setPosition(savedPosition ?? null)
     }
-  }, [userData, open])
+  }, [hasProfile, savedDisplayName, savedJerseyNumber, savedPosition, open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -69,11 +76,9 @@ export function ProfileCompleteModal({
         position: position.trim(),
       }
       await updateProfileAPI(updates)
-      const updatedUserData: User = {
-        ...userData!,
-        ...updates,
-      }
-      setUserData(updatedUserData)
+      // Merge into the current profile, not the pre-request snapshot, so a
+      // theme or club change saved meanwhile is kept.
+      mergeUserData(user.uid, updates)
       onOpenChange(false)
       onSaved?.()
     } catch {

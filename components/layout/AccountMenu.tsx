@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { logoutUser } from '@/lib/firebase/auth'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { cn } from '@/lib/utils'
@@ -59,7 +60,12 @@ export function AccountMenu({
 
   return (
     <div className={cn('flex w-full flex-col gap-2', className)}>
-      <p className="truncate px-1 text-sm font-semibold text-chalk">{label}</p>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <p className="min-w-0 flex-1 truncate px-1 text-sm font-semibold text-chalk">
+          {label}
+        </p>
+        <ThemeToggle />
+      </div>
       <button
         type="button"
         aria-label="Sign out"

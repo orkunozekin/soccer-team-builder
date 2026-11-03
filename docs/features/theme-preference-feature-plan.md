@@ -9,7 +9,7 @@ Let each signed-in user pick a dark or light theme. The choice is saved on their
 | Status | in-progress |
 | Owner session | Orchestrated: one agent session and one PR per implementation step (below) |
 | Last updated | 2026-11-03 |
-| Related PR / branch | Plan: [#126](https://github.com/orkunozekin/soccer-team-builder/pull/126). Step 1: [#128](https://github.com/orkunozekin/soccer-team-builder/pull/128) (`orkun/theme-step-1-preference-plumbing`). Step 2: [#129](https://github.com/orkunozekin/soccer-team-builder/pull/129) (`orkun/theme-step-2-color-tokens`). Step 3: [#130](https://github.com/orkunozekin/soccer-team-builder/pull/130) (`orkun/theme-step-3-hardcoded-colors`). Step 4: [#131](https://github.com/orkunozekin/soccer-team-builder/pull/131) (`orkun/theme-step-4-theme-runtime`) |
+| Related PR / branch | Plan: [#126](https://github.com/orkunozekin/soccer-team-builder/pull/126). Step 1: [#128](https://github.com/orkunozekin/soccer-team-builder/pull/128) (`orkun/theme-step-1-preference-plumbing`). Step 2: [#129](https://github.com/orkunozekin/soccer-team-builder/pull/129) (`orkun/theme-step-2-color-tokens`). Step 3: [#130](https://github.com/orkunozekin/soccer-team-builder/pull/130) (`orkun/theme-step-3-hardcoded-colors`). Step 4: [#131](https://github.com/orkunozekin/soccer-team-builder/pull/131) (`orkun/theme-step-4-theme-runtime`). Step 5: [#132](https://github.com/orkunozekin/soccer-team-builder/pull/132) (`orkun/theme-step-5-sidebar-toggle`) |
 
 ## Goals (v1)
 
@@ -251,10 +251,17 @@ shadcn HSL tokens in `:root` follow the same values: `--background` = ink, `--ca
   - next-themes puts `dark` or `light` on `<html>`. No CSS targets `.light`, so light comes from `:root` alone.
   - Verified: dark pixel-identical vs `main` on the step 3 routes (375 + 1280, production builds, emulators). No hydration or console warnings. With `NEXT_PUBLIC_FF_LIGHT_THEME=true` (only honored by `next dev`) and a cached `sv-theme=light`, a light user is light from first paint with no dark flash, and a user without a preference ends dark.
 
+- **Step 5: sidebar toggle** ([#132](https://github.com/orkunozekin/soccer-team-builder/pull/132), todo 9 + `ThemeToggle` tests):
+  - `components/layout/ThemeToggle.tsx`: icon-only Moon / Sun buttons in a `role="group"` labelled "Theme", each with `aria-label`, `aria-pressed`, a 44px hit area (`h-11 w-11`) and a `focus-visible` ring. Active = `bg-turf-raised text-chalk`, inactive = `text-mist` (hover `text-chalk`). Renders only when `light-theme` is on **and** ready. `aria-pressed` is only set after mount (hydration).
+  - Click: `setTheme(next)` at once, then `updateProfileAPI({ themePreference })`; both buttons are disabled (`aria-busy` on the group) while saving. Success merges `themePreference` into `userData` via the new `authStore.mergeUserData(uid, patch)` (current profile, uid-checked). `ProfileForm`, `ProfileCompleteModal`, `ProfileClubsSection` and `useClubWorkspace` now use it too, so concurrent profile/club/theme writes don't overwrite each other, and `ProfileForm` / `ProfileCompleteModal` only resync their inputs when the fields it shows change. Failure reverts to the previous theme, then bumps `resyncCount` so `ThemeSync` re-resolves from the current flag and profile (the flag turning off mid-save still ends dark), and shows a fixed `role="alert"` line in `text-flare` (no server text). The busy flag, error and request counter live in `store/themeSaveStore.ts` (written by `lib/theme/saveThemePreference.ts`; keyed by uid, shared by the rail and sheet toggles, kept across unmounts), and every write or rollback re-checks the latest request and the current auth uid.
+  - `AccountMenu.tsx`: the username and toggle share one `flex flex-wrap` row; the name keeps `min-w-0 flex-1 truncate`, the group is `shrink-0`, and the alert is `basis-full` so it wraps under the row. Same component in the desktop rail and the mobile sheet.
+  - Verified on emulators (`next dev`, `NEXT_PUBLIC_FF_LIGHT_THEME=true`): toggling from the rail (1280) and the sheet (320) applies at once and writes `themePreference` to the user doc; the choice survives reload. Flag off (production builds): no toggle, and `/login`, `/register`, `/forgot-password`, `/join`, signed-in `/join`, `/profile`, `/clubs` (sheet open on mobile) are byte-identical to `main` at 375 and 1280.
+  - Emulator note: `EmulatorAuthGate` signs out on every full page load, so "reload keeps the choice" means the cached theme applies before paint and the profile value applies again after signing in. Navigate client-side for signed-in screenshots.
+  - For step 6: in light, the active button's `turf-raised` fill on `rail` is subtle. Check it in the QA pass.
+
 ### Remaining work
 
-1. **Step 5: sidebar toggle** (todo 9 + toggle tests): `ThemeToggle` in the `AccountMenu` username row. Use `useTheme().setTheme` for the optimistic switch. `ThemeSync` won't fight it, because it only re-applies when the uid, the flag/readiness or `userData.themePreference` changes. So merge the saved value into `userData` after the API succeeds, and revert `setTheme` on failure. Render theme-dependent icons/pressed state only after mount (hydration).
-2. Step 6 (table above), one PR.
+1. **Step 6: light QA + docs** (todo 12, table above), one PR: screenshot pass in light at 320 / tablet / desktop, fix what's unreadable (including the step 3 leftovers listed above and the toggle's active-state contrast on `rail`), `docs/TECH_STACK.md`, mark the plan done.
 
 Each step's agent updates this Handoff in its own PR: it adds the PR link under Done so far and moves the next step to the top of Remaining work.
 

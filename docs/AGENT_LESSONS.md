@@ -269,3 +269,33 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 - **Going forward:** Store per-user values with the key they were evaluated for, and expose them only when that key matches the current user (fail-closed defaults otherwise). Readiness for a key must never cover values from another key. Test the switch with the error and timeout paths, not only the success path.
 - **Pointers:** `components/flags/LaunchDarklyProvider.tsx`, `components/flags/LaunchDarklyProvider.test.tsx`, `components/providers/ThemeSync.tsx`
 - **Promoted:** AGENT_CONTEXT.md → §3 Auth, roles, and club context (per-user values keyed by user); `.greptile/rules.md`
+
+### 2026-11-03 — Keep an in-flight save's guard where the shared state lives
+
+- **Source:** PR #132 · Codex
+- **Gap:** `ThemeToggle` kept its saving flag and request counter in component state, but the save writes app-wide state (`next-themes`, `userData`). The mobile sheet unmounts on close, so a pending save outlived its guard: after an account switch a late failure reverted the new user's theme, and a reopened sheet (or the rail's second instance) could start an overlapping save whose older response overwrote the newer one.
+- **Going forward:** When an async action writes app-wide state, keep its busy flag, request ordering and error in a store at that same level, scoped to the uid. Check the current auth uid before every write or rollback, not just the counter. When the same control renders in several places (rail + sheet), they share that in-flight state. Test with the component unmounted and remounted mid-request.
+- **Pointers:** `store/themeSaveStore.ts`, `lib/theme/saveThemePreference.ts`, `components/layout/ThemeToggle.tsx`, `components/layout/ThemeToggle.test.tsx`
+- **Promoted:** AGENT_CONTEXT.md → §3 Async state, races, and transactions (generation guards); `.greptile/rules.md`
+
+### 2026-11-03 — An optimistic rollback must re-resolve, not restore a snapshot
+
+- **Source:** PR #132 · Codex
+- **Gap:** A failed theme save restored the theme captured at click time. If the `light-theme` flag turned off while the save was pending, `ThemeSync` had already forced dark, and the rollback put light back with nothing left to correct it.
+- **Going forward:** When state has a resolver (flag + profile → theme), roll back by asking the resolver again (or nudging it to re-run), not by restoring a snapshot that may be stale. Test a rollback with one of the resolver's inputs changed mid-request.
+- **Pointers:** `lib/theme/saveThemePreference.ts`, `store/themeSaveStore.ts` (`resyncCount`), `components/providers/ThemeSync.tsx`
+
+### 2026-11-03 — Form sync effects must key on the fields they show
+
+- **Source:** PR #132 · Codex
+- **Gap:** `ProfileForm` reset its inputs from an effect keyed on the whole `userData` object. Once the sidebar theme toggle started merging `themePreference` into `userData`, a theme switch on `/profile` wiped any unsaved name, jersey or position edits.
+- **Going forward:** When a form mirrors shared state, depend on the specific fields it edits, not the parent object. Before adding a new writer to a shared store, check every effect keyed on that object.
+- **Pointers:** `components/profile/ProfileForm.tsx`, `components/profile/ProfileForm.test.tsx`, `lib/theme/saveThemePreference.ts`
+
+### 2026-11-03 — Merge profile writes into current state, not a pre-await snapshot
+
+- **Source:** PR #132 · Codex
+- **Gap:** `ProfileForm` (and the club switchers) wrote back `{ ...userData, ...updates }` using the `userData` captured before `await updateProfileAPI`. Once the sidebar theme toggle could save at the same time, a profile submit that finished second restored the old `themePreference`, and `ThemeSync` flipped the UI back.
+- **Going forward:** Grep every `setUserData(` call when adding a new profile writer. After an async profile write, merge with `useAuthStore.getState().mergeUserData(uid, patch)`. It merges into the profile as it is now, and only if it still belongs to `uid`. Never write back a spread of a snapshot taken before an `await`.
+- **Pointers:** `store/authStore.ts` (`mergeUserData`), `components/profile/ProfileForm.tsx`, `components/profile/ProfileCompleteModal.tsx`, `components/profile/ProfileClubsSection.tsx`, `lib/hooks/useClubWorkspace.ts`, `lib/theme/saveThemePreference.ts`
+- **Promoted:** AGENT_CONTEXT.md → §3 Async state, races, and transactions; `.greptile/rules.md`

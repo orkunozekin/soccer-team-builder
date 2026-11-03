@@ -20,7 +20,8 @@ Companion to [`docs/AGENT_CONTEXT.md`](../docs/AGENT_CONTEXT.md), root [`AGENTS.
 - New secrets, service accounts, or `.env` files in the diff
 - Unauthenticated cron or publicly callable seed/destructive routes
 - Broadening Firestore client write rules that should stay Admin SDK / API-only
-- Async results written to shared state (Zustand stores, auth profile) without a generation check after each `await` or invalidation on effect cleanup
+- `setUserData({ ...userData, ... })` after an `await` using a pre-await snapshot instead of `mergeUserData(uid, patch)`
+- Async results written to shared state (Zustand stores, auth profile) without a generation check after each `await` or invalidation on effect cleanup, or with the guard held in component state when the request can outlive the component or the control renders in several places
 - `runTransaction` callbacks that set outer variables instead of returning the outcome, or denormalized counters updated outside the transaction that changes the source doc
 - Admin redirects gated on auth `loading` instead of `rolePending` / `profileReady`
 - Per-user state (profile, feature flags, a "ready" signal) that survives an account switch: the previous user's value exposed or marked ready for the next user, especially on error/timeout fallbacks

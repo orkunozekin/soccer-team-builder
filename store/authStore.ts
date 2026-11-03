@@ -12,6 +12,13 @@ interface AuthState {
   profileReady: boolean
   setUser: (user: FirebaseUser | null) => void
   setUserData: (userData: User | null) => void
+  /**
+   * Merge fields into the profile as it is now (not a snapshot taken before
+   * an `await`), and only if it still belongs to `uid`. Use this after an
+   * async profile write so concurrent writers (theme toggle, club switch,
+   * profile form) don't overwrite each other's fields.
+   */
+  mergeUserData: (uid: string, patch: Partial<User>) => void
   setLoading: (loading: boolean) => void
   setProfileReady: (profileReady: boolean) => void
   logout: () => void
@@ -32,6 +39,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ user })
   },
   setUserData: userData => set({ userData }),
+  mergeUserData: (uid, patch) => {
+    const { user, userData } = get()
+    if (user?.uid !== uid || userData?.uid !== uid) return
+    set({ userData: { ...userData, ...patch } })
+  },
   setLoading: loading => set({ loading }),
   setProfileReady: profileReady => set({ profileReady }),
   logout: () => set({ user: null, userData: null, profileReady: false }),

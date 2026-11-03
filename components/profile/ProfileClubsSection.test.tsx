@@ -12,8 +12,12 @@ vi.mock('@/lib/hooks/useAuth', () => ({
 }))
 
 vi.mock('@/store/authStore', () => ({
-  useAuthStore: (selector: (s: { setUserData: () => void }) => unknown) =>
-    selector({ setUserData: vi.fn() }),
+  useAuthStore: (
+    selector: (s: {
+      setUserData: () => void
+      mergeUserData: () => void
+    }) => unknown
+  ) => selector({ setUserData: vi.fn(), mergeUserData: vi.fn() }),
 }))
 
 const refreshMock = vi.fn()
