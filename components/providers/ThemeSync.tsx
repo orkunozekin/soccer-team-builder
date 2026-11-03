@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { useTheme } from 'next-themes'
 import { useFeatureFlag, useFeatureFlagReady } from '@/lib/flags/useFeatureFlag'
 import { useAuthStore } from '@/store/authStore'
+import { useThemeSaveStore } from '@/store/themeSaveStore'
 import { normalizeThemePreference } from '@/types/user'
 
 /**
@@ -32,6 +33,9 @@ export function ThemeSync() {
   )
   const flagOn = useFeatureFlag('light-theme')
   const flagReady = useFeatureFlagReady('light-theme')
+  // A failed toggle save rolls back locally, then bumps this so the flag and
+  // profile get the final say again.
+  const resyncCount = useThemeSaveStore(state => state.resyncCount)
 
   useEffect(() => {
     if (!uid || !profileReady || !flagReady) return
@@ -43,7 +47,15 @@ export function ThemeSync() {
     // the fetch failed): keep the current theme rather than guess.
     if (profileUid !== uid) return
     setThemeRef.current(normalizeThemePreference(storedPreference))
-  }, [uid, profileReady, profileUid, storedPreference, flagOn, flagReady])
+  }, [
+    uid,
+    profileReady,
+    profileUid,
+    storedPreference,
+    flagOn,
+    flagReady,
+    resyncCount,
+  ])
 
   return null
 }

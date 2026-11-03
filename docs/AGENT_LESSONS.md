@@ -275,5 +275,12 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 - **Source:** PR #132 · Codex
 - **Gap:** `ThemeToggle` kept its saving flag and request counter in component state, but the save writes app-wide state (`next-themes`, `userData`). The mobile sheet unmounts on close, so a pending save outlived its guard: after an account switch a late failure reverted the new user's theme, and a reopened sheet (or the rail's second instance) could start an overlapping save whose older response overwrote the newer one.
 - **Going forward:** When an async action writes app-wide state, keep its busy flag, request ordering and error in a store at that same level, scoped to the uid. Check the current auth uid before every write or rollback, not just the counter. When the same control renders in several places (rail + sheet), they share that in-flight state. Test with the component unmounted and remounted mid-request.
-- **Pointers:** `store/themeSaveStore.ts`, `components/layout/ThemeToggle.tsx`, `components/layout/ThemeToggle.test.tsx`
+- **Pointers:** `store/themeSaveStore.ts`, `lib/theme/saveThemePreference.ts`, `components/layout/ThemeToggle.tsx`, `components/layout/ThemeToggle.test.tsx`
 - **Promoted:** AGENT_CONTEXT.md → §3 Async state, races, and transactions (generation guards); `.greptile/rules.md`
+
+### 2026-11-03 — An optimistic rollback must re-resolve, not restore a snapshot
+
+- **Source:** PR #132 · Codex
+- **Gap:** A failed theme save restored the theme captured at click time. If the `light-theme` flag turned off while the save was pending, `ThemeSync` had already forced dark, and the rollback put light back with nothing left to correct it.
+- **Going forward:** When state has a resolver (flag + profile → theme), roll back by asking the resolver again (or nudging it to re-run), not by restoring a snapshot that may be stale. Test a rollback with one of the resolver's inputs changed mid-request.
+- **Pointers:** `lib/theme/saveThemePreference.ts`, `store/themeSaveStore.ts` (`resyncCount`), `components/providers/ThemeSync.tsx`

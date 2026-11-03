@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react'
 import { type LucideIcon, Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useFeatureFlag, useFeatureFlagReady } from '@/lib/flags/useFeatureFlag'
+import { saveThemePreference } from '@/lib/theme/saveThemePreference'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
-import { saveThemePreference, useThemeSaveStore } from '@/store/themeSaveStore'
+import { useThemeSaveStore } from '@/store/themeSaveStore'
 import { type ThemePreference, normalizeThemePreference } from '@/types/user'
 
 const OPTIONS: { value: ThemePreference; label: string; Icon: LucideIcon }[] = [
@@ -23,7 +24,7 @@ const OPTIONS: { value: ThemePreference; label: string; Icon: LucideIcon }[] = [
  * reverts. `ThemeSync` only re-applies when the saved preference changes, so
  * the optimistic `setTheme` here is not undone while the save is in flight.
  *
- * Save state (busy, error, request ordering) lives in `themeSaveStore`, shared
+ * Save state (busy, error, request ordering) lives in `themeSaveStore` (written by `saveThemePreference`), shared
  * by the rail and sheet toggles and kept across unmounts.
  */
 export function ThemeToggle() {

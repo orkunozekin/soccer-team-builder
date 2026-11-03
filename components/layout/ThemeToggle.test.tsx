@@ -405,4 +405,31 @@ describe('ThemeToggle', () => {
     act(() => signIn('u2'))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
+
+  it('ends dark when the flag turns off while a failing save is pending', async () => {
+    const user = userEvent.setup()
+    const save = deferred<{ success: boolean }>()
+    updateProfile.mockReturnValue(save.promise)
+    signIn('u1', 'light')
+    const { rerender } = render(<Harness />)
+    await waitFor(() => expectTheme('light'))
+
+    await user.click(darkButton())
+    expectTheme('dark')
+
+    // LD turns the flag off mid-save; ThemeSync already forces dark.
+    rerender(<Harness flagOn={false} />)
+    await waitFor(() => expectTheme('dark'))
+
+    await act(async () => {
+      save.reject(new Error('network'))
+    })
+
+    await waitFor(() => expectTheme('dark'))
+    // Give a stray rollback a chance to land.
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 20))
+    })
+    expectTheme('dark')
+  })
 })
