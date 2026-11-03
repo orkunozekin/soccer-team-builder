@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { verifyClubAdmin } from '@/lib/api/auth'
+import { getClubMemberProfile } from '@/lib/clubs/clubMemberProfile'
 import { updateMembershipRole } from '@/lib/services/clubService'
 import { auditLog } from '@/lib/services/auditService'
 import type { ClubMembershipRole } from '@/types/club'
@@ -10,6 +11,45 @@ const CLIENT_SAFE_ERRORS = new Set([
   'Cannot demote the last club admin',
   'Cannot demote yourself',
 ])
+
+/** Member profile + this club's RSVP history, for club admins. */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ clubId: string; userId: string }> }
+) {
+  try {
+    const { clubId, userId } = await params
+    if (!clubId || !userId) {
+      return NextResponse.json(
+        { error: 'Club ID and user ID required' },
+        { status: 400 }
+      )
+    }
+
+    const { uid, isClubAdmin, error } = await verifyClubAdmin(request, clubId)
+    if (error || !uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!isClubAdmin) {
+      return NextResponse.json(
+        { error: 'Club admin privileges required' },
+        { status: 403 }
+      )
+    }
+
+    const profile = await getClubMemberProfile(clubId, userId)
+    if (!profile) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+    }
+    return NextResponse.json({ success: true, ...profile })
+  } catch (err: unknown) {
+    console.error('Error loading club member profile:', err)
+    return NextResponse.json(
+      { error: sanitizeErrorForClient(err, 'Failed to load member') },
+      { status: 500 }
+    )
+  }
+}
 
 export async function PATCH(
   request: NextRequest,

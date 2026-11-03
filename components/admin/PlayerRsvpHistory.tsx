@@ -12,22 +12,24 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Pagination } from '@/components/ui/pagination'
-import { getMatchesByIds } from '@/lib/services/matchService'
-import { getUserRSVPs } from '@/lib/services/rsvpService'
+import {
+  type HistoryMatch,
+  type LoadPlayerHistory,
+  loadPlayerHistory,
+} from '@/lib/services/playerHistory'
 import { isCheckInWindowEnded } from '@/lib/utils/checkIn'
 import { locationDisplayName } from '@/lib/utils/location'
-import type { Match } from '@/types/match'
 import type { RSVP } from '@/types/rsvp'
 
 type HistoryLabel = 'Present' | 'No-show' | 'Pending' | 'Cancelled'
 
 interface HistoryRow {
   rsvp: RSVP
-  match: Match | null
+  match: HistoryMatch | null
   label: HistoryLabel
 }
 
-function attendanceLabel(rsvp: RSVP, match: Match | null): HistoryLabel {
+function attendanceLabel(rsvp: RSVP, match: HistoryMatch | null): HistoryLabel {
   if (rsvp.status === 'cancelled') return 'Cancelled'
   if (rsvp.attended === true) return 'Present'
   if (match && isCheckInWindowEnded(match.date, match.time)) return 'No-show'
@@ -54,11 +56,20 @@ function badgeVariant(
 
 const PAGE_SIZE = 10
 
+const adminMatchHref = (matchId: string) => `/admin/matches/${matchId}`
+
 interface PlayerRsvpHistoryProps {
   userId: string
+  /** Defaults to every RSVP across clubs; must be a stable reference. */
+  loadHistory?: LoadPlayerHistory
+  matchHref?: (matchId: string) => string
 }
 
-export function PlayerRsvpHistory({ userId }: PlayerRsvpHistoryProps) {
+export function PlayerRsvpHistory({
+  userId,
+  loadHistory,
+  matchHref = adminMatchHref,
+}: PlayerRsvpHistoryProps) {
   const [rows, setRows] = useState<HistoryRow[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -69,12 +80,9 @@ export function PlayerRsvpHistory({ userId }: PlayerRsvpHistoryProps) {
       setLoading(true)
       setPage(1)
       try {
-        const rsvps = await getUserRSVPs(userId)
-        if (cancelled) return
-        const matches = await getMatchesByIds(
-          rsvps.map(r => r.matchId),
-          { includeDeleted: true }
-        )
+        const { rsvps, matches } = await (loadHistory
+          ? loadHistory()
+          : loadPlayerHistory(userId))
         if (cancelled) return
         const matchesById = new Map(matches.map(m => [m.id, m]))
         const next: HistoryRow[] = rsvps.map(rsvp => {
@@ -101,7 +109,7 @@ export function PlayerRsvpHistory({ userId }: PlayerRsvpHistoryProps) {
     return () => {
       cancelled = true
     }
-  }, [userId])
+  }, [userId, loadHistory])
 
   const summary = useMemo(() => {
     const confirmed = rows.filter(r => r.rsvp.status === 'confirmed').length
@@ -152,7 +160,7 @@ export function PlayerRsvpHistory({ userId }: PlayerRsvpHistoryProps) {
                     <div className="min-w-0 flex-1">
                       {match ? (
                         <Link
-                          href={`/admin/matches/${match.id}`}
+                          href={matchHref(match.id)}
                           className="truncate text-sm font-medium text-foreground underline-offset-2 hover:underline"
                         >
                           {dateLabel}

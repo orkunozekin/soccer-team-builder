@@ -13,6 +13,10 @@ export function clubRosterPath(slug: string): string {
   return `/c/${slug}/roster`
 }
 
+export function clubMemberPath(slug: string, userId: string): string {
+  return `/c/${slug}/roster/${userId}`
+}
+
 export function clubInvitesPath(slug: string): string {
   return `/c/${slug}/invites`
 }
@@ -52,8 +56,7 @@ export function resolveClubMembershipForPath(input: {
   activeClubId?: string | null
   pathSlug?: string | null
 }): ClubMembershipWithClub | null {
-  const slug =
-    typeof input.pathSlug === 'string' ? input.pathSlug.trim() : ''
+  const slug = typeof input.pathSlug === 'string' ? input.pathSlug.trim() : ''
   if (slug) {
     const fromPath = input.memberships.find(
       m => m.status === 'active' && m.club.slug === slug

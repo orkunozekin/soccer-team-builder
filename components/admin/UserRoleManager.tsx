@@ -484,13 +484,13 @@ export function UserRoleManager() {
               {visibleUsers.map(user => (
                 <li
                   key={user.uid}
-                  className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-muted/60"
+                  className="relative flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-muted/60"
                 >
                   <InitialsAvatar name={user.displayName || user.email} />
                   <div className="min-w-[8rem] flex-1">
                     <Link
                       href={`/admin/players/${user.uid}`}
-                      className="block truncate text-sm font-medium text-foreground underline-offset-2 hover:underline"
+                      className="block truncate text-sm font-medium text-foreground underline-offset-2 after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-ring"
                     >
                       {user.displayName}
                     </Link>
@@ -498,7 +498,8 @@ export function UserRoleManager() {
                       {user.email}
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                  {/* Above the row link's overlay so these stay clickable. */}
+                  <div className="relative z-10 flex shrink-0 items-center gap-2">
                     <Select
                       value={user.role}
                       onValueChange={(value: UserRole) =>
