@@ -113,9 +113,39 @@
     --fl-ok-pill-border: 191 216 166; /* #BFD8A6 */
     --fl-danger: 180 35 24; /* #B42318 */
     --fl-danger-wash: 243 194 187; /* #F3C2BB */
+    /* Status colors (step 6). .dark values equal the Tailwind colors they
+       replaced, so Floodlight renders exactly as before. */
+    --fl-danger-mark: 180 35 24; /* #B42318 required-field asterisk */
+    --fl-alert-text: 143 29 19; /* #8F1D13 */
+    --fl-alert-text-soft: 143 29 19; /* #8F1D13 */
+    --fl-alert-bg: 252 233 230; /* #FCE9E6 */
+    --fl-success: 47 107 12; /* #2F6B0C */
+    --fl-success-bright: 47 107 12; /* #2F6B0C */
+    --fl-success-soft: 47 107 12; /* #2F6B0C */
+    --fl-success-wash: 191 216 166; /* #BFD8A6 */
+    --fl-success-deep: 234 243 224; /* #EAF3E0 */
+    --fl-success-line: 191 216 166; /* #BFD8A6 */
+    --fl-warning: 146 64 14; /* #92400E */
+    --fl-warning-strong: 120 53 15; /* #78350F */
+    --fl-warning-soft: 146 64 14; /* #92400E */
+    --fl-warning-icon: 180 83 9; /* #B45309 */
+    --fl-warning-wash: 246 214 168; /* #F6D6A8 */
+    --fl-warning-deep: 253 243 220; /* #FDF3DC */
+    --fl-warning-line: 235 201 138; /* #EBC98A */
+    --fl-gk-pill: 246 214 168; /* #F6D6A8 */
+    --fl-gk-pill-border: 224 164 86; /* #E0A456 */
+    --fl-gk-pill-text: 120 53 15; /* #78350F */
+    --fl-chart-grid: 225 228 222; /* #E1E4DE */
+    --fl-confetti: 18 24 21; /* #121815 */
+    --fl-chip-shade: 86 97 91; /* #56615B, non-live hero kickoff chip */
+    /* Theme toggle: active button fill + edge (non-color cue on rail). */
+    --fl-toggle-active: 255 255 255; /* #FFFFFF */
+    --fl-toggle-edge: 111 123 116 / 1; /* #6F7B74 */
     /* Fixed in both themes (not redefined under .dark). */
     --fl-on-bright: 11 15 13; /* #0B0F0D */
     --fl-elevation: 18 24 21 / 0.12; /* soft #121815 panel shadow */
+    /* Pitch lineup chalk (the pitch keeps its colors in both themes). */
+    --fl-pitch-chalk: 243 241 234; /* #F3F1EA */
     /* Auth hero band stripes (.pitch-stripes) */
     --pitch-stripe-a: #dce9d6;
     --pitch-stripe-b: #d1e2ca;
@@ -169,6 +199,31 @@
     --fl-ok-pill-border: 59 90 34; /* #3B5A22 */
     --fl-danger: 248 113 113; /* red-400 #F87171 */
     --fl-danger-wash: 127 29 29; /* red-900 #7F1D1D */
+    --fl-danger-mark: 239 68 68; /* red-500 */
+    --fl-alert-text: 254 202 202; /* red-200 */
+    --fl-alert-text-soft: 252 165 165; /* red-300 */
+    --fl-alert-bg: 69 10 10; /* red-950 */
+    --fl-success: 74 222 128; /* green-400 */
+    --fl-success-bright: 52 211 153; /* emerald-400 */
+    --fl-success-soft: 110 231 183; /* emerald-300 */
+    --fl-success-wash: 20 83 45; /* green-900 */
+    --fl-success-deep: 2 44 34; /* emerald-950 */
+    --fl-success-line: 6 78 59; /* emerald-900 */
+    --fl-warning: 251 191 36; /* amber-400 */
+    --fl-warning-strong: 253 230 138; /* amber-200 */
+    --fl-warning-soft: 252 211 77; /* amber-300 */
+    --fl-warning-icon: 245 158 11; /* amber-500 */
+    --fl-warning-wash: 120 53 15; /* amber-900 */
+    --fl-warning-deep: 69 26 3; /* amber-950 */
+    --fl-warning-line: 146 64 14; /* amber-800 */
+    --fl-gk-pill: 180 83 9; /* amber-700 */
+    --fl-gk-pill-border: 217 119 6; /* amber-600 */
+    --fl-gk-pill-text: 254 243 199; /* amber-100 */
+    --fl-chart-grid: 39 39 42; /* zinc-800 */
+    --fl-confetti: 255 255 255; /* white */
+    --fl-chip-shade: 0 0 0; /* black */
+    --fl-toggle-active: 28 36 32; /* turf raised #1C2420 */
+    --fl-toggle-edge: 0 0 0 / 0; /* none: the fill reads on #0F1411 */
     --fl-elevation: 0 0 0 / 0.4; /* black/40 */
     --pitch-stripe-a: #102619;
     --pitch-stripe-b: #133020;

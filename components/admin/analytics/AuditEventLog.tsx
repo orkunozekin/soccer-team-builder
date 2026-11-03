@@ -141,7 +141,9 @@ function EventRow({ log }: { log: AuditLog }) {
     <div
       className={cn(
         'flex gap-3 rounded-lg border p-3 transition-colors',
-        failed ? 'border-red-900/50 bg-red-950/20' : 'border-border bg-card'
+        failed
+          ? 'border-danger-wash/50 bg-alert-bg/20'
+          : 'border-border bg-card'
       )}
     >
       <div
@@ -376,7 +378,7 @@ export function AuditEventLog() {
       </div>
 
       {error ? (
-        <div className="rounded-md bg-red-900/20 p-3 text-sm text-danger">
+        <div className="rounded-md bg-danger-wash/20 p-3 text-sm text-danger">
           {error}
         </div>
       ) : null}

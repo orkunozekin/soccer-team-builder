@@ -92,7 +92,7 @@ export function CheckInButton({
       </div>
 
       {alreadyPresent || success ? (
-        <p className="text-sm text-green-400">
+        <p className="text-sm text-success">
           You&apos;re checked in
           {userRsvp?.checkInMethod === 'host' ? ' (by host)' : ''}.
         </p>
@@ -104,7 +104,7 @@ export function CheckInButton({
             verify you&apos;re at the field and is not stored.
           </p>
           {!hasVenue && (
-            <p className="text-xs text-amber-400">
+            <p className="text-xs text-warning">
               This match has no pinned field coordinates. Ask a host to mark you
               present.
             </p>
@@ -121,7 +121,7 @@ export function CheckInButton({
         </>
       )}
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
     </div>
   )
 }

@@ -75,7 +75,7 @@ export function ActivityChart({ stats }: { stats: AuditStats }) {
                 </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  className="stroke-zinc-800"
+                  className="stroke-chart-grid"
                   vertical={false}
                 />
                 <XAxis

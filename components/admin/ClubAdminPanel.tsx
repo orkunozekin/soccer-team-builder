@@ -60,12 +60,12 @@ export function ClubAdminPanel() {
       </CardHeader>
       <CardContent className="space-y-4">
         {error && (
-          <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
+          <div className="rounded-md bg-danger-wash/20 p-3 text-sm text-danger">
             {error}
           </div>
         )}
         {result && (
-          <div className="rounded-md bg-green-900/20 p-3 text-sm text-green-400">
+          <div className="rounded-md bg-success-wash/20 p-3 text-sm text-success">
             {result}
           </div>
         )}

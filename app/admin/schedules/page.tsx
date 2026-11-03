@@ -161,7 +161,7 @@ export default function AdminSchedulesPage() {
       />
 
       {actionError && (
-        <p className="mb-4 text-sm text-red-400" role="alert">
+        <p className="mb-4 text-sm text-danger" role="alert">
           {actionError}
         </p>
       )}
@@ -244,7 +244,7 @@ export default function AdminSchedulesPage() {
                           : ''}
                         {' · '}
                         {schedule.active ? (
-                          <span className="font-medium text-emerald-400">
+                          <span className="font-medium text-success-bright">
                             Active
                           </span>
                         ) : (

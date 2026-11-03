@@ -247,7 +247,7 @@ export function MatchDetailView({
             {match.clubId && clubPermissionError && (
               <div
                 role="alert"
-                className="rounded-md border border-red-900 bg-red-900/20 p-4 text-sm text-red-300"
+                className="rounded-md border border-danger-wash bg-danger-wash/20 p-4 text-sm text-alert-text-soft"
               >
                 <p>
                   We couldn&apos;t verify your club permissions. Match

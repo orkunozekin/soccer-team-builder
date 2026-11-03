@@ -209,7 +209,7 @@ export function MatchDetails({
                 <span
                   className={
                     isGoalkeeper(currentPosition)
-                      ? 'rounded bg-amber-700/50 px-1.5 py-0.5 text-amber-100'
+                      ? 'rounded bg-gk-pill/50 px-1.5 py-0.5 text-gk-pill-text'
                       : undefined
                   }
                 >
@@ -241,16 +241,16 @@ export function MatchDetails({
                 </Button>
               </div>
               {isGkChangingToNonGk && (
-                <p className="text-sm text-amber-400">
+                <p className="text-sm text-warning">
                   If you change from goalkeeper, another goalkeeper may take
                   your spot on this team and you may move to a different team.
                 </p>
               )}
               {swapMessage && (
-                <p className="text-sm text-green-400">{swapMessage}</p>
+                <p className="text-sm text-success">{swapMessage}</p>
               )}
               {positionError && (
-                <p className="text-sm text-red-400">{positionError}</p>
+                <p className="text-sm text-danger">{positionError}</p>
               )}
             </div>
           )}

@@ -76,7 +76,7 @@ export function ThemeToggle() {
               className={cn(
                 'inline-flex h-11 w-11 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait',
                 pressed
-                  ? 'bg-turf-raised text-chalk'
+                  ? 'bg-toggle-active text-chalk shadow-[inset_0_0_0_1px_theme(colors.toggle-edge)]'
                   : 'text-mist hover:text-chalk'
               )}
             >

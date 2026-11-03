@@ -121,7 +121,7 @@ export function PasswordUpdateForm() {
       <FormError message={error} />
 
       {successMessage && (
-        <div className="rounded-lg border border-emerald-900/50 bg-emerald-950/30 px-4 py-3 text-sm font-medium text-emerald-300">
+        <div className="rounded-lg border border-success-line/50 bg-success-deep/30 px-4 py-3 text-sm font-medium text-success-soft">
           {successMessage}
         </div>
       )}

@@ -197,9 +197,7 @@ export function EditMatchCard({
                     addressId="match-location-address"
                   />
                   {saveSuccessMessage && (
-                    <p className="text-sm text-green-400">
-                      {saveSuccessMessage}
-                    </p>
+                    <p className="text-sm text-success">{saveSuccessMessage}</p>
                   )}
                   <Button type="submit" loading={saving} disabled={!hasChanges}>
                     Save

@@ -72,7 +72,7 @@ export function ClubSettingsPanel({
       />
 
       {error && (
-        <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
+        <div className="rounded-md bg-danger-wash/20 p-3 text-sm text-danger">
           {error}
         </div>
       )}
@@ -96,7 +96,7 @@ export function ClubSettingsPanel({
         </span>
       </label>
 
-      {saved && <p className="text-sm text-emerald-400">Saved.</p>}
+      {saved && <p className="text-sm text-success-bright">Saved.</p>}
     </div>
   )
 }

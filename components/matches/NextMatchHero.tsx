@@ -59,7 +59,12 @@ export function NextMatchHero({
         <p className="min-w-0 flex-1 font-mono text-[11px] uppercase tracking-[0.14em]">
           Next up · {status.label}
         </p>
-        <span className="shrink-0 rounded-full bg-black/25 px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.06em]">
+        <span
+          className={cn(
+            'shrink-0 rounded-full px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.06em]',
+            live ? 'bg-black/25' : 'bg-chip-shade/25'
+          )}
+        >
           {getKickoffLabelForMatch(match)}
         </span>
       </div>

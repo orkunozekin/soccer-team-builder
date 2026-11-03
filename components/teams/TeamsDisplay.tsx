@@ -497,7 +497,7 @@ export function TeamsDisplay({
       ) : null}
 
       {transferError && (
-        <div className="rounded-md border border-red-900/60 bg-red-950/40 p-3 text-sm font-medium text-red-200">
+        <div className="rounded-md border border-danger-wash/60 bg-alert-bg/40 p-3 text-sm font-medium text-alert-text">
           {transferError}
         </div>
       )}

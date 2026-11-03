@@ -103,7 +103,7 @@ export function ClubMemberProfile({
       <div>
         {backLink}
         <div role="alert" className="mt-4 space-y-3">
-          <p className="text-sm text-red-400">
+          <p className="text-sm text-danger">
             Could not load this member. {state.message}
           </p>
           <Button type="button" onClick={() => setAttempt(n => n + 1)}>

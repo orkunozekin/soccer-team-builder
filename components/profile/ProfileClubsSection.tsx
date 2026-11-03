@@ -51,13 +51,13 @@ export function ProfileClubsSection() {
   }
 
   if (error) {
-    return <p className="text-sm text-red-400">{error}</p>
+    return <p className="text-sm text-danger">{error}</p>
   }
 
   return (
     <div className="space-y-6">
       {actionError && (
-        <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
+        <div className="rounded-md bg-danger-wash/20 p-3 text-sm text-danger">
           {actionError}
         </div>
       )}
@@ -155,7 +155,7 @@ export function ProfileClubsSection() {
                         >
                           <Icon
                             aria-hidden
-                            className="h-5 w-5 text-emerald-300 transition-transform group-hover:scale-110"
+                            className="h-5 w-5 text-success-soft transition-transform group-hover:scale-110"
                           />
                           {label}
                         </Link>
@@ -231,12 +231,12 @@ export function JoinClubForm({ onJoined }: { onJoined?: () => void }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       {error && (
-        <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
+        <div className="rounded-md bg-danger-wash/20 p-3 text-sm text-danger">
           {error}
         </div>
       )}
       {success && (
-        <div className="rounded-md bg-green-900/20 p-3 text-sm text-green-400">
+        <div className="rounded-md bg-success-wash/20 p-3 text-sm text-success">
           {success}
         </div>
       )}

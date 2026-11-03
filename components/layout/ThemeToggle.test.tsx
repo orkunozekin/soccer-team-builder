@@ -169,6 +169,11 @@ describe('ThemeToggle', () => {
       expect(lightButton()).toHaveAttribute('aria-pressed', 'true')
     )
     expect(darkButton()).toHaveAttribute('aria-pressed', 'false')
+    // Active state carries an edge as well as a fill, so it does not rely on
+    // two similar fills alone (light theme on the rail).
+    expect(lightButton()).toHaveClass('bg-toggle-active')
+    expect(lightButton().className).toMatch(/shadow-\[inset_0_0_0_1px_/)
+    expect(darkButton()).not.toHaveClass('bg-toggle-active')
   })
 
   it('switches to light at once, saves it, then updates the profile', async () => {

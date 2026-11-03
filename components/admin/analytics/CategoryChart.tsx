@@ -66,7 +66,7 @@ export function CategoryChart({ stats }: { stats: AuditStats }) {
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  className="stroke-zinc-800"
+                  className="stroke-chart-grid"
                   horizontal={false}
                 />
                 <XAxis

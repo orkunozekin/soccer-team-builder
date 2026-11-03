@@ -35,7 +35,7 @@ export function StatusPill({
         <span
           aria-hidden
           data-testid="status-pill-dot"
-          className="h-2 w-2 shrink-0 rounded-full bg-flare shadow-[0_0_0_3px_rgba(255,90,74,0.18)] motion-safe:animate-badge-pulse"
+          className="h-2 w-2 shrink-0 rounded-full bg-flare shadow-[0_0_0_3px_rgb(var(--fl-flare)/0.18)] motion-safe:animate-badge-pulse"
         />
       ) : null}
       <span className="min-w-0">{children}</span>

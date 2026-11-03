@@ -44,7 +44,7 @@ export function RestoreRsvpOrderButton({
   return (
     <div className={showError === 'block' ? 'space-y-2' : undefined}>
       {error && showError === 'block' && (
-        <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
+        <div className="rounded-md bg-danger-wash/20 p-3 text-sm text-danger">
           {error}
         </div>
       )}
@@ -60,7 +60,7 @@ export function RestoreRsvpOrderButton({
         Restore RSVP order
       </Button>
       {error && showError === 'inline' && (
-        <div className="mt-2 text-xs text-red-400">{error}</div>
+        <div className="mt-2 text-xs text-danger">{error}</div>
       )}
     </div>
   )
