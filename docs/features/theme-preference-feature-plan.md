@@ -9,7 +9,7 @@ Let each signed-in user pick a dark or light theme. The choice is saved on their
 | Status | in-progress |
 | Owner session | Orchestrated: one agent session and one PR per implementation step (below) |
 | Last updated | 2026-11-03 |
-| Related PR / branch | Plan: [#126](https://github.com/orkunozekin/soccer-team-builder/pull/126). Step 1: [#128](https://github.com/orkunozekin/soccer-team-builder/pull/128) (`orkun/theme-step-1-preference-plumbing`). Step 2: [#129](https://github.com/orkunozekin/soccer-team-builder/pull/129) (`orkun/theme-step-2-color-tokens`). Step 3: `orkun/theme-step-3-hardcoded-colors` (PR link in Handoff) |
+| Related PR / branch | Plan: [#126](https://github.com/orkunozekin/soccer-team-builder/pull/126). Step 1: [#128](https://github.com/orkunozekin/soccer-team-builder/pull/128) (`orkun/theme-step-1-preference-plumbing`). Step 2: [#129](https://github.com/orkunozekin/soccer-team-builder/pull/129) (`orkun/theme-step-2-color-tokens`). Step 3: [#130](https://github.com/orkunozekin/soccer-team-builder/pull/130) (`orkun/theme-step-3-hardcoded-colors`) |
 
 ## Goals (v1)
 
@@ -235,7 +235,7 @@ shadcn HSL tokens in `:root` follow the same values: `--background` = ink, `--ca
   - `app/globals.css`: `--fl-*` RGB triplets. `.dark` has the exact Floodlight hex values, and `:root` has the approved Daylight values. The `:root` shadcn HSL tokens are now Daylight, and `:root --radius` matches dark (`0.875rem`). Light `.pitch-bg` is `#F5F4EE` with a faint lime radial. `.pitch-stripes` uses `--pitch-stripe-a/b` (Floodlight `#102619`/`#133020`, Daylight `#DCE9D6`/`#D1E2CA`). The light `html` rule sets `#F5F4EE`, `color-scheme: light` and `accent-color: #D72A1C`. The `--pitch-*` lineup tokens are unchanged.
   - Verified dark is pixel-identical on `/login`, `/register`, `/forgot-password`, `/join` (375 + 1280). In a light spot-check (`dark` class removed by hand), the `text-[#B9C2BD]` lede is faint and the auth card shadow is heavy. Both are step 3.
 
-- **Step 3: hard-coded color cleanup** (PR_LINK, todos 10–11):
+- **Step 3: hard-coded color cleanup** ([#130](https://github.com/orkunozekin/soccer-team-builder/pull/130), todos 10–11):
   - New tokens (same `--fl-*` RGB-triplet pattern; `.dark` values equal the hex they replace): `mist`, `dim`, `live-text`, `live-pill` / `live-pill-border`, `ok-pill` / `ok-pill-border`, plus `danger` / `danger-wash` (dark = Tailwind `red-400` / `red-900`, light `#B42318` / `#F3C2BB`). `on-bright` (`#0B0F0D`) is defined once in `:root` and is the same in both themes. `elevation` holds a full shadow color with alpha (`0 0 0 / 0.4` dark, `18 24 21 / 0.12` light) for `shadow-elevation`.
   - No `[#…]` arbitrary color classes are left in `app/` / `components/`. `text-[#B9C2BD]` → `text-mist`, `text-[#6F7B74]` → `text-dim`, status pill / match success card → `live-*` / `ok-pill*`, `bg-[#FF8641]` → `bg-pinny-orange`.
   - `text-on-bright` on the white live RSVP pill (`NextMatchHero`) and the orange `ProfileBadge`. `PlayerMarker` current-user border → `border-on-bright` (the pitch doesn't flip). `bg-chalk text-ink` pairs left alone.
