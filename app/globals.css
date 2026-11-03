@@ -7,14 +7,13 @@
     text-wrap: balance;
   }
 
+  /* Daylight ground with a very faint grass-green glow from the top. */
   .pitch-bg {
-    background-color: #fff3f2;
-    background-image: linear-gradient(
-      to bottom,
-      #ffffff 0%,
-      #fffbfb 45%,
-      #fff3f2 80%,
-      #ffe8e6 100%
+    background-color: #f5f4ee;
+    background-image: radial-gradient(
+      120% 60% at 50% -10%,
+      rgba(59, 122, 15, 0.05) 0%,
+      rgba(245, 244, 238, 0) 60%
     );
   }
 
@@ -43,10 +42,10 @@
   .pitch-stripes {
     background-image: repeating-linear-gradient(
       90deg,
-      #102619 0,
-      #102619 48px,
-      #133020 48px,
-      #133020 96px
+      var(--pitch-stripe-a) 0,
+      var(--pitch-stripe-a) 48px,
+      var(--pitch-stripe-b) 48px,
+      var(--pitch-stripe-b) 96px
     );
     -webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent);
     mask-image: linear-gradient(to bottom, #000 30%, transparent);
@@ -63,37 +62,51 @@
 }
 
 @layer base {
+  /* Daylight: the light theme. Floodlight (.dark) overrides below. */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --background: 51.4 25.9% 94.7%; /* ink #F5F4EE */
+    --foreground: 150 14.3% 8.2%; /* chalk #121815 */
+    --card: 0 0% 100%; /* turf #FFFFFF */
+    --card-foreground: 150 14.3% 8.2%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 0 100% 40%;
+    --popover-foreground: 150 14.3% 8.2%;
+    --primary: 4.5 77% 47.6%; /* card red #D72A1C */
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 0 100% 40%;
+    --secondary: 80 16.7% 92.9%; /* turf raised #EEF0EA */
+    --secondary-foreground: 150 14.3% 8.2%;
+    --muted: 80 16.7% 92.9%;
+    --muted-foreground: 147.3 6% 35.9%; /* fog #56615B */
+    --accent: 80 16.7% 92.9%;
+    --accent-foreground: 150 14.3% 8.2%;
+    --destructive: 5.2 79% 42.9%; /* flare #C42617 */
+    --destructive-foreground: 0 0% 100%;
+    --border: 90 10% 88.2%; /* #E1E4DE */
+    --input: 111.4 7.4% 81.4%; /* #CDD3CC */
+    --ring: 4.5 77% 47.6%; /* #D72A1C */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    --radius: 0.875rem;
     /* Soccer pitch lineup surface (striped grass + white markings) */
     --pitch-surface: #2d6a2d;
     --pitch-surface-alt: #276027;
     --pitch-markings: #f5faf5;
     --pitch-border: #ffffff;
+    /* Floodlight color names (tailwind.config.ts), as RGB triplets. */
+    --fl-ink: 245 244 238; /* #F5F4EE */
+    --fl-rail: 236 234 226; /* #ECEAE2 */
+    --fl-turf: 255 255 255; /* #FFFFFF */
+    --fl-turf-raised: 238 240 234; /* #EEF0EA */
+    --fl-line: 211 216 209; /* #D3D8D1 */
+    --fl-chalk: 18 24 21; /* #121815 */
+    --fl-fog: 86 97 91; /* #56615B */
+    --fl-flare: 196 38 23; /* #C42617 */
+    --fl-lime: 59 122 15; /* #3B7A0F */
+    /* Auth hero band stripes (.pitch-stripes) */
+    --pitch-stripe-a: #dce9d6;
+    --pitch-stripe-b: #d1e2ca;
   }
   /* Floodlight: the app renders dark (see <html class="dark"> in layout). */
   .dark {
@@ -126,6 +139,17 @@
     --pitch-surface-alt: #15371f;
     --pitch-markings: rgba(243, 241, 234, 0.55);
     --pitch-border: #22402e;
+    --fl-ink: 11 15 13; /* #0B0F0D */
+    --fl-rail: 15 20 17; /* #0F1411 */
+    --fl-turf: 19 26 22; /* #131A16 */
+    --fl-turf-raised: 28 36 32; /* #1C2420 */
+    --fl-line: 47 58 52; /* #2F3A34 */
+    --fl-chalk: 243 241 234; /* #F3F1EA */
+    --fl-fog: 154 165 159; /* #9AA59F */
+    --fl-flare: 255 90 74; /* #FF5A4A */
+    --fl-lime: 186 232 123; /* #BAE87B */
+    --pitch-stripe-a: #102619;
+    --pitch-stripe-b: #133020;
   }
 }
 
@@ -137,7 +161,10 @@
     overflow-x: clip;
     min-height: 100%;
     /* Match pitch-bg fallback so overscroll / short pages never flash white. */
-    background-color: #fff3f2;
+    background-color: #f5f4ee;
+    color-scheme: light;
+    /* Native checkboxes, radios and range inputs pick up the card red. */
+    accent-color: #d72a1c;
   }
   html.dark {
     background-color: #0b0f0d;

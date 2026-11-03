@@ -9,7 +9,7 @@ Let each signed-in user pick a dark or light theme. The choice is saved on their
 | Status | in-progress |
 | Owner session | Orchestrated: one agent session and one PR per implementation step (below) |
 | Last updated | 2026-11-03 |
-| Related PR / branch | Plan: [#126](https://github.com/orkunozekin/soccer-team-builder/pull/126). Step 1: [#128](https://github.com/orkunozekin/soccer-team-builder/pull/128) (`orkun/theme-step-1-preference-plumbing`) |
+| Related PR / branch | Plan: [#126](https://github.com/orkunozekin/soccer-team-builder/pull/126). Step 1: [#128](https://github.com/orkunozekin/soccer-team-builder/pull/128) (`orkun/theme-step-1-preference-plumbing`). Step 2: [#129](https://github.com/orkunozekin/soccer-team-builder/pull/129) (`orkun/theme-step-2-color-tokens`) |
 
 ## Goals (v1)
 
@@ -230,10 +230,15 @@ shadcn HSL tokens in `:root` follow the same values: `--background` = ink, `--ca
   - Hydration: `themePreference` mapped (normalized) in `AuthProvider` `userData` and `mapDocToUser`. So `userData.themePreference` is always `'dark' | 'light'` once the profile loads.
   - `PATCH /api/users/me`: strict `'dark' | 'light'`, else `400 Invalid themePreference`; in `changedFields`. `updateProfileAPI({ themePreference })` (`route.test.ts` cases added).
 
+- **Step 2: color tokens + Daylight values** ([#129](https://github.com/orkunozekin/soccer-team-builder/pull/129), todos 5–6):
+  - `tailwind.config.ts`: `ink`, `rail`, `turf` (+ `raised`), `line`, `chalk`, `fog`, `flare`, `lime` are `rgb(var(--fl-*) / <alpha-value>)`. Opacity modifiers (`border-line/60`, `bg-rail/95`, …) still compile.
+  - `app/globals.css`: `--fl-*` RGB triplets. `.dark` has the exact Floodlight hex values, and `:root` has the approved Daylight values. The `:root` shadcn HSL tokens are now Daylight, and `:root --radius` matches dark (`0.875rem`). Light `.pitch-bg` is `#F5F4EE` with a faint lime radial. `.pitch-stripes` uses `--pitch-stripe-a/b` (Floodlight `#102619`/`#133020`, Daylight `#DCE9D6`/`#D1E2CA`). The light `html` rule sets `#F5F4EE`, `color-scheme: light` and `accent-color: #D72A1C`. The `--pitch-*` lineup tokens are unchanged.
+  - Verified dark is pixel-identical on `/login`, `/register`, `/forgot-password`, `/join` (375 + 1280). In a light spot-check (`dark` class removed by hand), the `text-[#B9C2BD]` lede is faint and the auth card shadow is heavy. Both are step 3.
+
 ### Remaining work
 
-1. **Step 2: color tokens + Daylight values** (todos 5, 6).
-2. Steps 3–6 (table above), in order, one PR each.
+1. **Step 3: hard-coded color cleanup** (todos 10, 11): add the `mist`, `dim`, `live-*`, `ok-pill`, `on-bright` tokens (Floodlight values under `.dark`, Daylight under `:root`, same `--fl-*` RGB-triplet pattern) and replace the arbitrary hex classes.
+2. Steps 4–6 (table above), in order, one PR each.
 
 Each step's agent updates this Handoff in its own PR: it adds the PR link under Done so far and moves the next step to the top of Remaining work.
 

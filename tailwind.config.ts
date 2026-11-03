@@ -40,15 +40,20 @@ const config: Config = {
         'red-80': '#FFB5B3',
         'red-90': '#FFD8D6',
         'red-95': '#FFF3F2',
-        // Floodlight palette: night-match ground, chalk text, flare accent.
-        ink: '#0B0F0D',
-        rail: '#0F1411',
-        turf: { DEFAULT: '#131A16', raised: '#1C2420' },
-        line: '#2F3A34',
-        chalk: '#F3F1EA',
-        fog: '#9AA59F',
-        flare: '#FF5A4A',
-        lime: '#BAE87B',
+        // Floodlight (dark) / Daylight (light) palette. Values are RGB
+        // triplets in app/globals.css (:root = Daylight, .dark = Floodlight)
+        // so opacity modifiers like text-chalk/70 keep working.
+        ink: 'rgb(var(--fl-ink) / <alpha-value>)',
+        rail: 'rgb(var(--fl-rail) / <alpha-value>)',
+        turf: {
+          DEFAULT: 'rgb(var(--fl-turf) / <alpha-value>)',
+          raised: 'rgb(var(--fl-turf-raised) / <alpha-value>)',
+        },
+        line: 'rgb(var(--fl-line) / <alpha-value>)',
+        chalk: 'rgb(var(--fl-chalk) / <alpha-value>)',
+        fog: 'rgb(var(--fl-fog) / <alpha-value>)',
+        flare: 'rgb(var(--fl-flare) / <alpha-value>)',
+        lime: 'rgb(var(--fl-lime) / <alpha-value>)',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {
