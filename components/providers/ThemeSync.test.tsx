@@ -1,5 +1,6 @@
 import { act, render, waitFor } from '@testing-library/react'
 import type { User as FirebaseUser } from 'firebase/auth'
+import { useTheme } from 'next-themes'
 import {
   afterEach,
   beforeAll,
@@ -45,6 +46,14 @@ function signIn(uid: string, themePreference?: ThemePreference) {
   })
 }
 
+let externalSetTheme: ((theme: string) => void) | null = null
+
+/** Stands in for another caller of next-themes (e.g. the step 5 toggle). */
+function ExternalThemeControl() {
+  externalSetTheme = useTheme().setTheme
+  return null
+}
+
 function Harness({
   flagOn,
   flagReady = true,
@@ -57,6 +66,7 @@ function Harness({
       <FeatureFlagContext.Provider value={{ 'light-theme': flagOn }}>
         <FeatureFlagsReadyContext.Provider value={flagReady}>
           <ThemeSync />
+          <ExternalThemeControl />
         </FeatureFlagsReadyContext.Provider>
       </FeatureFlagContext.Provider>
     </ThemeProvider>
@@ -223,5 +233,26 @@ describe('ThemeSync', () => {
     })
 
     expectTheme('dark')
+  })
+
+  it('does not revert a theme change made elsewhere while its inputs are unchanged', async () => {
+    signIn('u1')
+    render(<Harness flagOn />)
+    await waitFor(() => expectTheme('dark'))
+
+    act(() => externalSetTheme!('light'))
+
+    await waitFor(() => expectTheme('light'))
+    // Give any re-run effect a chance to fire.
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 20))
+    })
+    expectTheme('light')
+
+    // A real input change (the saved preference) still applies.
+    act(() => {
+      useAuthStore.setState({ userData: profile('u1', 'dark') })
+    })
+    await waitFor(() => expectTheme('dark'))
   })
 })

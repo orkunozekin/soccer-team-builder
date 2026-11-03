@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useTheme } from 'next-themes'
 import { useFeatureFlag, useFeatureFlagReady } from '@/lib/flags/useFeatureFlag'
 import { useAuthStore } from '@/store/authStore'
@@ -19,6 +19,11 @@ import { normalizeThemePreference } from '@/types/user'
  */
 export function ThemeSync() {
   const { setTheme } = useTheme()
+  // next-themes recreates `setTheme` whenever the theme changes. Keeping it
+  // out of the effect deps means a theme change made elsewhere (the sidebar
+  // toggle) doesn't re-run this effect and get reverted to the profile value.
+  const setThemeRef = useRef(setTheme)
+  setThemeRef.current = setTheme
   const uid = useAuthStore(state => state.user?.uid ?? null)
   const profileReady = useAuthStore(state => state.profileReady)
   const profileUid = useAuthStore(state => state.userData?.uid ?? null)
@@ -31,22 +36,14 @@ export function ThemeSync() {
   useEffect(() => {
     if (!uid || !profileReady || !flagReady) return
     if (!flagOn) {
-      setTheme('dark')
+      setThemeRef.current('dark')
       return
     }
     // Profile not loaded for this uid (stale doc from the previous user, or
     // the fetch failed): keep the current theme rather than guess.
     if (profileUid !== uid) return
-    setTheme(normalizeThemePreference(storedPreference))
-  }, [
-    uid,
-    profileReady,
-    profileUid,
-    storedPreference,
-    flagOn,
-    flagReady,
-    setTheme,
-  ])
+    setThemeRef.current(normalizeThemePreference(storedPreference))
+  }, [uid, profileReady, profileUid, storedPreference, flagOn, flagReady])
 
   return null
 }
