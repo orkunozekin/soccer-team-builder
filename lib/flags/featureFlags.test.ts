@@ -4,16 +4,23 @@ import { getLocalFeatureFlagOverrides } from './featureFlags'
 describe('getLocalFeatureFlagOverrides', () => {
   const originalClub = process.env.NEXT_PUBLIC_FF_CLUB_CREATION
   const originalPitch = process.env.NEXT_PUBLIC_FF_PITCH_LINEUP_VIEW
+  const originalLightTheme = process.env.NEXT_PUBLIC_FF_LIGHT_THEME
   const originalNodeEnv = process.env.NODE_ENV
   const originalVercelEnv = process.env.VERCEL_ENV
 
   afterEach(() => {
-    if (originalClub === undefined) delete process.env.NEXT_PUBLIC_FF_CLUB_CREATION
+    if (originalClub === undefined)
+      delete process.env.NEXT_PUBLIC_FF_CLUB_CREATION
     else process.env.NEXT_PUBLIC_FF_CLUB_CREATION = originalClub
     if (originalPitch === undefined) {
       delete process.env.NEXT_PUBLIC_FF_PITCH_LINEUP_VIEW
     } else {
       process.env.NEXT_PUBLIC_FF_PITCH_LINEUP_VIEW = originalPitch
+    }
+    if (originalLightTheme === undefined) {
+      delete process.env.NEXT_PUBLIC_FF_LIGHT_THEME
+    } else {
+      process.env.NEXT_PUBLIC_FF_LIGHT_THEME = originalLightTheme
     }
     if (originalVercelEnv === undefined) delete process.env.VERCEL_ENV
     else process.env.VERCEL_ENV = originalVercelEnv
@@ -26,10 +33,12 @@ describe('getLocalFeatureFlagOverrides', () => {
     delete process.env.VERCEL_ENV
     process.env.NEXT_PUBLIC_FF_CLUB_CREATION = 'true'
     process.env.NEXT_PUBLIC_FF_PITCH_LINEUP_VIEW = 'true'
+    process.env.NEXT_PUBLIC_FF_LIGHT_THEME = 'true'
 
     expect(getLocalFeatureFlagOverrides()).toEqual({
       'club-creation': true,
       'pitch-lineup-view': true,
+      'light-theme': true,
     })
   })
 
@@ -37,6 +46,7 @@ describe('getLocalFeatureFlagOverrides', () => {
     vi.stubEnv('NODE_ENV', 'production')
     delete process.env.VERCEL_ENV
     process.env.NEXT_PUBLIC_FF_CLUB_CREATION = 'true'
+    process.env.NEXT_PUBLIC_FF_LIGHT_THEME = 'true'
 
     expect(getLocalFeatureFlagOverrides()).toEqual({})
   })
@@ -45,6 +55,17 @@ describe('getLocalFeatureFlagOverrides', () => {
     vi.stubEnv('NODE_ENV', 'test')
     process.env.VERCEL_ENV = 'production'
     process.env.NEXT_PUBLIC_FF_CLUB_CREATION = 'true'
+    process.env.NEXT_PUBLIC_FF_LIGHT_THEME = 'true'
+
+    expect(getLocalFeatureFlagOverrides()).toEqual({})
+  })
+
+  it('omits light-theme unless its override is exactly true', () => {
+    vi.stubEnv('NODE_ENV', 'test')
+    delete process.env.VERCEL_ENV
+    delete process.env.NEXT_PUBLIC_FF_CLUB_CREATION
+    delete process.env.NEXT_PUBLIC_FF_PITCH_LINEUP_VIEW
+    process.env.NEXT_PUBLIC_FF_LIGHT_THEME = '1'
 
     expect(getLocalFeatureFlagOverrides()).toEqual({})
   })

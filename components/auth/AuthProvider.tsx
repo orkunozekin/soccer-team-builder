@@ -10,7 +10,7 @@ import { createUser } from '@/lib/services/userService'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import { resolveHydratedActiveClubId } from '@/lib/utils/resolveHydratedActiveClubId'
 import { useAuthStore } from '@/store/authStore'
-import { User, normalizeUserRole } from '@/types/user'
+import { User, normalizeThemePreference, normalizeUserRole } from '@/types/user'
 
 /** If auth/user fetch takes longer than this, stop showing loading so the app is still usable. */
 const AUTH_LOADING_TIMEOUT_MS = 8_000
@@ -146,6 +146,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 position: userDoc.position ?? null,
                 role,
                 activeClubId,
+                themePreference: normalizeThemePreference(
+                  userDoc.themePreference
+                ),
                 createdAt: timestampToDate(userDoc.createdAt) || new Date(),
                 updatedAt: timestampToDate(userDoc.updatedAt) || new Date(),
               }
