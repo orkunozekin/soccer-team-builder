@@ -44,9 +44,7 @@ export function FormationSelect({
       onApplied?.(formationId)
     } catch (err) {
       setLocalValue(previous)
-      setError(
-        err instanceof Error ? err.message : 'Failed to apply formation'
-      )
+      setError(err instanceof Error ? err.message : 'Failed to apply formation')
     } finally {
       setBusy(false)
     }
@@ -55,9 +53,7 @@ export function FormationSelect({
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          Formation
-        </span>
+        <span className="text-sm font-medium text-[#B9C2BD]">Formation</span>
         <Select
           value={localValue || undefined}
           onValueChange={id => {
@@ -91,9 +87,7 @@ export function FormationSelect({
           {busy ? 'Applying…' : 'Apply'}
         </Button>
       </div>
-      {error ? (
-        <p className="text-xs text-red-700 dark:text-red-400">{error}</p>
-      ) : null}
+      {error ? <p className="text-xs text-red-400">{error}</p> : null}
     </div>
   )
 }

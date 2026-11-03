@@ -24,68 +24,64 @@ interface PlayerProfileDetailsProps {
 
 export function PlayerProfileDetails({ user }: PlayerProfileDetailsProps) {
   return (
-    <Card className="overflow-hidden rounded-xl border-zinc-200 shadow-sm dark:border-zinc-800">
+    <Card className="overflow-hidden rounded-xl border-border shadow-sm">
       <CardHeader className="pb-4 sm:px-8 sm:pt-8">
-        <CardTitle className="text-xl font-semibold tracking-tight sm:text-2xl">
-          Player Details
-        </CardTitle>
-        <CardDescription className="text-sm text-zinc-500 dark:text-zinc-400">
+        <CardTitle className="text-2xl sm:text-3xl">Player Details</CardTitle>
+        <CardDescription className="text-sm text-muted-foreground">
           Profile information on file
         </CardDescription>
       </CardHeader>
       <CardContent className="sm:px-8 sm:pb-8">
         <dl className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <dt className="text-xs uppercase tracking-wide text-zinc-500">
+            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
               Display name
             </dt>
-            <dd className="mt-1 text-base font-medium text-zinc-900 dark:text-zinc-100">
+            <dd className="mt-1 text-base font-medium text-foreground">
               {user.displayName || '—'}
             </dd>
           </div>
           <div className="sm:col-span-2">
-            <dt className="text-xs uppercase tracking-wide text-zinc-500">
+            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
               Email
             </dt>
-            <dd className="mt-1 break-all text-base text-zinc-900 dark:text-zinc-100">
+            <dd className="mt-1 break-all text-base text-foreground">
               {user.email || '—'}
             </dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-zinc-500">
+            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
               Jersey
             </dt>
-            <dd className="mt-1 text-base text-zinc-900 dark:text-zinc-100">
+            <dd className="mt-1 text-base text-foreground">
               {user.jerseyNumber == null ? '—' : user.jerseyNumber}
             </dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-zinc-500">
+            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
               Position
             </dt>
-            <dd className="mt-1 text-base text-zinc-900 dark:text-zinc-100">
+            <dd className="mt-1 text-base text-foreground">
               {positionLabel(user.position)}
             </dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-zinc-500">
+            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
               Role
             </dt>
             <dd className="mt-1">
               <Badge
-                variant={
-                  user.role === 'super_user' ? 'default' : 'outline'
-                }
+                variant={user.role === 'super_user' ? 'default' : 'outline'}
               >
                 {user.role === 'super_user' ? 'Super user' : 'User'}
               </Badge>
             </dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-zinc-500">
+            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
               Joined
             </dt>
-            <dd className="mt-1 text-base text-zinc-900 dark:text-zinc-100">
+            <dd className="mt-1 text-base text-foreground">
               {format(user.createdAt, 'MMM d, yyyy')}
             </dd>
           </div>

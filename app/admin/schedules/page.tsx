@@ -5,6 +5,7 @@ import {
   ScheduleForm,
   type ScheduleFormValues,
 } from '@/components/admin/ScheduleForm'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -140,31 +141,27 @@ export default function AdminSchedulesPage() {
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-            Schedules
-          </h1>
-          <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-            Recurring weekly or monthly match templates. Active schedules keep
-            the next 3 matches visible for players.
-          </p>
-        </div>
-        {mode === 'list' && (
-          <Button
-            type="button"
-            onClick={() => {
-              setEditing(null)
-              setMode('create')
-            }}
-          >
-            New schedule
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="Super user"
+        title="Schedules"
+        description="Recurring weekly or monthly match templates. Active schedules keep the next 3 matches visible for players."
+        actions={
+          mode === 'list' ? (
+            <Button
+              type="button"
+              onClick={() => {
+                setEditing(null)
+                setMode('create')
+              }}
+            >
+              New schedule
+            </Button>
+          ) : null
+        }
+      />
 
       {actionError && (
-        <p className="mb-4 text-sm text-red-600 dark:text-red-400" role="alert">
+        <p className="mb-4 text-sm text-red-400" role="alert">
           {actionError}
         </p>
       )}
@@ -214,10 +211,10 @@ export default function AdminSchedulesPage() {
       {mode === 'list' && (
         <div className="space-y-4">
           {loading ? (
-            <p className="text-sm text-zinc-500">Loading schedules…</p>
+            <p className="text-sm text-muted-foreground">Loading schedules…</p>
           ) : schedules.length === 0 ? (
             <Card>
-              <CardContent className="py-8 text-center text-sm text-zinc-500">
+              <CardContent className="py-8 text-center text-sm text-muted-foreground">
                 No schedules yet. Create one to auto-generate recurring matches.
               </CardContent>
             </Card>
@@ -235,7 +232,7 @@ export default function AdminSchedulesPage() {
                           : ''}
                         {' · '}
                         {schedule.active ? (
-                          <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                          <span className="font-medium text-emerald-400">
                             Active
                           </span>
                         ) : (
@@ -265,7 +262,7 @@ export default function AdminSchedulesPage() {
                       </Button>
                       <Button
                         type="button"
-                        variant="ghost"
+                        variant="destructive"
                         size="sm"
                         onClick={() => void handleDelete(schedule)}
                       >
@@ -275,7 +272,7 @@ export default function AdminSchedulesPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  <p className="text-sm text-muted-foreground">
                     {summarizeSlots(schedule) || 'No slots'}
                   </p>
                 </CardContent>

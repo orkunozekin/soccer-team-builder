@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AdminMatchCard } from '@/components/admin/AdminMatchCard'
 import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
-import { SoccerBallIcon } from '@/components/icons/SoccerBallIcon'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { MatchCard } from '@/components/matches/MatchCard'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { FilterPill } from '@/components/ui/filter-pill'
 import { Pagination } from '@/components/ui/pagination'
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
@@ -272,20 +273,17 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
   }
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8">
-      <div className="mb-6 animate-slide-up-fade">
-        <div className="flex items-center gap-3">
-          <SoccerBallIcon className="h-10 w-10 animate-float text-red-50" />
-          <div>
-            <h1 className="text-3xl font-bold text-red-50">Matches</h1>
-            <p className="text-zinc-600 dark:text-zinc-400">
-              {showAdminList
-                ? 'Create matches and manage RSVPs, teams, and attendance'
-                : 'View and RSVP to upcoming matches'}
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="container mx-auto max-w-5xl px-4 py-8 sm:py-10">
+      <PageHeader
+        className="animate-slide-up-fade"
+        eyebrow={clubId ? undefined : 'Super user'}
+        title={clubId ? 'Matches' : 'All matches'}
+        description={
+          showAdminList
+            ? 'Create matches and manage RSVPs, teams, and attendance'
+            : 'View and RSVP to upcoming matches'
+        }
+      />
 
       {canCreateMatch && (
         <div className="mb-6">
@@ -300,26 +298,20 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
         <div
           role="tablist"
           aria-label="Filter matches"
-          className="mb-4 flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900/50"
+          className="mb-5 flex flex-wrap gap-2"
         >
           {ADMIN_FILTERS.map(option => {
             const active = filter === option.value
             return (
-              <button
+              <FilterPill
                 key={option.value}
-                type="button"
+                active={active}
                 role="tab"
                 aria-selected={active}
                 onClick={() => setFilter(option.value)}
-                className={cn(
-                  'rounded-md px-3 py-1.5 text-sm font-semibold transition-colors',
-                  active
-                    ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100'
-                    : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
-                )}
               >
                 {option.label}
-              </button>
+              </FilterPill>
             )
           })}
         </div>
@@ -334,7 +326,7 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="text-sm text-muted-foreground">
               {showAdminList
                 ? filter === 'past'
                   ? 'No past matches.'
@@ -350,9 +342,8 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
       ) : (
         <div
           className={cn(
-            'grid gap-4',
-            visibleMatches.length > 1 && 'sm:grid-cols-2',
-            visibleMatches.length > 2 && 'lg:grid-cols-3'
+            'grid grid-cols-1 gap-4',
+            visibleMatches.length > 1 && 'md:grid-cols-2'
           )}
         >
           {paged.items.map((match, index) => {
@@ -366,6 +357,7 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
                 href={matchHref(match.id)}
                 rsvpCount={rsvpCounts[match.id]}
                 onDeleted={refetchMatchesAndCounts}
+                index={index}
               />
             ) : (
               <MatchCard

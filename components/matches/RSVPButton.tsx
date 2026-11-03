@@ -17,9 +17,10 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { cancelRSVPAPI, confirmRSVPAPI } from '@/lib/api/client'
-import { useIsClubAdmin } from '@/lib/hooks/useClubMemberships'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { useIsClubAdmin } from '@/lib/hooks/useClubMemberships'
 import { getUserRSVP } from '@/lib/services/rsvpService'
+import { cn } from '@/lib/utils'
 import { getTeamPositionOccupancy } from '@/lib/utils/pitchLayout'
 import { isProfileComplete } from '@/lib/utils/profile'
 import { hasMatchStarted } from '@/lib/utils/rsvpScheduler'
@@ -69,9 +70,7 @@ export function RSVPButton({
   const dismissCelebration = useCallback(() => setShowCelebration(false), [])
 
   const uid = currentUserId ?? user?.uid ?? null
-  const userTeam = uid
-    ? teams.find(t => t.playerIds.includes(uid))
-    : undefined
+  const userTeam = uid ? teams.find(t => t.playerIds.includes(uid)) : undefined
   const positionOccupancy = useMemo(
     () => getTeamPositionOccupancy(userTeam, rosterUsers),
     [userTeam, rosterUsers]
@@ -194,9 +193,7 @@ export function RSVPButton({
         await onTeamsRegenerated()
       }
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to update RSVP'
-      )
+      setError(err instanceof Error ? err.message : 'Failed to update RSVP')
     } finally {
       setLoading(false)
     }
@@ -209,7 +206,7 @@ export function RSVPButton({
   const matchStarted = hasMatchStarted(match.date, match.time)
   if (hasRSVPed && matchStarted && !canManageMatch) {
     return (
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-sm text-muted-foreground">
         Match has started. RSVP can no longer be cancelled.
       </p>
     )
@@ -240,7 +237,7 @@ export function RSVPButton({
                   e.preventDefault()
                   handleConfirmCancelRSVP()
                 }}
-                className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-600 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-600"
+                className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-600"
               >
                 Cancel RSVP
               </Button>
@@ -267,8 +264,8 @@ export function RSVPButton({
         }
       />
       {showPositionPickerForGkBlock && (
-        <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/80 p-3 dark:border-amber-800 dark:bg-amber-950/30">
-          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+        <div className="space-y-3 rounded-lg border border-amber-800 bg-amber-950/30 p-3">
+          <p className="text-sm font-medium text-amber-200">
             There are already 2 goalkeepers for this match. Choose a different
             position to RSVP.
           </p>
@@ -296,7 +293,7 @@ export function RSVPButton({
             </Button>
           </div>
           {positionForRsvp && isGoalkeeper(positionForRsvp) && (
-            <p className="text-sm text-amber-700 dark:text-amber-300">
+            <p className="text-sm text-amber-300">
               Please select a non-goalkeeper position.
             </p>
           )}
@@ -308,15 +305,18 @@ export function RSVPButton({
           disabled={!user}
           loading={loading}
           variant={hasRSVPed ? 'outline' : 'default'}
-          className={`h-11 w-full text-base transition-all duration-300 sm:h-9 sm:text-sm ${
-            justRsvped ? 'animate-rsvp-glow' : ''
-          }`}
+          size={hasRSVPed ? 'lg' : 'hero'}
+          className={cn(
+            'w-full transition-all duration-300',
+            hasRSVPed && 'h-12 rounded-2xl text-base',
+            justRsvped && 'animate-rsvp-glow'
+          )}
         >
-          {hasRSVPed ? 'Cancel RSVP' : 'RSVP to Match'}
+          {hasRSVPed ? 'Cancel RSVP' : "I'm in"}
         </Button>
       )}
       {error && !showPositionPickerForGkBlock && (
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="text-sm text-red-400">{error}</p>
       )}
     </div>
   )

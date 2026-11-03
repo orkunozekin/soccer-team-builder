@@ -44,7 +44,7 @@ export function RSVPSuccessCelebration({
           <span
             key={i}
             className={cn(
-              'absolute top-0 h-3 w-2 rounded-sm opacity-90 animate-confetti-fall',
+              'absolute top-0 h-3 w-2 animate-confetti-fall rounded-sm opacity-90',
               piece.color
             )}
             style={{ left: piece.left, animationDelay: piece.delay }}
@@ -52,11 +52,13 @@ export function RSVPSuccessCelebration({
         ))}
       </div>
 
-      <div className="animate-scale-in relative flex flex-col items-center gap-3 rounded-2xl border-2 border-red-50 bg-white px-10 py-8 shadow-2xl">
+      <div className="relative flex animate-scale-in flex-col items-center gap-3 rounded-2xl border-2 border-red-50 bg-popover px-10 py-8 shadow-2xl">
         <div className="absolute -inset-1 animate-pulse-ring rounded-2xl border-2 border-red-50/40" />
         <SoccerBallIcon className="h-16 w-16 animate-ball-bounce text-red-50" />
-        <p className="text-2xl font-bold text-red-50">You&apos;re in!</p>
-        <p className="text-sm font-medium text-zinc-600">
+        <p className="font-display text-4xl font-black uppercase text-chalk">
+          You&apos;re in!
+        </p>
+        <p className="text-sm font-medium text-muted-foreground">
           See you on the pitch
         </p>
       </div>

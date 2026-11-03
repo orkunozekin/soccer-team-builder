@@ -22,7 +22,7 @@ export function TeamToggle({
           className={`rounded px-4 py-2 text-sm font-medium transition-colors ${
             selectedIndex === index
               ? 'bg-primary text-primary-foreground'
-              : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
+              : 'bg-accent text-[#B9C2BD]'
           }`}
         >
           {team.name || `Team ${team.teamNumber}`}

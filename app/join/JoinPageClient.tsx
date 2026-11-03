@@ -112,19 +112,16 @@ export default function JoinPageClient() {
           </CardHeader>
           <CardContent className="space-y-4">
             {previewError ? (
-              <p className="text-sm text-amber-700 dark:text-amber-400">
+              <p className="text-sm text-amber-400">
                 {previewError}. You can still sign in and try the invite code.
               </p>
             ) : clubName ? (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-sm text-muted-foreground">
                 Sign in or create an account to join{' '}
-                <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                  {clubName}
-                </span>
-                .
+                <span className="font-medium text-foreground">{clubName}</span>.
               </p>
             ) : (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-sm text-muted-foreground">
                 Sign in or create an account, then enter your invite code.
               </p>
             )}
@@ -151,24 +148,22 @@ export default function JoinPageClient() {
     <div className="container mx-auto px-4 py-10">
       <Card className="mx-auto max-w-md">
         <CardHeader>
-          <CardTitle>
-            {clubName ? `Join ${clubName}` : 'Join a club'}
-          </CardTitle>
+          <CardTitle>{clubName ? `Join ${clubName}` : 'Join a club'}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {autoError && (
-            <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+            <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
               {autoError}
             </div>
           )}
           {!autoError && previewError && codeFromUrl && !autoStatus && (
-            <p className="text-sm text-amber-700 dark:text-amber-400">
+            <p className="text-sm text-amber-400">
               Could not load the club name. Redeeming invite…
             </p>
           )}
           {autoStatus && (
             <div className="space-y-3">
-              <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-400">
+              <div className="rounded-md bg-green-900/20 p-3 text-sm text-green-400">
                 {autoStatus}
               </div>
               <Button type="button" onClick={() => router.push('/matches')}>
@@ -180,10 +175,8 @@ export default function JoinPageClient() {
             <JoinClubForm onJoined={() => router.push('/matches')} />
           )}
           {codeFromUrl && !autoStatus && !autoError && (
-            <p className="text-sm text-zinc-500">
-              {clubName
-                ? `Joining ${clubName}…`
-                : 'Redeeming invite…'}
+            <p className="text-sm text-muted-foreground">
+              {clubName ? `Joining ${clubName}…` : 'Redeeming invite…'}
             </p>
           )}
           {autoError && (

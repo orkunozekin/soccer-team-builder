@@ -30,7 +30,9 @@ export function AnalyticsDashboard() {
       } catch (err: unknown) {
         if (!cancelled) {
           setStats(null)
-          setError(err instanceof Error ? err.message : 'Failed to load dashboard')
+          setError(
+            err instanceof Error ? err.message : 'Failed to load dashboard'
+          )
         }
       } finally {
         if (!cancelled) {
@@ -52,7 +54,7 @@ export function AnalyticsDashboard() {
   return (
     <div className="space-y-6">
       {error ? (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
           {error}
         </div>
       ) : null}

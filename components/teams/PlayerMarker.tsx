@@ -1,11 +1,14 @@
 'use client'
 
+import { resolveTeamColor, teamTextColor } from '@/lib/constants/teamColors'
 import { formatPitchDisplayName } from '@/lib/utils/displayName'
 import { formatJerseyDisplay } from '@/lib/utils/jerseyNumber'
 import { PitchPosition } from '@/lib/utils/pitchLayout'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
+
+const GOALKEEPER_DISC_COLOR = '#f5d76e'
 
 interface PlayerMarkerProps {
   user: User
@@ -32,6 +35,7 @@ export function PlayerMarker({
   isCurrentUser = false,
 }: PlayerMarkerProps) {
   const isGK = isGoalkeeper(user.position)
+  const discColor = isGK ? GOALKEEPER_DISC_COLOR : resolveTeamColor(team.color)
   const clickable = isAdmin && onPlayerClick
   const size = isMobile ? 30 : 40
 
@@ -40,7 +44,7 @@ export function PlayerMarker({
       <div
         className={`relative flex items-center justify-center rounded-full border shadow-sm ${
           isCurrentUser
-            ? 'animate-headcount-bump border-red-50 ring-2 ring-red-50/50'
+            ? 'animate-headcount-bump border-ink ring-2 ring-chalk'
             : 'border-white/90'
         }`}
         style={{
@@ -48,7 +52,7 @@ export function PlayerMarker({
           height: size,
           minWidth: size,
           minHeight: size,
-          backgroundColor: isGK ? '#f5d76e' : team.color || '#1e40af',
+          backgroundColor: discColor,
         }}
       >
         {/* Silhouette ring — denser pro-lineup look without requiring photos */}
@@ -57,9 +61,10 @@ export function PlayerMarker({
           aria-hidden
         />
         <span
-          className={`relative z-[1] font-bold tabular-nums leading-none drop-shadow-sm ${
-            isGK ? 'text-zinc-900' : 'text-white'
-          } ${isMobile ? 'text-xs' : 'text-base'}`}
+          className={`relative z-[1] font-mono font-bold tabular-nums leading-none ${
+            isMobile ? 'text-xs' : 'text-base'
+          }`}
+          style={{ color: teamTextColor(discColor) }}
         >
           {formatJerseyDisplay(user.jerseyNumber)}
         </span>
@@ -75,7 +80,7 @@ export function PlayerMarker({
             isGK
               ? // Solid black on a light pill — readable on grass. Avoid
                 // leading-none + truncate which clips glyph descenders.
-                'rounded-sm bg-white/90 px-1.5 py-0.5 text-black leading-tight shadow-sm'
+                'rounded-sm bg-white/90 px-1.5 py-0.5 leading-tight text-black shadow-sm'
               : 'truncate leading-none text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)]'
           } ${isMobile ? 'text-[11px]' : 'text-xs'}`}
           title={user.displayName}

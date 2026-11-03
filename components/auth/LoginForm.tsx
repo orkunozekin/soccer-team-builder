@@ -9,8 +9,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
-import { loginUser, loginWithGoogle, getAuthErrorMessage } from '@/lib/firebase/auth'
 import { recordAuditEventAPI } from '@/lib/api/client'
+import {
+  getAuthErrorMessage,
+  loginUser,
+  loginWithGoogle,
+} from '@/lib/firebase/auth'
 import { createUser, getUser } from '@/lib/services/userService'
 import { useAuthStore } from '@/store/authStore'
 
@@ -98,7 +102,7 @@ export function LoginForm({
           onChange={e => setEmail(e.target.value)}
           required
           disabled={loading || googleLoading}
-          className="h-11 text-base sm:h-9 sm:text-sm"
+          className="h-12 text-base"
           autoComplete="email"
         />
       </div>
@@ -108,7 +112,7 @@ export function LoginForm({
           <Label htmlFor="password">Password</Label>
           <Link
             href="/forgot-password"
-            className="text-sm font-medium text-red-50 hover:underline dark:text-red-400"
+            className="text-sm font-medium text-[#B9C2BD] underline-offset-4 hover:text-chalk hover:underline"
           >
             Forgot password?
           </Link>
@@ -120,7 +124,7 @@ export function LoginForm({
           onChange={e => setPassword(e.target.value)}
           required
           disabled={loading || googleLoading}
-          className="h-11 text-base sm:h-9 sm:text-sm"
+          className="h-12 text-base"
           autoComplete="current-password"
         />
       </div>
@@ -131,17 +135,18 @@ export function LoginForm({
         type="submit"
         disabled={loading || googleLoading}
         loading={loading}
-        className="h-11 w-full text-base sm:h-9 sm:text-sm"
+        size="hero"
+        className="w-full"
       >
-        Sign In
+        Sign in
       </Button>
 
       <div className="my-4 flex items-center gap-3">
-        <span className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
-        <span className="text-xs uppercase text-gray-500 dark:text-gray-400">
-          Or continue with
+        <span className="h-px flex-1 bg-border" />
+        <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-fog">
+          Or
         </span>
-        <span className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+        <span className="h-px flex-1 bg-border" />
       </div>
 
       <Button
@@ -149,12 +154,12 @@ export function LoginForm({
         variant="outline"
         disabled={loading}
         loading={googleLoading}
-        className="h-11 w-full text-base sm:h-9 sm:text-sm"
+        className="h-12 w-full rounded-2xl text-base"
         onClick={handleGoogleSignIn}
       >
         <span className="inline-flex items-center justify-center">
           <GoogleIcon className="mr-2" />
-          Sign in with Google
+          Continue with Google
         </span>
       </Button>
     </form>

@@ -1,8 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { format } from 'date-fns'
-import Link from 'next/link'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,18 +11,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { MatchCard } from '@/components/matches/MatchCard'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { ButtonSpinner } from '@/components/ui/button-spinner'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { deleteMatchAPI } from '@/lib/api/client'
-import { locationDisplayName } from '@/lib/utils/location'
 import { Match } from '@/types/match'
 
 interface AdminMatchCardProps {
@@ -33,6 +23,8 @@ interface AdminMatchCardProps {
   onDeleted?: () => void
   /** Detail URL. Defaults to the legacy admin match route. */
   href?: string
+  /** Index for staggered entrance animation */
+  index?: number
 }
 
 export function AdminMatchCard({
@@ -40,13 +32,10 @@ export function AdminMatchCard({
   rsvpCount,
   onDeleted,
   href,
+  index,
 }: AdminMatchCardProps) {
   const [open, setOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
-
-  const matchDate = new Date(match.date)
-  const formattedDate = format(matchDate, 'EEEE, MMM d')
-  const formattedTime = format(matchDate, 'h:mm a')
 
   const handleConfirmDelete = async () => {
     setDeleting(true)
@@ -63,58 +52,24 @@ export function AdminMatchCard({
 
   return (
     <>
-      <Link href={href ?? `/admin/matches/${match.id}`}>
-        <Card className="h-full cursor-pointer transition-all hover:shadow-md">
-          <CardHeader>
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1">
-                <CardTitle className="mb-2 text-xl">{formattedDate}</CardTitle>
-                <CardDescription className="text-base">
-                  {formattedTime}
-                </CardDescription>
-                {match.location && locationDisplayName(match.location) && (
-                  <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-                    @ {locationDisplayName(match.location)}
-                  </p>
-                )}
-              </div>
-              <Badge
-                variant={match.rsvpOpen ? 'default' : 'outline'}
-                className="shrink-0 py-1 text-xs"
-              >
-                {match.rsvpOpen ? 'RSVP Open' : 'RSVP Closed'}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {rsvpCount !== undefined && (
-              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                {rsvpCount} {rsvpCount === 1 ? 'player' : 'players'} confirmed
-              </p>
-            )}
-            <div
-              onClick={e => {
-                e.preventDefault()
-                e.stopPropagation()
-              }}
-            >
-              <Button
-                variant="destructive"
-                size="sm"
-                className="h-8"
-                loading={deleting}
-                onClick={e => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setOpen(true)
-                }}
-              >
-                Delete
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </Link>
+      <MatchCard
+        match={match}
+        rsvpCount={rsvpCount}
+        href={href ?? `/admin/matches/${match.id}`}
+        index={index}
+        isAdmin
+        actions={
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-9 rounded-full px-4"
+            loading={deleting}
+            onClick={() => setOpen(true)}
+          >
+            Delete
+          </Button>
+        }
+      />
 
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent onClick={e => e.stopPropagation()}>
@@ -133,7 +88,7 @@ export function AdminMatchCard({
                 handleConfirmDelete()
               }}
               disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className={buttonVariants({ variant: 'destructive' })}
             >
               {deleting ? <ButtonSpinner /> : 'Delete'}
             </AlertDialogAction>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Pagination } from '@/components/ui/pagination'
 import {
@@ -191,17 +192,15 @@ export function ClubInvitesPanel({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          Invites
-        </h2>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Create a code or link so players can join this club.
-        </p>
-      </div>
+      <PageHeader
+        className="mb-0"
+        eyebrow="Club admin"
+        title="Invites"
+        description="Create a code or link so players can join this club."
+      />
 
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
           {error}
         </div>
       )}
@@ -217,10 +216,10 @@ export function ClubInvitesPanel({
       </div>
 
       {created && (
-        <div className="space-y-2 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="space-y-2 rounded-md border border-border bg-card p-3 text-sm">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">Code:</span>
-            <code className="rounded bg-white px-2 py-0.5 font-mono tracking-wider dark:bg-zinc-800">
+            <code className="rounded bg-accent px-2 py-0.5 font-mono tracking-wider">
               {created.code}
             </code>
             <Button
@@ -234,7 +233,7 @@ export function ClubInvitesPanel({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">Link:</span>
-            <code className="max-w-full truncate rounded bg-white px-2 py-0.5 dark:bg-zinc-800">
+            <code className="max-w-full truncate rounded bg-accent px-2 py-0.5">
               {shareableInviteLink(created.link)}
             </code>
             <Button
@@ -253,13 +252,15 @@ export function ClubInvitesPanel({
 
       {canManageInvites && (
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Active invites
           </h3>
           {loading ? (
-            <p className="mt-2 text-sm text-zinc-500">Loading invites…</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Loading invites…
+            </p>
           ) : invites.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-2 text-sm text-muted-foreground">
               No active invites. Create one above.
             </p>
           ) : (
@@ -269,13 +270,13 @@ export function ClubInvitesPanel({
                 return (
                   <li
                     key={invite.id}
-                    className="flex flex-col gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-2 rounded-md border border-border bg-card px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0 text-sm">
                       <code className="font-mono tracking-wider">
                         {invite.code}
                       </code>
-                      <div className="text-xs text-zinc-500">
+                      <div className="text-xs text-muted-foreground">
                         Uses: {invite.useCount}
                         {invite.maxUses != null ? ` / ${invite.maxUses}` : ''}
                       </div>

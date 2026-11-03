@@ -168,9 +168,7 @@ export function SavedLocationForm({
         }
       />
 
-      {error && (
-        <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-      )}
+      {error && <p className="text-sm text-red-400">{error}</p>}
 
       <div className="flex flex-wrap gap-2">
         {onCancel && (
@@ -250,7 +248,7 @@ export function SavedLocationCard({
           )}
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-muted-foreground">
             {hasValidCoords(location)
               ? `Pinned: ${location.lat!.toFixed(5)}, ${location.lng!.toFixed(5)}`
               : 'No map pin yet'}

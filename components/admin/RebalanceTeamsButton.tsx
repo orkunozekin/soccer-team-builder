@@ -38,7 +38,7 @@ export function RebalanceTeamsButton({
   return (
     <div className={showError === 'block' ? 'space-y-2' : undefined}>
       {error && showError === 'block' && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
           {error}
         </div>
       )}
@@ -53,9 +53,7 @@ export function RebalanceTeamsButton({
         Rebalance teams
       </Button>
       {error && showError === 'inline' && (
-        <div className="mt-2 text-xs text-red-700 dark:text-red-400">
-          {error}
-        </div>
+        <div className="mt-2 text-xs text-red-400">{error}</div>
       )}
     </div>
   )

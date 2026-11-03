@@ -23,7 +23,7 @@ export function InitialsAvatar({
     <div
       aria-hidden
       className={cn(
-        'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-semibold uppercase text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
+        'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold uppercase text-[#B9C2BD]',
         className
       )}
     >

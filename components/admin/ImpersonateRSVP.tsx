@@ -133,7 +133,7 @@ export function ImpersonateRSVP({
               </div>
 
               {searching && (
-                <p className="text-sm text-zinc-500">Searching...</p>
+                <p className="text-sm text-muted-foreground">Searching...</p>
               )}
 
               {!searching &&
@@ -145,7 +145,7 @@ export function ImpersonateRSVP({
                       <li key={u.uid}>
                         <button
                           type="button"
-                          className="w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
                           onClick={() => {
                             setSelected(u)
                             setQuery('')
@@ -154,7 +154,7 @@ export function ImpersonateRSVP({
                         >
                           {u.displayName || u.email || u.uid}
                           {u.email && u.displayName && (
-                            <span className="ml-1 text-zinc-500">
+                            <span className="ml-1 text-muted-foreground">
                               ({u.email})
                             </span>
                           )}
@@ -165,10 +165,10 @@ export function ImpersonateRSVP({
                 )}
 
               {selected && (
-                <div className="space-y-3 rounded-md border bg-zinc-50 p-3 dark:bg-zinc-900/50">
+                <div className="space-y-3 rounded-md border bg-muted/50 p-3">
                   <p className="text-sm font-medium">
                     {hasRsvp ? 'Cancel RSVP for' : 'RSVP as'}{' '}
-                    <span className="text-zinc-900 dark:text-zinc-100">
+                    <span className="text-foreground">
                       {selected.displayName || selected.email || selected.uid}
                     </span>
                   </p>
@@ -221,7 +221,7 @@ export function ImpersonateRSVP({
                           Clear
                         </Button>
                       </div>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-muted-foreground">
                         Position is optional; profile position is used if not
                         set.
                       </p>
@@ -230,9 +230,7 @@ export function ImpersonateRSVP({
                 </div>
               )}
 
-              {error && (
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-              )}
+              {error && <p className="text-sm text-red-400">{error}</p>}
             </div>
           </AccordionContent>
         </AccordionItem>

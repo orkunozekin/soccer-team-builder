@@ -10,6 +10,11 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'var(--font-sans)', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
+      },
       colors: {
         'neutral-10': '#11151B',
         'neutral-20': '#232C35',
@@ -28,13 +33,22 @@ const config: Config = {
         'red-10': '#250704',
         'red-20': '#570F0C',
         'red-30': '#861719',
-        'red-40': '#B30000',
-        'red-50': '#CC0000',
+        'red-40': '#B82215',
+        'red-50': '#D72A1C',
         'red-60': '#E60000',
         'red-70': '#FF7A7B',
         'red-80': '#FFB5B3',
         'red-90': '#FFD8D6',
         'red-95': '#FFF3F2',
+        // Floodlight palette: night-match ground, chalk text, flare accent.
+        ink: '#0B0F0D',
+        rail: '#0F1411',
+        turf: { DEFAULT: '#131A16', raised: '#1C2420' },
+        line: '#2F3A34',
+        chalk: '#F3F1EA',
+        fog: '#9AA59F',
+        flare: '#FF5A4A',
+        lime: '#BAE87B',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {
@@ -119,21 +133,24 @@ const config: Config = {
         },
         'confetti-fall': {
           '0%': { transform: 'translateY(-10vh) rotate(0deg)', opacity: '1' },
-          '100%': { transform: 'translateY(110vh) rotate(720deg)', opacity: '0' },
+          '100%': {
+            transform: 'translateY(110vh) rotate(720deg)',
+            opacity: '0',
+          },
         },
         'pulse-ring': {
           '0%, 100%': { transform: 'scale(1)', opacity: '0.6' },
           '50%': { transform: 'scale(1.04)', opacity: '0.2' },
         },
         'rsvp-glow': {
-          '0%, 100%': { boxShadow: '0 0 0 0 rgba(204, 0, 0, 0)' },
-          '50%': { boxShadow: '0 0 0 6px rgba(204, 0, 0, 0.25)' },
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(215, 42, 28, 0)' },
+          '50%': { boxShadow: '0 0 0 6px rgba(215, 42, 28, 0.35)' },
         },
         'badge-pulse': {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.75' },
         },
-        'float': {
+        float: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-4px)' },
         },
@@ -153,7 +170,7 @@ const config: Config = {
         'pulse-ring': 'pulse-ring 1.5s ease-in-out infinite',
         'rsvp-glow': 'rsvp-glow 1s ease-out',
         'badge-pulse': 'badge-pulse 2s ease-in-out infinite',
-        'float': 'float 3s ease-in-out infinite',
+        float: 'float 3s ease-in-out infinite',
         'ball-spin': 'ball-spin 4s linear infinite',
       },
     },

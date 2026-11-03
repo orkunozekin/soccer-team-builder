@@ -63,7 +63,7 @@ export function Pagination({
         className
       )}
     >
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-sm text-muted-foreground">
         Showing {start}–{end} of {totalCount} {itemLabel}
       </p>
       <div className="flex flex-wrap items-center gap-1">
@@ -81,7 +81,7 @@ export function Pagination({
         </Button>
         {onPageChange ? (
           <>
-            <span className="px-2 text-sm text-zinc-600 dark:text-zinc-400 sm:hidden">
+            <span className="px-2 text-sm text-muted-foreground sm:hidden">
               Page {page} of {totalPages}
             </span>
             <ul className="hidden items-center gap-1 sm:flex">
@@ -94,8 +94,7 @@ export function Pagination({
                       size="icon"
                       className={cn(
                         'h-8 w-8',
-                        item === page &&
-                          'border-zinc-300 font-semibold dark:border-zinc-700'
+                        item === page && 'border-input font-semibold'
                       )}
                       onClick={() => {
                         if (item !== page) onPageChange(item)
@@ -110,7 +109,7 @@ export function Pagination({
                   <li
                     key={item}
                     aria-hidden
-                    className="flex h-8 w-8 items-center justify-center text-zinc-400"
+                    className="flex h-8 w-8 items-center justify-center text-muted-foreground"
                   >
                     <MoreHorizontal className="h-4 w-4" />
                   </li>
@@ -119,7 +118,7 @@ export function Pagination({
             </ul>
           </>
         ) : (
-          <span className="px-2 text-sm text-zinc-600 dark:text-zinc-400">
+          <span className="px-2 text-sm text-muted-foreground">
             Page {page} of {totalPages}
           </span>
         )}

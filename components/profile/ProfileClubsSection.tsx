@@ -43,32 +43,28 @@ export function ProfileClubsSection() {
   }
 
   if (loading) {
-    return (
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading clubs…</p>
-    )
+    return <p className="text-sm text-muted-foreground">Loading clubs…</p>
   }
 
   if (error) {
-    return (
-      <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-    )
+    return <p className="text-sm text-red-400">{error}</p>
   }
 
   return (
     <div className="space-y-6">
       {actionError && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
           {actionError}
         </div>
       )}
 
       <div>
-        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+        <h3 className="text-sm font-semibold text-foreground">
           Clubs I&apos;m in
         </h3>
         {memberships.length === 0 ? (
           <div className="mt-2 space-y-3">
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm text-muted-foreground">
               You are not a member of any club yet. Enter an invite code below,
               or open the{' '}
               <a href="/join" className="underline underline-offset-2">
@@ -85,17 +81,17 @@ export function ProfileClubsSection() {
               return (
                 <li
                   key={m.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
                 >
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span className="truncate font-medium text-zinc-900 dark:text-zinc-100">
+                    <span className="truncate font-medium text-foreground">
                       {m.club.name}
                     </span>
-                    <span className="shrink-0 rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                    <span className="shrink-0 rounded-md bg-accent px-2 py-0.5 text-xs font-medium text-[#B9C2BD]">
                       {formatMembershipRole(m.role)}
                     </span>
                     {isActive && (
-                      <span className="shrink-0 rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                      <span className="shrink-0 rounded-md bg-emerald-900/40 px-2 py-0.5 text-xs font-medium text-emerald-300">
                         active
                       </span>
                     )}
@@ -117,7 +113,7 @@ export function ProfileClubsSection() {
           </ul>
         )}
         {memberships.length > 1 && activeClubId && (
-          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="mt-2 text-xs text-muted-foreground">
             Match lists and new matches use your active club. You can also
             switch from the club bar.
           </p>
@@ -126,37 +122,35 @@ export function ProfileClubsSection() {
 
       {adminClubs.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+          <h3 className="text-sm font-semibold text-foreground">
             Clubs I manage
           </h3>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 text-sm text-muted-foreground">
             Roster, invites, and settings live on the club bar for each club.
           </p>
           <ul className="mt-2 space-y-2">
             {adminClubs.map(m => (
               <li
                 key={`admin-${m.id}`}
-                className="rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800"
+                className="rounded-lg border border-border px-3 py-2"
               >
-                <div className="font-medium text-zinc-900 dark:text-zinc-100">
-                  {m.club.name}
-                </div>
+                <div className="font-medium text-foreground">{m.club.name}</div>
                 <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
                   <Link
                     href={clubRosterPath(m.club.slug)}
-                    className="font-medium text-zinc-700 underline-offset-2 hover:underline dark:text-zinc-300"
+                    className="font-medium text-[#B9C2BD] underline-offset-2 hover:underline"
                   >
                     Roster
                   </Link>
                   <Link
                     href={clubInvitesPath(m.club.slug)}
-                    className="font-medium text-zinc-700 underline-offset-2 hover:underline dark:text-zinc-300"
+                    className="font-medium text-[#B9C2BD] underline-offset-2 hover:underline"
                   >
                     Invites
                   </Link>
                   <Link
                     href={clubSettingsPath(m.club.slug)}
-                    className="font-medium text-zinc-700 underline-offset-2 hover:underline dark:text-zinc-300"
+                    className="font-medium text-[#B9C2BD] underline-offset-2 hover:underline"
                   >
                     Settings
                   </Link>
@@ -168,7 +162,7 @@ export function ProfileClubsSection() {
       )}
 
       {memberships.length > 0 && adminClubs.length === 0 && (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm text-muted-foreground">
           You are a player in your clubs. Club admins can share invite codes.
         </p>
       )}
@@ -196,9 +190,8 @@ export function JoinClubForm({ onJoined }: { onJoined?: () => void }) {
     setLoading(true)
     try {
       const { redeemInviteAPI } = await import('@/lib/api/client')
-      const { afterInviteRedeemed } = await import(
-        '@/lib/hooks/useClubMemberships'
-      )
+      const { afterInviteRedeemed } =
+        await import('@/lib/hooks/useClubMemberships')
       const res = await redeemInviteAPI(trimmed)
       if (user?.uid) {
         await afterInviteRedeemed({
@@ -224,12 +217,12 @@ export function JoinClubForm({ onJoined }: { onJoined?: () => void }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
           {error}
         </div>
       )}
       {success && (
-        <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-400">
+        <div className="rounded-md bg-green-900/20 p-3 text-sm text-green-400">
           {success}
         </div>
       )}

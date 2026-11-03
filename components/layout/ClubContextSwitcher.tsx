@@ -61,13 +61,13 @@ export function ClubContextSwitcher({
         disabled={switching}
         aria-label="Switch club"
         className={cn(
-          'inline-flex w-full min-w-0 items-center gap-2 rounded-md border border-white/30 bg-white/10 px-2.5 py-2 text-left text-sm font-semibold text-white outline-none hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white/70 disabled:opacity-60',
+          'inline-flex min-h-11 w-full min-w-0 items-center gap-2 rounded-xl border border-line/70 bg-turf px-3 py-2 text-left text-sm font-semibold text-chalk outline-none hover:bg-turf-raised focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60',
           className
         )}
       >
         <span className="min-w-0 flex-1">
           <span className="block truncate">{clubName}</span>
-          <span className="block truncate text-xs font-normal text-white">
+          <span className="block truncate text-xs font-normal text-fog">
             {formatMembershipRole(role)}
           </span>
         </span>
@@ -75,7 +75,7 @@ export function ClubContextSwitcher({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-0">
         {showSearch ? (
-          <div className="border-b border-zinc-200 p-2 dark:border-zinc-800">
+          <div className="border-b border-border p-2">
             <Input
               autoFocus
               value={query}
@@ -87,7 +87,7 @@ export function ClubContextSwitcher({
         ) : null}
         <ul className="max-h-64 overflow-y-auto p-1">
           {filtered.length === 0 ? (
-            <li className="px-2 py-3 text-sm text-zinc-500 dark:text-zinc-400">
+            <li className="px-2 py-3 text-sm text-muted-foreground">
               No clubs match.
             </li>
           ) : (
@@ -102,13 +102,13 @@ export function ClubContextSwitcher({
                       closeSwitcher()
                       onSwitch(membership.clubId)
                     }}
-                    className="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm hover:bg-zinc-100 disabled:opacity-60 dark:hover:bg-zinc-800"
+                    className="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm hover:bg-accent disabled:opacity-60"
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">
                         {membership.club.name}
                       </span>
-                      <span className="text-xs text-zinc-500">
+                      <span className="text-xs text-muted-foreground">
                         {formatMembershipRole(membership.role)}
                       </span>
                     </span>
@@ -121,11 +121,11 @@ export function ClubContextSwitcher({
             })
           )}
         </ul>
-        <div className="flex flex-col border-t border-zinc-200 p-1 dark:border-zinc-800">
+        <div className="flex flex-col border-t border-border p-1">
           <Link
             href="/join"
             onClick={() => closeSwitcher()}
-            className="rounded-sm px-2 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            className="rounded-sm px-2 py-2 text-sm font-medium text-foreground hover:bg-accent"
           >
             Join a club
           </Link>
@@ -133,7 +133,7 @@ export function ClubContextSwitcher({
             <Link
               href="/admin/users"
               onClick={() => closeSwitcher()}
-              className="rounded-sm px-2 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
+              className="rounded-sm px-2 py-2 text-sm font-medium text-foreground hover:bg-accent"
             >
               Create club
             </Link>

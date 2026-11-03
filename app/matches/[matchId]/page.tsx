@@ -139,7 +139,7 @@ export default function MatchDetailsRedirectPage() {
   if (membershipsError) {
     return (
       <div className="container mx-auto max-w-5xl px-4 py-8">
-        <p className="text-sm text-red-700 dark:text-red-400">
+        <p className="text-sm text-red-400">
           Could not load clubs. {membershipsError}
         </p>
         <Button
@@ -158,9 +158,7 @@ export default function MatchDetailsRedirectPage() {
   if (failed) {
     return (
       <div className="container mx-auto max-w-5xl px-4 py-8">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Match not found.
-        </p>
+        <p className="text-sm text-muted-foreground">Match not found.</p>
       </div>
     )
   }

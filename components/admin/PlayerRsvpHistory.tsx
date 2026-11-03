@@ -117,12 +117,10 @@ export function PlayerRsvpHistory({ userId }: PlayerRsvpHistoryProps) {
   )
 
   return (
-    <Card className="overflow-hidden rounded-xl border-zinc-200 shadow-sm dark:border-zinc-800">
+    <Card className="overflow-hidden rounded-xl border-border shadow-sm">
       <CardHeader className="pb-3 sm:px-8 sm:pt-8">
-        <CardTitle className="text-xl font-semibold tracking-tight sm:text-2xl">
-          RSVP History
-        </CardTitle>
-        <CardDescription className="text-sm text-zinc-500 dark:text-zinc-400">
+        <CardTitle className="text-2xl sm:text-3xl">RSVP History</CardTitle>
+        <CardDescription className="text-sm text-muted-foreground">
           {loading
             ? 'Loading match history…'
             : summary.total === 0
@@ -132,14 +130,14 @@ export function PlayerRsvpHistory({ userId }: PlayerRsvpHistoryProps) {
       </CardHeader>
       <CardContent className="sm:px-8 sm:pb-8">
         {loading ? (
-          <p className="text-sm text-zinc-500">Loading history…</p>
+          <p className="text-sm text-muted-foreground">Loading history…</p>
         ) : rows.length === 0 ? (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             This player has not RSVP&apos;d to any matches yet.
           </p>
         ) : (
           <>
-            <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+            <ul className="divide-y divide-border">
               {pageRows.map(({ rsvp, match, label }) => {
                 const dateLabel = match
                   ? format(match.date, 'EEE, MMM d')
@@ -155,18 +153,18 @@ export function PlayerRsvpHistory({ userId }: PlayerRsvpHistoryProps) {
                       {match ? (
                         <Link
                           href={`/admin/matches/${match.id}`}
-                          className="truncate text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
+                          className="truncate text-sm font-medium text-foreground underline-offset-2 hover:underline"
                         >
                           {dateLabel}
                           {timeLabel}
                         </Link>
                       ) : (
-                        <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                        <p className="truncate text-sm font-medium text-foreground">
                           {dateLabel}
                         </p>
                       )}
                       {place && (
-                        <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                        <p className="truncate text-xs text-muted-foreground">
                           {place}
                         </p>
                       )}

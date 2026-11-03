@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { FilterPill } from '@/components/ui/filter-pill'
 import { InitialsAvatar } from '@/components/ui/initials-avatar'
 import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/pagination'
@@ -14,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { StatusPill } from '@/components/ui/status-pill'
 import { listClubMembersAPI, updateClubMemberRoleAPI } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 import {
@@ -134,23 +137,21 @@ export function ClubAdminRoster({
   const filtersActive = roleFilter !== 'all' || query.trim() !== ''
 
   const header = (
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          Roster
-        </h2>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Promote or demote members. The last club admin cannot be demoted.
-        </p>
-      </div>
-      {!loading && members.length > 0 && (
-        <Badge variant="secondary" className="shrink-0 font-medium">
-          {filtersActive
-            ? `${filteredMembers.length} of ${members.length}`
-            : `${members.length} ${members.length === 1 ? 'member' : 'members'}`}
-        </Badge>
-      )}
-    </div>
+    <PageHeader
+      className="mb-0"
+      eyebrow="Club admin"
+      title="Roster"
+      description="Promote or demote members. The last club admin cannot be demoted."
+      actions={
+        !loading && members.length > 0 ? (
+          <StatusPill tone="neutral">
+            {filtersActive
+              ? `${filteredMembers.length} of ${members.length}`
+              : `${members.length} ${members.length === 1 ? 'member' : 'members'}`}
+          </StatusPill>
+        ) : null
+      }
+    />
   )
 
   const filters = !loading && members.length > 0 && (
@@ -158,25 +159,19 @@ export function ClubAdminRoster({
       <div
         role="group"
         aria-label="Filter roster by role"
-        className="flex flex-wrap gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900/50"
+        className="flex flex-wrap gap-2"
       >
         {CLUB_ROSTER_ROLE_FILTERS.map(option => {
           const active = roleFilter === option.value
           return (
-            <button
+            <FilterPill
               key={option.value}
-              type="button"
+              active={active}
               aria-pressed={active}
               onClick={() => setRoleFilter(option.value)}
-              className={cn(
-                'rounded-md px-3 py-1.5 text-sm font-semibold transition-colors',
-                active
-                  ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100'
-                  : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
-              )}
             >
               {option.label}
-            </button>
+            </FilterPill>
           )
         })}
       </div>
@@ -195,7 +190,7 @@ export function ClubAdminRoster({
       <div className="space-y-4">
         {header}
         <Card aria-busy="true" aria-label="Loading roster">
-          <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+          <ul className="divide-y divide-border">
             {Array.from({ length: 5 }, (_, i) => (
               <li key={i} className="flex items-center gap-3 px-4 py-3">
                 <Skeleton className="h-9 w-9 rounded-full" />
@@ -215,7 +210,7 @@ export function ClubAdminRoster({
   return (
     <div className="space-y-4">
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
           {error}
         </div>
       )}
@@ -224,16 +219,16 @@ export function ClubAdminRoster({
       {filters}
 
       {members.length === 0 ? (
-        <Card className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
+        <Card className="px-4 py-10 text-center text-sm text-muted-foreground">
           No members yet.
         </Card>
       ) : filteredMembers.length === 0 ? (
-        <Card className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
+        <Card className="px-4 py-10 text-center text-sm text-muted-foreground">
           No members match.
         </Card>
       ) : (
         <Card className="overflow-hidden">
-          <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+          <ul className="divide-y divide-border">
             {pageMembers.map(member => {
               const isSelf = member.userId === currentUserId
               const isLastAdmin =
@@ -243,25 +238,25 @@ export function ClubAdminRoster({
               return (
                 <li
                   key={member.id}
-                  className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
+                  className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/60"
                 >
                   <InitialsAvatar name={member.displayName} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                      <span className="truncate text-sm font-medium text-foreground">
                         {member.displayName}
                       </span>
                       {isSelf && (
                         <Badge
                           variant="outline"
-                          className="shrink-0 px-1.5 py-0 text-[10px] font-medium text-zinc-500 dark:text-zinc-400"
+                          className="shrink-0 px-1.5 py-0 text-[10px] font-medium text-muted-foreground"
                         >
                           You
                         </Badge>
                       )}
                     </div>
                     {member.email && (
-                      <div className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                      <div className="truncate text-xs text-muted-foreground">
                         {member.email}
                       </div>
                     )}
@@ -303,7 +298,7 @@ export function ClubAdminRoster({
           </ul>
           {totalPages > 1 && (
             <Pagination
-              className="mt-0 border-zinc-100 px-4 py-3 dark:border-zinc-800"
+              className="mt-0 border-border px-4 py-3"
               page={currentPage}
               totalPages={totalPages}
               totalCount={filteredMembers.length}

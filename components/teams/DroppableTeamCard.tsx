@@ -1,5 +1,6 @@
 'use client'
 
+import type { HTMLAttributes } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import {
   CheckCircle2,
@@ -8,7 +9,6 @@ import {
   MoreVertical,
   XCircle,
 } from 'lucide-react'
-import type { HTMLAttributes } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,6 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { resolveTeamColor, teamTextColor } from '@/lib/constants/teamColors'
 import { cn } from '@/lib/utils'
 import type { AttendanceLabel } from '@/lib/utils/checkIn'
 import {
@@ -71,7 +72,7 @@ export function CheckInStatusLegend({ className }: { className?: string }) {
   return (
     <ul
       className={cn(
-        'flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-600 dark:text-zinc-400',
+        'flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground',
         className
       )}
       aria-label="Check-in status legend"
@@ -128,8 +129,7 @@ export function PlayerTile({
     <div
       className={cn(
         '-mx-1 flex min-w-0 items-center gap-1.5 rounded-md px-1.5 py-1.5 text-sm sm:gap-2 sm:px-2',
-        isCurrentUser &&
-          'bg-primary/10 font-medium ring-1 ring-primary/40 dark:bg-primary/20 dark:ring-primary/50',
+        isCurrentUser && 'bg-primary/20 font-medium ring-1 ring-primary/50',
         className
       )}
       // WebKit: do not turn jersey + name + position into a Maps link.
@@ -138,7 +138,7 @@ export function PlayerTile({
       {showGrip && (
         <span
           {...gripProps}
-          className="flex shrink-0 cursor-grab touch-none rounded p-0.5 text-zinc-400 hover:text-zinc-600 active:cursor-grabbing dark:text-zinc-500 dark:hover:text-zinc-300"
+          className="flex shrink-0 cursor-grab touch-none rounded p-0.5 text-muted-foreground hover:text-[#B9C2BD] active:cursor-grabbing"
           title="Drag to move to another team"
           aria-label="Drag to move player to another team"
         >
@@ -146,8 +146,11 @@ export function PlayerTile({
         </span>
       )}
       <span
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-        style={{ backgroundColor: teamColor || '#3b82f6' }}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+        style={{
+          backgroundColor: resolveTeamColor(teamColor),
+          color: teamTextColor(teamColor),
+        }}
       >
         {formatJerseyDisplay(user.jerseyNumber)}
       </span>
@@ -158,9 +161,8 @@ export function PlayerTile({
         {user.position ? (
           <p
             className={cn(
-              'truncate text-xs leading-tight text-zinc-500 dark:text-zinc-400',
-              isGoalkeeper(user.position) &&
-                'font-medium text-amber-700 dark:text-amber-400'
+              'truncate text-xs leading-tight text-muted-foreground',
+              isGoalkeeper(user.position) && 'font-medium text-amber-400'
             )}
           >
             {formatPositionDisplay(user.position)}
@@ -195,7 +197,7 @@ export function PlayerTile({
                 ) : null}
                 {onCancelRSVP ? (
                   <DropdownMenuItem
-                    className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
+                    className="text-red-400 focus:text-red-400"
                     onClick={() => onCancelRSVP(user.uid, displayName)}
                   >
                     Cancel RSVP
@@ -242,7 +244,7 @@ function DraggablePlayerRow({
     <div
       ref={setNodeRef}
       className={cn(
-        dndEnabled && 'hover:bg-zinc-50 dark:hover:bg-zinc-900',
+        dndEnabled && 'hover:bg-card',
         (isDragging || transferring === user.uid) && 'opacity-40'
       )}
     >
@@ -297,9 +299,7 @@ export function DroppableTeamCard({
         'min-w-0 overflow-hidden',
         dndEnabled &&
           'outline outline-1 outline-transparent hover:outline-zinc-300',
-        isOver &&
-          dndEnabled &&
-          'outline-2 outline-zinc-400 ring-2 ring-zinc-300 dark:ring-zinc-600'
+        isOver && dndEnabled && 'outline-2 outline-zinc-400 ring-2 ring-ring'
       )}
     >
       <CardHeader>
@@ -308,14 +308,17 @@ export function DroppableTeamCard({
             {team.name || `Team ${team.teamNumber}`}
           </CardTitle>
           <Badge
-            style={{ backgroundColor: team.color || '#3b82f6' }}
-            className="shrink-0 text-white"
+            style={{
+              backgroundColor: resolveTeamColor(team.color),
+              color: teamTextColor(team.color),
+            }}
+            className="shrink-0"
           >
             {team.playerIds.length}/{team.maxSize}
           </Badge>
         </div>
         {dndEnabled && (
-          <p className="text-xs text-zinc-600 dark:text-zinc-400">
+          <p className="text-xs text-muted-foreground">
             Use the grip handle (⋮⋮) on a player to drag them to another team.
           </p>
         )}
@@ -323,9 +326,7 @@ export function DroppableTeamCard({
       <CardContent>
         <div className="space-y-2">
           {teamUsers.length === 0 ? (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              No players assigned
-            </p>
+            <p className="text-sm text-muted-foreground">No players assigned</p>
           ) : (
             teamUsers.map(user => (
               <DraggablePlayerRow

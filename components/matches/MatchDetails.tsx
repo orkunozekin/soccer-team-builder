@@ -2,22 +2,20 @@
 
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
-import { Calendar, Users } from 'lucide-react'
 import { CheckInButton } from '@/components/matches/CheckInButton'
 import { LocationLink } from '@/components/matches/LocationLink'
+import { RosterFillMeter } from '@/components/matches/RosterFillMeter'
 import { RSVPButton } from '@/components/matches/RSVPButton'
 import { PositionSelector } from '@/components/profile/PositionSelector'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { StatusPill } from '@/components/ui/status-pill'
 import { updateRSVPPositionAPI } from '@/lib/api/client'
 import { SOCCER_POSITIONS } from '@/lib/constants/positions'
+import { cn } from '@/lib/utils'
+import {
+  getKickoffLabelForMatch,
+  getRsvpStatusForMatch,
+} from '@/lib/utils/matchStatus'
 import { getTeamPositionOccupancy } from '@/lib/utils/pitchLayout'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { useMatchStore } from '@/store/matchStore'
@@ -63,8 +61,8 @@ export function MatchDetails({
   currentUserId = null,
 }: MatchDetailsProps) {
   const matchDate = new Date(match.date)
-  const formattedDate = format(matchDate, 'EEEE, MMM d')
   const formattedTime = format(matchDate, 'h:mm a')
+  const rsvpStatus = getRsvpStatusForMatch(match)
 
   const { updateRSVPPosition } = useMatchStore()
   const currentPosition = userRsvp?.position ?? userProfilePosition ?? null
@@ -131,45 +129,56 @@ export function MatchDetails({
 
   return (
     <div className="min-w-0 space-y-6">
-      <Card className="card-soccer-accent overflow-hidden">
-        <CardHeader>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <CardTitle className="mb-2 text-2xl sm:text-3xl">
-                {formattedDate}
-              </CardTitle>
-              <CardDescription className="flex items-center gap-2 text-base sm:text-lg">
-                <Calendar className="h-4 w-4 shrink-0 text-red-50" />
-                {formattedTime}
-              </CardDescription>
-              {match.location && (
-                <LocationLink
-                  location={match.location}
-                  className="mt-1 text-sm text-zinc-600 dark:text-zinc-400"
-                  showIcon
-                />
-              )}
-            </div>
-            <Badge
-              variant={match.rsvpOpen ? 'default' : 'outline'}
-              className={`shrink-0 py-1 text-xs ${
-                match.rsvpOpen ? 'animate-badge-pulse' : ''
-              }`}
+      <section
+        aria-labelledby="match-date-heading"
+        className="card-soccer-accent space-y-6 overflow-hidden"
+      >
+        <div className="space-y-4">
+          <StatusPill tone={rsvpStatus.tone}>{rsvpStatus.label}</StatusPill>
+          <div>
+            <p className="font-mono text-[13px] tracking-[0.14em] text-fog">
+              {format(matchDate, 'EEEE').toUpperCase()}
+            </p>
+            <h1
+              id="match-date-heading"
+              className="font-display text-[clamp(4.5rem,14vw,8rem)] font-black uppercase leading-[0.86]"
             >
-              {match.rsvpOpen ? 'RSVP Open' : 'RSVP Closed'}
-            </Badge>
+              {format(matchDate, 'MMM dd')}
+            </h1>
+            <p className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+              <span className="font-display text-4xl font-extrabold text-flare">
+                {formattedTime}
+              </span>
+              <span className="text-[15px] text-[#B9C2BD]">
+                Kickoff{' '}
+                <strong className="font-semibold text-chalk">
+                  {getKickoffLabelForMatch(match)}
+                </strong>
+              </span>
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-lg bg-red-95/60 px-4 py-3 dark:bg-red-20/20">
-            <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-              <Users className="h-4 w-4 text-red-50" />
+          {match.location && (
+            <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3">
+              <LocationLink
+                location={match.location}
+                className="min-w-0 text-[15px]"
+                showIcon
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-5 rounded-2xl border border-border bg-card p-5">
+          <div className="space-y-4">
+            <p className="font-mono text-xs uppercase tracking-[0.12em] text-fog">
               Current headcount
             </p>
+            {!showCheckInHeadcount && <RosterFillMeter confirmed={rsvpCount} />}
             <p
-              className={`text-sm font-medium text-zinc-600 dark:text-zinc-400 ${
-                bumpHeadcount ? 'animate-headcount-bump' : ''
-              }`}
+              className={cn(
+                'inline-block text-sm font-medium text-[#B9C2BD]',
+                bumpHeadcount && 'animate-headcount-bump'
+              )}
             >
               {showCheckInHeadcount
                 ? `${checkedInCount} of ${rsvpCount} checked in`
@@ -179,21 +188,21 @@ export function MatchDetails({
 
           {showEditPosition && (
             <div
-              className={`space-y-3 border-t border-zinc-200 pt-2 dark:border-zinc-800 ${
-                highlightPosition
-                  ? 'animate-slide-up-fade rounded-lg bg-red-95/40 p-3 dark:bg-red-20/10'
-                  : ''
-              }`}
+              className={cn(
+                'space-y-3 border-t border-border pt-4',
+                highlightPosition &&
+                  'animate-slide-up-fade rounded-xl border border-[#3B5A22] bg-[#1A2A12] p-4'
+              )}
             >
-              <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+              <p className="font-display text-xl font-extrabold uppercase">
                 Your position for this match
               </p>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-sm text-[#B9C2BD]">
                 Current:{' '}
                 <span
                   className={
                     isGoalkeeper(currentPosition)
-                      ? 'rounded bg-amber-200/90 px-1.5 py-0.5 text-amber-900 dark:bg-amber-700/50 dark:text-amber-100'
+                      ? 'rounded bg-amber-700/50 px-1.5 py-0.5 text-amber-100'
                       : undefined
                   }
                 >
@@ -225,26 +234,22 @@ export function MatchDetails({
                 </Button>
               </div>
               {isGkChangingToNonGk && (
-                <p className="text-sm text-amber-600 dark:text-amber-400">
+                <p className="text-sm text-amber-400">
                   If you change from goalkeeper, another goalkeeper may take
                   your spot on this team and you may move to a different team.
                 </p>
               )}
               {swapMessage && (
-                <p className="text-sm text-green-600 dark:text-green-400">
-                  {swapMessage}
-                </p>
+                <p className="text-sm text-green-400">{swapMessage}</p>
               )}
               {positionError && (
-                <p className="text-sm text-red-600 dark:text-red-400">
-                  {positionError}
-                </p>
+                <p className="text-sm text-red-400">{positionError}</p>
               )}
             </div>
           )}
 
           {match.rsvpOpen && (
-            <div className="pt-4">
+            <div className="pt-1">
               <RSVPButton
                 match={match}
                 onTeamsRegenerated={onTeamsRegenerated}
@@ -262,8 +267,8 @@ export function MatchDetails({
             userRsvp={userRsvp}
             onCheckedIn={onMatchRefetch}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </div>
   )
 }

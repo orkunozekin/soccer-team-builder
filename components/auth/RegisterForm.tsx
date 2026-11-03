@@ -8,7 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
-import { loginWithGoogle, registerUser, getAuthErrorMessage } from '@/lib/firebase/auth'
+import {
+  loginWithGoogle,
+  registerUser,
+  getAuthErrorMessage,
+} from '@/lib/firebase/auth'
 import { recordAuditEventAPI, redeemInviteAPI } from '@/lib/api/client'
 import { afterInviteRedeemed } from '@/lib/hooks/useClubMemberships'
 import { createUser, getUser } from '@/lib/services/userService'
@@ -221,11 +225,11 @@ export function RegisterForm({
       </Button>
 
       <div className="my-4 flex items-center gap-3">
-        <span className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
-        <span className="text-xs uppercase text-gray-500 dark:text-gray-400">
+        <span className="h-px flex-1 bg-muted" />
+        <span className="text-xs uppercase text-muted-foreground">
           Or continue with
         </span>
-        <span className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+        <span className="h-px flex-1 bg-muted" />
       </div>
 
       <Button

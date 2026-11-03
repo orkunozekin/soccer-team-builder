@@ -77,13 +77,13 @@ export function CardLoadingSkeleton() {
 /** Minimal header skeleton for nav while auth is loading. */
 export function NavLoadingSkeleton() {
   return (
-    <header className="flex items-center justify-center bg-red-50 py-2 font-semibold text-white">
+    <header className="flex items-center justify-center border-b border-line/60 bg-rail py-2 font-semibold text-chalk">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
-          <Skeleton className="h-6 w-48 rounded bg-white/20" />
+          <Skeleton className="h-6 w-48 rounded bg-turf-raised" />
           <div className="flex gap-2">
-            <Skeleton className="h-8 w-16 rounded bg-white/20" />
-            <Skeleton className="h-8 w-20 rounded bg-white/20" />
+            <Skeleton className="h-8 w-16 rounded bg-turf-raised" />
+            <Skeleton className="h-8 w-20 rounded bg-turf-raised" />
           </div>
         </div>
       </div>

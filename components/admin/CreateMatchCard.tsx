@@ -68,8 +68,7 @@ export function CreateMatchCard({
             }
           : null
 
-      const fromProp =
-        typeof clubIdProp === 'string' ? clubIdProp.trim() : ''
+      const fromProp = typeof clubIdProp === 'string' ? clubIdProp.trim() : ''
       const fromProfile =
         typeof userData?.activeClubId === 'string'
           ? userData.activeClubId.trim()
@@ -164,13 +163,13 @@ export function CreateMatchCard({
             />
 
             {error && (
-              <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+              <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-400">
+              <div className="rounded-md bg-green-900/20 p-3 text-sm text-green-400">
                 Match created successfully!
               </div>
             )}

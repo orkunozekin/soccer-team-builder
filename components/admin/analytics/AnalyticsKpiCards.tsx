@@ -16,29 +16,30 @@ type KpiCardProps = {
   accent?: 'default' | 'success' | 'warning'
 }
 
-function KpiCard({ title, value, subtitle, icon, accent = 'default' }: KpiCardProps) {
+function KpiCard({
+  title,
+  value,
+  subtitle,
+  icon,
+  accent = 'default',
+}: KpiCardProps) {
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
-            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-              {title}
-            </p>
-            <p className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <p className="text-3xl font-bold tracking-tight text-foreground">
               {value.toLocaleString()}
             </p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</p>
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
           </div>
           <div
             className={cn(
               'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
-              accent === 'success' &&
-                'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-              accent === 'warning' &&
-                'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-              accent === 'default' &&
-                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+              accent === 'success' && 'bg-emerald-900/30 text-emerald-400',
+              accent === 'warning' && 'bg-amber-900/30 text-amber-400',
+              accent === 'default' && 'bg-red-900/30 text-red-400'
             )}
           >
             {icon}

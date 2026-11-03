@@ -1,6 +1,7 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyClubAdminForMatch } from '@/lib/api/auth'
+import { teamPaletteEntry } from '@/lib/constants/teamColors'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { auditLog } from '@/lib/services/auditService'
 import { enforceTeamMaxSizes } from '@/lib/utils/teamGenerator'
@@ -30,13 +31,8 @@ function findTeamForPlayer(
 
 export async function POST(request: NextRequest) {
   try {
-    const {
-      matchId,
-      playerId,
-      targetTeamId,
-      currentTeamId,
-      swapWithPlayerId,
-    } = await request.json()
+    const { matchId, playerId, targetTeamId, currentTeamId, swapWithPlayerId } =
+      await request.json()
 
     if (!matchId || !playerId || targetTeamId === undefined) {
       return NextResponse.json(
@@ -211,10 +207,7 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       )
     }
-    targetAssignment.playerIds = uniq([
-      ...targetAssignment.playerIds,
-      playerId,
-    ])
+    targetAssignment.playerIds = uniq([...targetAssignment.playerIds, playerId])
 
     const manualPins = new Map<string, number>(
       Object.entries(existingAssignments).filter(
@@ -248,15 +241,6 @@ export async function POST(request: NextRequest) {
       { manualPins, rsvpAtByUserId }
     )
 
-    const TEAM_COLORS = [
-      '#f97316',
-      '#3b82f6',
-      '#eab308',
-      '#65a30d',
-      '#ef4444',
-      '#8b5cf6',
-    ]
-    const TEAM_NAMES = ['Orange', 'Blue', 'Yellow', 'Lime', 'Red', 'Purple']
     const existingByNumber = new Map(
       nextAssignments.map(t => [t.teamNumber, t] as const)
     )
@@ -274,12 +258,8 @@ export async function POST(request: NextRequest) {
       batch.set(teamsCol.doc(teamId), {
         matchId,
         teamNumber: assignment.teamNumber,
-        name:
-          TEAM_NAMES[(assignment.teamNumber - 1) % TEAM_NAMES.length] ??
-          `Team ${assignment.teamNumber}`,
-        color:
-          TEAM_COLORS[(assignment.teamNumber - 1) % TEAM_COLORS.length] ??
-          '#3b82f6',
+        name: teamPaletteEntry(assignment.teamNumber).name,
+        color: teamPaletteEntry(assignment.teamNumber).color,
         playerIds: assignment.playerIds,
         maxSize: 11,
         createdAt: now,

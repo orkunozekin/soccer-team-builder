@@ -25,9 +25,9 @@ function ActivityTooltip({
 }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white px-3 py-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-      <p className="text-xs text-zinc-500">{label}</p>
-      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+    <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-sm">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-sm font-semibold text-foreground">
         {payload[0]?.value ?? 0} events
       </p>
     </div>
@@ -40,8 +40,8 @@ export function ActivityChart({ stats }: { stats: AuditStats }) {
   return (
     <Card className="min-w-0">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold">Activity over time</CardTitle>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <CardTitle className="text-xl">Activity over time</CardTitle>
+        <p className="text-sm text-muted-foreground">
           Daily event volume for the last 14 days
         </p>
       </CardHeader>
@@ -54,14 +54,28 @@ export function ActivityChart({ stats }: { stats: AuditStats }) {
                 margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
               >
                 <defs>
-                  <linearGradient id="activityGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={CHART_COLOR} stopOpacity={0.35} />
-                    <stop offset="95%" stopColor={CHART_COLOR} stopOpacity={0} />
+                  <linearGradient
+                    id="activityGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="5%"
+                      stopColor={CHART_COLOR}
+                      stopOpacity={0.35}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor={CHART_COLOR}
+                      stopOpacity={0}
+                    />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  className="stroke-zinc-200 dark:stroke-zinc-800"
+                  className="stroke-zinc-800"
                   vertical={false}
                 />
                 <XAxis
@@ -90,7 +104,7 @@ export function ActivityChart({ stats }: { stats: AuditStats }) {
             </ResponsiveContainer>
           </div>
         ) : (
-          <div className="flex h-64 items-center justify-center rounded-lg border border-dashed text-sm text-zinc-500">
+          <div className="flex h-64 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
             No activity in this period yet
           </div>
         )}

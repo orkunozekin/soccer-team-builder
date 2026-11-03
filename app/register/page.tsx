@@ -1,18 +1,10 @@
 'use client'
 
 import { Suspense, useEffect, useState } from 'react'
-import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { AuthFooterLink, AuthPageShell } from '@/components/auth/AuthPageShell'
 import { RegisterForm } from '@/components/auth/RegisterForm'
-import { SoccerBallIcon } from '@/components/icons/SoccerBallIcon'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { previewInviteAPI } from '@/lib/api/client'
 
 function safeRedirectPath(raw: string | null): string | null {
@@ -39,10 +31,7 @@ function resolveInviteCode(
 function RegisterPageInner() {
   const searchParams = useSearchParams()
   const redirectTo = safeRedirectPath(searchParams.get('redirect'))
-  const inviteCode = resolveInviteCode(
-    searchParams.get('code'),
-    redirectTo
-  )
+  const inviteCode = resolveInviteCode(searchParams.get('code'), redirectTo)
   const loginHref = redirectTo
     ? `/login?redirect=${encodeURIComponent(redirectTo)}`
     : inviteCode
@@ -80,65 +69,38 @@ function RegisterPageInner() {
   }
 
   return (
-    <div className="flex flex-col items-center px-4 py-10 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-6">
-        <div className="animate-slide-up-fade text-center">
-          <div className="mb-4 flex justify-center">
-            <SoccerBallIcon className="h-16 w-16 animate-float text-red-50" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-red-50">
-            {clubName ? `Join ${clubName}` : 'Join the Squad'}
-          </h1>
-          <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-            {clubName
-              ? `Create your account to join ${clubName}`
-              : inviteCode
-                ? 'Create your account to join this club'
-                : 'Create your account and start playing'}
-          </p>
-        </div>
-
-        <Card
-          className="card-soccer-accent animate-slide-up-fade shadow-lg"
-          style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}
-        >
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-center text-2xl font-bold">
-              Create Account
-            </CardTitle>
-            <CardDescription className="text-center">
-              {clubName
-                ? `Finish signing up to join ${clubName}`
-                : inviteCode
-                  ? 'Your invite is ready — finish signing up to join'
-                  : 'Sign up to join soccer pickup matches'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RegisterForm
-              inviteCode={inviteCode || null}
-              redirectTo={
-                redirectTo ??
-                (inviteCode
-                  ? `/join?code=${encodeURIComponent(inviteCode)}`
-                  : null)
-              }
-            />
-            <div className="mt-4 text-center text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                Already have an account?{' '}
-              </span>
-              <Link
-                href={loginHref}
-                className="font-medium text-red-50 hover:underline dark:text-red-400"
-              >
-                Sign in
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    <AuthPageShell
+      title={clubName ? `Join ${clubName}` : 'Join the squad.'}
+      description={
+        clubName
+          ? `Create your account to join ${clubName}`
+          : inviteCode
+            ? 'Create your account to join this club'
+            : 'Create your account and start playing'
+      }
+      panelTitle="Create account"
+      panelDescription={
+        clubName
+          ? `Finish signing up to join ${clubName}`
+          : inviteCode
+            ? 'Your invite is ready — finish signing up to join'
+            : 'Sign up to join soccer pickup matches'
+      }
+      footer={
+        <>
+          Already have an account?{' '}
+          <AuthFooterLink href={loginHref}>Sign in</AuthFooterLink>
+        </>
+      }
+    >
+      <RegisterForm
+        inviteCode={inviteCode || null}
+        redirectTo={
+          redirectTo ??
+          (inviteCode ? `/join?code=${encodeURIComponent(inviteCode)}` : null)
+        }
+      />
+    </AuthPageShell>
   )
 }
 
