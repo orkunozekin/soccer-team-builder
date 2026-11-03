@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { InitialsAvatar } from '@/components/ui/initials-avatar'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
 import { StatusPill } from '@/components/ui/status-pill'
 import { updateProfileAPI } from '@/lib/api/client'
 import { useAuth } from '@/lib/hooks/useAuth'
@@ -47,7 +48,7 @@ export function ProfileClubsSection() {
   }
 
   if (loading) {
-    return <p className="text-sm text-muted-foreground">Loading clubs…</p>
+    return <ProfileClubsSkeleton />
   }
 
   if (error) {
@@ -180,6 +181,33 @@ export function ProfileClubsSection() {
           You are a player in your clubs. Club admins can share invite codes.
         </p>
       )}
+    </div>
+  )
+}
+
+function ProfileClubsSkeleton() {
+  return (
+    <div role="status" aria-live="polite">
+      <span className="sr-only">Loading clubs…</span>
+      <div aria-hidden>
+        <Skeleton className="h-4 w-20 motion-reduce:animate-none" />
+        <ul className="mt-3 space-y-4">
+          {[0, 1].map(row => (
+            <li
+              key={row}
+              className="rounded-2xl border border-border bg-card p-4 sm:p-5"
+            >
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-11 w-11 shrink-0 rounded-full motion-reduce:animate-none" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Skeleton className="h-4 w-2/5 motion-reduce:animate-none" />
+                  <Skeleton className="h-5 w-16 rounded-full motion-reduce:animate-none" />
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   )
 }
