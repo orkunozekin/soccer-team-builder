@@ -269,3 +269,11 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 - **Going forward:** Store per-user values with the key they were evaluated for, and expose them only when that key matches the current user (fail-closed defaults otherwise). Readiness for a key must never cover values from another key. Test the switch with the error and timeout paths, not only the success path.
 - **Pointers:** `components/flags/LaunchDarklyProvider.tsx`, `components/flags/LaunchDarklyProvider.test.tsx`, `components/providers/ThemeSync.tsx`
 - **Promoted:** AGENT_CONTEXT.md → §3 Auth, roles, and club context (per-user values keyed by user); `.greptile/rules.md`
+
+### 2026-11-03 — Keep an in-flight save's guard where the shared state lives
+
+- **Source:** PR #132 · Codex
+- **Gap:** `ThemeToggle` kept its saving flag and request counter in component state, but the save writes app-wide state (`next-themes`, `userData`). The mobile sheet unmounts on close, so a pending save outlived its guard: after an account switch a late failure reverted the new user's theme, and a reopened sheet (or the rail's second instance) could start an overlapping save whose older response overwrote the newer one.
+- **Going forward:** When an async action writes app-wide state, keep its busy flag, request ordering and error in a store at that same level, scoped to the uid. Check the current auth uid before every write or rollback, not just the counter. When the same control renders in several places (rail + sheet), they share that in-flight state. Test with the component unmounted and remounted mid-request.
+- **Pointers:** `store/themeSaveStore.ts`, `components/layout/ThemeToggle.tsx`, `components/layout/ThemeToggle.test.tsx`
+- **Promoted:** AGENT_CONTEXT.md → §3 Async state, races, and transactions (generation guards); `.greptile/rules.md`

@@ -95,7 +95,7 @@ Path alias: `@/*` → project root (`tsconfig.json`).
 
 Repeated review findings; treat these as defaults.
 
-- **Generation-guard every async write to shared state.** Give each fetch or auth callback a generation (`fetchGen`, `authGenRef`). After every `await`, skip store/state writes unless that generation is still current, and bump it in effect cleanup so an unmounted page cannot overwrite the shared store for the next one.
+- **Generation-guard every async write to shared state.** Give each fetch or auth callback a generation (`fetchGen`, `authGenRef`). After every `await`, skip store/state writes unless that generation is still current, and bump it in effect cleanup so an unmounted page cannot overwrite the shared store for the next one. If the write targets app-wide state (theme, auth profile) and the request can outlive its component (a sheet closes) or the control renders in more than one place, keep the generation, busy flag and error in a shared store scoped to the uid, and re-check the current auth uid before writing or rolling back.
 - **Do not invalidate in-flight work to start a secondary fetch.** Bumping a shared generation for a lazy load (e.g. another tab) discards results the UI still needs.
 - **Separate mutation success from refresh failure.** If the write succeeded and only the follow-up refresh failed, keep the prior list or optimistic value and report the refresh error. Disable conflicting actions while a refresh is in flight. When clearing a per-row busy id in `finally`, only clear it if it still matches (`setBusy(prev => (prev === id ? null : prev))`).
 - **Reset local form state when the club (or other scoping prop) changes.**

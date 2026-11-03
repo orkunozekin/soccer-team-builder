@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { User as FirebaseUser } from 'firebase/auth'
 import {
@@ -22,6 +22,7 @@ import {
 import { ThemeSync } from '@/components/providers/ThemeSync'
 import { updateProfileAPI } from '@/lib/api/client'
 import { useAuthStore } from '@/store/authStore'
+import { resetThemeSaveStore } from '@/store/themeSaveStore'
 import type { ThemePreference, User } from '@/types/user'
 
 vi.mock('@/lib/api/client', () => ({
@@ -70,16 +71,23 @@ function deferred<T>() {
 function Harness({
   flagOn = true,
   flagReady = true,
+  toggles = 1,
 }: {
   flagOn?: boolean
   flagReady?: boolean
+  /** How many toggles are mounted (rail + sheet = 2; sheet closed = 0). */
+  toggles?: number
 }) {
   return (
     <ThemeProvider>
       <FeatureFlagContext.Provider value={{ 'light-theme': flagOn }}>
         <FeatureFlagsReadyContext.Provider value={flagReady}>
           <ThemeSync />
-          <ThemeToggle />
+          {Array.from({ length: toggles }, (_, i) => (
+            <div key={i} data-testid={`toggle-${i}`}>
+              <ThemeToggle />
+            </div>
+          ))}
         </FeatureFlagsReadyContext.Provider>
       </FeatureFlagContext.Provider>
     </ThemeProvider>
@@ -115,6 +123,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  resetThemeSaveStore()
   window.localStorage.clear()
   document.documentElement.className = ''
   signIn('u1')
@@ -293,6 +302,107 @@ describe('ThemeToggle', () => {
     })
 
     expectTheme('light')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('does not revert the new account’s theme when a save fails after its toggle unmounted', async () => {
+    const user = userEvent.setup()
+    const save = deferred<{ success: boolean }>()
+    updateProfile.mockReturnValue(save.promise)
+    const { rerender } = render(<Harness />)
+    await waitFor(() => expectTheme('dark'))
+
+    await user.click(lightButton())
+    expectTheme('light')
+
+    // The mobile sheet closes (toggle unmounts), then another account signs in.
+    rerender(<Harness toggles={0} />)
+    act(() => signIn('u2', 'light'))
+    await waitFor(() => expectTheme('light'))
+
+    await act(async () => {
+      save.reject(new Error('network'))
+    })
+
+    expectTheme('light')
+    expect(useAuthStore.getState().userData).toMatchObject({
+      uid: 'u2',
+      themePreference: 'light',
+    })
+  })
+
+  it('shares the pending save between the rail and sheet toggles', async () => {
+    const user = userEvent.setup()
+    const save = deferred<{ success: boolean }>()
+    updateProfile.mockReturnValue(save.promise)
+    render(<Harness toggles={2} />)
+    const rail = within(screen.getByTestId('toggle-0'))
+    const sheet = within(screen.getByTestId('toggle-1'))
+    await waitFor(() =>
+      expect(rail.getByRole('button', { name: 'Dark theme' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      )
+    )
+
+    await user.click(rail.getByRole('button', { name: 'Light theme' }))
+
+    expect(sheet.getByRole('button', { name: 'Dark theme' })).toBeDisabled()
+    expect(sheet.getByRole('button', { name: 'Light theme' })).toBeDisabled()
+    expect(sheet.getByRole('button', { name: 'Light theme' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+
+    await act(async () => {
+      save.resolve({ success: true })
+    })
+    expect(sheet.getByRole('button', { name: 'Dark theme' })).toBeEnabled()
+    expect(updateProfile).toHaveBeenCalledOnce()
+  })
+
+  it('keeps a remounted toggle busy until the earlier save settles', async () => {
+    const user = userEvent.setup()
+    const first = deferred<{ success: boolean }>()
+    updateProfile.mockReturnValueOnce(first.promise)
+    updateProfile.mockResolvedValueOnce({ success: true })
+    const { rerender } = render(<Harness />)
+    await waitFor(() => expectTheme('dark'))
+
+    await user.click(lightButton())
+    // Sheet closes and reopens while the Light save is still pending.
+    rerender(<Harness toggles={0} />)
+    rerender(<Harness />)
+
+    await waitFor(() =>
+      expect(lightButton()).toHaveAttribute('aria-pressed', 'true')
+    )
+    expect(darkButton()).toBeDisabled()
+    await user.click(darkButton())
+    expect(updateProfile).toHaveBeenCalledOnce()
+
+    await act(async () => {
+      first.resolve({ success: true })
+    })
+    expect(useAuthStore.getState().userData?.themePreference).toBe('light')
+
+    await user.click(darkButton())
+    await waitFor(() =>
+      expect(useAuthStore.getState().userData?.themePreference).toBe('dark')
+    )
+    expectTheme('dark')
+  })
+
+  it('shows a failed save’s alert only for the account it belongs to', async () => {
+    const user = userEvent.setup()
+    updateProfile.mockRejectedValue(new Error('nope'))
+    render(<Harness />)
+    await waitFor(() => expectTheme('dark'))
+
+    await user.click(lightButton())
+    await screen.findByRole('alert')
+
+    act(() => signIn('u2'))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })
