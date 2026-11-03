@@ -98,7 +98,7 @@ export function NextMatchHero({
           aria-hidden
           className={cn(
             'inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-bold',
-            live ? 'bg-white text-ink' : 'bg-chalk text-ink'
+            live ? 'bg-white text-on-bright' : 'bg-chalk text-ink'
           )}
         >
           {cta}

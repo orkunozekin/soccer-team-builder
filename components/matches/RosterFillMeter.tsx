@@ -19,9 +19,9 @@ export function RosterFillMeter({
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <p className="font-display text-4xl font-extrabold leading-none">
           {fill.confirmed}
-          <span className="text-[#6F7B74]"> / {fill.capacity}</span>
+          <span className="text-dim"> / {fill.capacity}</span>
         </p>
-        <p className="text-sm text-[#B9C2BD]">{describeRosterFill(fill)}</p>
+        <p className="text-sm text-mist">{describeRosterFill(fill)}</p>
       </div>
       <div
         role="img"

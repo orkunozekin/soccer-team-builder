@@ -156,7 +156,7 @@ export function MatchDetails({
               <span className="font-display text-4xl font-extrabold text-flare">
                 {formattedTime}
               </span>
-              <span className="text-[15px] text-[#B9C2BD]">
+              <span className="text-[15px] text-mist">
                 {hasMatchStarted(matchDate, match.time) ? '' : 'Kickoff '}
                 <strong className="font-semibold text-chalk">
                   {getKickoffLabelForMatch(match)}
@@ -183,7 +183,7 @@ export function MatchDetails({
             {!showCheckInHeadcount && <RosterFillMeter confirmed={rsvpCount} />}
             <p
               className={cn(
-                'inline-block text-sm font-medium text-[#B9C2BD]',
+                'inline-block text-sm font-medium text-mist',
                 bumpHeadcount && 'animate-headcount-bump'
               )}
             >
@@ -198,13 +198,13 @@ export function MatchDetails({
               className={cn(
                 'space-y-3 border-t border-border pt-4',
                 highlightPosition &&
-                  'animate-slide-up-fade rounded-xl border border-[#3B5A22] bg-[#1A2A12] p-4'
+                  'animate-slide-up-fade rounded-xl border border-ok-pill-border bg-ok-pill p-4'
               )}
             >
               <p className="font-display text-xl font-extrabold uppercase">
                 Your position for this match
               </p>
-              <p className="text-sm text-[#B9C2BD]">
+              <p className="text-sm text-mist">
                 Current:{' '}
                 <span
                   className={

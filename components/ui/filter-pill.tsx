@@ -19,7 +19,7 @@ export const FilterPill = React.forwardRef<HTMLButtonElement, FilterPillProps>(
         'h-9 rounded-full px-4 text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
         active
           ? 'bg-chalk text-ink'
-          : 'border border-line text-[#B9C2BD] hover:text-chalk',
+          : 'border border-line text-mist hover:text-chalk',
         className
       )}
       {...props}

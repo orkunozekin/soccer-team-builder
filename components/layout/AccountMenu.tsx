@@ -66,7 +66,7 @@ export function AccountMenu({
         onClick={() => {
           void handleLogout()
         }}
-        className="inline-flex h-10 w-full items-center justify-center rounded-full border border-line px-3 text-sm font-semibold text-[#B9C2BD] outline-none hover:bg-turf hover:text-chalk focus-visible:ring-2 focus-visible:ring-ring"
+        className="inline-flex h-10 w-full items-center justify-center rounded-full border border-line px-3 text-sm font-semibold text-mist outline-none hover:bg-turf hover:text-chalk focus-visible:ring-2 focus-visible:ring-ring"
       >
         Sign out
       </button>

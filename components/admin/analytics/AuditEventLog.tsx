@@ -147,7 +147,7 @@ function EventRow({ log }: { log: AuditLog }) {
       <div
         className={cn(
           'flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
-          failed ? 'bg-red-900/40 text-red-400' : 'bg-accent text-[#B9C2BD]'
+          failed ? 'bg-danger-wash/40 text-danger' : 'bg-accent text-mist'
         )}
       >
         <Icon className="h-4 w-4" />
@@ -175,13 +175,13 @@ function EventRow({ log }: { log: AuditLog }) {
         </div>
 
         {typeof log.metadata?.message === 'string' && failed ? (
-          <p className="text-xs text-red-400">{log.metadata.message}</p>
+          <p className="text-xs text-danger">{log.metadata.message}</p>
         ) : null}
 
         <button
           type="button"
           onClick={() => setExpanded(prev => !prev)}
-          className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-[#B9C2BD]"
+          className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-mist"
         >
           <ChevronDown
             className={cn(
@@ -208,7 +208,7 @@ function EventRow({ log }: { log: AuditLog }) {
                 ) : (
                   <Link
                     href={`/admin/players/${log.actorUid}`}
-                    className="text-red-400 hover:underline"
+                    className="text-danger hover:underline"
                   >
                     {log.actorDisplayName ?? log.actorUid.slice(0, 8)}
                   </Link>
@@ -221,7 +221,7 @@ function EventRow({ log }: { log: AuditLog }) {
                 <dd>
                   <Link
                     href={`/admin/players/${log.targetUid}`}
-                    className="text-red-400 hover:underline"
+                    className="text-danger hover:underline"
                   >
                     {log.targetDisplayName ?? log.targetUid.slice(0, 8)}
                   </Link>
@@ -234,7 +234,7 @@ function EventRow({ log }: { log: AuditLog }) {
                 <dd>
                   <Link
                     href={`/admin/matches/${log.matchId}`}
-                    className="font-mono text-red-400 hover:underline"
+                    className="font-mono text-danger hover:underline"
                   >
                     {log.matchId.slice(0, 12)}…
                   </Link>
@@ -376,7 +376,7 @@ export function AuditEventLog() {
       </div>
 
       {error ? (
-        <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
+        <div className="rounded-md bg-red-900/20 p-3 text-sm text-danger">
           {error}
         </div>
       ) : null}
