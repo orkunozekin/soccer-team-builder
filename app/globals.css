@@ -104,6 +104,18 @@
     --fl-fog: 86 97 91; /* #56615B */
     --fl-flare: 196 38 23; /* #C42617 */
     --fl-lime: 59 122 15; /* #3B7A0F */
+    --fl-mist: 63 74 68; /* #3F4A44 */
+    --fl-dim: 99 109 103; /* #636D67 */
+    --fl-live-text: 180 35 24; /* #B42318 */
+    --fl-live-pill: 252 233 230; /* #FCE9E6 */
+    --fl-live-pill-border: 243 194 187; /* #F3C2BB */
+    --fl-ok-pill: 234 243 224; /* #EAF3E0 */
+    --fl-ok-pill-border: 191 216 166; /* #BFD8A6 */
+    --fl-danger: 180 35 24; /* #B42318 */
+    --fl-danger-wash: 243 194 187; /* #F3C2BB */
+    /* Fixed in both themes (not redefined under .dark). */
+    --fl-on-bright: 11 15 13; /* #0B0F0D */
+    --fl-elevation: 18 24 21 / 0.12; /* soft #121815 panel shadow */
     /* Auth hero band stripes (.pitch-stripes) */
     --pitch-stripe-a: #dce9d6;
     --pitch-stripe-b: #d1e2ca;
@@ -148,6 +160,16 @@
     --fl-fog: 154 165 159; /* #9AA59F */
     --fl-flare: 255 90 74; /* #FF5A4A */
     --fl-lime: 186 232 123; /* #BAE87B */
+    --fl-mist: 185 194 189; /* #B9C2BD */
+    --fl-dim: 111 123 116; /* #6F7B74 */
+    --fl-live-text: 255 179 170; /* #FFB3AA */
+    --fl-live-pill: 30 20 18; /* #1E1412 */
+    --fl-live-pill-border: 74 30 25; /* #4A1E19 */
+    --fl-ok-pill: 26 42 18; /* #1A2A12 */
+    --fl-ok-pill-border: 59 90 34; /* #3B5A22 */
+    --fl-danger: 248 113 113; /* red-400 #F87171 */
+    --fl-danger-wash: 127 29 29; /* red-900 #7F1D1D */
+    --fl-elevation: 0 0 0 / 0.4; /* black/40 */
     --pitch-stripe-a: #102619;
     --pitch-stripe-b: #133020;
   }

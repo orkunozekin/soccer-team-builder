@@ -7,9 +7,9 @@ const statusPillVariants = cva(
   {
     variants: {
       tone: {
-        live: 'border-[#4A1E19] bg-[#1E1412] text-[#FFB3AA]',
-        success: 'border-[#3B5A22] bg-[#1A2A12] text-lime',
-        neutral: 'border-line text-[#B9C2BD]',
+        live: 'border-live-pill-border bg-live-pill text-live-text',
+        success: 'border-ok-pill-border bg-ok-pill text-lime',
+        neutral: 'border-line text-mist',
         muted: 'border-line text-fog',
       },
     },

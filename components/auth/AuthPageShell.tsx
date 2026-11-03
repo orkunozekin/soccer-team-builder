@@ -33,13 +33,13 @@ export function AuthPageShell({
             {title}
           </h1>
           {description ? (
-            <p className="mt-3 text-base text-[#B9C2BD]">{description}</p>
+            <p className="mt-3 text-base text-mist">{description}</p>
           ) : null}
         </header>
 
         <section
           aria-labelledby="auth-panel-title"
-          className="animate-slide-up-fade rounded-3xl border border-border bg-card/95 p-5 shadow-2xl shadow-black/40 sm:p-6"
+          className="animate-slide-up-fade rounded-3xl border border-border bg-card/95 p-5 shadow-2xl shadow-elevation sm:p-6"
           style={{ animationDelay: '80ms', animationFillMode: 'backwards' }}
         >
           <div className="mb-5 space-y-1">

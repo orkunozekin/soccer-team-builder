@@ -16,4 +16,11 @@ describe('ProfileBadge', () => {
       screen.getByRole('link', { name: 'Your profile' })
     ).toHaveTextContent('OO')
   })
+
+  it('keeps dark text on the fixed orange fill in both themes', () => {
+    render(<ProfileBadge displayName="Orkun O." jerseyNumber={10} />)
+    const link = screen.getByRole('link', { name: 'Your profile' })
+    expect(link).toHaveClass('bg-pinny-orange', 'text-on-bright')
+    expect(link).not.toHaveClass('text-ink')
+  })
 })

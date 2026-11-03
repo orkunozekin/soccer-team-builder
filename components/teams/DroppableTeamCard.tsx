@@ -138,7 +138,7 @@ export function PlayerTile({
       {showGrip && (
         <span
           {...gripProps}
-          className="flex shrink-0 cursor-grab touch-none rounded p-0.5 text-muted-foreground hover:text-[#B9C2BD] active:cursor-grabbing"
+          className="flex shrink-0 cursor-grab touch-none rounded p-0.5 text-muted-foreground hover:text-mist active:cursor-grabbing"
           title="Drag to move to another team"
           aria-label="Drag to move player to another team"
         >

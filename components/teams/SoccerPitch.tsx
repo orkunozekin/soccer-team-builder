@@ -104,9 +104,7 @@ export function SoccerPitch({
     <div className="space-y-6">
       {dual}
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-[#B9C2BD]">
-          Additional teams
-        </h3>
+        <h3 className="text-sm font-semibold text-mist">Additional teams</h3>
         {extraTeams.length > 1 && (isMobile || extraTeams.length > 2) ? (
           <>
             <TeamToggle

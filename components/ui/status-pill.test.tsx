@@ -17,4 +17,24 @@ describe('StatusPill', () => {
     rerender(<StatusPill tone="muted">RSVP closed</StatusPill>)
     expect(screen.queryByTestId('status-pill-dot')).not.toBeInTheDocument()
   })
+
+  it('uses theme tokens instead of hard-coded hex colors', () => {
+    const { rerender } = render(<StatusPill tone="live">Live</StatusPill>)
+    expect(screen.getByText('Live').parentElement).toHaveClass(
+      'border-live-pill-border',
+      'bg-live-pill',
+      'text-live-text'
+    )
+    rerender(<StatusPill tone="success">In</StatusPill>)
+    expect(screen.getByText('In').parentElement).toHaveClass(
+      'border-ok-pill-border',
+      'bg-ok-pill',
+      'text-lime'
+    )
+    rerender(<StatusPill tone="neutral">Closed</StatusPill>)
+    expect(screen.getByText('Closed').parentElement).toHaveClass('text-mist')
+    expect(screen.getByText('Closed').parentElement.className).not.toMatch(
+      /\[#/
+    )
+  })
 })

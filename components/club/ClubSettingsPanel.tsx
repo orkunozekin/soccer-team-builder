@@ -77,7 +77,7 @@ export function ClubSettingsPanel({
         </div>
       )}
 
-      <label className="flex items-start gap-3 text-sm text-[#B9C2BD]">
+      <label className="flex items-start gap-3 text-sm text-mist">
         <input
           type="checkbox"
           className="mt-1"

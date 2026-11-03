@@ -53,7 +53,7 @@ export function FormationSelect({
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-[#B9C2BD]">Formation</span>
+        <span className="text-sm font-medium text-mist">Formation</span>
         <Select
           value={localValue || undefined}
           onValueChange={id => {

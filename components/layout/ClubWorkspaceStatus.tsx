@@ -32,7 +32,7 @@ export function ClubWorkspaceStatus({
   if (status.kind === 'empty') {
     return (
       <div className="rounded-xl border border-line/70 bg-turf px-3 py-3 text-chalk">
-        <p className="text-sm text-[#B9C2BD]">You are not in a club yet.</p>
+        <p className="text-sm text-mist">You are not in a club yet.</p>
         <Link
           href="/join"
           onClick={onNavigate}

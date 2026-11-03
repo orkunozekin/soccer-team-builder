@@ -54,6 +54,20 @@ const config: Config = {
         fog: 'rgb(var(--fl-fog) / <alpha-value>)',
         flare: 'rgb(var(--fl-flare) / <alpha-value>)',
         lime: 'rgb(var(--fl-lime) / <alpha-value>)',
+        mist: 'rgb(var(--fl-mist) / <alpha-value>)',
+        dim: 'rgb(var(--fl-dim) / <alpha-value>)',
+        'live-text': 'rgb(var(--fl-live-text) / <alpha-value>)',
+        'live-pill': 'rgb(var(--fl-live-pill) / <alpha-value>)',
+        'live-pill-border': 'rgb(var(--fl-live-pill-border) / <alpha-value>)',
+        'ok-pill': 'rgb(var(--fl-ok-pill) / <alpha-value>)',
+        'ok-pill-border': 'rgb(var(--fl-ok-pill-border) / <alpha-value>)',
+        danger: 'rgb(var(--fl-danger) / <alpha-value>)',
+        'danger-wash': 'rgb(var(--fl-danger-wash) / <alpha-value>)',
+        // Same in both themes: dark text on fills that never flip (white
+        // RSVP pill, orange profile badge).
+        'on-bright': 'rgb(var(--fl-on-bright) / <alpha-value>)',
+        // Full shadow color incl. alpha (e.g. shadow-elevation), per theme.
+        elevation: 'rgb(var(--fl-elevation))',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {

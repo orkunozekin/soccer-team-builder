@@ -19,7 +19,7 @@ export function ProfileBadge({
       href="/profile"
       aria-label="Your profile"
       className={cn(
-        'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FF8641] font-mono text-sm font-bold text-ink outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pinny-orange font-mono text-sm font-bold text-on-bright outline-none focus-visible:ring-2 focus-visible:ring-ring',
         className
       )}
     >
