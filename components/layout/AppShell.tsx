@@ -79,7 +79,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         }}
       />
     ) : (
-      <ClubWorkspaceStatus status={workspace.status} />
+      <ClubWorkspaceStatus status={workspace.status} variant={variant} />
     )
 
   return (
@@ -154,6 +154,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                     <div className="px-1">
                       <ClubWorkspaceStatus
                         status={workspace.status}
+                        variant="nav"
                         onNavigate={() => setSheetOpen(false)}
                       />
                     </div>
