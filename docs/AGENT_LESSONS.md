@@ -261,3 +261,11 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 - **Gap:** Transactional cancellation cleanup queried all retained RSVP history and filtered cancelled records in memory, unnecessarily reading and locking old records on every cancellation or retry.
 - **Going forward:** Query confirmed RSVPs at the database boundary for roster operations; retaining cancellation history does not make it part of the active roster. Reuse the existing matchId/status query and index contract.
 - **Pointers:** `lib/teams/removeUserFromMatchTeams.ts`, `lib/teams/expandTeamsForMatch.ts`
+
+### 2026-11-03 — Don't certify the previous user's flags after an account switch
+
+- **Source:** PR #131 · Codex
+- **Gap:** `LaunchDarklyProvider` tracked flag readiness per user, but kept one shared `typedFlags` value. After user A (flag on) switched to user B, a failed LD init or the fallback timer marked B "ready" while the context still held A's flags, so `ThemeSync` could apply B's light preference under A's targeting.
+- **Going forward:** Store per-user values with the key they were evaluated for, and expose them only when that key matches the current user (fail-closed defaults otherwise). Readiness for a key must never cover values from another key. Test the switch with the error and timeout paths, not only the success path.
+- **Pointers:** `components/flags/LaunchDarklyProvider.tsx`, `components/flags/LaunchDarklyProvider.test.tsx`, `components/providers/ThemeSync.tsx`
+- **Promoted:** AGENT_CONTEXT.md → §3 Auth, roles, and club context (per-user values keyed by user); `.greptile/rules.md`

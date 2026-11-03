@@ -132,4 +132,40 @@ describe('LaunchDarklyProvider readiness', () => {
 
     expect(probe()).toBe('ready:off')
   })
+
+  it('does not carry the previous user’s flags into a failed init for the next user', async () => {
+    const Tree = await loadProvider()
+    const { rerender } = render(<Tree />)
+    ld.flags = { 'light-theme': true }
+    await act(async () => ld.init!.resolve())
+    expect(probe()).toBe('ready:on')
+
+    ld.init = deferred()
+    authState.user = { uid: 'u2', email: 'u2@example.com' }
+    rerender(<Tree />)
+    // u1's value must not be visible while u2 is evaluated…
+    expect(probe()).toBe('loading:off')
+
+    // …nor certified as u2's when u2's init fails.
+    await act(async () => ld.init!.reject(new Error('timeout')))
+    expect(probe()).toBe('ready:off')
+  })
+
+  it('does not certify the previous user’s flags via the fallback timer', async () => {
+    vi.useFakeTimers()
+    const Tree = await loadProvider()
+    const { rerender } = render(<Tree />)
+    ld.flags = { 'light-theme': true }
+    await act(async () => ld.init!.resolve())
+    expect(probe()).toBe('ready:on')
+
+    ld.init = deferred()
+    authState.user = { uid: 'u2', email: 'u2@example.com' }
+    rerender(<Tree />)
+    await act(async () => {
+      vi.advanceTimersByTime(12_000)
+    })
+
+    expect(probe()).toBe('ready:off')
+  })
 })

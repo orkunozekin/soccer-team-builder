@@ -1,6 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
 import { LDProvider, useLDClient } from 'launchdarkly-react-client-sdk'
 import {
   FeatureFlagContext,
@@ -62,7 +68,11 @@ function LaunchDarklyBridge({
   onFlags,
   onReady,
 }: {
-  onFlags: (flags: Partial<Record<FeatureFlagKey, boolean>>) => void
+  /** Called with the context key the flags were evaluated for. */
+  onFlags: (
+    key: string,
+    flags: Partial<Record<FeatureFlagKey, boolean>>
+  ) => void
   /** Called with the context key once flags have settled (or failed). */
   onReady: (key: string) => void
 }) {
@@ -74,12 +84,12 @@ function LaunchDarklyBridge({
 
   const applyFlags = useCallback(
     (raw: Record<string, unknown>) => {
-      onFlags({
+      onFlags(contextKey, {
         ...readTypedFlags(raw),
         ...getLocalFeatureFlagOverrides(),
       })
     },
-    [onFlags]
+    [onFlags, contextKey]
   )
 
   useEffect(() => {
@@ -142,12 +152,26 @@ function LaunchDarklyBridge({
  */
 export function LaunchDarklyProvider({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth()
-  const [typedFlags, setTypedFlags] = useState(closedFlags)
-  // Flags are per user: after an account switch the previous user's values
-  // linger in `typedFlags` until LD answers for the new one, so readiness is
-  // tracked per context key rather than as a single boolean.
+  // Flags and readiness are per LD context (uid or anonymous). Values are
+  // only exposed for the context they were evaluated for: after an account
+  // switch the previous user's flags fall back to the fail-closed defaults,
+  // so a failed or slow init for the new user can never certify them.
+  const [evaluated, setEvaluated] = useState<{
+    key: string
+    flags: Partial<Record<FeatureFlagKey, boolean>>
+  } | null>(null)
   const [readyKey, setReadyKey] = useState<string | null>(null)
   const contextKey = flagsContextKey(user?.uid)
+  const onFlags = useCallback(
+    (key: string, flags: Partial<Record<FeatureFlagKey, boolean>>) =>
+      setEvaluated({ key, flags }),
+    []
+  )
+
+  const typedFlags = useMemo(
+    () => (evaluated?.key === contextKey ? evaluated.flags : closedFlags()),
+    [evaluated, contextKey]
+  )
 
   useEffect(() => {
     if (!CLIENT_SIDE_ID || loading) return
@@ -193,7 +217,7 @@ export function LaunchDarklyProvider({ children }: { children: ReactNode }) {
             }}
             timeout={LD_TIMEOUT_S}
           >
-            <LaunchDarklyBridge onFlags={setTypedFlags} onReady={setReadyKey} />
+            <LaunchDarklyBridge onFlags={onFlags} onReady={setReadyKey} />
           </LDProvider>
         ) : null}
         {children}
