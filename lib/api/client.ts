@@ -20,6 +20,7 @@ import type {
   ClubMembershipWithClub,
   ClubMembershipWithUser,
 } from '@/types/club'
+import type { ThemePreference } from '@/types/user'
 
 const API_BASE = '/api'
 
@@ -299,6 +300,7 @@ export async function updateProfileAPI(updates: {
   syncEmail?: boolean
   /** Set the active club, or null to clear */
   activeClubId?: string | null
+  themePreference?: ThemePreference
 }): Promise<{ success: boolean }> {
   const response = await apiRequest('/users/me', {
     method: 'PATCH',

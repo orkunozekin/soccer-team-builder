@@ -10,7 +10,12 @@ import {
 } from '@/lib/firebase/firestore'
 import type { AdminUserFilter } from '@/lib/utils/adminUserFilters'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
-import { User, UserFirestore, normalizeUserRole } from '@/types/user'
+import {
+  User,
+  UserFirestore,
+  normalizeThemePreference,
+  normalizeUserRole,
+} from '@/types/user'
 
 export const createUser = async (
   uid: string,
@@ -82,6 +87,7 @@ const mapDocToUser = (user: Record<string, unknown>): User => ({
   position: (user.position as string | null) ?? null,
   role: normalizeUserRole(user.role),
   activeClubId: (user.activeClubId as string | null | undefined) ?? null,
+  themePreference: normalizeThemePreference(user.themePreference),
   createdAt: timestampToDate(user.createdAt as never) || new Date(),
   updatedAt: timestampToDate(user.updatedAt as never) || new Date(),
 })

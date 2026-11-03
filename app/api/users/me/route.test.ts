@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PATCH } from './route'
 import { getActiveClubMembership, verifyAuth } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { auditLog } from '@/lib/services/auditService'
 
 vi.mock('@/lib/api/auth', () => ({
   verifyAuth: vi.fn(),
@@ -236,5 +237,73 @@ describe('PATCH /api/users/me', () => {
     expect(updateMock).toHaveBeenCalledWith(
       expect.objectContaining({ activeClubId: null })
     )
+  })
+
+  describe('themePreference', () => {
+    function mockUserDoc() {
+      vi.mocked(verifyAuth).mockResolvedValue({
+        uid: 'user1',
+        email: 'alex@example.com',
+        error: null,
+      })
+      const updateMock = vi.fn()
+      vi.mocked(getAdminDb).mockReturnValue({
+        collection: () => ({
+          doc: () => ({
+            get: vi.fn().mockResolvedValue({ exists: true }),
+            update: updateMock,
+          }),
+        }),
+      } as never)
+      return updateMock
+    }
+
+    function patch(body: unknown) {
+      return PATCH(
+        new NextRequest('http://localhost/api/users/me', {
+          method: 'PATCH',
+          body: JSON.stringify(body),
+        })
+      )
+    }
+
+    it.each(['dark', 'light'] as const)(
+      'stores %s and audit-logs the field',
+      async themePreference => {
+        const updateMock = mockUserDoc()
+
+        const response = await patch({ themePreference })
+
+        expect(response.status).toBe(200)
+        expect(updateMock).toHaveBeenCalledWith(
+          expect.objectContaining({ themePreference })
+        )
+        expect(auditLog).toHaveBeenCalledWith(
+          expect.objectContaining({
+            action: 'user.profile_updated',
+            metadata: { fields: ['themePreference'] },
+          })
+        )
+      }
+    )
+
+    it.each([
+      ['an unknown string', 'system'],
+      ['null', null],
+      ['a number', 1],
+    ])('rejects %s with 400', async (_label, themePreference) => {
+      const updateMock = mockUserDoc()
+
+      const response = await patch({ themePreference })
+
+      expect(response.status).toBe(400)
+      await expect(response.json()).resolves.toEqual({
+        error: 'Invalid themePreference',
+      })
+      expect(updateMock).not.toHaveBeenCalled()
+      expect(auditLog).not.toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'user.profile_updated' })
+      )
+    })
   })
 })

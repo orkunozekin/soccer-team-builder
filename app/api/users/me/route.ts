@@ -71,11 +71,18 @@ export async function PATCH(request: NextRequest) {
       changedFields.push('position')
     }
 
+    if (body?.themePreference !== undefined) {
+      if (body.themePreference !== 'dark' && body.themePreference !== 'light') {
+        return profileUpdateFailed(uid, 400, 'Invalid themePreference')
+      }
+      updates.themePreference = body.themePreference
+      changedFields.push('themePreference')
+    }
+
     // Sync Firestore email from the verified ID token (after Auth email change).
     // Never trust a client-supplied email string.
     if (body?.syncEmail === true) {
-      const tokenEmail =
-        typeof auth.email === 'string' ? auth.email.trim() : ''
+      const tokenEmail = typeof auth.email === 'string' ? auth.email.trim() : ''
       if (!tokenEmail) {
         return profileUpdateFailed(
           uid,
@@ -104,7 +111,12 @@ export async function PATCH(request: NextRequest) {
         }
         const clubSnap = await adminDb.collection('clubs').doc(clubId).get()
         if (!clubSnap.exists) {
-          return profileUpdateFailed(uid, 404, 'Club not found', 'club_not_found')
+          return profileUpdateFailed(
+            uid,
+            404,
+            'Club not found',
+            'club_not_found'
+          )
         }
         const { membership, isSuperUser } = await getActiveClubMembership(
           uid,
