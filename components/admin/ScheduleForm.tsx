@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
+import { format } from 'date-fns'
 import { LocationPicker } from '@/components/admin/LocationPicker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -87,6 +88,60 @@ function draftToSlotPayload(draft: SlotDraft) {
   }
 }
 
+/** Header line for a slot card, e.g. "Monday · 7:00 PM". */
+function describeSlot(slot: SlotDraft, cadence: ScheduleCadence): string {
+  const day =
+    cadence === 'weekly'
+      ? (WEEKDAY_OPTIONS.find(opt => opt.value === String(slot.day))?.label ??
+        '')
+      : `Day ${slot.day}`
+  const [hours, minutes] = slot.time.split(':').map(Number)
+  const time =
+    Number.isFinite(hours) && Number.isFinite(minutes)
+      ? format(new Date(2000, 0, 1, hours, minutes), 'h:mm a')
+      : slot.time
+  return [day, time].filter(Boolean).join(' · ')
+}
+
+function FormSection({
+  step,
+  title,
+  description,
+  action,
+  children,
+}: {
+  step: string
+  title: string
+  description: string
+  action?: ReactNode
+  children: ReactNode
+}) {
+  const headingId = `schedule-section-${step}`
+  return (
+    <section
+      aria-labelledby={headingId}
+      className="space-y-5 rounded-2xl border border-border bg-card p-5"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="font-mono text-xs tracking-[0.14em] text-lime">
+            {step}
+          </p>
+          <h3
+            id={headingId}
+            className="font-display text-xl font-extrabold uppercase text-foreground"
+          >
+            {title}
+          </h3>
+          <p className="text-sm text-fog">{description}</p>
+        </div>
+        {action}
+      </div>
+      {children}
+    </section>
+  )
+}
+
 export type ScheduleFormValues = {
   name: string
   cadence: ScheduleCadence
@@ -160,186 +215,215 @@ export function ScheduleForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="schedule-name">Name</Label>
-        <Input
-          id="schedule-name"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="Club weekly games"
-          disabled={loading}
-          required
-        />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
+    <form onSubmit={handleSubmit} className="form-field-labels space-y-6">
+      <FormSection
+        step="01"
+        title="Schedule details"
+        description="What the schedule is called and how often it repeats."
+      >
         <div className="space-y-2">
-          <Label>Cadence</Label>
-          <Select
-            value={cadence}
-            onValueChange={v => setCadence(v as ScheduleCadence)}
-            disabled={loading}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="monthly">Monthly</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="schedule-interval">
-            Every N {cadence === 'weekly' ? 'weeks' : 'months'}
-          </Label>
+          <Label htmlFor="schedule-name">Schedule name</Label>
           <Input
-            id="schedule-interval"
-            type="number"
-            min={1}
-            step={1}
-            value={interval}
-            onChange={e => setInterval(e.target.value)}
+            id="schedule-name"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Club weekly games"
             disabled={loading}
+            required
           />
         </div>
-      </div>
 
-      <label className="flex items-center gap-2 text-sm text-[#B9C2BD]">
-        <input
-          type="checkbox"
-          checked={active}
-          onChange={e => setActive(e.target.checked)}
-          disabled={loading}
-          className="h-4 w-4 rounded border-input"
-        />
-        Active (keep next 3 matches created automatically)
-      </label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="schedule-cadence">Repeats</Label>
+            <Select
+              value={cadence}
+              onValueChange={v => setCadence(v as ScheduleCadence)}
+              disabled={loading}
+            >
+              <SelectTrigger id="schedule-cadence">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="schedule-interval">
+              Every how many {cadence === 'weekly' ? 'weeks' : 'months'}
+            </Label>
+            <Input
+              id="schedule-interval"
+              type="number"
+              min={1}
+              step={1}
+              value={interval}
+              onChange={e => setInterval(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+        </div>
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-foreground">Slots</h3>
+        <label className="flex items-start gap-3 rounded-xl border border-border bg-background p-4">
+          <input
+            type="checkbox"
+            checked={active}
+            onChange={e => setActive(e.target.checked)}
+            disabled={loading}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-input"
+          />
+          <span className="space-y-1">
+            <span className="block text-sm font-semibold text-foreground">
+              Active
+            </span>
+            <span className="block text-sm text-fog">
+              Keep the next 3 matches created automatically.
+            </span>
+          </span>
+        </label>
+      </FormSection>
+
+      <FormSection
+        step="02"
+        title="Match slots"
+        description={
+          cadence === 'weekly'
+            ? 'Each slot is one match every cycle: a weekday, kickoff time and field.'
+            : 'Each slot is one match every cycle: a day of the month, kickoff time and field.'
+        }
+        action={
           <Button
             type="button"
             variant="outline"
             size="sm"
             disabled={loading}
-            onClick={() =>
-              setSlots(prev => [
-                ...prev,
-                newSlotDraft(cadence === 'weekly' ? 1 : 1),
-              ])
-            }
+            onClick={() => setSlots(prev => [...prev, newSlotDraft()])}
           >
             Add slot
           </Button>
-        </div>
-
-        {slots.map((slot, index) => (
-          <div key={slot.key} className="space-y-3 border-t border-border pt-4">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-medium text-foreground">
-                Slot {index + 1}
-              </p>
-              {slots.length > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={loading}
-                  onClick={() =>
-                    setSlots(prev => prev.filter(s => s.key !== slot.key))
-                  }
-                >
-                  Remove
-                </Button>
-              )}
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>
-                  {cadence === 'weekly' ? 'Day of week' : 'Day of month (1-28)'}
-                </Label>
-                {cadence === 'weekly' ? (
-                  <Select
-                    value={String(slot.day)}
-                    onValueChange={v =>
-                      updateSlot(slot.key, { day: Number(v) })
-                    }
+        }
+      >
+        <ol className="space-y-4">
+          {slots.map((slot, index) => (
+            <li
+              key={slot.key}
+              aria-label={`Slot ${index + 1}`}
+              className="space-y-4 rounded-xl border border-border bg-background p-4"
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
+                <p className="flex items-baseline gap-2">
+                  <span className="font-display text-base font-extrabold uppercase text-foreground">
+                    Slot {index + 1}
+                  </span>
+                  <span className="text-sm text-fog">
+                    {describeSlot(slot, cadence)}
+                  </span>
+                </p>
+                {slots.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
                     disabled={loading}
+                    aria-label={`Remove slot ${index + 1}`}
+                    onClick={() =>
+                      setSlots(prev => prev.filter(s => s.key !== slot.key))
+                    }
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {WEEKDAY_OPTIONS.map(opt => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    type="number"
-                    min={1}
-                    max={28}
-                    value={slot.day}
-                    onChange={e =>
-                      updateSlot(slot.key, {
-                        day: Number(e.target.value) || 1,
-                      })
-                    }
-                    disabled={loading}
-                  />
+                    Remove
+                  </Button>
                 )}
               </div>
-              <div className="min-w-0 space-y-2">
-                <Label htmlFor={`slot-time-${slot.key}`}>Time</Label>
-                <TimePicker
-                  id={`slot-time-${slot.key}`}
-                  value={slot.time}
-                  onChange={next => updateSlot(slot.key, { time: next })}
-                  disabled={loading}
-                />
-              </div>
-            </div>
 
-            <LocationPicker
-              key={slot.key}
-              locationName={slot.locationName}
-              address={slot.address}
-              lat={slot.lat}
-              lng={slot.lng}
-              disabled={loading}
-              nameId={`slot-name-${slot.key}`}
-              addressId={`slot-address-${slot.key}`}
-              onLocationNameChange={nameVal =>
-                updateSlot(slot.key, { locationName: nameVal })
-              }
-              onAddressTextChange={addr =>
-                updateSlot(slot.key, { address: addr })
-              }
-              onAddressSelect={loc =>
-                updateSlot(slot.key, {
-                  locationName: loc.name || slot.locationName,
-                  address: loc.address,
-                  lat: loc.lat,
-                  lng: loc.lng,
-                })
-              }
-              onPinChange={coords =>
-                updateSlot(slot.key, {
-                  lat: coords?.lat ?? null,
-                  lng: coords?.lng ?? null,
-                })
-              }
-            />
-          </div>
-        ))}
-      </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor={`slot-day-${slot.key}`}>
+                    {cadence === 'weekly'
+                      ? 'Day of week'
+                      : 'Day of month (1-28)'}
+                  </Label>
+                  {cadence === 'weekly' ? (
+                    <Select
+                      value={String(slot.day)}
+                      onValueChange={v =>
+                        updateSlot(slot.key, { day: Number(v) })
+                      }
+                      disabled={loading}
+                    >
+                      <SelectTrigger id={`slot-day-${slot.key}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {WEEKDAY_OPTIONS.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id={`slot-day-${slot.key}`}
+                      type="number"
+                      min={1}
+                      max={28}
+                      value={slot.day}
+                      onChange={e =>
+                        updateSlot(slot.key, {
+                          day: Number(e.target.value) || 1,
+                        })
+                      }
+                      disabled={loading}
+                    />
+                  )}
+                </div>
+                <div className="min-w-0 space-y-2">
+                  <Label htmlFor={`slot-time-${slot.key}`}>Kickoff time</Label>
+                  <TimePicker
+                    id={`slot-time-${slot.key}`}
+                    value={slot.time}
+                    onChange={next => updateSlot(slot.key, { time: next })}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <LocationPicker
+                key={slot.key}
+                locationName={slot.locationName}
+                address={slot.address}
+                lat={slot.lat}
+                lng={slot.lng}
+                disabled={loading}
+                nameId={`slot-name-${slot.key}`}
+                addressId={`slot-address-${slot.key}`}
+                onLocationNameChange={nameVal =>
+                  updateSlot(slot.key, { locationName: nameVal })
+                }
+                onAddressTextChange={addr =>
+                  updateSlot(slot.key, { address: addr })
+                }
+                onAddressSelect={loc =>
+                  updateSlot(slot.key, {
+                    locationName: loc.name || slot.locationName,
+                    address: loc.address,
+                    lat: loc.lat,
+                    lng: loc.lng,
+                  })
+                }
+                onPinChange={coords =>
+                  updateSlot(slot.key, {
+                    lat: coords?.lat ?? null,
+                    lng: coords?.lng ?? null,
+                  })
+                }
+              />
+            </li>
+          ))}
+        </ol>
+      </FormSection>
 
       {error && (
         <p className="text-sm text-red-400" role="alert">
