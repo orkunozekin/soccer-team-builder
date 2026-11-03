@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -19,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { StatusPill } from '@/components/ui/status-pill'
 import { listClubMembersAPI, updateClubMemberRoleAPI } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
+import { clubMemberPath } from '@/lib/utils/clubPaths'
 import {
   CLUB_ROSTER_ROLE_FILTERS,
   type ClubRosterRoleFilter,
@@ -28,11 +30,17 @@ import type { ClubMembershipRole, ClubMembershipWithUser } from '@/types/club'
 
 const PAGE_SIZE = 10
 
+/** Name link whose ::after covers the row, so the whole row opens it. */
+const ROW_LINK_CLASS =
+  "truncate text-sm font-medium text-foreground underline-offset-2 after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-ring"
+
 export function ClubAdminRoster({
   clubId,
+  clubSlug,
   currentUserId,
 }: {
   clubId: string
+  clubSlug: string
   currentUserId: string
 }) {
   const [members, setMembers] = useState<ClubMembershipWithUser[]>([])
@@ -238,14 +246,17 @@ export function ClubAdminRoster({
               return (
                 <li
                   key={member.id}
-                  className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/60"
+                  className="relative flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/60"
                 >
                   <InitialsAvatar name={member.displayName} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium text-foreground">
+                      <Link
+                        href={clubMemberPath(clubSlug, member.userId)}
+                        className={ROW_LINK_CLASS}
+                      >
                         {member.displayName}
-                      </span>
+                      </Link>
                       {isSelf && (
                         <Badge
                           variant="outline"
@@ -261,37 +272,40 @@ export function ClubAdminRoster({
                       </div>
                     )}
                   </div>
-                  <Select
-                    value={member.role}
-                    onValueChange={(value: ClubMembershipRole) => {
-                      if (value === member.role) return
-                      void handleRoleChange(member.userId, value)
-                    }}
-                    disabled={busy || cannotDemoteSelf}
-                  >
-                    <SelectTrigger
-                      className="h-9 w-[8.5rem] shrink-0"
-                      aria-label={`Role for ${member.displayName}`}
-                      title={
-                        cannotDemoteSelf
-                          ? 'You cannot demote yourself'
-                          : isLastAdmin
-                            ? 'Cannot demote the last club admin'
-                            : undefined
-                      }
+                  {/* Above the row link's overlay so it stays clickable. */}
+                  <div className="relative z-10 shrink-0">
+                    <Select
+                      value={member.role}
+                      onValueChange={(value: ClubMembershipRole) => {
+                        if (value === member.role) return
+                        void handleRoleChange(member.userId, value)
+                      }}
+                      disabled={busy || cannotDemoteSelf}
                     >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem
-                        value="player"
-                        disabled={isLastAdmin || cannotDemoteSelf}
+                      <SelectTrigger
+                        className="h-9 w-[8.5rem] shrink-0"
+                        aria-label={`Role for ${member.displayName}`}
+                        title={
+                          cannotDemoteSelf
+                            ? 'You cannot demote yourself'
+                            : isLastAdmin
+                              ? 'Cannot demote the last club admin'
+                              : undefined
+                        }
                       >
-                        Player
-                      </SelectItem>
-                      <SelectItem value="club_admin">Club admin</SelectItem>
-                    </SelectContent>
-                  </Select>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem
+                          value="player"
+                          disabled={isLastAdmin || cannotDemoteSelf}
+                        >
+                          Player
+                        </SelectItem>
+                        <SelectItem value="club_admin">Club admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </li>
               )
             })}

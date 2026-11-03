@@ -8,16 +8,23 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { getMatchesByIds } from '@/lib/services/matchService'
-import { getUserRSVPs } from '@/lib/services/rsvpService'
+import {
+  type LoadPlayerHistory,
+  loadPlayerHistory,
+} from '@/lib/services/playerHistory'
 import { computeAttendanceStats } from '@/lib/utils/attendanceStats'
 import type { AttendanceStats } from '@/lib/utils/attendanceStats'
 
 interface AttendanceStatsCardProps {
   userId: string
+  /** Defaults to every RSVP across clubs; must be a stable reference. */
+  loadHistory?: LoadPlayerHistory
 }
 
-export function AttendanceStatsCard({ userId }: AttendanceStatsCardProps) {
+export function AttendanceStatsCard({
+  userId,
+  loadHistory,
+}: AttendanceStatsCardProps) {
   const [stats, setStats] = useState<AttendanceStats | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -26,12 +33,9 @@ export function AttendanceStatsCard({ userId }: AttendanceStatsCardProps) {
     const load = async () => {
       setLoading(true)
       try {
-        const rsvps = await getUserRSVPs(userId)
-        if (cancelled) return
-        const matches = await getMatchesByIds(
-          rsvps.map(r => r.matchId),
-          { includeDeleted: true }
-        )
+        const { rsvps, matches } = await (loadHistory
+          ? loadHistory()
+          : loadPlayerHistory(userId))
         if (cancelled) return
         const matchesById = new Map(matches.map(m => [m.id, m]))
         setStats(computeAttendanceStats(rsvps, matchesById))
@@ -45,7 +49,7 @@ export function AttendanceStatsCard({ userId }: AttendanceStatsCardProps) {
     return () => {
       cancelled = true
     }
-  }, [userId])
+  }, [userId, loadHistory])
 
   return (
     <Card className="overflow-hidden rounded-xl border-border shadow-sm">

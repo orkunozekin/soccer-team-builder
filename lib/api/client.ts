@@ -4,6 +4,7 @@
  */
 
 import type { AuditStats } from '@/lib/audit/computeAuditStats'
+import type { ClubMemberProfileDTO } from '@/lib/clubs/clubMemberProfile'
 import { auth } from '@/lib/firebase/config'
 import { useAuthStore } from '@/store/authStore'
 import type {
@@ -481,9 +482,7 @@ export async function listSchedulesAPI(): Promise<{
   return response.json()
 }
 
-export async function createScheduleAPI(
-  payload: ScheduleAPIPayload
-): Promise<{
+export async function createScheduleAPI(payload: ScheduleAPIPayload): Promise<{
   success: boolean
   schedule: import('@/types/schedule').MatchSchedule
 }> {
@@ -529,9 +528,7 @@ export async function deleteScheduleAPI(
   return response.json()
 }
 
-export async function hostCheckInAllAPI(
-  matchId: string
-): Promise<{
+export async function hostCheckInAllAPI(matchId: string): Promise<{
   success: boolean
   updated: Array<{ rsvpId: string; userId: string }>
   message?: string
@@ -792,11 +789,30 @@ export async function listClubMembersAPI(
   return response.json()
 }
 
+export async function getClubMemberProfileAPI(
+  clubId: string,
+  userId: string
+): Promise<ClubMemberProfileDTO> {
+  const response = await apiRequest(`/clubs/${clubId}/members/${userId}`)
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    const err = new Error(error.error || 'Failed to load member') as Error & {
+      status?: number
+    }
+    err.status = response.status
+    throw err
+  }
+  return response.json()
+}
+
 export async function updateClubMemberRoleAPI(
   clubId: string,
   userId: string,
   role: ClubMembershipRole
-): Promise<{ success: boolean; membership: { id: string; role: ClubMembershipRole } }> {
+): Promise<{
+  success: boolean
+  membership: { id: string; role: ClubMembershipRole }
+}> {
   const response = await apiRequest(`/clubs/${clubId}/members/${userId}`, {
     method: 'PATCH',
     body: JSON.stringify({ role }),
@@ -808,9 +824,7 @@ export async function updateClubMemberRoleAPI(
   return response.json()
 }
 
-export async function listClubInvitesAPI(
-  clubId: string
-): Promise<{
+export async function listClubInvitesAPI(clubId: string): Promise<{
   success: boolean
   invites: Array<ClubInvite & { link: string }>
 }> {
@@ -837,9 +851,7 @@ export async function revokeClubInviteAPI(
   return response.json()
 }
 
-export async function redeemInviteAPI(
-  code: string
-): Promise<{
+export async function redeemInviteAPI(code: string): Promise<{
   success: boolean
   alreadyMember: boolean
   clubId: string
@@ -885,4 +897,3 @@ export async function backfillClubMembershipsAPI(
   }
   return response.json()
 }
-

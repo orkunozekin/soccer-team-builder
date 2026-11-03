@@ -12,7 +12,7 @@ import {
 import { SOCCER_POSITIONS } from '@/lib/constants/positions'
 import type { User } from '@/types/user'
 
-function positionLabel(value: string | null): string {
+export function positionLabel(value: string | null): string {
   if (!value) return '—'
   const p = SOCCER_POSITIONS.find(x => x.value === value)
   return p ? p.label : value

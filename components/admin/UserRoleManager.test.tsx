@@ -102,6 +102,11 @@ describe('UserRoleManager', () => {
 
     expect(await screen.findByText(/user two/i)).toBeInTheDocument()
     expect(screen.queryByText(/user one/i)).not.toBeInTheDocument()
+    // The name link covers the row so the whole row opens the profile.
+    expect(screen.getByRole('link', { name: 'User Two' })).toHaveAttribute(
+      'href',
+      '/admin/players/u2'
+    )
   })
 
   it('caches paginated pages when navigating back', async () => {
@@ -331,14 +336,10 @@ describe('UserRoleManager', () => {
     await user.click(screen.getByRole('tab', { name: /^super users$/i }))
     expect(await screen.findByText(/super person/i)).toBeInTheDocument()
     expect(screen.queryByText(/plain user/i)).not.toBeInTheDocument()
-    expect(mocks.getUsersForAdminFilterMock).toHaveBeenCalledWith(
-      'super_users'
-    )
+    expect(mocks.getUsersForAdminFilterMock).toHaveBeenCalledWith('super_users')
 
     await user.click(screen.getByRole('tab', { name: /^club admins$/i }))
     expect(await screen.findByText(/club admin person/i)).toBeInTheDocument()
-    expect(mocks.getUsersForAdminFilterMock).toHaveBeenCalledWith(
-      'club_admins'
-    )
+    expect(mocks.getUsersForAdminFilterMock).toHaveBeenCalledWith('club_admins')
   })
 })

@@ -20,6 +20,7 @@ export default function ClubRosterPage() {
       {club => (
         <ClubAdminRoster
           clubId={club.id}
+          clubSlug={club.slug}
           currentUserId={user?.uid ?? ''}
         />
       )}

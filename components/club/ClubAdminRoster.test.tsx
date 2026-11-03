@@ -51,7 +51,9 @@ describe('ClubAdminRoster', () => {
   })
 
   it('lists members with role controls', async () => {
-    render(<ClubAdminRoster clubId="c1" currentUserId="u1" />)
+    render(
+      <ClubAdminRoster clubId="c1" clubSlug="club-one" currentUserId="u1" />
+    )
 
     expect(await screen.findByText('Admin Self')).toBeInTheDocument()
     expect(screen.getByText('You')).toBeInTheDocument()
@@ -59,6 +61,20 @@ describe('ClubAdminRoster', () => {
     expect(listClubMembersAPI).toHaveBeenCalledWith('c1')
     expect(screen.getByLabelText('Role for Admin Self')).toBeDisabled()
     expect(screen.getByLabelText('Role for Player Two')).not.toBeDisabled()
+  })
+
+  it("links each member's row to their club profile page", async () => {
+    render(
+      <ClubAdminRoster clubId="c1" clubSlug="club-one" currentUserId="u1" />
+    )
+
+    expect(
+      await screen.findByRole('link', { name: 'Player Two' })
+    ).toHaveAttribute('href', '/c/club-one/roster/u2')
+    // The role select sits above the row link so it stays usable.
+    expect(
+      screen.getByRole('combobox', { name: 'Role for Player Two' })
+    ).toBeInTheDocument()
   })
 
   it('ignores a stale roster response after clubId changes', async () => {
@@ -88,9 +104,11 @@ describe('ClubAdminRoster', () => {
       })
 
     const { rerender } = render(
-      <ClubAdminRoster clubId="c1" currentUserId="u1" />
+      <ClubAdminRoster clubId="c1" clubSlug="club-one" currentUserId="u1" />
     )
-    rerender(<ClubAdminRoster clubId="c2" currentUserId="u1" />)
+    rerender(
+      <ClubAdminRoster clubId="c2" clubSlug="club-two" currentUserId="u1" />
+    )
 
     expect(await screen.findByText('Club Two Member')).toBeInTheDocument()
     resolveFirst({ success: true, members: [] })
@@ -115,7 +133,9 @@ describe('ClubAdminRoster', () => {
         email: `m${i}@example.com`,
       })),
     })
-    render(<ClubAdminRoster clubId="c1" currentUserId="u0" />)
+    render(
+      <ClubAdminRoster clubId="c1" clubSlug="club-one" currentUserId="u0" />
+    )
 
     expect(await screen.findByText('Member 01')).toBeInTheDocument()
     expect(screen.getByText('Member 10')).toBeInTheDocument()
@@ -160,7 +180,9 @@ describe('ClubAdminRoster', () => {
         email: `m${i}@example.com`,
       })),
     })
-    render(<ClubAdminRoster clubId="c1" currentUserId="u0" />)
+    render(
+      <ClubAdminRoster clubId="c1" clubSlug="club-one" currentUserId="u0" />
+    )
 
     expect(await screen.findByText('Member 01')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Go to page 3' }))
@@ -178,7 +200,9 @@ describe('ClubAdminRoster', () => {
   })
 
   it('hides pagination when the roster fits on one page', async () => {
-    render(<ClubAdminRoster clubId="c1" currentUserId="u1" />)
+    render(
+      <ClubAdminRoster clubId="c1" clubSlug="club-one" currentUserId="u1" />
+    )
     expect(await screen.findByText('Player Two')).toBeInTheDocument()
     expect(
       screen.queryByRole('navigation', { name: 'Pagination' })
@@ -187,13 +211,17 @@ describe('ClubAdminRoster', () => {
 
   it('shows an error when the roster fails to load', async () => {
     vi.mocked(listClubMembersAPI).mockRejectedValue(new Error('Nope'))
-    render(<ClubAdminRoster clubId="c1" currentUserId="u1" />)
+    render(
+      <ClubAdminRoster clubId="c1" clubSlug="club-one" currentUserId="u1" />
+    )
     expect(await screen.findByText('Nope')).toBeInTheDocument()
   })
 
   it('filters the roster to club admins', async () => {
     const user = userEvent.setup()
-    render(<ClubAdminRoster clubId="c1" currentUserId="u1" />)
+    render(
+      <ClubAdminRoster clubId="c1" clubSlug="club-one" currentUserId="u1" />
+    )
 
     expect(await screen.findByText('Player Two')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Club admins' }))
@@ -213,7 +241,9 @@ describe('ClubAdminRoster', () => {
 
   it('searches members by name or email', async () => {
     const user = userEvent.setup()
-    render(<ClubAdminRoster clubId="c1" currentUserId="u1" />)
+    render(
+      <ClubAdminRoster clubId="c1" clubSlug="club-one" currentUserId="u1" />
+    )
 
     expect(await screen.findByText('Player Two')).toBeInTheDocument()
     await user.type(
@@ -228,7 +258,9 @@ describe('ClubAdminRoster', () => {
 
   it('shows an empty match state when filters exclude everyone', async () => {
     const user = userEvent.setup()
-    render(<ClubAdminRoster clubId="c1" currentUserId="u1" />)
+    render(
+      <ClubAdminRoster clubId="c1" clubSlug="club-one" currentUserId="u1" />
+    )
 
     expect(await screen.findByText('Player Two')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Players' }))
@@ -256,7 +288,9 @@ describe('ClubAdminRoster', () => {
         email: `m${i}@example.com`,
       })),
     })
-    render(<ClubAdminRoster clubId="c1" currentUserId="u0" />)
+    render(
+      <ClubAdminRoster clubId="c1" clubSlug="club-one" currentUserId="u0" />
+    )
 
     expect(await screen.findByText('Member 01')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }))
@@ -311,7 +345,13 @@ describe('ClubAdminRoster', () => {
         })),
       ],
     })
-    render(<ClubAdminRoster clubId="c1" currentUserId="admin-0" />)
+    render(
+      <ClubAdminRoster
+        clubId="c1"
+        clubSlug="club-one"
+        currentUserId="admin-0"
+      />
+    )
 
     expect(await screen.findByText('Admin 01')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Go to page 2' }))
