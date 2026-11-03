@@ -35,9 +35,31 @@ describe('splitNextMatch', () => {
     const later = match('later', '2030-01-12')
     const sameDayEarly = match('early', '2030-01-10', '09:00')
     const sameDayLate = match('late', '2030-01-10', '19:30')
-    const { next, rest } = splitNextMatch([later, sameDayLate, sameDayEarly])
+    const { next, rest } = splitNextMatch(
+      [later, sameDayLate, sameDayEarly],
+      new Date('2030-01-01T00:00:00Z')
+    )
     expect(next?.id).toBe('early')
     expect(rest.map(m => m.id)).toEqual(['late', 'later'])
+  })
+
+  it('skips matches that have already kicked off', () => {
+    const inProgress = match('live', '2030-01-10', '09:00')
+    const upcoming = match('soon', '2030-01-10', '19:30')
+    // 2030-01-10 12:00 CT: the 09:00 match started three hours ago.
+    const now = new Date('2030-01-10T18:00:00Z')
+    const { next, rest } = splitNextMatch([upcoming, inProgress], now)
+    expect(next?.id).toBe('soon')
+    expect(rest.map(m => m.id)).toEqual(['live'])
+  })
+
+  it('has no hero when every match has kicked off', () => {
+    const inProgress = match('live', '2030-01-10', '09:00')
+    const now = new Date('2030-01-10T18:00:00Z')
+    expect(splitNextMatch([inProgress], now)).toEqual({
+      next: null,
+      rest: [inProgress],
+    })
   })
 
   it('returns no hero for an empty list', () => {
@@ -127,6 +149,14 @@ describe('selectMatchList', () => {
     const { next, rows } = selectMatchList(all, 'past', new Map(), now)
     expect(next?.id).toBe('next')
     expect(rows.map(m => m.id)).toEqual(['old', 'older'])
+  })
+
+  it('keeps a match in progress out of the hero but in the rows', () => {
+    // 2030-01-16 21:00 CT: "next" kicked off at 19:30 and is still open.
+    const lateNow = new Date('2030-01-17T03:00:00Z')
+    const { next, rows } = selectMatchList(all, 'upcoming', new Map(), lateNow)
+    expect(next?.id).toBe('later')
+    expect(rows.map(m => m.id)).toEqual(['next'])
   })
 
   it('has no hero when nothing is upcoming', () => {

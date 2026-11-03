@@ -138,7 +138,7 @@ export function MatchDetails({
     <div className="min-w-0 space-y-6">
       <section
         aria-labelledby="match-date-heading"
-        className="card-soccer-accent space-y-6 overflow-hidden"
+        className="space-y-6 overflow-hidden"
       >
         <div className="space-y-4">
           <StatusPill tone={rsvpStatus.tone}>{rsvpStatus.label}</StatusPill>
