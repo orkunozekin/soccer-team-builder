@@ -296,6 +296,6 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 
 - **Source:** PR #132 · Codex
 - **Gap:** `ProfileForm` (and the club switchers) wrote back `{ ...userData, ...updates }` using the `userData` captured before `await updateProfileAPI`. Once the sidebar theme toggle could save at the same time, a profile submit that finished second restored the old `themePreference`, and `ThemeSync` flipped the UI back.
-- **Going forward:** After an async profile write, merge with `useAuthStore.getState().mergeUserData(uid, patch)`. It merges into the profile as it is now, and only if it still belongs to `uid`. Never write back a spread of a snapshot taken before an `await`.
-- **Pointers:** `store/authStore.ts` (`mergeUserData`), `components/profile/ProfileForm.tsx`, `components/profile/ProfileClubsSection.tsx`, `lib/hooks/useClubWorkspace.ts`, `lib/theme/saveThemePreference.ts`
+- **Going forward:** Grep every `setUserData(` call when adding a new profile writer. After an async profile write, merge with `useAuthStore.getState().mergeUserData(uid, patch)`. It merges into the profile as it is now, and only if it still belongs to `uid`. Never write back a spread of a snapshot taken before an `await`.
+- **Pointers:** `store/authStore.ts` (`mergeUserData`), `components/profile/ProfileForm.tsx`, `components/profile/ProfileCompleteModal.tsx`, `components/profile/ProfileClubsSection.tsx`, `lib/hooks/useClubWorkspace.ts`, `lib/theme/saveThemePreference.ts`
 - **Promoted:** AGENT_CONTEXT.md → §3 Async state, races, and transactions; `.greptile/rules.md`
