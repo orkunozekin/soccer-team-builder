@@ -37,13 +37,13 @@ function Calendar({
         [UI.Dropdowns]: 'flex gap-2 items-center justify-center flex-wrap',
         [UI.DropdownRoot]: 'relative rdp-dropdown-root',
         [UI.Dropdown]:
-          'rounded-md border border-zinc-200 bg-transparent px-2 py-1.5 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 dark:border-zinc-800 dark:focus-visible:ring-zinc-300',
+          'rounded-md border bg-transparent px-2 py-1.5 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 border-border focus-visible:ring-ring',
         [UI.MonthsDropdown]: 'min-w-[5rem]',
         [UI.YearsDropdown]: 'min-w-[4rem]',
         [UI.MonthGrid]: 'w-full border-collapse space-y-1',
         [UI.Weekdays]: 'flex',
         [UI.Weekday]:
-          'text-zinc-500 rounded-md w-8 font-normal text-[0.8rem] dark:text-zinc-400',
+          'rounded-md w-8 font-normal text-[0.8rem] text-muted-foreground',
         [UI.Weeks]: 'flex flex-col gap-2 mt-2',
         [UI.Week]: 'flex w-full',
         [UI.Day]:
@@ -54,13 +54,12 @@ function Calendar({
         ),
         [SelectionState.selected]:
           'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
-        [DayFlag.today]:
-          'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50',
+        [DayFlag.today]: 'bg-accent text-foreground',
         [DayFlag.outside]:
-          'text-zinc-500 opacity-50 aria-selected:bg-zinc-100/50 aria-selected:text-zinc-500 dark:text-zinc-400 dark:aria-selected:bg-zinc-800/50 dark:aria-selected:text-zinc-400',
-        [DayFlag.disabled]: 'text-zinc-500 opacity-50 dark:text-zinc-400',
+          'opacity-50 text-muted-foreground aria-selected:bg-accent/50 aria-selected:text-muted-foreground',
+        [DayFlag.disabled]: 'opacity-50 text-muted-foreground',
         [SelectionState.range_middle]:
-          'aria-selected:bg-zinc-100 aria-selected:text-zinc-900 dark:aria-selected:bg-zinc-800 dark:aria-selected:text-zinc-50',
+          'aria-selected:bg-accent aria-selected:text-foreground',
         [DayFlag.hidden]: 'invisible',
         ...classNames,
       }}

@@ -48,54 +48,52 @@ export function AttendanceStatsCard({ userId }: AttendanceStatsCardProps) {
   }, [userId])
 
   return (
-    <Card className="overflow-hidden rounded-xl border-zinc-200 shadow-sm dark:border-zinc-800">
+    <Card className="overflow-hidden rounded-xl border-border shadow-sm">
       <CardHeader className="pb-3 sm:px-8 sm:pt-8">
-        <CardTitle className="text-xl font-semibold tracking-tight sm:text-2xl">
-          Attendance
-        </CardTitle>
-        <CardDescription className="text-sm text-zinc-500 dark:text-zinc-400">
+        <CardTitle className="text-2xl sm:text-3xl">Attendance</CardTitle>
+        <CardDescription className="text-sm text-muted-foreground">
           Confirmed RSVPs vs shows after the check-in window
         </CardDescription>
       </CardHeader>
       <CardContent className="sm:px-8 sm:pb-8">
         {loading ? (
-          <p className="text-sm text-zinc-500">Loading stats…</p>
+          <p className="text-sm text-muted-foreground">Loading stats…</p>
         ) : !stats || stats.confirmedCount === 0 ? (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             No confirmed RSVPs yet. Stats appear after confirmed RSVPs to
             matches.
           </p>
         ) : (
           <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
-              <dt className="text-xs uppercase tracking-wide text-zinc-500">
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
                 Confirmed
               </dt>
-              <dd className="mt-1 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+              <dd className="mt-1 text-2xl font-semibold text-foreground">
                 {stats.confirmedCount}
               </dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-zinc-500">
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
                 Attended
               </dt>
-              <dd className="mt-1 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+              <dd className="mt-1 text-2xl font-semibold text-foreground">
                 {stats.attendedCount}
               </dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-zinc-500">
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
                 No-shows
               </dt>
-              <dd className="mt-1 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+              <dd className="mt-1 text-2xl font-semibold text-foreground">
                 {stats.noShowCount}
               </dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-zinc-500">
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
                 Show rate
               </dt>
-              <dd className="mt-1 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+              <dd className="mt-1 text-2xl font-semibold text-foreground">
                 {stats.showRate == null ? '—' : `${stats.showRate}%`}
               </dd>
             </div>

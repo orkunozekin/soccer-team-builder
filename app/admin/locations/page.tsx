@@ -5,6 +5,7 @@ import {
   CreateSavedLocationCard,
   SavedLocationCard,
 } from '@/components/admin/SavedLocationManager'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent } from '@/components/ui/card'
 import { Pagination } from '@/components/ui/pagination'
 import {
@@ -45,27 +46,24 @@ export default function AdminLocationsPage() {
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-          Locations
-        </h1>
-        <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-          Save venues once and pick them when creating or editing matches
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Super user"
+        title="Locations"
+        description="Save venues once and pick them when creating or editing matches"
+      />
 
       <div className="space-y-6">
         <CreateSavedLocationCard onCreated={loadLocations} />
 
         <div>
-          <h2 className="mb-4 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+          <h2 className="mb-4 font-display text-2xl font-extrabold uppercase tracking-[0.02em]">
             Saved locations
           </h2>
 
           {loading ? (
             <Card>
               <CardContent className="py-6">
-                <p className="text-center text-zinc-600 dark:text-zinc-400">
+                <p className="text-center text-muted-foreground">
                   Loading locations…
                 </p>
               </CardContent>
@@ -73,7 +71,7 @@ export default function AdminLocationsPage() {
           ) : locations.length === 0 ? (
             <Card>
               <CardContent className="py-6">
-                <p className="text-center text-zinc-600 dark:text-zinc-400">
+                <p className="text-center text-muted-foreground">
                   No saved locations yet. Add one above or run the migration
                   script to import venues from past matches.
                 </p>

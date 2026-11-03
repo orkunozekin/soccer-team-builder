@@ -34,9 +34,9 @@ function CategoryTooltip({
   if (!active || !payload?.length) return null
   const item = payload[0]
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white px-3 py-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-      <p className="text-xs text-zinc-500">{item?.payload.category}</p>
-      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+    <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-sm">
+      <p className="text-xs text-muted-foreground">{item?.payload.category}</p>
+      <p className="text-sm font-semibold text-foreground">
         {item?.value ?? 0} events
       </p>
     </div>
@@ -50,8 +50,8 @@ export function CategoryChart({ stats }: { stats: AuditStats }) {
   return (
     <Card className="min-w-0">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold">Events by category</CardTitle>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <CardTitle className="text-xl">Events by category</CardTitle>
+        <p className="text-sm text-muted-foreground">
           Breakdown of activity types
         </p>
       </CardHeader>
@@ -66,7 +66,7 @@ export function CategoryChart({ stats }: { stats: AuditStats }) {
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  className="stroke-zinc-200 dark:stroke-zinc-800"
+                  className="stroke-zinc-800"
                   horizontal={false}
                 />
                 <XAxis
@@ -86,7 +86,10 @@ export function CategoryChart({ stats }: { stats: AuditStats }) {
                   axisLine={false}
                   className="fill-zinc-500"
                 />
-                <Tooltip content={<CategoryTooltip />} cursor={{ fill: 'transparent' }} />
+                <Tooltip
+                  content={<CategoryTooltip />}
+                  cursor={{ fill: 'transparent' }}
+                />
                 <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={24}>
                   {data.map((entry, index) => (
                     <Cell
@@ -99,7 +102,7 @@ export function CategoryChart({ stats }: { stats: AuditStats }) {
             </ResponsiveContainer>
           </div>
         ) : (
-          <div className="flex h-64 items-center justify-center rounded-lg border border-dashed text-sm text-zinc-500">
+          <div className="flex h-64 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
             No category data yet
           </div>
         )}

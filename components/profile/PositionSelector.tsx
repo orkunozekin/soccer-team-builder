@@ -54,7 +54,7 @@ export function PositionSelector({
         <SelectTrigger
           id="position"
           className={cn(
-            'h-11 rounded-lg border-zinc-200 bg-zinc-50/50 text-sm dark:border-zinc-700 dark:bg-zinc-900/50',
+            'h-11 rounded-lg border-input bg-muted/50 text-sm',
             triggerClassName
           )}
         >
@@ -65,9 +65,7 @@ export function PositionSelector({
             const claimed = occupancyLabel(occupancy?.[position.value])
             return (
               <SelectItem key={position.value} value={position.value}>
-                {claimed
-                  ? `${position.label} · ${claimed}`
-                  : position.label}
+                {claimed ? `${position.label} · ${claimed}` : position.label}
               </SelectItem>
             )
           })}

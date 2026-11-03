@@ -36,6 +36,12 @@ export function PlatformAdminNav({
       aria-label="Admin sections"
       className={cn('flex flex-col gap-1', className)}
     >
+      <p
+        aria-hidden
+        className="px-3 pb-1 pt-2 font-mono text-[11px] uppercase tracking-[0.14em] text-fog"
+      >
+        Super user
+      </p>
       {ADMIN_NAV_LINKS.map(link => (
         <SidenavLink
           key={link.href}

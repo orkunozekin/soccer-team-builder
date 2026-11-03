@@ -8,11 +8,13 @@ import type { MatchLocation } from '@/types/match'
 
 const LocationMapPicker = dynamic(
   () =>
-    import('@/components/admin/LocationMapPicker').then(m => m.LocationMapPicker),
+    import('@/components/admin/LocationMapPicker').then(
+      m => m.LocationMapPicker
+    ),
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-56 items-center justify-center rounded-md border border-dashed border-zinc-300 text-xs text-zinc-500 sm:h-64">
+      <div className="flex h-56 items-center justify-center rounded-md border border-dashed border-input text-xs text-muted-foreground sm:h-64">
         Loading map…
       </div>
     ),
@@ -32,7 +34,9 @@ interface AddressAutocompleteProps {
   lat: number | null
   lng: number | null
   onLocationNameChange: (name: string) => void
-  onAddressSelect: (loc: Omit<MatchLocation, 'name'> & { name?: string }) => void
+  onAddressSelect: (
+    loc: Omit<MatchLocation, 'name'> & { name?: string }
+  ) => void
   onAddressTextChange: (address: string) => void
   onPinChange: (coords: { lat: number; lng: number } | null) => void
   disabled?: boolean
@@ -250,19 +254,17 @@ export function AddressAutocomplete({
           autoComplete="off"
         />
         {open && suggestions.length > 0 && (
-          <ul className="absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-md border border-zinc-200 bg-white py-1 shadow-md dark:border-zinc-700 dark:bg-zinc-900">
+          <ul className="absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-md border border-input bg-card py-1 shadow-md">
             {suggestions.map(s => (
               <li key={s.mapbox_id}>
                 <button
                   type="button"
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
                   onClick={() => handleSelect(s)}
                 >
-                  <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                    {s.name}
-                  </span>
+                  <span className="font-medium text-foreground">{s.name}</span>
                   {(s.place_formatted || s.full_address) && (
-                    <span className="mt-0.5 block text-xs text-zinc-500">
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
                       {s.full_address || s.place_formatted}
                     </span>
                   )}
@@ -272,14 +274,12 @@ export function AddressAutocomplete({
           </ul>
         )}
         {loading && (
-          <p className="text-xs text-zinc-500">Searching addresses…</p>
+          <p className="text-xs text-muted-foreground">Searching addresses…</p>
         )}
         {coordsHint && !loading && (
-          <p className="text-xs text-zinc-500">{coordsHint}</p>
+          <p className="text-xs text-muted-foreground">{coordsHint}</p>
         )}
-        {error && (
-          <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
-        )}
+        {error && <p className="text-xs text-red-400">{error}</p>}
       </div>
 
       {token ? (
@@ -291,7 +291,7 @@ export function AddressAutocomplete({
           onPinChange={handlePinChange}
         />
       ) : (
-        <p className="text-xs text-amber-700 dark:text-amber-400">
+        <p className="text-xs text-amber-400">
           Set NEXT_PUBLIC_MAPBOX_TOKEN for address search and map pinning.
         </p>
       )}

@@ -178,9 +178,7 @@ export function LocationMapPicker({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">
-          Pin on map
-        </p>
+        <p className="text-sm font-medium text-foreground">Pin on map</p>
         {hasCoords(lat, lng) && (
           <Button
             type="button"
@@ -193,13 +191,13 @@ export function LocationMapPicker({
           </Button>
         )}
       </div>
-      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+      <p className="text-xs text-muted-foreground">
         Optional. Click the map (or drag the pin) to set exact coordinates. The
         nearest address fills in automatically; coords still win for maps links
         and check-in.
       </p>
       {mapUnavailable && (
-        <p role="status" className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p role="status" className="text-sm text-muted-foreground">
           Map unavailable in this browser. You can still enter a location or
           choose a saved one.
         </p>
@@ -207,7 +205,7 @@ export function LocationMapPicker({
       <div
         ref={containerRef}
         hidden={mapUnavailable}
-        className="h-56 w-full overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700 sm:h-64"
+        className="h-56 w-full overflow-hidden rounded-md border border-input sm:h-64"
         aria-label="Map to pin match location"
       />
     </div>

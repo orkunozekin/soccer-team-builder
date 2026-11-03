@@ -36,9 +36,9 @@ export function ForgotPasswordForm() {
   if (sent) {
     return (
       <div className="w-full space-y-4">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          If an account exists for that email, we sent a link to reset
-          your password. Check your inbox and spam folder.
+        <p className="text-sm text-muted-foreground">
+          If an account exists for that email, we sent a link to reset your
+          password. Check your inbox and spam folder.
         </p>
         <Button asChild className="h-11 w-full text-base sm:h-9 sm:text-sm">
           <Link href="/login">Back to sign in</Link>

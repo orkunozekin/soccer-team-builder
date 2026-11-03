@@ -123,13 +123,11 @@ export function SavedLocationSelect({
         </SelectContent>
       </Select>
       {!loading && locations.length === 0 && !error && (
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-muted-foreground">
           No saved locations yet. Add one to reuse it on future matches.
         </p>
       )}
-      {error && (
-        <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
-      )}
+      {error && <p className="text-xs text-red-400">{error}</p>}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">

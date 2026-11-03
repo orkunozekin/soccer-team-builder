@@ -34,12 +34,19 @@ export default function MobileAuthCallbackPage() {
     try {
       returnUrl = decodeURIComponent(state.slice(separator + 1))
     } catch {
-      setMessage('Sign-in failed: invalid return URL. You can close this window.')
+      setMessage(
+        'Sign-in failed: invalid return URL. You can close this window.'
+      )
       return
     }
 
-    if (!returnUrl.startsWith('exp://') && !returnUrl.startsWith('soccerville://')) {
-      setMessage('Sign-in failed: unexpected return URL. You can close this window.')
+    if (
+      !returnUrl.startsWith('exp://') &&
+      !returnUrl.startsWith('soccerville://')
+    ) {
+      setMessage(
+        'Sign-in failed: unexpected return URL. You can close this window.'
+      )
       return
     }
 
@@ -66,9 +73,7 @@ export default function MobileAuthCallbackPage() {
 
   return (
     <main className="flex min-h-[50vh] items-center justify-center px-4">
-      <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
-        {message}
-      </p>
+      <p className="text-center text-sm text-muted-foreground">{message}</p>
     </main>
   )
 }

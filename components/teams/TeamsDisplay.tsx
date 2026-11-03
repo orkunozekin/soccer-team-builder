@@ -412,7 +412,7 @@ export function TeamsDisplay({
                 handleConfirmCancelRSVP()
               }}
               disabled={cancelling}
-              className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-600 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-600"
+              className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-600"
             >
               {cancelling ? 'Cancelling…' : 'Cancel RSVP'}
             </AlertDialogAction>
@@ -455,10 +455,10 @@ export function TeamsDisplay({
       </div>
 
       {showPitchFlag || (isAdmin && matchId && teamsSorted.length > 0) ? (
-        <div className="flex flex-wrap items-center gap-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-3">
           {showPitchFlag ? (
             <div
-              className="inline-flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-700"
+              className="inline-flex rounded-md border border-input p-0.5"
               role="group"
               aria-label="Teams view"
             >
@@ -497,7 +497,7 @@ export function TeamsDisplay({
       ) : null}
 
       {transferError && (
-        <div className="rounded-md border border-red-300 bg-red-100 p-3 text-sm font-medium text-red-950 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
+        <div className="rounded-md border border-red-900/60 bg-red-950/40 p-3 text-sm font-medium text-red-200">
           {transferError}
         </div>
       )}
@@ -520,7 +520,7 @@ export function TeamsDisplay({
           {listContent}
           <DragOverlay dropAnimation={null}>
             {activeDrag ? (
-              <div className="min-w-[220px] rounded-md border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-950">
+              <div className="min-w-[220px] rounded-md border border-input bg-card shadow-lg">
                 <PlayerTile
                   user={activeDrag.user}
                   teamColor={activeDrag.teamColor}

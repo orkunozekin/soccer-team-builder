@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { updateClubAPI } from '@/lib/api/client'
 import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
 
@@ -40,9 +41,7 @@ export function ClubSettingsPanel({
       })
     } catch (err) {
       setAllowPlayerInvites(previous)
-      setError(
-        err instanceof Error ? err.message : 'Failed to update settings'
-      )
+      setError(err instanceof Error ? err.message : 'Failed to update settings')
       setBusy(false)
       return
     }
@@ -65,22 +64,20 @@ export function ClubSettingsPanel({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          Settings
-        </h2>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Club options for {clubName}.
-        </p>
-      </div>
+      <PageHeader
+        className="mb-0"
+        eyebrow="Club admin"
+        title="Settings"
+        description={`Club options for ${clubName}.`}
+      />
 
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
           {error}
         </div>
       )}
 
-      <label className="flex items-start gap-3 text-sm text-zinc-700 dark:text-zinc-300">
+      <label className="flex items-start gap-3 text-sm text-[#B9C2BD]">
         <input
           type="checkbox"
           className="mt-1"
@@ -89,21 +86,17 @@ export function ClubSettingsPanel({
           onChange={e => void handleToggle(e.target.checked)}
         />
         <span>
-          <span className="font-medium text-zinc-900 dark:text-zinc-100">
+          <span className="font-medium text-foreground">
             Players can invite
           </span>
-          <span className="mt-0.5 block text-zinc-500 dark:text-zinc-400">
+          <span className="mt-0.5 block text-muted-foreground">
             When on, players in this club can create invite codes. Club admins
             can always invite.
           </span>
         </span>
       </label>
 
-      {saved && (
-        <p className="text-sm text-emerald-700 dark:text-emerald-400">
-          Saved.
-        </p>
-      )}
+      {saved && <p className="text-sm text-emerald-400">Saved.</p>}
     </div>
   )
 }

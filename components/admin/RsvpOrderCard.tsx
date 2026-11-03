@@ -53,7 +53,9 @@ export function RsvpOrderCard({
           />
           <AccordionContent className="px-6 pb-4">
             {orderedRsvps.length === 0 ? (
-              <p className="text-sm text-zinc-500">No confirmed RSVPs yet.</p>
+              <p className="text-sm text-muted-foreground">
+                No confirmed RSVPs yet.
+              </p>
             ) : (
               <ol start={paged.offset + 1} className="space-y-2">
                 {paged.items.map((rsvp, index) => {
@@ -64,16 +66,16 @@ export function RsvpOrderCard({
                   return (
                     <li
                       key={rsvp.id}
-                      className="flex items-center gap-3 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-900/50"
+                      className="flex items-center gap-3 rounded-md border border-border bg-muted/50 px-3 py-2 text-sm"
                     >
-                      <span className="w-6 shrink-0 text-center font-medium text-zinc-500">
+                      <span className="w-6 shrink-0 text-center font-medium text-muted-foreground">
                         {paged.offset + index + 1}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">
+                        <p className="truncate font-medium text-foreground">
                           {displayName}
                         </p>
-                        <p className="text-xs text-zinc-500">
+                        <p className="text-xs text-muted-foreground">
                           {format(rsvp.rsvpAt, 'MMM d, yyyy h:mm a')}
                         </p>
                       </div>
@@ -86,8 +88,8 @@ export function RsvpOrderCard({
               <Pagination {...paged.pagination} itemLabel="RSVPs" />
             )}
             {matchId && onRestoreComplete && (
-              <div className="mt-4 space-y-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              <div className="mt-4 space-y-2 border-t border-border pt-4">
+                <p className="text-sm text-muted-foreground">
                   Rebuild teams from this RSVP order and goalkeeper priority.
                   Saved admin transfers are re-applied afterward.
                 </p>

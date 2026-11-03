@@ -41,7 +41,7 @@ const AllPlayersList = () => {
           })
         return (
           <PlayersRowItem
-            className="rounded-sm border border-neutral-400 p-1"
+            className="rounded-sm border border-input p-1"
             kebabMenuItems={kebabMenuItems}
             player={player}
             key={player.id}

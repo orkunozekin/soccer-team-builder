@@ -53,7 +53,7 @@ export function RSVPPositionModal({
         aria-labelledby="rsvp-position-modal-title"
         className={cn(
           'fixed left-1/2 top-1/2 z-50 w-full max-w-[min(calc(100vw-2rem),28rem)] -translate-x-1/2 -translate-y-1/2',
-          'rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-950',
+          'rounded-xl border border-border bg-card p-6 shadow-xl',
           'duration-200 animate-in fade-in-0 zoom-in-95'
         )}
         onClick={e => e.stopPropagation()}
@@ -63,7 +63,7 @@ export function RSVPPositionModal({
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute right-0 top-0 h-8 w-8 shrink-0 rounded-full text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            className="absolute right-0 top-0 h-8 w-8 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
             onClick={() => !loading && onOpenChange(false)}
             aria-label="Close"
             disabled={loading}
@@ -73,11 +73,11 @@ export function RSVPPositionModal({
           <div className="mb-4 pr-8">
             <h2
               id="rsvp-position-modal-title"
-              className="text-lg font-semibold text-zinc-900 dark:text-zinc-100"
+              className="font-display text-2xl font-extrabold uppercase leading-none tracking-[0.02em] text-foreground"
             >
               Select your position
             </h2>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-muted-foreground">
               Choose the position you want to play for this match.
             </p>
           </div>

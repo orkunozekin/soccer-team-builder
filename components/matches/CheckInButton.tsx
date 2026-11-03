@@ -76,8 +76,7 @@ export function CheckInButton({
         )
       } else {
         setError(
-          geoErr?.message ||
-            'Check-in failed. Ask a host to mark you present.'
+          geoErr?.message || 'Check-in failed. Ask a host to mark you present.'
         )
       }
     } finally {
@@ -86,30 +85,28 @@ export function CheckInButton({
   }
 
   return (
-    <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+    <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-4">
       <div className="flex items-center gap-2">
         <MapPin className="h-4 w-4 text-red-50" />
-        <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
-          Field check-in
-        </p>
+        <p className="text-sm font-semibold text-foreground">Field check-in</p>
       </div>
 
       {alreadyPresent || success ? (
-        <p className="text-sm text-green-700 dark:text-green-400">
+        <p className="text-sm text-green-400">
           You&apos;re checked in
           {userRsvp?.checkInMethod === 'host' ? ' (by host)' : ''}.
         </p>
       ) : (
         <>
-          <p className="text-xs text-zinc-600 dark:text-zinc-400">
+          <p className="text-xs text-muted-foreground">
             Available {format(windowTimes.start, 'h:mm a')} –{' '}
             {format(windowTimes.end, 'h:mm a')}. Your location is used once to
             verify you&apos;re at the field and is not stored.
           </p>
           {!hasVenue && (
-            <p className="text-xs text-amber-700 dark:text-amber-400">
-              This match has no pinned field coordinates. Ask a host to mark
-              you present.
+            <p className="text-xs text-amber-400">
+              This match has no pinned field coordinates. Ask a host to mark you
+              present.
             </p>
           )}
           <Button
@@ -124,9 +121,7 @@ export function CheckInButton({
         </>
       )}
 
-      {error && (
-        <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-      )}
+      {error && <p className="text-sm text-red-400">{error}</p>}
     </div>
   )
 }

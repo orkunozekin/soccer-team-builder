@@ -15,7 +15,7 @@ export function ProfileForm() {
 
   if (!userData) {
     return (
-      <div className="text-center text-zinc-600 dark:text-zinc-400">
+      <div className="text-center text-muted-foreground">
         Loading profile...
       </div>
     )
@@ -134,9 +134,9 @@ function ProfileFormInner({
   }
 
   const formLabelClass =
-    'text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight'
+    'text-base font-semibold text-foreground tracking-tight'
   const inputClass =
-    'h-11 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500'
+    'h-11 rounded-lg text-sm text-foreground placeholder:text-muted-foreground border-input bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring'
 
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-6">
@@ -172,9 +172,7 @@ function ProfileFormInner({
           disabled={loading}
           className={inputClass}
         />
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          Optional · 0 to 99
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">Optional · 0 to 99</p>
       </div>
 
       <PositionSelector
@@ -185,12 +183,10 @@ function ProfileFormInner({
         triggerClassName={inputClass}
       />
 
-      {error && (
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-      )}
+      {error && <p className="text-sm text-red-400">{error}</p>}
 
       {successMessage && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">
+        <div className="rounded-lg border border-emerald-900/50 bg-emerald-950/30 px-4 py-3 text-sm font-medium text-emerald-300">
           {successMessage}
         </div>
       )}

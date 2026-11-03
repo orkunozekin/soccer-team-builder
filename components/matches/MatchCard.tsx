@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { format } from 'date-fns'
 import { ChevronRight, MapPin, Users } from 'lucide-react'
 import Link from 'next/link'
@@ -19,6 +20,11 @@ interface MatchCardProps {
   index?: number
   /** Detail URL. Defaults to legacy `/matches/[id]` (redirects to club path). */
   href?: string
+  /**
+   * Controls (e.g. admin Delete) rendered in the card's footer. Kept outside
+   * the detail link so buttons are never nested inside an anchor.
+   */
+  actions?: ReactNode
 }
 
 export function MatchCard({
@@ -27,6 +33,7 @@ export function MatchCard({
   isAdmin,
   index = 0,
   href,
+  actions,
 }: MatchCardProps) {
   const detailHref = href ?? `/matches/${match.id}`
   const matchDate = new Date(match.date)
@@ -40,6 +47,7 @@ export function MatchCard({
     <article
       className={cn(
         'flex h-full items-start gap-4 rounded-2xl border border-border bg-card p-4 transition-colors sm:p-5',
+        actions && 'pb-16 sm:pb-16',
         isClickable && 'hover:border-line hover:bg-turf-raised',
         match.rsvpOpen && 'border-[#4A1E19]'
       )}
@@ -104,7 +112,7 @@ export function MatchCard({
 
   return (
     <div
-      className="h-full w-full animate-slide-up-fade"
+      className="relative h-full w-full animate-slide-up-fade"
       style={{
         animationDelay: `${index * 60}ms`,
         animationFillMode: 'backwards',
@@ -120,6 +128,11 @@ export function MatchCard({
       ) : (
         cardContent
       )}
+      {actions ? (
+        <div className="absolute bottom-4 left-[5.5rem] right-4 flex flex-wrap items-center gap-2 sm:left-[6rem]">
+          {actions}
+        </div>
+      ) : null}
     </div>
   )
 }

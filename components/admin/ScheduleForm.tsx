@@ -206,22 +206,20 @@ export function ScheduleForm({
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+      <label className="flex items-center gap-2 text-sm text-[#B9C2BD]">
         <input
           type="checkbox"
           checked={active}
           onChange={e => setActive(e.target.checked)}
           disabled={loading}
-          className="h-4 w-4 rounded border-zinc-300"
+          className="h-4 w-4 rounded border-input"
         />
         Active (keep next 3 matches created automatically)
       </label>
 
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            Slots
-          </h3>
+          <h3 className="text-sm font-semibold text-foreground">Slots</h3>
           <Button
             type="button"
             variant="outline"
@@ -239,12 +237,9 @@ export function ScheduleForm({
         </div>
 
         {slots.map((slot, index) => (
-          <div
-            key={slot.key}
-            className="space-y-3 border-t border-zinc-200 pt-4 dark:border-zinc-800"
-          >
+          <div key={slot.key} className="space-y-3 border-t border-border pt-4">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+              <p className="text-sm font-medium text-foreground">
                 Slot {index + 1}
               </p>
               {slots.length > 1 && (
@@ -347,7 +342,7 @@ export function ScheduleForm({
       </div>
 
       {error && (
-        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+        <p className="text-sm text-red-400" role="alert">
           {error}
         </p>
       )}

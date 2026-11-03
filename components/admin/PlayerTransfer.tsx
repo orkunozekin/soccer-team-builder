@@ -334,7 +334,7 @@ export function PlayerTransfer({
               )}
 
               {error && (
-                <div className="rounded-md border border-red-300 bg-red-100 p-3 text-sm font-medium text-red-950 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
+                <div className="rounded-md border border-red-900/60 bg-red-950/40 p-3 text-sm font-medium text-red-200">
                   {error}
                 </div>
               )}

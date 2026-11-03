@@ -111,7 +111,8 @@ function getActionDescription(log: AuditLog): string {
 
 function getActionIcon(action: string) {
   if (action.startsWith('auth.')) return LogIn
-  if (action.startsWith('rsvp.') || action.startsWith('check_in.')) return Calendar
+  if (action.startsWith('rsvp.') || action.startsWith('check_in.'))
+    return Calendar
   if (action.startsWith('match.') || action.startsWith('team.')) return Users
   if (action.startsWith('location.')) return MapPin
   if (action.startsWith('user.')) return User
@@ -140,17 +141,13 @@ function EventRow({ log }: { log: AuditLog }) {
     <div
       className={cn(
         'flex gap-3 rounded-lg border p-3 transition-colors',
-        failed
-          ? 'border-red-200 bg-red-50/50 dark:border-red-900/50 dark:bg-red-950/20'
-          : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950'
+        failed ? 'border-red-900/50 bg-red-950/20' : 'border-border bg-card'
       )}
     >
       <div
         className={cn(
           'flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
-          failed
-            ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
-            : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
+          failed ? 'bg-red-900/40 text-red-400' : 'bg-accent text-[#B9C2BD]'
         )}
       >
         <Icon className="h-4 w-4" />
@@ -159,11 +156,10 @@ function EventRow({ log }: { log: AuditLog }) {
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-              {description}
-            </p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              {relativeTime} · {format(new Date(log.createdAt), 'MMM d, h:mm a')}
+            <p className="text-sm font-medium text-foreground">{description}</p>
+            <p className="text-xs text-muted-foreground">
+              {relativeTime} ·{' '}
+              {format(new Date(log.createdAt), 'MMM d, h:mm a')}
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-1">
@@ -179,37 +175,40 @@ function EventRow({ log }: { log: AuditLog }) {
         </div>
 
         {typeof log.metadata?.message === 'string' && failed ? (
-          <p className="text-xs text-red-700 dark:text-red-400">
-            {log.metadata.message}
-          </p>
+          <p className="text-xs text-red-400">{log.metadata.message}</p>
         ) : null}
 
         <button
           type="button"
           onClick={() => setExpanded(prev => !prev)}
-          className="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-[#B9C2BD]"
         >
           <ChevronDown
-            className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-180')}
+            className={cn(
+              'h-3.5 w-3.5 transition-transform',
+              expanded && 'rotate-180'
+            )}
           />
           {expanded ? 'Hide details' : 'Show details'}
         </button>
 
         {expanded ? (
-          <dl className="grid gap-2 rounded-md bg-zinc-50 p-3 text-xs dark:bg-zinc-900/50 sm:grid-cols-2">
+          <dl className="grid gap-2 rounded-md bg-muted/50 p-3 text-xs sm:grid-cols-2">
             <div>
-              <dt className="text-zinc-500">Action</dt>
+              <dt className="text-muted-foreground">Action</dt>
               <dd className="font-mono">{log.action}</dd>
             </div>
             <div>
-              <dt className="text-zinc-500">Actor</dt>
+              <dt className="text-muted-foreground">Actor</dt>
               <dd>
                 {log.actorUid === 'system' || log.actorUid === 'anonymous' ? (
-                  <span className="font-mono text-zinc-500">{log.actorUid}</span>
+                  <span className="font-mono text-muted-foreground">
+                    {log.actorUid}
+                  </span>
                 ) : (
                   <Link
                     href={`/admin/players/${log.actorUid}`}
-                    className="text-red-700 hover:underline dark:text-red-400"
+                    className="text-red-400 hover:underline"
                   >
                     {log.actorDisplayName ?? log.actorUid.slice(0, 8)}
                   </Link>
@@ -218,11 +217,11 @@ function EventRow({ log }: { log: AuditLog }) {
             </div>
             {log.targetUid ? (
               <div>
-                <dt className="text-zinc-500">Target</dt>
+                <dt className="text-muted-foreground">Target</dt>
                 <dd>
                   <Link
                     href={`/admin/players/${log.targetUid}`}
-                    className="text-red-700 hover:underline dark:text-red-400"
+                    className="text-red-400 hover:underline"
                   >
                     {log.targetDisplayName ?? log.targetUid.slice(0, 8)}
                   </Link>
@@ -231,11 +230,11 @@ function EventRow({ log }: { log: AuditLog }) {
             ) : null}
             {log.matchId ? (
               <div>
-                <dt className="text-zinc-500">Match</dt>
+                <dt className="text-muted-foreground">Match</dt>
                 <dd>
                   <Link
                     href={`/admin/matches/${log.matchId}`}
-                    className="font-mono text-red-700 hover:underline dark:text-red-400"
+                    className="font-mono text-red-400 hover:underline"
                   >
                     {log.matchId.slice(0, 12)}…
                   </Link>
@@ -244,9 +243,9 @@ function EventRow({ log }: { log: AuditLog }) {
             ) : null}
             {log.metadata && Object.keys(log.metadata).length > 0 ? (
               <div className="sm:col-span-2">
-                <dt className="mb-1 text-zinc-500">Metadata</dt>
+                <dt className="mb-1 text-muted-foreground">Metadata</dt>
                 <dd>
-                  <pre className="max-w-full overflow-x-auto rounded bg-white p-2 font-mono text-[11px] dark:bg-zinc-950">
+                  <pre className="max-w-full overflow-x-auto rounded bg-card p-2 font-mono text-[11px]">
                     {JSON.stringify(log.metadata, null, 2)}
                   </pre>
                 </dd>
@@ -261,7 +260,8 @@ function EventRow({ log }: { log: AuditLog }) {
 
 export function AuditEventLog() {
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS)
-  const [appliedFilters, setAppliedFilters] = useState<FilterState>(EMPTY_FILTERS)
+  const [appliedFilters, setAppliedFilters] =
+    useState<FilterState>(EMPTY_FILTERS)
   const [showFilters, setShowFilters] = useState(false)
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [cursors, setCursors] = useState<(string | null)[]>([null])
@@ -358,10 +358,10 @@ export function AuditEventLog() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+          <h2 className="font-display text-xl font-extrabold uppercase tracking-[0.02em]">
             Recent activity
           </h2>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="text-sm text-muted-foreground">
             Latest events across the platform
           </p>
         </div>
@@ -376,13 +376,13 @@ export function AuditEventLog() {
       </div>
 
       {error ? (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
           {error}
         </div>
       ) : null}
 
       {showFilters ? (
-        <div className="rounded-lg border border-zinc-200 bg-zinc-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-900/30">
+        <div className="rounded-lg border border-border bg-muted/30 p-4">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="analytics-action">Action</Label>
@@ -480,7 +480,12 @@ export function AuditEventLog() {
             >
               Apply filters
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={clearFilters}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={clearFilters}
+            >
               Clear
             </Button>
           </div>
@@ -488,9 +493,9 @@ export function AuditEventLog() {
       ) : null}
 
       {loading && logs.length === 0 ? (
-        <p className="text-sm text-zinc-500">Loading events…</p>
+        <p className="text-sm text-muted-foreground">Loading events…</p>
       ) : logs.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-8 text-center text-sm text-zinc-500">
+        <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
           No events match your filters.
         </p>
       ) : (

@@ -138,6 +138,8 @@
   html.dark {
     background-color: #0b0f0d;
     color-scheme: dark;
+    /* Native checkboxes, radios and range inputs pick up the card red. */
+    accent-color: #d72a1c;
   }
   body {
     /* pitch-bg owns the page background; do not layer bg-background (white). */

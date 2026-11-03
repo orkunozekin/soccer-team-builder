@@ -54,7 +54,7 @@ export function ClubSectionPage({
   if (access.status === 'error') {
     return (
       <div className="container mx-auto max-w-3xl px-4 py-8">
-        <p className="text-sm text-red-700 dark:text-red-400">
+        <p className="text-sm text-red-400">
           Could not load club. {access.message}
         </p>
         <Button type="button" className="mt-3" onClick={() => access.retry()}>

@@ -26,13 +26,13 @@ export function SectionAccordionTrigger({
       className="gap-4 px-6 py-4 text-left hover:no-underline"
     >
       <span className="flex flex-col gap-1">
-        <span id={titleId} className="text-base font-semibold">
+        <span
+          id={titleId}
+          className="font-display text-xl font-extrabold uppercase tracking-[0.02em]"
+        >
           {title}
         </span>
-        <span
-          id={descriptionId}
-          className="font-normal text-zinc-500 dark:text-zinc-400"
-        >
+        <span id={descriptionId} className="font-normal text-muted-foreground">
           {description}
         </span>
       </span>

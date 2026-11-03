@@ -18,6 +18,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { ButtonSpinner } from '@/components/ui/button-spinner'
 import { Card } from '@/components/ui/card'
+import { FilterPill } from '@/components/ui/filter-pill'
 import { InitialsAvatar } from '@/components/ui/initials-avatar'
 import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/pagination'
@@ -196,10 +197,7 @@ export function UserRoleManager() {
     { revalidateIfStale: false, revalidateOnReconnect: false }
   )
 
-  const clubAdminUidSet = useMemo(
-    () => new Set(clubAdminIds),
-    [clubAdminIds]
-  )
+  const clubAdminUidSet = useMemo(() => new Set(clubAdminIds), [clubAdminIds])
 
   // Remember forward cursors so page N+1 can be requested.
   useEffect(() => {
@@ -427,13 +425,13 @@ export function UserRoleManager() {
   return (
     <div className="space-y-4">
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-400">
+        <div className="rounded-md bg-green-900/20 p-3 text-sm text-green-400">
           Changes saved successfully!
         </div>
       )}
@@ -442,26 +440,20 @@ export function UserRoleManager() {
         <div
           role="tablist"
           aria-label="Filter users"
-          className="flex flex-wrap gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900/50"
+          className="flex flex-wrap gap-2"
         >
           {ADMIN_USER_FILTERS.map(option => {
             const active = roleFilter === option.value
             return (
-              <button
+              <FilterPill
                 key={option.value}
-                type="button"
+                active={active}
                 role="tab"
                 aria-selected={active}
                 onClick={() => setRoleFilter(option.value)}
-                className={cn(
-                  'rounded-md px-3 py-1.5 text-sm font-semibold transition-colors',
-                  active
-                    ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100'
-                    : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
-                )}
               >
                 {option.label}
-              </button>
+              </FilterPill>
             )
           })}
         </div>
@@ -478,31 +470,31 @@ export function UserRoleManager() {
       (browsing &&
         (useFilteredFetch ? filterLoading : pageLoading) &&
         visibleUsers.length === 0) ? (
-        <Card className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
+        <Card className="px-4 py-10 text-center text-sm text-muted-foreground">
           {searchLoading ? 'Searching…' : 'Loading…'}
         </Card>
       ) : (
         <Card className="overflow-hidden">
           {visibleUsers.length === 0 ? (
-            <p className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="px-4 py-10 text-center text-sm text-muted-foreground">
               No users found.
             </p>
           ) : (
-            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <ul className="divide-y divide-border">
               {visibleUsers.map(user => (
                 <li
                   key={user.uid}
-                  className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
+                  className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-muted/60"
                 >
                   <InitialsAvatar name={user.displayName || user.email} />
                   <div className="min-w-[8rem] flex-1">
                     <Link
                       href={`/admin/players/${user.uid}`}
-                      className="block truncate text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-100"
+                      className="block truncate text-sm font-medium text-foreground underline-offset-2 hover:underline"
                     >
                       {user.displayName}
                     </Link>
-                    <div className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                    <div className="truncate text-xs text-muted-foreground">
                       {user.email}
                     </div>
                   </div>
@@ -541,7 +533,7 @@ export function UserRoleManager() {
           )}
           {showPagination && (
             <Pagination
-              className="mt-0 border-zinc-100 px-4 py-3 dark:border-zinc-800"
+              className="mt-0 border-border px-4 py-3"
               page={pagination.page}
               totalPages={pagination.totalPages}
               totalCount={pagination.totalCount}

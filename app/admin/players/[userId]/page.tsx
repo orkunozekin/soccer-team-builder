@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { PlayerProfileDetails } from '@/components/admin/PlayerProfileDetails'
 import { PlayerRsvpHistory } from '@/components/admin/PlayerRsvpHistory'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { AttendanceStatsCard } from '@/components/profile/AttendanceStatsCard'
 import { BackLink } from '@/components/ui/back-link'
@@ -56,10 +57,10 @@ export default function AdminPlayerProfilePage() {
       <div className="container mx-auto max-w-xl px-4 py-8">
         <BackLink href="/admin/users" label="Back to Users" />
         <div className="mt-8 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+          <h1 className="font-display text-4xl font-black uppercase">
             Player not found
           </h1>
-          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-2 text-sm text-fog">
             This user may have been removed or the link is invalid.
           </p>
         </div>
@@ -71,14 +72,13 @@ export default function AdminPlayerProfilePage() {
     <div className="container mx-auto max-w-xl px-4 py-8 sm:py-10">
       <BackLink href="/admin/users" label="Back to Users" />
 
-      <div className="mb-8 mt-4">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-3xl">
-          {player.displayName || 'Player'}
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Player profile and attendance
-        </p>
-      </div>
+      <PageHeader
+        size="md"
+        className="mt-4"
+        eyebrow="Super user · Player"
+        title={player.displayName || 'Player'}
+        description="Player profile and attendance"
+      />
 
       <div className="space-y-6">
         <PlayerProfileDetails user={player} />

@@ -11,7 +11,8 @@ const buttonVariants = cva(
       variant: {
         default: 'bg-red-50 text-white shadow hover:bg-red-40',
         destructive:
-          'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
+          // Outlined so it never reads as the (solid red) primary action.
+          'border border-flare/40 bg-transparent text-flare shadow-sm hover:bg-flare/10',
         outline:
           'border border-input bg-transparent shadow-sm hover:bg-accent hover:text-accent-foreground',
         secondary:

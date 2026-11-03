@@ -29,7 +29,7 @@ export function AdminUiToggle() {
         size="sm"
         variant="outline"
         onClick={toggleHideAdminUi}
-        className="h-9 border-zinc-300 bg-white/95 text-zinc-900 shadow-md backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95 dark:text-zinc-100"
+        className="h-9 border-input bg-muted/95 text-foreground shadow-md backdrop-blur"
       >
         {hideAdminUi ? 'Show admin UI' : 'Hide admin UI'}
       </Button>

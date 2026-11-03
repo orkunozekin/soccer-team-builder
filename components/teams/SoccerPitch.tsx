@@ -55,7 +55,7 @@ export function SoccerPitch({
 
   if (sortedTeams.length === 0) {
     return (
-      <div className="py-8 text-center text-zinc-600 dark:text-zinc-400">
+      <div className="py-8 text-center text-muted-foreground">
         No teams generated yet
       </div>
     )
@@ -104,7 +104,7 @@ export function SoccerPitch({
     <div className="space-y-6">
       {dual}
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+        <h3 className="text-sm font-semibold text-[#B9C2BD]">
           Additional teams
         </h3>
         {extraTeams.length > 1 && (isMobile || extraTeams.length > 2) ? (

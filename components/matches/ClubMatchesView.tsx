@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AdminMatchCard } from '@/components/admin/AdminMatchCard'
 import { CreateMatchCard } from '@/components/admin/CreateMatchCard'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { MatchCard } from '@/components/matches/MatchCard'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { FilterPill } from '@/components/ui/filter-pill'
 import { Pagination } from '@/components/ui/pagination'
 import { useAdmin } from '@/lib/hooks/useAdmin'
 import { useAuth } from '@/lib/hooks/useAuth'
@@ -272,16 +274,16 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8 sm:py-10">
-      <div className="mb-8 animate-slide-up-fade">
-        <h1 className="font-display text-6xl font-black uppercase leading-[0.9] sm:text-7xl">
-          Matches
-        </h1>
-        <p className="mt-2 text-fog">
-          {showAdminList
+      <PageHeader
+        className="animate-slide-up-fade"
+        eyebrow={clubId ? undefined : 'Super user'}
+        title={clubId ? 'Matches' : 'All matches'}
+        description={
+          showAdminList
             ? 'Create matches and manage RSVPs, teams, and attendance'
-            : 'View and RSVP to upcoming matches'}
-        </p>
-      </div>
+            : 'View and RSVP to upcoming matches'
+        }
+      />
 
       {canCreateMatch && (
         <div className="mb-6">
@@ -301,21 +303,15 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
           {ADMIN_FILTERS.map(option => {
             const active = filter === option.value
             return (
-              <button
+              <FilterPill
                 key={option.value}
-                type="button"
+                active={active}
                 role="tab"
                 aria-selected={active}
                 onClick={() => setFilter(option.value)}
-                className={cn(
-                  'h-9 rounded-full px-4 text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
-                  active
-                    ? 'bg-chalk text-ink'
-                    : 'border border-line text-[#B9C2BD] hover:text-chalk'
-                )}
               >
                 {option.label}
-              </button>
+              </FilterPill>
             )
           })}
         </div>
@@ -330,7 +326,7 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="text-sm text-muted-foreground">
               {showAdminList
                 ? filter === 'past'
                   ? 'No past matches.'
@@ -361,6 +357,7 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
                 href={matchHref(match.id)}
                 rsvpCount={rsvpCounts[match.id]}
                 onDeleted={refetchMatchesAndCounts}
+                index={index}
               />
             ) : (
               <MatchCard

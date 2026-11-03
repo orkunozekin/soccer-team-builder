@@ -197,7 +197,7 @@ export function EditMatchCard({
                     addressId="match-location-address"
                   />
                   {saveSuccessMessage && (
-                    <p className="text-sm text-green-600 dark:text-green-400">
+                    <p className="text-sm text-green-400">
                       {saveSuccessMessage}
                     </p>
                   )}

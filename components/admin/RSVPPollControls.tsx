@@ -91,7 +91,7 @@ export function RSVPPollControls({ match, onUpdated }: RSVPPollControlsProps) {
               </div>
 
               {schedule.openAt && schedule.closeAt && (
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="text-sm text-muted-foreground">
                   <span className="font-medium">Default window:</span>{' '}
                   {format(schedule.openAt, 'MMM d, h:mm a')} –{' '}
                   {format(schedule.closeAt, 'MMM d, h:mm a')} CT
@@ -99,13 +99,13 @@ export function RSVPPollControls({ match, onUpdated }: RSVPPollControlsProps) {
               )}
 
               {error && (
-                <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
                   {error}
                 </div>
               )}
 
               {success && (
-                <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                <div className="rounded-md bg-green-900/20 p-3 text-sm text-green-400">
                   RSVP status updated successfully!
                 </div>
               )}

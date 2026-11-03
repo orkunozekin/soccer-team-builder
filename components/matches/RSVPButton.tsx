@@ -206,7 +206,7 @@ export function RSVPButton({
   const matchStarted = hasMatchStarted(match.date, match.time)
   if (hasRSVPed && matchStarted && !canManageMatch) {
     return (
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-sm text-muted-foreground">
         Match has started. RSVP can no longer be cancelled.
       </p>
     )
@@ -237,7 +237,7 @@ export function RSVPButton({
                   e.preventDefault()
                   handleConfirmCancelRSVP()
                 }}
-                className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-600 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-600"
+                className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-600"
               >
                 Cancel RSVP
               </Button>
@@ -264,8 +264,8 @@ export function RSVPButton({
         }
       />
       {showPositionPickerForGkBlock && (
-        <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/80 p-3 dark:border-amber-800 dark:bg-amber-950/30">
-          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+        <div className="space-y-3 rounded-lg border border-amber-800 bg-amber-950/30 p-3">
+          <p className="text-sm font-medium text-amber-200">
             There are already 2 goalkeepers for this match. Choose a different
             position to RSVP.
           </p>
@@ -293,7 +293,7 @@ export function RSVPButton({
             </Button>
           </div>
           {positionForRsvp && isGoalkeeper(positionForRsvp) && (
-            <p className="text-sm text-amber-700 dark:text-amber-300">
+            <p className="text-sm text-amber-300">
               Please select a non-goalkeeper position.
             </p>
           )}
@@ -316,7 +316,7 @@ export function RSVPButton({
         </Button>
       )}
       {error && !showPositionPickerForGkBlock && (
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="text-sm text-red-400">{error}</p>
       )}
     </div>
   )

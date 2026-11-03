@@ -29,15 +29,15 @@ function ProfileSection({
   children: ReactNode
 }) {
   return (
-    <Card className="overflow-hidden rounded-xl border-zinc-200 shadow-sm dark:border-zinc-800">
+    <Card className="overflow-hidden rounded-xl border-border shadow-sm">
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value={value} className="border-0">
           <AccordionTrigger className="px-6 py-4 hover:no-underline sm:px-8 sm:py-5">
             <span className="text-left">
-              <span className="block text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-lg">
+              <span className="block text-base font-semibold tracking-tight text-foreground sm:text-lg">
                 {title}
               </span>
-              <span className="mt-0.5 block text-sm font-normal text-zinc-500 dark:text-zinc-400">
+              <span className="mt-0.5 block text-sm font-normal text-muted-foreground">
                 {description}
               </span>
             </span>
@@ -83,7 +83,7 @@ export default function ProfilePage() {
       <div className="mx-auto max-w-xl space-y-6">
         <div className="flex items-end gap-4 sm:gap-5">
           <div
-            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-2xl font-bold tabular-nums text-white dark:bg-zinc-100 dark:text-zinc-900 sm:h-20 sm:w-20 sm:text-3xl"
+            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-accent text-2xl font-bold tabular-nums text-foreground sm:h-20 sm:w-20 sm:text-3xl"
             aria-label={
               jerseyNumber == null
                 ? 'No jersey number'
@@ -93,13 +93,13 @@ export default function ProfilePage() {
             {jerseyNumber == null ? '—' : jerseyNumber}
           </div>
           <div className="min-w-0 pb-0.5">
-            <p className="text-sm font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
               Profile
             </p>
-            <h1 className="truncate text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-3xl">
+            <h1 className="truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               {displayName}
             </h1>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-muted-foreground">
               {jerseyNumber == null
                 ? 'No jersey number set'
                 : `Jersey #${jerseyNumber}`}
