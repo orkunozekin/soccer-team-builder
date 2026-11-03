@@ -17,6 +17,7 @@ import {
   getRsvpStatusForMatch,
 } from '@/lib/utils/matchStatus'
 import { getTeamPositionOccupancy } from '@/lib/utils/pitchLayout'
+import { hasMatchStarted } from '@/lib/utils/rsvpScheduler'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { useMatchStore } from '@/store/matchStore'
 import { Match } from '@/types/match'
@@ -39,6 +40,11 @@ interface MatchDetailsProps {
   teams?: Team[]
   rosterUsers?: User[]
   currentUserId?: string | null
+  /**
+   * Past match viewed by someone who cannot manage it: RSVP and position
+   * controls are disabled (the RSVP API enforces the same rule).
+   */
+  readOnly?: boolean
 }
 
 function positionLabel(value: string | null): string {
@@ -59,6 +65,7 @@ export function MatchDetails({
   teams = [],
   rosterUsers = [],
   currentUserId = null,
+  readOnly = false,
 }: MatchDetailsProps) {
   const matchDate = new Date(match.date)
   const formattedTime = format(matchDate, 'h:mm a')
@@ -121,7 +128,7 @@ export function MatchDetails({
     }
   }
 
-  const showEditPosition = userRsvp && match.rsvpOpen
+  const showEditPosition = userRsvp && match.rsvpOpen && !readOnly
   const isGkChangingToNonGk =
     showEditPosition &&
     isGoalkeeper(currentPosition) &&
@@ -150,7 +157,7 @@ export function MatchDetails({
                 {formattedTime}
               </span>
               <span className="text-[15px] text-[#B9C2BD]">
-                Kickoff{' '}
+                {hasMatchStarted(matchDate, match.time) ? '' : 'Kickoff '}
                 <strong className="font-semibold text-chalk">
                   {getKickoffLabelForMatch(match)}
                 </strong>
@@ -248,7 +255,16 @@ export function MatchDetails({
             </div>
           )}
 
-          {match.rsvpOpen && (
+          {readOnly ? (
+            <div className="space-y-2 pt-1">
+              <Button size="hero" className="w-full" disabled>
+                Match ended
+              </Button>
+              <p className="text-sm text-fog">
+                This match is over, so RSVPs and positions can no longer change.
+              </p>
+            </div>
+          ) : match.rsvpOpen ? (
             <div className="pt-1">
               <RSVPButton
                 match={match}
@@ -260,7 +276,7 @@ export function MatchDetails({
                 currentUserId={currentUserId}
               />
             </div>
-          )}
+          ) : null}
 
           <CheckInButton
             match={match}

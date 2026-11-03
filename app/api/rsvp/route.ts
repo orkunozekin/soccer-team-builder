@@ -16,6 +16,7 @@ import {
 } from '@/lib/teams/swapGkWithLowerTeam'
 import { getUserPositionsByIdsAdmin } from '@/lib/users/getUsersByIdsAdmin'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
+import { MATCH_ENDED_MESSAGE, isMatchReadOnly } from '@/lib/utils/matchAccess'
 import { hasMatchStarted } from '@/lib/utils/rsvpScheduler'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 
@@ -46,6 +47,34 @@ function rsvpFailed(
   )
 }
 
+/** Kickoff inputs from a match document (Timestamp or serialized date). */
+function matchScheduleFromDoc(data: FirebaseFirestore.DocumentData): {
+  date: Date
+  time: string | null
+} {
+  return {
+    date: data.date?.toDate?.() ?? new Date(data.date),
+    time: typeof data.time === 'string' ? data.time : null,
+  }
+}
+
+/**
+ * True when a past match is read-only for this requester. Only checks club
+ * admin (an extra lookup) once the match is actually past.
+ */
+async function isPastMatchLockedFor(
+  request: NextRequest,
+  matchId: string,
+  matchData: FirebaseFirestore.DocumentData,
+  knownAdmin: boolean
+): Promise<boolean> {
+  const schedule = matchScheduleFromDoc(matchData)
+  if (!isMatchReadOnly(schedule, false)) return false
+  if (knownAdmin) return false
+  const { isClubAdmin } = await verifyClubAdminForMatch(request, matchId)
+  return isMatchReadOnly(schedule, isClubAdmin)
+}
+
 /**
  * POST: Confirm RSVP for the authenticated user (or for impersonateUserId when requester is admin).
  * Creates the RSVP document, then expands teams if needed (e.g. 3rd team when 23+ RSVPs).
@@ -73,6 +102,7 @@ export async function POST(request: NextRequest) {
         ? body.impersonateUserId.trim() || null
         : null
     let effectiveUid: string = uid
+    let requesterIsAdmin = false
     if (impersonateUserId) {
       const { isClubAdmin } = await verifyClubAdminForMatch(request, matchId)
       if (!isClubAdmin) {
@@ -85,6 +115,7 @@ export async function POST(request: NextRequest) {
           }
         )
       }
+      requesterIsAdmin = true
       effectiveUid = impersonateUserId
     }
 
@@ -100,6 +131,17 @@ export async function POST(request: NextRequest) {
     const rsvpOpen = matchSnap.data()?.rsvpOpen === true
     if (!rsvpOpen) {
       return rsvpFailed(uid, 403, 'RSVP is closed for this match', { matchId })
+    }
+    // rsvpOpen is flipped by a cron; never rely on it alone for finished matches.
+    if (
+      await isPastMatchLockedFor(
+        request,
+        matchId,
+        matchSnap.data()!,
+        requesterIsAdmin
+      )
+    ) {
+      return rsvpFailed(uid, 403, MATCH_ENDED_MESSAGE, { matchId })
     }
 
     const userSnap = await adminDb.collection('users').doc(effectiveUid).get()
@@ -361,6 +403,25 @@ export async function PATCH(request: NextRequest) {
 
     // Update position flow (PATCH with position field)
     if (positionFromBody !== undefined) {
+      const matchSnapForPosition = await adminDb
+        .collection('matches')
+        .doc(matchId)
+        .get()
+      if (
+        matchSnapForPosition.exists &&
+        (await isPastMatchLockedFor(
+          request,
+          matchId,
+          matchSnapForPosition.data()!,
+          requesterIsAdmin
+        ))
+      ) {
+        return rsvpFailed(uid, 403, MATCH_ENDED_MESSAGE, {
+          matchId,
+          entityId: rsvpId,
+          targetUid: userId,
+        })
+      }
       const newPosition =
         typeof positionFromBody === 'string'
           ? positionFromBody.trim() || null
@@ -572,16 +633,10 @@ export async function PATCH(request: NextRequest) {
         targetUid: userId,
       })
     }
-    const matchDataForCancel = matchSnapForCancel.data()!
-    const matchDateForCancel =
-      matchDataForCancel.date?.toDate?.() ?? new Date(matchDataForCancel.date)
-    const matchTimeForCancel =
-      typeof matchDataForCancel.time === 'string'
-        ? matchDataForCancel.time
-        : null
+    const scheduleForCancel = matchScheduleFromDoc(matchSnapForCancel.data()!)
     if (
       data.status !== 'cancelled' &&
-      hasMatchStarted(matchDateForCancel, matchTimeForCancel)
+      hasMatchStarted(scheduleForCancel.date, scheduleForCancel.time)
     ) {
       if (!requesterIsAdmin) {
         const { isClubAdmin } = await verifyClubAdminForMatch(request, matchId)

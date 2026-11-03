@@ -18,6 +18,7 @@ import { getMatchRSVPs } from '@/lib/services/rsvpService'
 import { getMatchTeams } from '@/lib/services/teamService'
 import { getUsersByIds } from '@/lib/services/userService'
 import { hasCheckInWindowStarted } from '@/lib/utils/checkIn'
+import { isMatchReadOnly } from '@/lib/utils/matchAccess'
 import {
   buildRosterPlaceholders,
   collectMatchParticipantIds,
@@ -240,6 +241,7 @@ export function MatchDetailView({
               teams={teams}
               rosterUsers={usersWithMatchPosition}
               currentUserId={userId}
+              readOnly={isMatchReadOnly(match, canManageMatch)}
             />
 
             {match.clubId && clubPermissionError && (

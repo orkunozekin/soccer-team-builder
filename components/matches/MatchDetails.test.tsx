@@ -38,7 +38,12 @@ const baseMatch: Match = {
   id: 'match1',
   date: new Date('2024-01-01T19:00:00Z'),
   time: '19:00',
-  location: { name: 'Test field', address: 'Test field', lat: 30.0, lng: -97.0 },
+  location: {
+    name: 'Test field',
+    address: 'Test field',
+    lat: 30.0,
+    lng: -97.0,
+  },
   rsvpOpen: true,
   rsvpOpenAt: null,
   rsvpCloseAt: null,
@@ -147,5 +152,38 @@ describe('MatchDetails', () => {
     expect(
       screen.getByText(/you were swapped with teammate/i)
     ).toBeInTheDocument()
+  })
+
+  it('disables RSVP and position controls on a read-only (past) match', () => {
+    const userRsvp: RSVP = {
+      id: 'r1',
+      matchId: 'match1',
+      userId: 'user1',
+      status: 'confirmed',
+      position: 'ST',
+      jerseyNumber: null,
+      attended: null,
+      checkedInAt: null,
+      checkInMethod: null,
+      rsvpAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    // rsvpOpen still true (stale cron) must not re-enable anything.
+    render(
+      <MatchDetails
+        match={baseMatch}
+        rsvpCount={1}
+        userRsvp={userRsvp}
+        userProfilePosition={null}
+        readOnly
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Match ended' })).toBeDisabled()
+    expect(screen.queryByText('RSVPButtonMock')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/your position for this match/i)
+    ).not.toBeInTheDocument()
   })
 })

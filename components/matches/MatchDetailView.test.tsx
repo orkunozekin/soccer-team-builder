@@ -69,8 +69,14 @@ vi.mock('@/lib/services/userService', () => ({
 }))
 
 vi.mock('@/components/matches/MatchDetails', () => ({
-  MatchDetails: ({ rsvpCount }: { rsvpCount: number }) => (
-    <div>MatchDetailsMock:{rsvpCount}</div>
+  MatchDetails: ({
+    rsvpCount,
+    readOnly,
+  }: {
+    rsvpCount: number
+    readOnly?: boolean
+  }) => (
+    <div data-read-only={String(!!readOnly)}>MatchDetailsMock:{rsvpCount}</div>
   ),
 }))
 
@@ -178,6 +184,36 @@ describe('MatchDetailView', () => {
     expect(screen.getByText('TeamsDisplayMock:1')).toBeInTheDocument()
     expect(screen.queryByText('EditMatchCardMock')).not.toBeInTheDocument()
   })
+
+  it.each([
+    [false, 'true'],
+    [true, 'false'],
+  ])(
+    'makes a past match read-only unless the viewer manages it (admin: %s)',
+    async (isClubAdmin, expected) => {
+      useIsClubAdminMock.mockReturnValue({
+        isClubAdmin,
+        isSuperUser: false,
+        loading: false,
+        error: null,
+        refresh: refreshClubMembershipsMock,
+      })
+      getMatchMock.mockResolvedValueOnce({
+        ...mockMatch(),
+        date: new Date('2020-01-01T18:00:00Z'),
+      })
+      getMatchRSVPsMock.mockResolvedValueOnce([])
+      getMatchTeamsMock.mockResolvedValueOnce([])
+      getUsersByIdsMock.mockResolvedValueOnce([])
+
+      render(<MatchDetailView backLink={backLink} />)
+
+      expect(await screen.findByText('MatchDetailsMock:0')).toHaveAttribute(
+        'data-read-only',
+        expected
+      )
+    }
+  )
 
   it('shows admin controls when user is club admin or super user', async () => {
     useIsClubAdminMock.mockReturnValue({

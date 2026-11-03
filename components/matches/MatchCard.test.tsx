@@ -36,17 +36,13 @@ describe('MatchCard', () => {
     ).toBeInTheDocument()
   })
 
-  it('does not link closed matches for members', () => {
-    render(<MatchCard match={makeMatch({ rsvpOpen: false })} />)
-    expect(
-      screen.queryByRole('link', { name: /7:30 PM/ })
-    ).not.toBeInTheDocument()
+  it('links closed matches too, with a closed status', () => {
+    render(<MatchCard match={makeMatch({ rsvpOpen: false })} href="/c/a/m1" />)
+    expect(screen.getByRole('link', { name: /7:30 PM/ })).toHaveAttribute(
+      'href',
+      '/c/a/m1'
+    )
     expect(screen.queryByTestId('status-pill-dot')).not.toBeInTheDocument()
-  })
-
-  it('always links for club admins and shows the real RSVP status', () => {
-    render(<MatchCard match={makeMatch({ rsvpOpen: false })} isAdmin />)
-    expect(screen.getByRole('link', { name: /7:30 PM/ })).toBeInTheDocument()
     expect(screen.queryByText(/Click to view details/)).not.toBeInTheDocument()
   })
 })

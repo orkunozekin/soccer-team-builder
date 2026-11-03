@@ -1,7 +1,6 @@
 import { format } from 'date-fns'
 import { ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-import { LocationLink } from '@/components/matches/LocationLink'
 import { cn } from '@/lib/utils'
 import { locationDisplayName } from '@/lib/utils/location'
 import { getKickoffLabelForMatch } from '@/lib/utils/matchStatus'
@@ -17,13 +16,11 @@ import type { RSVP } from '@/types/rsvp'
 export function NextMatchHero({
   match,
   href,
-  clickable,
   rsvpCount,
   myRsvp,
 }: {
   match: Match
   href: string
-  clickable: boolean
   rsvpCount?: number
   myRsvp?: RSVP | null
 }) {
@@ -35,8 +32,6 @@ export function NextMatchHero({
     : null
   const cta = myRsvp ? 'View' : match.rsvpOpen ? 'RSVP' : 'Details'
   const fill = rsvpCount !== undefined ? getRosterFill(rsvpCount) : null
-  // Without a detail link, keep a maps link so the venue stays reachable.
-  const showMapsLink = !clickable && match.location && locationName
 
   const body = (
     <article
@@ -77,11 +72,8 @@ export function NextMatchHero({
         </h2>
         <p className="mt-2 font-display text-2xl font-extrabold uppercase sm:text-3xl">
           {format(matchDate, 'h:mm a')}
-          {locationName && !showMapsLink ? ` · ${locationName}` : ''}
+          {locationName ? ` · ${locationName}` : ''}
         </p>
-        {showMapsLink && match.location ? (
-          <LocationLink location={match.location} className="mt-2 text-base" />
-        ) : null}
       </div>
 
       <div
@@ -102,23 +94,20 @@ export function NextMatchHero({
             ' '
           )}
         </p>
-        {clickable ? (
-          <span
-            aria-hidden
-            className={cn(
-              'inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-bold',
-              live ? 'bg-white text-ink' : 'bg-chalk text-ink'
-            )}
-          >
-            {cta}
-            <ArrowRight className="h-4 w-4" />
-          </span>
-        ) : null}
+        <span
+          aria-hidden
+          className={cn(
+            'inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-bold',
+            live ? 'bg-white text-ink' : 'bg-chalk text-ink'
+          )}
+        >
+          {cta}
+          <ArrowRight className="h-4 w-4" />
+        </span>
       </div>
     </article>
   )
 
-  if (!clickable) return body
   return (
     <Link
       href={href}

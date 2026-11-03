@@ -3,6 +3,7 @@ import {
   getKickoffLabel,
   getKickoffLabelForMatch,
   getMatchRsvpStatus,
+  getRsvpStatusForMatch,
 } from './matchStatus'
 
 const now = new Date(2026, 10, 3, 12, 0)
@@ -52,6 +53,23 @@ describe('getMatchRsvpStatus', () => {
         now,
       })
     ).toEqual({ tone: 'muted', label: 'RSVP closed' })
+  })
+})
+
+describe('getRsvpStatusForMatch', () => {
+  it('reports a past match as ended even when rsvpOpen is stale', () => {
+    // 19:30 CT Jan 10 2030 → RSVP window closes 05:30Z Jan 11.
+    const match = {
+      date: new Date('2030-01-10T18:00:00Z'),
+      time: '19:30',
+      rsvpOpen: true,
+    }
+    expect(
+      getRsvpStatusForMatch(match, new Date('2030-01-11T06:00:00Z'))
+    ).toEqual({ tone: 'muted', label: 'Match ended' })
+    expect(
+      getRsvpStatusForMatch(match, new Date('2030-01-11T05:00:00Z')).tone
+    ).toBe('live')
   })
 })
 
