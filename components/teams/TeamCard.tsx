@@ -2,6 +2,7 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { resolveTeamColor, teamTextColor } from '@/lib/constants/teamColors'
 import {
   formatJerseyDisplay,
   formatPositionDisplay,
@@ -28,8 +29,10 @@ export function TeamCard({ team, users, currentUserId }: TeamCardProps) {
         <div className="flex items-center justify-between">
           <CardTitle>{team.name || `Team ${team.teamNumber}`}</CardTitle>
           <Badge
-            style={{ backgroundColor: team.color || '#3b82f6' }}
-            className="text-white"
+            style={{
+              backgroundColor: resolveTeamColor(team.color),
+              color: teamTextColor(team.color),
+            }}
           >
             {team.playerIds.length}/{team.maxSize}
           </Badge>
@@ -56,8 +59,11 @@ export function TeamCard({ team, users, currentUserId }: TeamCardProps) {
                   {...{ 'x-apple-data-detectors': 'false' }}
                 >
                   <span
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white"
-                    style={{ backgroundColor: team.color || '#3b82f6' }}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold"
+                    style={{
+                      backgroundColor: resolveTeamColor(team.color),
+                      color: teamTextColor(team.color),
+                    }}
                   >
                     {formatJerseyDisplay(user.jerseyNumber)}
                   </span>

@@ -9,17 +9,8 @@
 
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore'
 import { Timestamp } from 'firebase-admin/firestore'
+import { teamPaletteEntry } from '@/lib/constants/teamColors'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
-
-const TEAM_COLORS = [
-  '#f97316',
-  '#3b82f6',
-  '#eab308',
-  '#65a30d',
-  '#ef4444',
-  '#8b5cf6',
-]
-const TEAM_NAMES = ['Orange', 'Blue', 'Yellow', 'Lime', 'Red', 'Purple']
 
 interface TeamDoc {
   id: string
@@ -110,9 +101,7 @@ export async function placeGkOnTeamWithoutGk(
     const nonGks = playerIds.filter(
       id =>
         !isGoalkeeper(
-          rsvpPositionsByUserId.get(id) ??
-            userPositionsByUserId.get(id) ??
-            null
+          rsvpPositionsByUserId.get(id) ?? userPositionsByUserId.get(id) ?? null
         )
     )
     return lastByRsvp(nonGks)
@@ -207,19 +196,14 @@ export async function placeGkOnTeamWithoutGk(
   const writes: Promise<unknown>[] = []
   for (const t of teams) {
     if (originalTeamIds.has(t.id)) {
-      writes.push(
-        t.ref.update({ playerIds: t.playerIds, updatedAt: now })
-      )
+      writes.push(t.ref.update({ playerIds: t.playerIds, updatedAt: now }))
     } else {
       writes.push(
         t.ref.set({
           matchId,
           teamNumber: t.teamNumber,
-          name:
-            TEAM_NAMES[(t.teamNumber - 1) % TEAM_NAMES.length] ??
-            `Team ${t.teamNumber}`,
-          color:
-            TEAM_COLORS[(t.teamNumber - 1) % TEAM_COLORS.length] ?? '#3b82f6',
+          name: teamPaletteEntry(t.teamNumber).name,
+          color: teamPaletteEntry(t.teamNumber).color,
           playerIds: t.playerIds,
           maxSize: 11,
           createdAt: now,

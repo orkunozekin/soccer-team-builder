@@ -7,6 +7,10 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import type { Firestore, QuerySnapshot } from 'firebase-admin/firestore'
 import { compactTeamVacancies } from './compactTeamVacancies'
+import {
+  DEFAULT_TEAM_COLOR,
+  teamPaletteEntry,
+} from '@/lib/constants/teamColors'
 import { getUsersByIdsAdmin } from '@/lib/users/getUsersByIdsAdmin'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import {
@@ -22,16 +26,6 @@ import {
 import type { TeamAssignment } from '@/lib/utils/teamGenerator'
 import type { RSVP } from '@/types/rsvp'
 import type { User } from '@/types/user'
-
-const TEAM_COLORS = [
-  '#f97316',
-  '#3b82f6',
-  '#eab308',
-  '#65a30d',
-  '#ef4444',
-  '#8b5cf6',
-]
-const TEAM_NAMES = ['Orange', 'Blue', 'Yellow', 'Lime', 'Red', 'Purple']
 
 function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
   if (!t) return null
@@ -180,9 +174,8 @@ async function incrementallyAssignUnassignedPlayers(
     batch.set(teamsCol.doc(teamId), {
       matchId,
       teamNumber: assignment.teamNumber,
-      name:
-        TEAM_NAMES[i % TEAM_NAMES.length] ?? `Team ${assignment.teamNumber}`,
-      color: TEAM_COLORS[i % TEAM_COLORS.length] ?? '#3b82f6',
+      name: teamPaletteEntry(i + 1).name,
+      color: teamPaletteEntry(i + 1).color,
       playerIds: assignment.playerIds,
       maxSize: 11,
       createdAt: now,
@@ -301,9 +294,8 @@ async function fullyRegenerateTeams(
       teamsCol.doc(teamId).set({
         matchId,
         teamNumber: assignment.teamNumber,
-        name:
-          TEAM_NAMES[i % TEAM_NAMES.length] ?? `Team ${assignment.teamNumber}`,
-        color: TEAM_COLORS[i % TEAM_COLORS.length] ?? '#3b82f6',
+        name: teamPaletteEntry(i + 1).name,
+        color: teamPaletteEntry(i + 1).color,
         playerIds: assignment.playerIds,
         maxSize: 11,
         createdAt: now,
@@ -397,7 +389,7 @@ export async function expandTeamsForMatch(
         id: d.id,
         teamNumber: (data.teamNumber as number) ?? 0,
         name: (data.name as string) ?? '',
-        color: (data.color as string) ?? '#3b82f6',
+        color: (data.color as string) ?? DEFAULT_TEAM_COLOR,
         playerIds: (data.playerIds as string[]) ?? [],
       }
     })

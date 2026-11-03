@@ -1,5 +1,6 @@
 'use client'
 
+import type { HTMLAttributes } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import {
   CheckCircle2,
@@ -8,7 +9,6 @@ import {
   MoreVertical,
   XCircle,
 } from 'lucide-react'
-import type { HTMLAttributes } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,6 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { resolveTeamColor, teamTextColor } from '@/lib/constants/teamColors'
 import { cn } from '@/lib/utils'
 import type { AttendanceLabel } from '@/lib/utils/checkIn'
 import {
@@ -146,8 +147,11 @@ export function PlayerTile({
         </span>
       )}
       <span
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-        style={{ backgroundColor: teamColor || '#3b82f6' }}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+        style={{
+          backgroundColor: resolveTeamColor(teamColor),
+          color: teamTextColor(teamColor),
+        }}
       >
         {formatJerseyDisplay(user.jerseyNumber)}
       </span>
@@ -308,8 +312,11 @@ export function DroppableTeamCard({
             {team.name || `Team ${team.teamNumber}`}
           </CardTitle>
           <Badge
-            style={{ backgroundColor: team.color || '#3b82f6' }}
-            className="shrink-0 text-white"
+            style={{
+              backgroundColor: resolveTeamColor(team.color),
+              color: teamTextColor(team.color),
+            }}
+            className="shrink-0"
           >
             {team.playerIds.length}/{team.maxSize}
           </Badge>

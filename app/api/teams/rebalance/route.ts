@@ -1,6 +1,7 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyClubAdminForMatch } from '@/lib/api/auth'
+import { teamPaletteEntry } from '@/lib/constants/teamColors'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { auditLog } from '@/lib/services/auditService'
 import { getUsersByIdsAdmin } from '@/lib/users/getUsersByIdsAdmin'
@@ -247,7 +248,11 @@ export async function POST(request: NextRequest) {
       uniqueRsvpsSorted.map(r => [r.userId, r.rsvpAt.getTime()])
     )
     const { teams: teamsWithKeepers, gkReplacements } =
-      shiftGoalkeepersOntoTeamsWithoutGk(baselineTeams, uniqueRsvpsSorted, users)
+      shiftGoalkeepersOntoTeamsWithoutGk(
+        baselineTeams,
+        uniqueRsvpsSorted,
+        users
+      )
     replacements.push(...gkReplacements)
     const finalTeams = applyPersistedTransfersKeepingBalance(
       teamsWithKeepers,
@@ -261,15 +266,6 @@ export async function POST(request: NextRequest) {
     )
     const finalAssigned = teams.map(t => finalByNumber.get(t.teamNumber) ?? [])
 
-    const TEAM_COLORS = [
-      '#f97316',
-      '#3b82f6',
-      '#eab308',
-      '#65a30d',
-      '#ef4444',
-      '#8b5cf6',
-    ]
-    const TEAM_NAMES = ['Orange', 'Blue', 'Yellow', 'Lime', 'Red', 'Purple']
     const existingNumbers = new Set(teams.map(t => t.teamNumber))
 
     const now = Timestamp.now()
@@ -287,12 +283,8 @@ export async function POST(request: NextRequest) {
       batch.set(teamsCol.doc(teamId), {
         matchId,
         teamNumber: assignment.teamNumber,
-        name:
-          TEAM_NAMES[(assignment.teamNumber - 1) % TEAM_NAMES.length] ??
-          `Team ${assignment.teamNumber}`,
-        color:
-          TEAM_COLORS[(assignment.teamNumber - 1) % TEAM_COLORS.length] ??
-          '#3b82f6',
+        name: teamPaletteEntry(assignment.teamNumber).name,
+        color: teamPaletteEntry(assignment.teamNumber).color,
         playerIds: assignment.playerIds,
         maxSize: 11,
         createdAt: now,

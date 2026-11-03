@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { transferPlayerAPI } from '@/lib/api/client'
+import { resolveTeamColor, teamTextColor } from '@/lib/constants/teamColors'
 import { cn } from '@/lib/utils'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
@@ -47,15 +48,12 @@ export function PlayerTransfer({
   teams.forEach(team => team.playerIds.forEach(id => allPlayerIds.add(id)))
 
   const availablePlayers = users.filter(u => allPlayerIds.has(u.uid))
-  const usersById = useMemo(
-    () => new Map(users.map(u => [u.uid, u])),
-    [users]
-  )
+  const usersById = useMemo(() => new Map(users.map(u => [u.uid, u])), [users])
 
   const teamColorByPlayerId = useMemo(() => {
     const map = new Map<string, string>()
     for (const team of teams) {
-      const color = team.color || '#3b82f6'
+      const color = resolveTeamColor(team.color)
       for (const id of team.playerIds) {
         if (!map.has(id)) map.set(id, color)
       }
@@ -68,7 +66,7 @@ export function PlayerTransfer({
     [teams]
   )
   const teamColorById = useMemo(
-    () => new Map(teams.map(t => [t.id, t.color || '#3b82f6'])),
+    () => new Map(teams.map(t => [t.id, resolveTeamColor(t.color)])),
     [teams]
   )
 
@@ -112,7 +110,7 @@ export function PlayerTransfer({
     if (!hex) return undefined
     return {
       backgroundColor: hex,
-      color: 'white',
+      color: teamTextColor(hex),
     }
   }
 
