@@ -6,7 +6,7 @@ import {
 } from '@/lib/utils/rsvpScheduler'
 import type { Match } from '@/types/match'
 
-export type MatchStatusTone = 'live' | 'neutral' | 'muted'
+export type MatchStatusTone = 'live' | 'success' | 'neutral' | 'muted'
 
 export interface MatchRsvpStatus {
   tone: MatchStatusTone
