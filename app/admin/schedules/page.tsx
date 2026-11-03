@@ -167,45 +167,57 @@ export default function AdminSchedulesPage() {
       )}
 
       {mode === 'create' && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Create schedule</CardTitle>
-            <CardDescription>
+        <section
+          aria-labelledby="schedule-form-heading"
+          className="mb-8 space-y-4"
+        >
+          <div className="space-y-1">
+            <h2
+              id="schedule-form-heading"
+              className="font-display text-2xl font-extrabold uppercase"
+            >
+              Create schedule
+            </h2>
+            <p className="text-sm text-fog">
               Add one or more day/time/location slots. Activate to create the
               next 3 matches immediately.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ScheduleForm
-              submitLabel="Create schedule"
-              onSubmit={handleCreate}
-              onCancel={() => setMode('list')}
-            />
-          </CardContent>
-        </Card>
+            </p>
+          </div>
+          <ScheduleForm
+            submitLabel="Create schedule"
+            onSubmit={handleCreate}
+            onCancel={() => setMode('list')}
+          />
+        </section>
       )}
 
       {mode === 'edit' && editing && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Edit schedule</CardTitle>
-            <CardDescription>
+        <section
+          aria-labelledby="schedule-form-heading"
+          className="mb-8 space-y-4"
+        >
+          <div className="space-y-1">
+            <h2
+              id="schedule-form-heading"
+              className="font-display text-2xl font-extrabold uppercase"
+            >
+              Edit schedule
+            </h2>
+            <p className="text-sm text-fog">
               Changes apply to future generated matches only.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ScheduleForm
-              key={editing.id}
-              initial={editing}
-              submitLabel="Save changes"
-              onSubmit={handleUpdate}
-              onCancel={() => {
-                setEditing(null)
-                setMode('list')
-              }}
-            />
-          </CardContent>
-        </Card>
+            </p>
+          </div>
+          <ScheduleForm
+            key={editing.id}
+            initial={editing}
+            submitLabel="Save changes"
+            onSubmit={handleUpdate}
+            onCancel={() => {
+              setEditing(null)
+              setMode('list')
+            }}
+          />
+        </section>
       )}
 
       {mode === 'list' && (

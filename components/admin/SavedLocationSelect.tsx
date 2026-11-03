@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { SavedLocationForm } from '@/components/admin/SavedLocationManager'
 import { Button } from '@/components/ui/button'
 import {
@@ -38,6 +38,8 @@ export function SavedLocationSelect({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
+  // Unique per instance: forms like ScheduleForm render one picker per slot.
+  const selectId = useId()
 
   useEffect(() => {
     let cancelled = false
@@ -79,7 +81,7 @@ export function SavedLocationSelect({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <Label htmlFor="saved-location-select">Saved location</Label>
+        <Label htmlFor={selectId}>Saved location</Label>
         <Button
           type="button"
           variant="ghost"
@@ -103,7 +105,7 @@ export function SavedLocationSelect({
         }}
         disabled={disabled || loading}
       >
-        <SelectTrigger id="saved-location-select" className="h-11">
+        <SelectTrigger id={selectId} className="h-11">
           <SelectValue
             placeholder={
               loading ? 'Loading saved locations…' : 'Choose a saved location…'

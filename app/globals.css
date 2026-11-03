@@ -53,6 +53,15 @@
   }
 }
 
+@layer components {
+  /* Opt-in for forms whose field labels must read apart from body copy:
+     mono eyebrow style. Only labels tied to an input (for=) are styled, so
+     wrapping checkbox labels keep their own look. */
+  .form-field-labels label[for] {
+    @apply font-mono text-xs font-medium uppercase tracking-[0.12em] text-fog;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
