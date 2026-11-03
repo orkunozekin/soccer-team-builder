@@ -9,7 +9,7 @@ Let each signed-in user pick a dark or light theme. The choice is saved on their
 | Status | in-progress |
 | Owner session | Orchestrated: one agent session and one PR per implementation step (below) |
 | Last updated | 2026-11-03 |
-| Related PR / branch | Plan: [#126](https://github.com/orkunozekin/soccer-team-builder/pull/126). Step PRs: see Handoff |
+| Related PR / branch | Plan: [#126](https://github.com/orkunozekin/soccer-team-builder/pull/126). Step 1: [#128](https://github.com/orkunozekin/soccer-team-builder/pull/128) (`orkun/theme-step-1-preference-plumbing`) |
 
 ## Goals (v1)
 
@@ -224,10 +224,18 @@ shadcn HSL tokens in `:root` follow the same values: `--background` = ink, `--ca
 - Design canvas published: [Soccerville Daylight Theme](https://claude.ai/artifact/WxiJNNTkc7f14wSQaSCiaj). It has the token map, Matches (Floodlight vs Daylight), Profile → Appearance (interactive) and Sign in (Daylight). The link is private to the owner until it's shared.
 
 - Daylight palette approved. The `light-theme` flag has been created in LaunchDarkly and is on in the Test environment.
+- **Step 1: preference plumbing** ([#128](https://github.com/orkunozekin/soccer-team-builder/pull/128), todos 1–4):
+  - `lib/flags/featureFlags.ts`: `light-theme` key, default `false`, `NEXT_PUBLIC_FF_LIGHT_THEME` override (+ `.env.sample`, `featureFlags.test.ts`).
+  - `types/user.ts`: `ThemePreference`, optional `themePreference` on `User` / `UserFirestore`, `normalizeThemePreference` (`types/user.test.ts`).
+  - Hydration: `themePreference` mapped (normalized) in `AuthProvider` `userData` and `mapDocToUser`. So `userData.themePreference` is always `'dark' | 'light'` once the profile loads.
+  - `PATCH /api/users/me`: strict `'dark' | 'light'`, else `400 Invalid themePreference`; in `changedFields`. `updateProfileAPI({ themePreference })` (`route.test.ts` cases added).
 
 ### Remaining work
 
-- Implementation steps 1–6 (table above), in order, one PR each. Each step's agent updates this Handoff in its own PR: it adds the PR link under Done so far and moves the next step to the top of Remaining work.
+1. **Step 2: color tokens + Daylight values** (todos 5, 6).
+2. Steps 3–6 (table above), in order, one PR each.
+
+Each step's agent updates this Handoff in its own PR: it adds the PR link under Done so far and moves the next step to the top of Remaining work.
 
 ### Blockers / risks
 
