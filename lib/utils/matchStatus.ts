@@ -3,6 +3,7 @@ import {
   getMatchStart,
   getNextRSVPCloseTime,
   getNextRSVPOpenTime,
+  isMatchPast,
 } from '@/lib/utils/rsvpScheduler'
 import type { Match } from '@/types/match'
 
@@ -46,12 +47,21 @@ export function getMatchRsvpStatus({
   return { tone: 'muted', label: 'RSVP closed' }
 }
 
-/** Resolves the scheduler window for `match`, then derives its status. */
+export const MATCH_ENDED_STATUS: MatchRsvpStatus = {
+  tone: 'muted',
+  label: 'Match ended',
+}
+
+/**
+ * Resolves the scheduler window for `match`, then derives its status. A past
+ * match always reads "Match ended", even if its rsvpOpen flag is stale.
+ */
 export function getRsvpStatusForMatch(
   match: Pick<Match, 'date' | 'time' | 'rsvpOpen'>,
   now: Date = new Date()
 ): MatchRsvpStatus {
   const matchDate = new Date(match.date)
+  if (isMatchPast(matchDate, match.time, now)) return MATCH_ENDED_STATUS
   return getMatchRsvpStatus({
     rsvpOpen: match.rsvpOpen,
     opensAt: getNextRSVPOpenTime(matchDate, match.time),

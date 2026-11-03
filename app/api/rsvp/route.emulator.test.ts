@@ -287,5 +287,32 @@ describe.skipIf(!emulator)(
         'confirmed'
       )
     })
+
+    it('keeps a past match read-only for players even if rsvpOpen is stale', async () => {
+      // The cron never flipped rsvpOpen, but kickoff + 4h has long passed.
+      await db.doc(`matches/${matchId}`).update({
+        date: Timestamp.fromDate(new Date('2020-01-01T18:00:00Z')),
+        time: '19:00',
+      })
+
+      const join = await arrive()
+      expect(join.status).toBe(403)
+      expect((await join.json()).error).toBe('This match has ended')
+
+      const move = await PATCH(
+        request('PATCH', ids[0], {
+          rsvpId: `${matchId}_${ids[0]}`,
+          position: 'GK',
+        })
+      )
+      expect(move.status).toBe(403)
+      expect((await move.json()).error).toBe('This match has ended')
+
+      const own = (await db.doc(`rsvps/${matchId}_${ids[0]}`).get()).data()!
+      expect(own.position).toBe('ST')
+      expect((await db.doc(`rsvps/${matchId}_${ids[24]}`).get()).exists).toBe(
+        false
+      )
+    })
   }
 )

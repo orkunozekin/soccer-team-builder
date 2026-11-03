@@ -57,7 +57,6 @@ export function AdminMatchCard({
         rsvpCount={rsvpCount}
         href={href ?? `/admin/matches/${match.id}`}
         index={index}
-        isAdmin
         actions={
           <Button
             variant="destructive"

@@ -26,7 +26,6 @@ export function PlayerMatchesList({
   matches,
   rsvpCounts,
   hrefFor,
-  canOpen,
   myRsvps,
   onRetryMyRsvps,
   paginationScope,
@@ -34,7 +33,6 @@ export function PlayerMatchesList({
   matches: Match[]
   rsvpCounts: Record<string, number>
   hrefFor: (matchId: string) => string
-  canOpen: (match: Match) => boolean
   myRsvps: MyMatchRsvpsState
   onRetryMyRsvps: () => void
   paginationScope: string
@@ -54,7 +52,6 @@ export function PlayerMatchesList({
       <NextMatchHero
         match={next}
         href={hrefFor(next.id)}
-        clickable={canOpen(next)}
         rsvpCount={rsvpCounts[next.id]}
         myRsvp={myRsvps.byMatchId.get(next.id)}
       />
@@ -102,7 +99,6 @@ export function PlayerMatchesList({
                   key={match.id}
                   match={match}
                   href={hrefFor(match.id)}
-                  clickable={canOpen(match)}
                   status={getPlayerMatchStatus({
                     match,
                     myRsvp: myRsvps.byMatchId.get(match.id),

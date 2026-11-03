@@ -52,10 +52,14 @@ export function hasMatchStarted(
 /**
  * True when the RSVP/close window has ended (match start + 4h passed).
  */
-export function isMatchPast(date: Date, time?: string | null): boolean {
+export function isMatchPast(
+  date: Date,
+  time?: string | null,
+  now: Date = new Date()
+): boolean {
   const { closeAt } = getRSVPSchedule(date, time)
   if (!closeAt) return false
-  return new Date() > closeAt
+  return now > closeAt
 }
 
 /**

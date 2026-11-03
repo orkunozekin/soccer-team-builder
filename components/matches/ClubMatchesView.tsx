@@ -351,7 +351,6 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
           matches={visibleMatches}
           rsvpCounts={rsvpCounts}
           hrefFor={matchHref}
-          canOpen={match => (manageFlags[match.id] ?? false) || match.rsvpOpen}
           myRsvps={myRsvps}
           onRetryMyRsvps={() => void myRsvps.retry()}
           paginationScope={JSON.stringify([clubId, userId])}
@@ -382,7 +381,6 @@ export function ClubMatchesView({ clubId, clubSlug }: ClubMatchesViewProps) {
                 match={match}
                 href={matchHref(match.id)}
                 rsvpCount={rsvpCounts[match.id]}
-                isAdmin={canManage}
                 index={index}
               />
             )
