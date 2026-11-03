@@ -6,16 +6,16 @@ Let each signed-in user pick a dark or light theme. The choice is saved on their
 
 | Field | Value |
 |-------|-------|
-| Status | planned |
-| Owner session | — |
+| Status | in-progress |
+| Owner session | Orchestrated: one agent session and one PR per implementation step (below) |
 | Last updated | 2026-11-03 |
-| Related PR / branch | `orkun/eloquent-cray-xqz6fr` (plan only) |
+| Related PR / branch | Plan: [#126](https://github.com/orkunozekin/soccer-team-builder/pull/126). Step PRs: see Handoff |
 
 ## Goals (v1)
 
 - **Light palette ("Daylight")** — a real light theme for every surface that uses the Floodlight tokens, not the leftover shadcn defaults in `:root`.
 - **Per-user preference** — `themePreference: 'dark' | 'light'` on `users/{uid}`, written only through `PATCH /api/users/me`. A missing value means `dark`, so existing users see no change.
-- **Switch UI** — an "Appearance" control on the Profile page. Changing it applies right away and persists.
+- **Switch UI** — an icon-only Dark / Light toggle in the sidebar account footer, next to the username (desktop rail and mobile sheet). Changing it applies right away and persists.
 - **No flash on load** — the stored theme is applied before first paint on reload, and the profile value wins once it loads.
 - **Flag-gated** — the switch is only shown when the LaunchDarkly flag `light-theme` is on (default `false`). With the flag off, everyone stays on dark, whatever their stored value.
 - **Out of scope for v1:**
@@ -23,6 +23,19 @@ Let each signed-in user pick a dark or light theme. The choice is saved on their
   - Per-club or white-label theming / brand colors.
   - Restyling the pitch lineup surface (it stays green/dark in both themes).
   - Email templates, OG images.
+
+## Implementation steps (one PR each)
+
+Each step ships as its own PR, in this order. Each one merges before the next starts. Every step keeps the app looking exactly as it does today until step 4 adds the runtime, and only users with the flag on see anything new.
+
+| Step | Todos | Scope | Visible change |
+|------|-------|-------|----------------|
+| 1. Preference plumbing | 1–4 (+ their tests) | flag key, `themePreference` type/normalizer, hydration mapping, API field + client | none |
+| 2. Color tokens + Daylight values | 5, 6 | Floodlight names → CSS vars; Daylight values in `:root`; light `pitch-bg` / `pitch-stripes` / `html` | none (`<html>` is still hardcoded `dark`) |
+| 3. Hard-coded color cleanup | 10, 11 | `mist`, `dim`, `live-*`, `ok-pill`, `on-bright` tokens; replace arbitrary hex classes | none in dark |
+| 4. Theme runtime | 7, 8 (+ `ThemeSync` tests) | `next-themes`, `ThemeProvider`, `ThemeSync`, layout changes | none while the flag is off / no stored light preference |
+| 5. Sidebar toggle | 9 (+ toggle tests) | `ThemeToggle` in the account footer | flag on: toggle appears |
+| 6. Light QA + docs | 12 | screenshot pass in light at 320 / tablet / desktop, fix what's unreadable, `docs/TECH_STACK.md`, mark plan done | light fixes only |
 
 ## Todos
 
@@ -34,7 +47,7 @@ Let each signed-in user pick a dark or light theme. The choice is saved on their
 6. Design the Daylight values for the shadcn HSL tokens in `:root` (replace the pinkish legacy defaults), `.pitch-bg`, `.pitch-stripes`, `html` background / `color-scheme` / `accent-color`.
 7. Theme runtime: add `next-themes` (`attribute="class"`, `themes={['dark','light']}`, `defaultTheme="dark"`, `enableSystem={false}`, `storageKey="sv-theme"`). Wrap it in a `ThemeProvider` under `components/providers/`, remove the hardcoded `className="dark"` from [`app/layout.tsx`](../../app/layout.tsx), and add `suppressHydrationWarning` on `<html>`.
 8. `ThemeSync` client component (mounted inside `AuthProvider` + `LaunchDarklyProvider`): once `profileReady`, call `setTheme(flagOn ? userData.themePreference ?? 'dark' : 'dark')`. Generation-guard on uid so a fast account switch can't apply the previous user's theme.
-9. `AppearanceSettings` component on [`app/profile/page.tsx`](../../app/profile/page.tsx): a two-option segmented control (Dark / Light). Optimistic `setTheme` + `updateProfileAPI({ themePreference })` + `setUserData` merge. On failure, revert to the previous theme and show a sanitized error.
+9. `ThemeToggle` component, rendered by [`AccountMenu.tsx`](../../components/layout/AccountMenu.tsx) on the same row as the username (so it appears in both the desktop rail and the mobile sheet). It's two icon-only buttons, Moon (dark) and Sun (light) from `lucide-react`. Each has an `aria-label` ("Dark theme" / "Light theme"), `aria-pressed`, a 44px hit area and a visible focus ring, wrapped in a `role="group"` labelled "Theme". It only renders when `useFeatureFlag('light-theme')` is true. Optimistic `setTheme` + `updateProfileAPI({ themePreference })` + `setUserData` merge. On failure, revert to the previous theme and show a sanitized error (e.g. a small `role="alert"` line under the row). The username must still truncate and the row must wrap at 320px (see the narrow-rows rule in `AGENT_CONTEXT.md`).
 10. Tokenize the arbitrary hex classes that the Tailwind remap won't catch (found while designing):
     - `text-[#B9C2BD]` (~20 uses: `PageHeader`, `SidenavLink`, `filter-pill`, `status-pill`, `AuthPageShell`, `LoginForm`, `MatchDetails`, `RosterFillMeter`, `TeamToggle`, …) → new `mist` token.
     - `text-[#6F7B74]` in [`RosterFillMeter.tsx`](../../components/matches/RosterFillMeter.tsx) → new `dim` token.
@@ -43,7 +56,7 @@ Let each signed-in user pick a dark or light theme. The choice is saved on their
     - `shadow-2xl shadow-black/40` on the auth panel ([`AuthPageShell.tsx`](../../components/auth/AuthPageShell.tsx)) is too heavy on light; use a softer shadow in light.
 11. Audit the remaining hard-coded colors: `bg-white` in [`RSVPSuccessCelebration.tsx`](../../components/matches/RSVPSuccessCelebration.tsx), `text-white` / `bg-zinc-500` in [`BenchList.tsx`](../../components/teams/BenchList.tsx), [`TeamsDisplay.tsx`](../../components/teams/TeamsDisplay.tsx), [`PlayerRsvpHistory.tsx`](../../components/admin/PlayerRsvpHistory.tsx), `text-red-400` / `bg-red-900/40` in `AuditEventLog.tsx`, and the `bg-black/60` overlays (probably fine as they are). Fix only what's actually unreadable.
 12. Visual QA in both themes at 320px / tablet / desktop: login, match list, match detail, RSVP flow, teams, admin pages, dialogs/sheets.
-13. Tests: route validation, `normalizeThemePreference`, `ThemeSync` (flag off → dark; flag on → stored value; uid change resets), `AppearanceSettings` (optimistic switch + revert on API error).
+13. Tests: route validation, `normalizeThemePreference`, `ThemeSync` (flag off → dark; flag on → stored value; uid change resets), `ThemeToggle` (hidden with the flag off; optimistic switch + revert on API error; `aria-pressed` reflects the theme).
 
 ## Current state
 
@@ -143,14 +156,15 @@ chalk: 'rgb(var(--fl-chalk) / <alpha-value>)',
 
 shadcn HSL tokens in `:root` follow the same values: `--background` = ink, `--card`/`--popover` = turf, `--border` `#E1E4DE`, `--input` `#CDD3CC`, `--muted-foreground` = fog, `--ring` = `#D72A1C`.
 
-These values still need sign-off from whoever owns the brand, but they're no longer placeholders.
+**Approved** by the product owner on 2026-11-03. Implement these values as given.
 
 `chalk` now means "foreground" rather than literal chalk in light mode. That's an accepted naming wart for v1. Renaming to semantic names is a separate refactor (see Later).
 
 ### UX
 
-- Profile page → new card **Appearance**, with a segmented control: `Dark` / `Light` (radiogroup semantics, keyboard-navigable, 44px hit targets). It only renders when `useFeatureFlag('light-theme')` is true.
-- The switch applies instantly. The API write runs in the background with a busy state. On error, revert and toast/inline a sanitized message.
+- Sidebar account footer (desktop rail + mobile sheet), on the username row: `[Username …truncates…] [☾][☀]`. Icon-only buttons: Moon = dark, Sun = light. The active one is filled (`bg-turf-raised text-chalk`) and the inactive one is muted (`text-mist`). It only renders when `useFeatureFlag('light-theme')` is true.
+- The switch applies instantly. The API write runs in the background with a busy state (both buttons disabled). On error, revert and show a sanitized inline message.
+- No Profile-page Appearance card in v1. The sidebar toggle replaces it (the design canvas's Profile artboard shows an earlier option).
 
 ## Critical decisions
 
@@ -179,15 +193,15 @@ These values still need sign-off from whoever owns the brand, but they're no lon
 | [`app/layout.tsx`](../../app/layout.tsx) | drop hardcoded `dark`, `suppressHydrationWarning`, mount `ThemeProvider` + `ThemeSync` |
 | `components/providers/ThemeProvider.tsx` (new) | `next-themes` wrapper |
 | `components/providers/ThemeSync.tsx` (new, + test) | profile → theme sync |
-| `components/profile/AppearanceSettings.tsx` (new, + test) | switch UI |
-| [`app/profile/page.tsx`](../../app/profile/page.tsx) | render `AppearanceSettings` |
+| `components/layout/ThemeToggle.tsx` (new, + test) | icon-only switch |
+| [`components/layout/AccountMenu.tsx`](../../components/layout/AccountMenu.tsx) (+ `AccountMenu.test.tsx`) | render `ThemeToggle` beside the username |
 | Hard-coded color spots (todos 10–11) | new tokens + targeted fixes only |
 | [`docs/TECH_STACK.md`](../TECH_STACK.md) | note `next-themes` + token approach |
 
 ## Acceptance criteria
 
-- [ ] Flag off: the app is pixel-identical to today for every user (dark), and no Appearance card is shown.
-- [ ] Flag on: a user can switch Dark ↔ Light on Profile. It applies instantly and survives reload with no dark/light flash.
+- [ ] Flag off: the app is pixel-identical to today for every user (dark), and no theme toggle is shown.
+- [ ] Flag on: a user can switch Dark ↔ Light from the sidebar toggle. It applies instantly and survives reload with no dark/light flash.
 - [ ] The preference follows the user to another browser/device after sign-in.
 - [ ] Signing in as a different user on the same device applies that user's preference (or dark).
 - [ ] `PATCH /api/users/me` rejects invalid `themePreference` values with 400 and audit-logs valid changes.
@@ -197,7 +211,6 @@ These values still need sign-off from whoever owns the brand, but they're no lon
 ## Later
 
 - `System` option (`enableSystem`, `'system'` stored value) that follows `prefers-color-scheme`.
-- Quick toggle in the account rail/menu.
 - Rename Floodlight color names to semantic tokens (`surface`, `text-muted`, …).
 - Remove the flag once Daylight is polished and rolled out.
 
@@ -210,17 +223,18 @@ These values still need sign-off from whoever owns the brand, but they're no lon
 - Plan written. No code changes yet.
 - Design canvas published: [Soccerville Daylight Theme](https://claude.ai/artifact/WxiJNNTkc7f14wSQaSCiaj). It has the token map, Matches (Floodlight vs Daylight), Profile → Appearance (interactive) and Sign in (Daylight). The link is private to the owner until it's shared.
 
+- Daylight palette approved. The `light-theme` flag has been created in LaunchDarkly and is on in the Test environment.
+
 ### Remaining work
 
-- All Todos (1–13). Start with 5, 6 and 10 (tokenizing + Daylight palette): it's the largest risk and can be checked visually by temporarily removing `dark` from `<html>`, before any preference plumbing.
+- Implementation steps 1–6 (table above), in order, one PR each. Each step's agent updates this Handoff in its own PR: it adds the PR link under Done so far and moves the next step to the top of Remaining work.
 
 ### Blockers / risks
 
-- The Daylight palette (Design → table) needs sign-off before it ships.
-- The `light-theme` flag has to be created in the LaunchDarkly dashboard (both environments) before the toggle can show outside local overrides.
+- The `light-theme` flag is off in Production. Leave it that way until step 6 is merged and QA'd.
 
 ### Pointers for the next agent
 
-- Start at: [`tailwind.config.ts`](../../tailwind.config.ts) Floodlight colors + [`app/globals.css`](../../app/globals.css) `:root` / `.dark`.
+- Start at: the first implementation step not yet listed under Done so far.
 - Do not: sprinkle `dark:` variants across components; write the preference via the client Firestore SDK; change the default away from dark.
 - Verify with: `yarn test:run`; manual pass in both themes on emulators (`NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true`, `NEXT_PUBLIC_FF_LIGHT_THEME=true`).
