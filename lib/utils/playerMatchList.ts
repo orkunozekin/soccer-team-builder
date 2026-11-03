@@ -36,12 +36,19 @@ export function sortByKickoff<T extends Pick<Match, 'date' | 'time'>>(
   return [...matches].sort((a, b) => kickoffTime(a) - kickoffTime(b))
 }
 
-/** The soonest match becomes the "Next up" hero; the rest list below it. */
+/**
+ * The soonest match that hasn't kicked off becomes the "Next up" hero; the
+ * rest (including any already in progress) list below it in kickoff order.
+ */
 export function splitNextMatch<T extends Pick<Match, 'date' | 'time'>>(
-  matches: readonly T[]
+  matches: readonly T[],
+  now: Date = new Date()
 ): { next: T | null; rest: T[] } {
-  const [next = null, ...rest] = sortByKickoff(matches)
-  return { next, rest }
+  const sorted = sortByKickoff(matches)
+  const nextIndex = sorted.findIndex(m => kickoffTime(m) > now.getTime())
+  if (nextIndex === -1) return { next: null, rest: sorted }
+  const [next] = sorted.splice(nextIndex, 1)
+  return { next, rest: sorted }
 }
 
 /** Confirmed RSVPs keyed by match id (cancelled RSVPs are ignored). */
@@ -63,7 +70,7 @@ export function filterPlayerMatches<T extends Pick<Match, 'id'>>(
 }
 
 /**
- * Splits a list into the "Next up" hero (soonest upcoming match) and the rows
+ * Splits a list into the "Next up" hero (soonest match yet to kick off) and the rows
  * for the chosen filter: remaining upcoming matches, the ones I'm in, or past
  * matches newest first.
  */
@@ -74,7 +81,10 @@ export function selectMatchList<T extends Pick<Match, 'id' | 'date' | 'time'>>(
   now: Date = new Date()
 ): { next: T | null; rows: T[] } {
   const isPast = (m: T) => isMatchPast(new Date(m.date), m.time, now)
-  const { next, rest } = splitNextMatch(matches.filter(m => !isPast(m)))
+  const { next, rest } = splitNextMatch(
+    matches.filter(m => !isPast(m)),
+    now
+  )
   if (filter === 'past') {
     return { next, rows: sortByKickoff(matches.filter(isPast)).reverse() }
   }
