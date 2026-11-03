@@ -279,7 +279,7 @@ export function AddressAutocomplete({
         {coordsHint && !loading && (
           <p className="text-xs text-muted-foreground">{coordsHint}</p>
         )}
-        {error && <p className="text-xs text-red-400">{error}</p>}
+        {error && <p className="text-xs text-danger">{error}</p>}
       </div>
 
       {token ? (
@@ -291,7 +291,7 @@ export function AddressAutocomplete({
           onPinChange={handlePinChange}
         />
       ) : (
-        <p className="text-xs text-amber-400">
+        <p className="text-xs text-warning">
           Set NEXT_PUBLIC_MAPBOX_TOKEN for address search and map pinning.
         </p>
       )}

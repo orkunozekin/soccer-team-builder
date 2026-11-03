@@ -52,7 +52,7 @@ export function CheckInStatusIcon({
       />
     ) : (
       <CircleDashed
-        className={cn('h-4 w-4 shrink-0 text-amber-500', className)}
+        className={cn('h-4 w-4 shrink-0 text-warning-icon', className)}
         aria-hidden
       />
     )
@@ -82,7 +82,7 @@ export function CheckInStatusLegend({ className }: { className?: string }) {
         Present
       </li>
       <li className="inline-flex items-center gap-1.5">
-        <CircleDashed className="h-3.5 w-3.5 text-amber-500" aria-hidden />
+        <CircleDashed className="h-3.5 w-3.5 text-warning-icon" aria-hidden />
         Pending
       </li>
       <li className="inline-flex items-center gap-1.5">
@@ -162,7 +162,7 @@ export function PlayerTile({
           <p
             className={cn(
               'truncate text-xs leading-tight text-muted-foreground',
-              isGoalkeeper(user.position) && 'font-medium text-amber-400'
+              isGoalkeeper(user.position) && 'font-medium text-warning'
             )}
           >
             {formatPositionDisplay(user.position)}
@@ -197,7 +197,7 @@ export function PlayerTile({
                 ) : null}
                 {onCancelRSVP ? (
                   <DropdownMenuItem
-                    className="text-red-400 focus:text-red-400"
+                    className="text-danger focus:text-danger"
                     onClick={() => onCancelRSVP(user.uid, displayName)}
                   >
                     Cancel RSVP

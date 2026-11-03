@@ -6,10 +6,10 @@ Let each signed-in user pick a dark or light theme. The choice is saved on their
 
 | Field | Value |
 |-------|-------|
-| Status | in-progress |
+| Status | done |
 | Owner session | Orchestrated: one agent session and one PR per implementation step (below) |
 | Last updated | 2026-11-03 |
-| Related PR / branch | Plan: [#126](https://github.com/orkunozekin/soccer-team-builder/pull/126). Step 1: [#128](https://github.com/orkunozekin/soccer-team-builder/pull/128) (`orkun/theme-step-1-preference-plumbing`). Step 2: [#129](https://github.com/orkunozekin/soccer-team-builder/pull/129) (`orkun/theme-step-2-color-tokens`). Step 3: [#130](https://github.com/orkunozekin/soccer-team-builder/pull/130) (`orkun/theme-step-3-hardcoded-colors`). Step 4: [#131](https://github.com/orkunozekin/soccer-team-builder/pull/131) (`orkun/theme-step-4-theme-runtime`). Step 5: [#132](https://github.com/orkunozekin/soccer-team-builder/pull/132) (`orkun/theme-step-5-sidebar-toggle`) |
+| Related PR / branch | Plan: [#126](https://github.com/orkunozekin/soccer-team-builder/pull/126). Step 1: [#128](https://github.com/orkunozekin/soccer-team-builder/pull/128) (`orkun/theme-step-1-preference-plumbing`). Step 2: [#129](https://github.com/orkunozekin/soccer-team-builder/pull/129) (`orkun/theme-step-2-color-tokens`). Step 3: [#130](https://github.com/orkunozekin/soccer-team-builder/pull/130) (`orkun/theme-step-3-hardcoded-colors`). Step 4: [#131](https://github.com/orkunozekin/soccer-team-builder/pull/131) (`orkun/theme-step-4-theme-runtime`). Step 5: [#132](https://github.com/orkunozekin/soccer-team-builder/pull/132) (`orkun/theme-step-5-sidebar-toggle`). Step 6: [#133](https://github.com/orkunozekin/soccer-team-builder/pull/133) (`orkun/theme-step-6-light-qa`) |
 
 ## Goals (v1)
 
@@ -200,13 +200,13 @@ shadcn HSL tokens in `:root` follow the same values: `--background` = ink, `--ca
 
 ## Acceptance criteria
 
-- [ ] Flag off: the app is pixel-identical to today for every user (dark), and no theme toggle is shown.
-- [ ] Flag on: a user can switch Dark ↔ Light from the sidebar toggle. It applies instantly and survives reload with no dark/light flash.
-- [ ] The preference follows the user to another browser/device after sign-in.
-- [ ] Signing in as a different user on the same device applies that user's preference (or dark).
-- [ ] `PATCH /api/users/me` rejects invalid `themePreference` values with 400 and audit-logs valid changes.
-- [ ] Every page reviewed in light at 320px, tablet and desktop. Text tokens meet WCAG AA on their surfaces, and nothing is light-on-light or invisible.
-- [ ] No hydration warnings in the console. `yarn test:run`, lint and typecheck pass.
+- [x] Flag off: the app is pixel-identical to today for every user (dark), and no theme toggle is shown.
+- [x] Flag on: a user can switch Dark ↔ Light from the sidebar toggle. It applies instantly and survives reload with no dark/light flash.
+- [x] The preference follows the user to another browser/device after sign-in.
+- [x] Signing in as a different user on the same device applies that user's preference (or dark).
+- [x] `PATCH /api/users/me` rejects invalid `themePreference` values with 400 and audit-logs valid changes.
+- [x] Every page reviewed in light at 320px, tablet and desktop. Text tokens meet WCAG AA on their surfaces, and nothing is light-on-light or invisible.
+- [x] No hydration warnings in the console. `yarn test:run`, lint and typecheck pass.
 
 ## Later
 
@@ -259,15 +259,26 @@ shadcn HSL tokens in `:root` follow the same values: `--background` = ink, `--ca
   - Emulator note: `EmulatorAuthGate` signs out on every full page load, so "reload keeps the choice" means the cached theme applies before paint and the profile value applies again after signing in. Navigate client-side for signed-in screenshots.
   - For step 6: in light, the active button's `turf-raised` fill on `rail` is subtle. Check it in the QA pass.
 
+- **Step 6: light QA + docs** ([#133](https://github.com/orkunozekin/soccer-team-builder/pull/133), todo 12):
+  - QA on emulators (`next dev`, `NEXT_PUBLIC_FF_LIGHT_THEME=true`, `NEXT_PUBLIC_FF_PITCH_LINEUP_VIEW=true`, seeded club / matches / RSVPs / teams, club admin + super user + players) in light at 320, 768 and 1280: auth pages, `/matches` (Next up hero), match detail (RSVP open / closed, check-in, teams, pitch lineup), `/profile`, `/clubs`, club settings / roster / member / invites, `/admin`, `/admin/matches` (+ detail), `/admin/users`, `/admin/players/[userId]`, `/admin/schedules`, `/admin/analytics`, `/admin/locations`, the profile-complete and RSVP position modals, the cancel-RSVP alert dialog, the RSVP celebration, the mobile nav sheet, error banners (API failures forced) and loading skeletons. An axe-core `color-contrast` run on every route and state found no light-only failures after the fixes below.
+  - New status tokens (same `--fl-*` pattern; every `.dark` value is the Tailwind color it replaced): `danger-mark`, `alert-text`, `alert-text-soft`, `alert-bg`, `success` (+ `bright`, `soft`, `wash`, `deep`, `line`), `warning` (+ `strong`, `soft`, `icon`, `wash`, `deep`, `line`), `gk-pill` (+ `border`, `text`), `chart-grid`, `confetti`, `chip-shade`, `toggle-active`, `toggle-edge` (full color with alpha; transparent in dark). `pitch-chalk` is fixed (`#F3F1EA`) in both themes.
+  - Swapped every `text-red-400` / `bg-red-900/*` error line and banner to `text-danger` / `bg-danger-wash/*`, the `red-200` / `red-300` on `red-950` alerts to `alert-*`, green / emerald / amber status text and fills to `success-*` / `warning-*`, the GK pills to `gk-pill*`, the analytics grid to `chart-grid`. White confetti → `bg-confetti` (dark pieces in light). `PlayerMarker` current-user ring → `ring-pitch-chalk` (stays chalk on the grass). Live-dot glow uses `rgb(var(--fl-flare)/0.18)`. The non-live Next up kickoff chip uses `bg-chip-shade/25` (it was a heavy grey `black/25` blob on white). The theme toggle's active button is white with a 1px `#6F7B74` edge in light (3.7:1 against `rail`), so it no longer depends on two near-identical fills.
+  - Dark: production builds with the flag off are pixel-identical to `main` on 28 routes (public + club admin + player + super user) at 375 and 1280 (56 screenshots, `PIL.ImageChops.difference`, no differences).
+  - Acceptance criteria re-checked on emulators: fresh browser picks up the stored theme after sign-in, the toggle switches both ways and writes the profile, reload paints the cached theme before hydration, signing in as a user with a stored `dark` on the same device switches to dark, `PATCH /api/users/me` returns 400 for `"system"` / `null` and audit-logs `fields: ['themePreference']`, no console warnings or errors.
+  - Not changed (same in both themes, not light-specific): the white-on-`emerald-600` "Present" attendance badge (3.8:1). Pitch `--pitch-*` grass is unchanged and readable.
+  - The design canvas [Soccerville Daylight Theme](https://claude.ai/artifact/WxiJNNTkc7f14wSQaSCiaj) is still the visual reference for Daylight.
+
 ### Remaining work
 
-1. **Step 6: light QA + docs** (todo 12, table above), one PR: screenshot pass in light at 320 / tablet / desktop, fix what's unreadable (including the step 3 leftovers listed above and the toggle's active-state contrast on `rail`), `docs/TECH_STACK.md`, mark the plan done.
+None in code. Manual steps for the owner:
 
-Each step's agent updates this Handoff in its own PR: it adds the PR link under Done so far and moves the next step to the top of Remaining work.
+1. When ready, turn `light-theme` on in the LaunchDarkly **Production** environment (it is on in Test only). Spot-check a few pages in light on production after enabling.
+2. Later, once Daylight has been on for a while: remove the flag (`lib/flags/featureFlags.ts`, `useFeatureFlag('light-theme')` in `ThemeToggle` / `ThemeSync`, `NEXT_PUBLIC_FF_LIGHT_THEME` in `.env.sample`) and archive it in LaunchDarkly. See Later.
 
 ### Blockers / risks
 
-- The `light-theme` flag is off in Production. Leave it that way until step 6 is merged and QA'd.
+- The `light-theme` flag is off in Production until the owner turns it on.
+- The "Present" attendance badge (white on `emerald-600`, 3.8:1) is below AA in both themes. It was left alone so dark stays unchanged; fix it in its own change if wanted.
 
 ### Pointers for the next agent
 

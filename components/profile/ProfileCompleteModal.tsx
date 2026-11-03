@@ -138,7 +138,7 @@ export function ProfileCompleteModal({
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="space-y-2">
               <Label htmlFor="modal-displayName">
-                Display Name <span className="text-red-500">*</span>
+                Display Name <span className="text-danger-mark">*</span>
               </Label>
               <Input
                 id="modal-displayName"
@@ -152,7 +152,7 @@ export function ProfileCompleteModal({
             </div>
             <div className="space-y-2">
               <Label htmlFor="position">
-                Position <span className="text-red-500">*</span>
+                Position <span className="text-danger-mark">*</span>
               </Label>
               <PositionSelector
                 value={position}
@@ -175,7 +175,7 @@ export function ProfileCompleteModal({
                 className="h-11"
               />
             </div>
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && <p className="text-sm text-danger">{error}</p>}
             <Button type="submit" loading={loading} className="mt-2">
               Save and continue
             </Button>

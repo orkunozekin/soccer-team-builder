@@ -218,7 +218,7 @@ export function ClubAdminRoster({
   return (
     <div className="space-y-4">
       {error && (
-        <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
+        <div className="rounded-md bg-danger-wash/20 p-3 text-sm text-danger">
           {error}
         </div>
       )}

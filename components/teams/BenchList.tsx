@@ -39,7 +39,7 @@ export function BenchList({ playerIds, users }: BenchListProps) {
                 <span
                   className={`ml-auto text-xs ${
                     isGoalkeeper(user.position)
-                      ? 'rounded bg-amber-700/50 px-1.5 py-0.5 text-amber-100'
+                      ? 'rounded bg-gk-pill/50 px-1.5 py-0.5 text-gk-pill-text'
                       : 'text-muted-foreground'
                   }`}
                 >

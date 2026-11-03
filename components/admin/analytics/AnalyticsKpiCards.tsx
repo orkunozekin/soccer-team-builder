@@ -37,9 +37,9 @@ function KpiCard({
           <div
             className={cn(
               'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
-              accent === 'success' && 'bg-emerald-900/30 text-emerald-400',
-              accent === 'warning' && 'bg-amber-900/30 text-amber-400',
-              accent === 'default' && 'bg-red-900/30 text-red-400'
+              accent === 'success' && 'bg-success-line/30 text-success-bright',
+              accent === 'warning' && 'bg-warning-wash/30 text-warning',
+              accent === 'default' && 'bg-danger-wash/30 text-danger'
             )}
           >
             {icon}

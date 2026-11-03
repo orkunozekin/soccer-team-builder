@@ -11,13 +11,13 @@ interface RSVPSuccessCelebrationProps {
 
 const CONFETTI = [
   { left: '12%', delay: '0ms', color: 'bg-red-50' },
-  { left: '22%', delay: '120ms', color: 'bg-white' },
+  { left: '22%', delay: '120ms', color: 'bg-confetti' },
   { left: '35%', delay: '60ms', color: 'bg-red-70' },
   { left: '48%', delay: '180ms', color: 'bg-red-50' },
-  { left: '58%', delay: '40ms', color: 'bg-white' },
+  { left: '58%', delay: '40ms', color: 'bg-confetti' },
   { left: '68%', delay: '140ms', color: 'bg-red-40' },
   { left: '78%', delay: '90ms', color: 'bg-red-50' },
-  { left: '88%', delay: '200ms', color: 'bg-white' },
+  { left: '88%', delay: '200ms', color: 'bg-confetti' },
 ]
 
 export function RSVPSuccessCelebration({

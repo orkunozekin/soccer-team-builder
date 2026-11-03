@@ -112,7 +112,7 @@ export default function JoinPageClient() {
           </CardHeader>
           <CardContent className="space-y-4">
             {previewError ? (
-              <p className="text-sm text-amber-400">
+              <p className="text-sm text-warning">
                 {previewError}. You can still sign in and try the invite code.
               </p>
             ) : clubName ? (
@@ -152,18 +152,18 @@ export default function JoinPageClient() {
         </CardHeader>
         <CardContent className="space-y-4">
           {autoError && (
-            <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
+            <div className="rounded-md bg-danger-wash/20 p-3 text-sm text-danger">
               {autoError}
             </div>
           )}
           {!autoError && previewError && codeFromUrl && !autoStatus && (
-            <p className="text-sm text-amber-400">
+            <p className="text-sm text-warning">
               Could not load the club name. Redeeming invite…
             </p>
           )}
           {autoStatus && (
             <div className="space-y-3">
-              <div className="rounded-md bg-green-900/20 p-3 text-sm text-green-400">
+              <div className="rounded-md bg-success-wash/20 p-3 text-sm text-success">
                 {autoStatus}
               </div>
               <Button type="button" onClick={() => router.push('/matches')}>

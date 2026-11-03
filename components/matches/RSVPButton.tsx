@@ -264,8 +264,8 @@ export function RSVPButton({
         }
       />
       {showPositionPickerForGkBlock && (
-        <div className="space-y-3 rounded-lg border border-amber-800 bg-amber-950/30 p-3">
-          <p className="text-sm font-medium text-amber-200">
+        <div className="space-y-3 rounded-lg border border-warning-line bg-warning-deep/30 p-3">
+          <p className="text-sm font-medium text-warning-strong">
             There are already 2 goalkeepers for this match. Choose a different
             position to RSVP.
           </p>
@@ -293,7 +293,7 @@ export function RSVPButton({
             </Button>
           </div>
           {positionForRsvp && isGoalkeeper(positionForRsvp) && (
-            <p className="text-sm text-amber-300">
+            <p className="text-sm text-warning-soft">
               Please select a non-goalkeeper position.
             </p>
           )}
@@ -316,7 +316,7 @@ export function RSVPButton({
         </Button>
       )}
       {error && !showPositionPickerForGkBlock && (
-        <p className="text-sm text-red-400">{error}</p>
+        <p className="text-sm text-danger">{error}</p>
       )}
     </div>
   )

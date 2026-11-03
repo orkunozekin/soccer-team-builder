@@ -21,16 +21,23 @@ This document lists the technologies used in this app so you can replicate the s
 
 ## Styling & UI primitives
 
-| Technology                         | Version | Purpose                                                         |
-| ---------------------------------- | ------- | --------------------------------------------------------------- |
-| **Tailwind CSS**                   | ^3.4    | Utility-first CSS, theme (colors, radius, animations)           |
-| **tailwindcss-animate**            | latest  | Accordion and other animations                                  |
-| **PostCSS**                        | ^8      | Tailwind pipeline (`postcss.config.mjs`)                        |
-| **class-variance-authority (cva)** | latest  | Variant-based component APIs (e.g. button variants)             |
-| **clsx** + **tailwind-merge**      | latest  | Conditional and merged class names (e.g. `cn()` in `lib/utils`) |
+| Technology                         | Version | Purpose                                                           |
+| ---------------------------------- | ------- | ----------------------------------------------------------------- |
+| **Tailwind CSS**                   | ^3.4    | Utility-first CSS, theme (colors, radius, animations)             |
+| **tailwindcss-animate**            | latest  | Accordion and other animations                                    |
+| **PostCSS**                        | ^8      | Tailwind pipeline (`postcss.config.mjs`)                          |
+| **class-variance-authority (cva)** | latest  | Variant-based component APIs (e.g. button variants)               |
+| **clsx** + **tailwind-merge**      | latest  | Conditional and merged class names (e.g. `cn()` in `lib/utils`)   |
+| **next-themes**                    | 0.4.6   | Applies the `dark` / `light` class on `<html>` before first paint |
 
 - **Dark mode**: `darkMode: ['class']` in `tailwind.config.ts`.
 - **Theme**: Custom palette + shadcn/ui CSS variables for `background`, `foreground`, `card`, `primary`, etc.
+- **Dark / light themes (Floodlight / Daylight)**:
+  - Colors are tokens, not `dark:` variants. Each Tailwind color name (`ink`, `chalk`, `fog`, `turf`, `line`, `danger`, `success`, `warning`, …) maps to `rgb(var(--fl-*) / <alpha-value>)` in `tailwind.config.ts`. `app/globals.css` defines the Daylight RGB triplets in `:root` and the Floodlight ones in `.dark`, so opacity modifiers (`text-chalk/70`) keep working. Don't add `dark:` classes or raw palette colors (`text-red-400`, `bg-white`, `[#hex]`) for themed UI; add or reuse a `--fl-*` token with both values. Fills that never flip (`on-bright`, `pitch-chalk`, the `--pitch-*` lineup surface, team pinny colors) are defined once in `:root`.
+  - `components/providers/ThemeProvider.tsx` wraps `next-themes` (`attribute="class"`, `defaultTheme="dark"`, `enableSystem={false}`, `storageKey="sv-theme"`). localStorage is only a first-paint cache.
+  - `components/providers/ThemeSync.tsx` applies the signed-in user's `themePreference` (from `users/{uid}`, written via `PATCH /api/users/me`) once the profile and flags are ready, and forces dark while the flag is off.
+  - The LaunchDarkly flag `light-theme` (default `false`, local override `NEXT_PUBLIC_FF_LIGHT_THEME`, dev only) gates the sidebar `ThemeToggle` and light mode as a whole.
+  - Plan and palette: `docs/features/theme-preference-feature-plan.md`. Visual reference: the [Soccerville Daylight Theme design canvas](https://claude.ai/artifact/WxiJNNTkc7f14wSQaSCiaj).
 
 ---
 

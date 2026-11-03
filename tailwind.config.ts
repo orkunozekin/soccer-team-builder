@@ -63,9 +63,43 @@ const config: Config = {
         'ok-pill-border': 'rgb(var(--fl-ok-pill-border) / <alpha-value>)',
         danger: 'rgb(var(--fl-danger) / <alpha-value>)',
         'danger-wash': 'rgb(var(--fl-danger-wash) / <alpha-value>)',
+        'danger-mark': 'rgb(var(--fl-danger-mark) / <alpha-value>)',
+        'alert-text': 'rgb(var(--fl-alert-text) / <alpha-value>)',
+        'alert-text-soft': 'rgb(var(--fl-alert-text-soft) / <alpha-value>)',
+        'alert-bg': 'rgb(var(--fl-alert-bg) / <alpha-value>)',
+        success: {
+          DEFAULT: 'rgb(var(--fl-success) / <alpha-value>)',
+          bright: 'rgb(var(--fl-success-bright) / <alpha-value>)',
+          soft: 'rgb(var(--fl-success-soft) / <alpha-value>)',
+          wash: 'rgb(var(--fl-success-wash) / <alpha-value>)',
+          deep: 'rgb(var(--fl-success-deep) / <alpha-value>)',
+          line: 'rgb(var(--fl-success-line) / <alpha-value>)',
+        },
+        warning: {
+          DEFAULT: 'rgb(var(--fl-warning) / <alpha-value>)',
+          strong: 'rgb(var(--fl-warning-strong) / <alpha-value>)',
+          soft: 'rgb(var(--fl-warning-soft) / <alpha-value>)',
+          icon: 'rgb(var(--fl-warning-icon) / <alpha-value>)',
+          wash: 'rgb(var(--fl-warning-wash) / <alpha-value>)',
+          deep: 'rgb(var(--fl-warning-deep) / <alpha-value>)',
+          line: 'rgb(var(--fl-warning-line) / <alpha-value>)',
+        },
+        'gk-pill': {
+          DEFAULT: 'rgb(var(--fl-gk-pill) / <alpha-value>)',
+          border: 'rgb(var(--fl-gk-pill-border) / <alpha-value>)',
+          text: 'rgb(var(--fl-gk-pill-text) / <alpha-value>)',
+        },
+        'chart-grid': 'rgb(var(--fl-chart-grid) / <alpha-value>)',
+        confetti: 'rgb(var(--fl-confetti) / <alpha-value>)',
+        'chip-shade': 'rgb(var(--fl-chip-shade) / <alpha-value>)',
+        'toggle-active': 'rgb(var(--fl-toggle-active) / <alpha-value>)',
+        // Full color incl. alpha: transparent in dark, a visible edge in light.
+        'toggle-edge': 'rgb(var(--fl-toggle-edge))',
         // Same in both themes: dark text on fills that never flip (white
         // RSVP pill, orange profile badge).
         'on-bright': 'rgb(var(--fl-on-bright) / <alpha-value>)',
+        // Same in both themes: chalk markings on the (non-flipping) pitch.
+        'pitch-chalk': 'rgb(var(--fl-pitch-chalk) / <alpha-value>)',
         // Full shadow color incl. alpha (e.g. shadow-elevation), per theme.
         elevation: 'rgb(var(--fl-elevation))',
         background: 'hsl(var(--background))',

@@ -71,7 +71,7 @@ export function TeamCard({ team, users, currentUserId }: TeamCardProps) {
                       variant="outline"
                       className={`ml-auto shrink-0 text-xs ${
                         isGoalkeeper(user.position)
-                          ? 'border-amber-600 bg-amber-700/50 text-amber-100'
+                          ? 'border-gk-pill-border bg-gk-pill/50 text-gk-pill-text'
                           : ''
                       }`}
                     >

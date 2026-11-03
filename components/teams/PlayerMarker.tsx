@@ -44,7 +44,7 @@ export function PlayerMarker({
       <div
         className={`relative flex items-center justify-center rounded-full border shadow-sm ${
           isCurrentUser
-            ? 'animate-headcount-bump border-on-bright ring-2 ring-chalk'
+            ? 'animate-headcount-bump border-on-bright ring-2 ring-pitch-chalk'
             : 'border-white/90'
         }`}
         style={{
