@@ -169,7 +169,7 @@ export function EditMatchCard({
                     onTimeChange={setTime}
                     datePlaceholder="Select date"
                     disabled={saving}
-                    timeStep={300}
+                    timeStep={900}
                   />
                   <LocationPicker
                     locationName={locationName}

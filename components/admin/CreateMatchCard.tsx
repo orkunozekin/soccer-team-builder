@@ -135,7 +135,7 @@ export function CreateMatchCard({
               datePlaceholder="Select date"
               disabled={loading}
               minDate={new Date(today + 'T12:00:00')}
-              timeStep={300}
+              timeStep={900}
             />
 
             <LocationPicker

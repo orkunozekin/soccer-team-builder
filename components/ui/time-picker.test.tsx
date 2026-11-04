@@ -13,6 +13,15 @@ describe('normalizeTimeValue', () => {
 })
 
 describe('buildTimeOptions', () => {
+  it('defaults to 15-minute options for a full day', () => {
+    const options = buildTimeOptions()
+    expect(options).toHaveLength(96)
+    expect(options[0]).toEqual({ value: '00:00', label: '12:00 AM' })
+    expect(options[1]).toEqual({ value: '00:15', label: '12:15 AM' })
+    expect(options[36]).toEqual({ value: '09:00', label: '9:00 AM' })
+    expect(options.at(-1)).toEqual({ value: '23:45', label: '11:45 PM' })
+  })
+
   it('builds 5-minute options for a full day', () => {
     const options = buildTimeOptions(300)
     expect(options).toHaveLength(288)
