@@ -27,7 +27,7 @@ export interface DatePickerTimeProps {
   className?: string
   dateId?: string
   timeId?: string
-  /** Time input step in seconds (default 300 = 5 min) */
+  /** Time input step in seconds (default 900 = 15 min) */
   timeStep?: number
 }
 
@@ -42,7 +42,7 @@ export function DatePickerTime({
   className,
   dateId = 'date-picker',
   timeId = 'time-picker',
-  timeStep = 300,
+  timeStep = 900,
 }: DatePickerTimeProps) {
   const [open, setOpen] = React.useState(false)
   const dateObj = date ? new Date(date + 'T12:00:00') : undefined

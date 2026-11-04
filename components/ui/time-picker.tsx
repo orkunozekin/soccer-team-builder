@@ -16,7 +16,7 @@ export interface TimePickerProps {
   onChange: (time: string) => void
   id?: string
   disabled?: boolean
-  /** Step in seconds (default 300 = 5 min) */
+  /** Step in seconds (default 900 = 15 min) */
   step?: number
   className?: string
   placeholder?: string
@@ -33,7 +33,7 @@ export function normalizeTimeValue(time: string): string {
 }
 
 export function buildTimeOptions(
-  stepSeconds = 300
+  stepSeconds = 900
 ): { value: string; label: string }[] {
   const stepMinutes = Math.max(1, Math.round(stepSeconds / 60))
   const options: { value: string; label: string }[] = []
@@ -54,7 +54,7 @@ export function TimePicker({
   onChange,
   id,
   disabled = false,
-  step = 300,
+  step = 900,
   className,
   placeholder = 'Select time',
 }: TimePickerProps) {
