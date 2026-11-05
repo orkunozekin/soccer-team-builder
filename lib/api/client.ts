@@ -20,6 +20,13 @@ import type {
   ClubMembershipWithClub,
   ClubMembershipWithUser,
 } from '@/types/club'
+import type {
+  ClubSkillRankingDTO,
+  SkillAnswers,
+  SkillAssessmentDTO,
+  SkillRankingMemberDTO,
+  SkillRankingTiers,
+} from '@/types/skill'
 import type { ThemePreference } from '@/types/user'
 
 const API_BASE = '/api'
@@ -896,6 +903,81 @@ export async function backfillClubMembershipsAPI(
   if (!response.ok) {
     const error = await response.json()
     throw new Error(error.error || 'Failed to backfill memberships')
+  }
+  return response.json()
+}
+
+type ApiError = Error & { status?: number; code?: string }
+
+async function throwApiError(
+  response: Response,
+  fallback: string
+): Promise<never> {
+  const body = (await response.json().catch(() => ({}))) as {
+    error?: string
+    code?: string
+  }
+  const err = new Error(body.error || fallback) as ApiError
+  err.status = response.status
+  if (body.code) err.code = body.code
+  throw err
+}
+
+/** The signed-in player's skill questionnaire (null when not answered). */
+export async function getMySkillAssessmentAPI(): Promise<{
+  assessment: SkillAssessmentDTO | null
+}> {
+  const response = await apiRequest('/users/me/skill-assessment', {
+    method: 'GET',
+  })
+  if (!response.ok) {
+    await throwApiError(response, 'Failed to load skill questionnaire')
+  }
+  return response.json()
+}
+
+export async function saveMySkillAssessmentAPI(
+  answers: SkillAnswers
+): Promise<{ success: boolean; assessment: SkillAssessmentDTO }> {
+  const response = await apiRequest('/users/me/skill-assessment', {
+    method: 'PUT',
+    body: JSON.stringify({ answers }),
+  })
+  if (!response.ok) {
+    await throwApiError(response, 'Failed to save skill questionnaire')
+  }
+  return response.json()
+}
+
+/** Club admins: the club's skill ranking plus active members. */
+export async function getClubSkillRankingAPI(clubId: string): Promise<{
+  ranking: ClubSkillRankingDTO
+  members: SkillRankingMemberDTO[]
+}> {
+  const response = await apiRequest(
+    `/clubs/${encodeURIComponent(clubId)}/skill-ranking`,
+    { method: 'GET' }
+  )
+  if (!response.ok) {
+    await throwApiError(response, 'Failed to load skill ranking')
+  }
+  return response.json()
+}
+
+/**
+ * Club admins: save the ranking loaded at `version`. Rejects with
+ * `status === 409` when another admin saved first (reload, then retry).
+ */
+export async function saveClubSkillRankingAPI(
+  clubId: string,
+  input: { tiers: SkillRankingTiers; version: number }
+): Promise<{ success: boolean; ranking: ClubSkillRankingDTO }> {
+  const response = await apiRequest(
+    `/clubs/${encodeURIComponent(clubId)}/skill-ranking`,
+    { method: 'PUT', body: JSON.stringify(input) }
+  )
+  if (!response.ok) {
+    await throwApiError(response, 'Failed to save skill ranking')
   }
   return response.json()
 }

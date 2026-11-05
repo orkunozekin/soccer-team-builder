@@ -9,7 +9,7 @@ Plan to give each club a private, admin-maintained skill ranking of its players,
 | Status | in-progress |
 | Owner session | — |
 | Last updated | 2026-11-05 |
-| Related PR / branch | Step 1: [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137) (`orkun/skill-step-1-foundation`) |
+| Related PR / branch | Step 1: [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137) (merged, `b87260b`); Step 2: `orkun/skill-step-2-storage-apis` (PR_LINK) |
 
 ## Why not a 1–5 self-rating
 
@@ -179,20 +179,28 @@ Runs **last** in the rebalance route, after GK shift and pin application. Pair m
 - Plan revised after owner feedback (admin ranking + questionnaire instead of 1–5 self-rating).
 - Owner decisions: one shared ranking per club; questionnaire in v1; match page gets only the admins-only strength card.
 - Workflow: one PR per step (Todos 1–5), each squash-merged after a passing AI review on its head (Greptile 5/5, or a clean Codex review when Greptile is unavailable; see `docs/AGENT_CONTEXT.md` § Code review on every PR) and green CI, before the next step starts.
-- **Step 1 (in review, [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137)):** flag `skill-balanced-teams` (default false, `NEXT_PUBLIC_FF_SKILL_BALANCED_TEAMS` override, `.env.sample`); `types/skill.ts`; `lib/skill/scoring.ts` (`SKILL_QUESTIONNAIRE`, `SKILL_TIER_LABELS`/`SKILL_TIER_VALUES`, `parseSkillAnswers`, `validateSkillTiers` for saves, `normalizeStoredSkillTiers` for reads, `assessmentScore`, `rankingScores`, `computeEffectiveSkillScores` → `{ scoreByUserId, unratedUserIds }`); `lib/teams/balanceTeamsBySkill.ts` (`balanceTeamsBySkill`, `summarizeTeamStrength` → `{ teams: [{ teamNumber, total, average, size }], unratedCount }`, rounded to 2 decimals). Colocated Vitest tests.
+- **Step 1 (merged, [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137), `b87260b`):** flag `skill-balanced-teams` (default false, `NEXT_PUBLIC_FF_SKILL_BALANCED_TEAMS` override, `.env.sample`); `types/skill.ts`; `lib/skill/scoring.ts` (`SKILL_QUESTIONNAIRE`, `SKILL_TIER_LABELS`/`SKILL_TIER_VALUES`, `parseSkillAnswers`, `validateSkillTiers` for saves, `normalizeStoredSkillTiers` for reads, `assessmentScore`, `rankingScores`, `computeEffectiveSkillScores` → `{ scoreByUserId, unratedUserIds }`); `lib/teams/balanceTeamsBySkill.ts` (`balanceTeamsBySkill`, `summarizeTeamStrength` → `{ teams: [{ teamNumber, total, average, size }], unratedCount }`, rounded to 2 decimals). Colocated Vitest tests.
 - Balancer note: greedy seed + best-improvement pairwise swaps (per Design) is a local search, not exhaustive; on random small pairs it occasionally lands up to ~1 point above the brute-force optimum. Accepted for v1 per the plan.
+- **Step 2 (in review, PR_LINK):**
+  - `firestore.rules`: `allow read, write: if false` for `clubSkillRankings/{clubId}` and `skillAssessments/{userId}`.
+  - [`lib/skill/skillStoreAdmin.ts`](../../lib/skill/skillStoreAdmin.ts) (Admin SDK, takes `adminDb`): `getSkillAssessment`, `saveSkillAssessment`, `getSkillAnswersForUsers` (chunked `getAll`, malformed answers skipped), `getClubSkillRanking(adminDb, clubId, allowedUids?)` → `{ tiers, version }` (0 when missing), `saveClubSkillRanking` (transaction; returns `{ ok: true, version }` or `{ ok: false, conflict: true, currentVersion }`), `getEffectiveSkillScoresForClub(adminDb, clubId, uids)` → `EffectiveSkillScores`.
+  - `GET/PUT /api/users/me/skill-assessment` (`verifyAuth`, `'fallback'` → 401, flag off → 403, invalid answers → 400).
+  - `GET/PUT /api/clubs/[clubId]/skill-ranking` (`verifyClubAdmin`: no uid → 401, membership lookup error → 503 retryable, non-admin → 403, flag off → 403). GET returns the ranking with former members dropped plus active members (`displayName`, `position`, `assessmentScore` or null). PUT validates `{ tiers, version }` against active members (400), 409 `{ error: 'Another admin changed the ranking. Reload to see their changes.', code: 'version_conflict' }`, audit `club.skill_ranking_updated` (metadata: `rankedCount`, `tierCounts`, `version`).
+  - DTO types in `types/skill.ts` (`SkillAssessmentDTO`, `ClubSkillRankingDTO`, `SkillRankingMemberDTO`). Client helpers in `lib/api/client.ts`: `getMySkillAssessmentAPI`, `saveMySkillAssessmentAPI`, `getClubSkillRankingAPI`, `saveClubSkillRankingAPI` (errors carry `status`, e.g. 409, and `code`).
+  - Tests: store unit tests (version check, chunking, normalization) and route tests for both routes.
 
 ### Remaining work
 
-- Step 1: pass review on #137, then merge (coordinator).
-- Then Step 2 (Storage + APIs): reuse `parseSkillAnswers` / `validateSkillTiers` (pass active member uids) in the routes and `normalizeStoredSkillTiers` when reading `clubSkillRankings`. Steps 3–5 in order.
+- Step 2: pass review on PR_LINK, then merge (coordinator).
+- Then Step 3 (skill-aware rebalance): in the rebalance route, after `verifyClubAdminForMatch`, evaluate `skill-balanced-teams` server-side and call `getEffectiveSkillScoresForClub(adminDb, clubId, rosterUids)` from `lib/skill/skillStoreAdmin.ts`; pass `scoreByUserId` to `balanceTeamsBySkill` (locked = GKs + pinned) and `unratedUserIds.length` to `summarizeTeamStrength`. A match without `clubId` (pre-backfill) has no ranking: skip skill balancing. Steps 4–5 in order.
+- Deploy note: `firestore.rules` must be deployed for the deny blocks (no new indexes; lookups are by doc id).
 
 ### Run ledger
 
 | Step | Session | PR | Status |
 |------|---------|----|--------|
-| 1 | Claude Code (cloud) | [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137) | in review |
-| 2 | — | — | not started |
+| 1 | Claude Code (cloud) | [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137) | merged (`b87260b`) |
+| 2 | Claude Code (cloud) | PR_LINK | in review |
 | 3 | — | — | not started |
 | 4 | — | — | not started |
 | 5 | — | — | not started |
