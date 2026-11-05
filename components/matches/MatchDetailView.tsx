@@ -210,6 +210,13 @@ export function MatchDetailView({
     }
   }
 
+  // Any roster change other than the skill rebalance itself makes the strength
+  // summary stale, so drop it before refetching.
+  const refetchAfterRosterChange = async () => {
+    setSkillSummary(null)
+    await refetchMatchRoster()
+  }
+
   if (loadingMatch || !matchId || !match) {
     return <PageLoadingSkeleton showBack variant="container" />
   }
@@ -245,8 +252,8 @@ export function MatchDetailView({
               showCheckInHeadcount={showCheckInHeadcount}
               userRsvp={userRsvp}
               userProfilePosition={userProfilePosition}
-              onTeamsRegenerated={refetchMatchRoster}
-              onMatchRefetch={refetchMatchRoster}
+              onTeamsRegenerated={refetchAfterRosterChange}
+              onMatchRefetch={refetchAfterRosterChange}
               teams={teams}
               rosterUsers={usersWithMatchPosition}
               currentUserId={userId}
@@ -277,13 +284,13 @@ export function MatchDetailView({
                 <EditMatchCard
                   matchId={matchId}
                   match={match}
-                  onSaved={refetchMatchRoster}
+                  onSaved={refetchAfterRosterChange}
                   onDeleted={() => router.push(backLink.href)}
                 />
                 <ImpersonateRSVP
                   match={match}
                   matchRSVPs={matchRSVPs}
-                  onDone={refetchMatchRoster}
+                  onDone={refetchAfterRosterChange}
                 />
               </>
             )}
@@ -303,7 +310,7 @@ export function MatchDetailView({
                 teams={teams}
                 users={usersWithMatchPosition}
                 isAdmin={canManageMatch}
-                onTeamsChanged={refetchMatchRoster}
+                onTeamsChanged={refetchAfterRosterChange}
                 currentUserId={userId}
                 matchRSVPs={matchRSVPs}
                 matchDate={match.date}
@@ -328,7 +335,7 @@ export function MatchDetailView({
                   matchId={matchId}
                   teams={teams}
                   users={usersWithMatchPosition}
-                  onTransferComplete={refetchMatchRoster}
+                  onTransferComplete={refetchAfterRosterChange}
                 />
               )}
             </div>
@@ -341,11 +348,7 @@ export function MatchDetailView({
               matchId={matchId}
               matchRSVPs={matchRSVPs}
               users={rosterUsers}
-              onRestoreComplete={async () => {
-                // Restore RSVP order undoes a skill rebalance.
-                setSkillSummary(null)
-                await refetchMatchRoster()
-              }}
+              onRestoreComplete={refetchAfterRosterChange}
             />
           </div>
         )}
