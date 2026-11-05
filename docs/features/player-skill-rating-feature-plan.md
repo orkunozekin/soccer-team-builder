@@ -24,7 +24,7 @@ So v1's source of truth is a **club ranking maintained by admins**. Players fill
 ## Goals (v1)
 
 - **Admin skill ranking** — club admins place members into tiers (Top, Strong, Average, Developing) and order them within each tier. One shared ranking per club; any club admin can edit it. Concurrent edits are detected (version check), not silently overwritten.
-- **Skills questionnaire** — four questions about observable ability (first touch, passing, fitness, game sense), three concrete answers each. Answered once per player (not per club); prompted as an optional step in the RSVP flow and editable from the profile.
+- **Skills questionnaire** — four questions about observable ability (first touch, passing, fitness, game sense), three concrete answers each. Answered once per player (not per club); required once in the RSVP flow (owner decision after v1: no skipping) and editable from the profile.
 - **Private** — the ranking is visible only to club admins (and super users). Questionnaire answers are visible to the player and to admins of clubs they belong to. Nothing appears on rosters, team cards or match pages for players.
 - **Skill-aware rebalance** — with the flag on, **Rebalance teams** keeps everything it does today (RSVP-order roster selection, even pair sizes, one GK per team where available, admin pins) and then swaps outfield players within each matchup pair (Team 1 vs 2, 3 vs 4, …) to minimize the difference in total skill.
 - **Admins-only strength card** on the match page after a skill rebalance: per-team strength, how many players had no ranking or questionnaire, a link to the ranking. No other match page changes.
@@ -115,7 +115,7 @@ Runs **last** in the rebalance route, after GK shift and pin application. Pair m
 
 ### UX
 
-- **RSVP:** when the flag is on and the player has no assessment, `RSVPPositionModal` adds an optional "Your game" step after position. "Skip" never blocks the RSVP; the assessment saves independently of the RSVP call, and a failed save doesn't fail the RSVP.
+- **RSVP:** when the flag is on and the player has no assessment, `RSVPPositionModal` adds a required "Your game" step after position (no Skip). The answers are saved first and the RSVP is sent only after the save succeeds; a failed save keeps the modal open with the answers and an error so the player can retry. While we don't yet know whether the player answered (loading, or an earlier save in flight) Next is disabled; after a load error the questionnaire is asked again rather than let the RSVP through. _(Changed after v1 at the owner's request; v1 shipped it optional and fire-and-forget.)_
 - **Profile:** "Skill questionnaire" section (flag on) with the same form. Note: "Only club admins see your answers."
 - **Club roster page (admins):** a "Skill ranking" card below the member list (flag on). Four tier groups plus an "Unranked" group. Each row: name, position, questionnaire hint (e.g. "Questionnaire 2.8" or "No questionnaire"), a tier `Select`, and move up / move down buttons. Save / Discard; dirty-state indicator; 409 shows "Another admin changed the ranking. Reload to see their changes." Rows wrap at 320px.
 - **Match page:** after a successful skill rebalance, an admins-only card under the button: "Balanced by skill", per-team bar + total, "N of M players unrated, counted as average · Rank players" (link to roster). Held in component state only (not persisted, never shown to players).
@@ -155,7 +155,7 @@ Runs **last** in the rebalance route, after GK shift and pin application. Pair m
 ## Acceptance criteria
 
 - [x] Flag off: rebalance output unchanged (existing route tests pass); no new UI visible. _(Route tests; flag-off tests for profile, RSVP modal and roster page.)_
-- [x] Player can answer/edit the questionnaire from RSVP (skippable) and profile. _(Component tests; not checked manually against emulators.)_
+- [x] Player answers the questionnaire before their first RSVP (required, no Skip) and can edit it from the profile. _(Component tests; not checked manually against emulators.)_
 - [x] Club admins can tier and order members, save, and see a conflict message when another admin saved first; non-admins get 403; other clubs unreachable. _(Route tests for 401/403/409 and club scoping; `SkillRankingBoard` tests for tiering, ordering, save and the conflict UI. Not checked manually against emulators.)_
 - [ ] Client Firestore cannot read either collection. _(`firestore.rules` has `allow read, write: if false` for both; not exercised against the rules emulator here, and production needs the `firestore.rules` deploy.)_
 - [x] Flag on: rebalance keeps roster membership, sizes, GK coverage and pins; only the outfield split within each pair changes. _(Route + balancer tests; emulator run on a seeded match not done here.)_

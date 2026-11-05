@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { RSVPPositionModal } from './RSVPPositionModal'
+import { RSVPPositionModal, type SkillStepMode } from './RSVPPositionModal'
 import { SKILL_QUESTIONNAIRE } from '@/lib/skill/scoring'
 
 vi.mock('@/components/profile/PositionSelector', () => ({
@@ -10,11 +10,13 @@ vi.mock('@/components/profile/PositionSelector', () => ({
 }))
 
 function Harness({
-  showSkillStep,
+  skillStep,
+  skillError,
   onConfirm,
 }: {
-  showSkillStep?: boolean
-  onConfirm: (...args: unknown[]) => void
+  skillStep?: SkillStepMode
+  skillError?: string | null
+  onConfirm: (...args: unknown[]) => void | boolean | Promise<void | boolean>
 }) {
   const [open, setOpen] = useState(false)
   return (
@@ -27,7 +29,8 @@ function Harness({
         onOpenChange={setOpen}
         defaultPosition="ST"
         onConfirm={onConfirm}
-        showSkillStep={showSkillStep}
+        skillStep={skillStep}
+        skillError={skillError}
       />
     </>
   )
@@ -61,7 +64,7 @@ describe('RSVPPositionModal', () => {
   it('with the skill step, Next shows the questionnaire and Confirm needs all answers', async () => {
     const user = userEvent.setup()
     const onConfirm = vi.fn()
-    render(<Harness showSkillStep onConfirm={onConfirm} />)
+    render(<Harness skillStep="required" onConfirm={onConfirm} />)
 
     await user.click(screen.getByRole('button', { name: 'Open modal' }))
     expect(
@@ -85,30 +88,74 @@ describe('RSVPPositionModal', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('Skip confirms without answers; Back returns to position', async () => {
+  it('has no Skip: Confirm stays disabled until every question is answered; Back returns to position', async () => {
     const user = userEvent.setup()
     const onConfirm = vi.fn()
-    render(<Harness showSkillStep onConfirm={onConfirm} />)
+    render(<Harness skillStep="required" onConfirm={onConfirm} />)
 
     await user.click(screen.getByRole('button', { name: 'Open modal' }))
     await user.click(screen.getByRole('button', { name: 'Next' }))
-    await user.click(screen.getByRole('button', { name: 'Back' }))
-    expect(screen.getByText('Select your position')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Next' }))
+    expect(screen.queryByRole('button', { name: 'Skip' })).toBeNull()
     await user.click(
       screen.getByRole('radio', {
         name: SKILL_QUESTIONNAIRE[0].options[0].label,
       })
     )
-    await user.click(screen.getByRole('button', { name: 'Skip' }))
-    expect(onConfirm).toHaveBeenCalledWith('ST', undefined)
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Confirm RSVP' })).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.getByText('Select your position')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Confirm RSVP' })
+    ).not.toBeInTheDocument()
+    expect(onConfirm).not.toHaveBeenCalled()
+  })
+
+  it('while checking, Next is disabled and there is no way to confirm', async () => {
+    const user = userEvent.setup()
+    render(<Harness skillStep="checking" onConfirm={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Open modal' }))
+    expect(screen.getByRole('button', { name: /next/i })).toBeDisabled()
+    expect(
+      screen.queryByRole('button', { name: 'Confirm RSVP' })
+    ).not.toBeInTheDocument()
+  })
+
+  it('stays open with the error and the answers when onConfirm resolves false', async () => {
+    const user = userEvent.setup()
+    const onConfirm = vi.fn().mockResolvedValue(false)
+    const { rerender } = render(
+      <Harness skillStep="required" onConfirm={onConfirm} />
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Open modal' }))
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+    await answerAll(user)
+    await user.click(screen.getByRole('button', { name: 'Confirm RSVP' }))
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+    rerender(
+      <Harness
+        skillStep="required"
+        skillError="Couldn’t save your answers"
+        onConfirm={onConfirm}
+      />
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Couldn’t save your answers'
+    )
+    expect(
+      screen.getByRole('radio', {
+        name: SKILL_QUESTIONNAIRE[0].options[1].label,
+      })
+    ).toBeChecked()
   })
 
   it('resets the step and answers when reopened', async () => {
     const user = userEvent.setup()
-    render(<Harness showSkillStep onConfirm={vi.fn()} />)
+    render(<Harness skillStep="required" onConfirm={vi.fn()} />)
 
     await user.click(screen.getByRole('button', { name: 'Open modal' }))
     await user.click(screen.getByRole('button', { name: 'Next' }))

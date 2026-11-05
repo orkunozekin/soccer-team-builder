@@ -1,7 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { RSVPPositionModal } from '@/components/matches/RSVPPositionModal'
+import {
+  RSVPPositionModal,
+  type SkillStepMode,
+} from '@/components/matches/RSVPPositionModal'
 import { RSVPSuccessCelebration } from '@/components/matches/RSVPSuccessCelebration'
 import { PositionSelector } from '@/components/profile/PositionSelector'
 import { ProfileCompleteModal } from '@/components/profile/ProfileCompleteModal'
@@ -79,18 +82,30 @@ export function RSVPButton({
   const skillEnabled = useFeatureFlag('skill-balanced-teams')
   const authUid = user?.uid ?? null
   const skillAssessment = useSkillAssessment(skillEnabled ? authUid : null)
-  // Offer the questionnaire only once we know this player never answered;
-  // while loading, after a load error, or while an earlier save is still in
-  // flight, the modal behaves as before.
-  const showSkillStep =
-    skillEnabled &&
-    skillAssessment.loadStatus === 'loaded' &&
-    skillAssessment.assessment === null &&
-    skillAssessment.saveStatus !== 'saving'
+  const [skillSaveError, setSkillSaveError] = useState<string | null>(null)
+  // The questionnaire is required once. Leave it out only when we know the
+  // player answered; wait while loading or while an earlier save is still in
+  // flight; after a load error ask again rather than let the RSVP through.
+  const skillStep: SkillStepMode = !skillEnabled
+    ? 'none'
+    : skillAssessment.saveStatus === 'saving'
+      ? 'checking'
+      : skillAssessment.loadStatus === 'loaded' &&
+          skillAssessment.assessment !== null
+        ? 'none'
+        : skillAssessment.loadStatus === 'loaded' ||
+            skillAssessment.loadStatus === 'error'
+          ? 'required'
+          : 'checking'
 
   useEffect(() => {
     if (skillEnabled && authUid) void loadSkillAssessment(authUid)
   }, [skillEnabled, authUid])
+
+  // A save error belongs to one attempt; start each RSVP attempt clean.
+  useEffect(() => {
+    if (positionModalOpen) setSkillSaveError(null)
+  }, [positionModalOpen])
 
   const uid = currentUserId ?? user?.uid ?? null
   const userTeam = uid ? teams.find(t => t.playerIds.includes(uid)) : undefined
@@ -188,12 +203,24 @@ export function RSVPButton({
     setPositionModalOpen(true)
   }
 
-  const handleModalConfirm = (
+  const handleModalConfirm = async (
     pos: string | null,
     skillAnswers?: SkillAnswers
-  ) => {
-    // Best-effort and independent of the RSVP: never awaited, never throws.
-    if (skillAnswers && user) void saveSkillAssessment(user.uid, skillAnswers)
+  ): Promise<boolean | void> => {
+    if (skillAnswers) {
+      if (!user) return false
+      // Required: the answers must be saved before the RSVP is sent.
+      setSkillSaveError(null)
+      setLoading(true)
+      const saved = await saveSkillAssessment(user.uid, skillAnswers)
+      setLoading(false)
+      if (!saved) {
+        setSkillSaveError(
+          'Couldn’t save your answers, so you’re not RSVP’d yet. Please try again.'
+        )
+        return false
+      }
+    }
     return submitConfirmRSVP(pos)
   }
 
@@ -288,7 +315,8 @@ export function RSVPButton({
         onOpenChange={setPositionModalOpen}
         defaultPosition={userData?.position ?? null}
         onConfirm={handleModalConfirm}
-        showSkillStep={showSkillStep}
+        skillStep={skillStep}
+        skillError={skillSaveError}
         loading={loading}
         occupancy={
           Object.keys(positionOccupancy).length > 0

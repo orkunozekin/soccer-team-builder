@@ -17,17 +17,29 @@ interface RSVPPositionModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   defaultPosition: string | null
-  /** `skillAnswers` is set only when the player completed the optional skill step. */
+  /**
+   * `skillAnswers` is set when the skill step was shown (always complete).
+   * Resolve `false` to keep the modal open (e.g. the answers failed to save).
+   */
   onConfirm: (
     position: string | null,
     skillAnswers?: SkillAnswers
-  ) => void | Promise<void>
+  ) => void | boolean | Promise<void | boolean>
   loading?: boolean
   /** Team occupancy counts when the user is already on a team */
   occupancy?: Record<string, number>
-  /** Offer the optional "Your game" questionnaire step after position. */
-  showSkillStep?: boolean
+  /**
+   * Skill questionnaire step after position:
+   * - `'none'`: no step (already answered, or the feature is off)
+   * - `'checking'`: still finding out whether the player has answered
+   * - `'required'`: the player must answer before the RSVP is sent
+   */
+  skillStep?: SkillStepMode
+  /** Shown on the skill step, e.g. when saving the answers failed. */
+  skillError?: string | null
 }
+
+export type SkillStepMode = 'none' | 'checking' | 'required'
 
 type Step = 'position' | 'skill'
 
@@ -38,7 +50,8 @@ export function RSVPPositionModal({
   onConfirm,
   loading = false,
   occupancy,
-  showSkillStep = false,
+  skillStep = 'none',
+  skillError = null,
 }: RSVPPositionModalProps) {
   const [position, setPosition] = useState<string | null>(defaultPosition)
   const [step, setStep] = useState<Step>('position')
@@ -59,7 +72,8 @@ export function RSVPPositionModal({
   }, [open, defaultPosition])
 
   const handleConfirm = async (answers?: SkillAnswers) => {
-    await onConfirm(position, answers)
+    const result = await onConfirm(position, answers)
+    if (result === false) return
     onOpenChange(false)
   }
 
@@ -109,10 +123,18 @@ export function RSVPPositionModal({
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {onSkillStep
-                ? 'Optional: helps admins balance teams. Only club admins see your answers.'
+                ? 'Answer once to RSVP. It helps admins build even teams, and only club admins see your answers.'
                 : 'Choose the position you want to play for this match.'}
             </p>
           </div>
+          {onSkillStep && skillError && (
+            <div
+              role="alert"
+              className="mb-4 rounded-md bg-danger-wash/20 p-3 text-sm text-danger"
+            >
+              {skillError}
+            </div>
+          )}
           {onSkillStep ? (
             <SkillQuestionnaire
               value={skillAnswers}
@@ -145,14 +167,6 @@ export function RSVPPositionModal({
                 </Button>
                 <Button
                   type="button"
-                  variant="ghost"
-                  onClick={() => handleConfirm()}
-                  disabled={loading}
-                >
-                  Skip
-                </Button>
-                <Button
-                  type="button"
                   onClick={() =>
                     isSkillQuestionnaireComplete(skillAnswers) &&
                     handleConfirm(skillAnswers)
@@ -173,11 +187,12 @@ export function RSVPPositionModal({
                 >
                   Cancel
                 </Button>
-                {showSkillStep ? (
+                {skillStep !== 'none' ? (
                   <Button
                     type="button"
                     onClick={() => setStep('skill')}
-                    disabled={loading}
+                    aria-busy={skillStep === 'checking' || undefined}
+                    disabled={loading || skillStep === 'checking'}
                   >
                     Next
                   </Button>
