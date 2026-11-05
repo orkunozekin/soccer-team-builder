@@ -23,6 +23,8 @@ Full detail and reviewer focus areas: [`docs/AGENT_CONTEXT.md`](docs/AGENT_CONTE
 
 ## Greptile / PR review bots
 
-Repo review config lives under [`.greptile/`](.greptile/). It points reviewers at `docs/AGENT_CONTEXT.md` and encodes high-severity safety rules. Prefer updating `docs/AGENT_CONTEXT.md` + `.greptile/` together when standards change.
+Every PR gets an AI review: **Greptile first, Codex when Greptile is not available.** Greptile counts as unavailable when it has not reviewed the PR's current head about 15 minutes after the PR opened, a push, or an `@greptileai` tag (or it says it can't review, e.g. out of credits). Then post a top-level PR comment `@codex review`. When re-requesting review after a push, tag the reviewer that reviewed last. Full rules: [`docs/AGENT_CONTEXT.md`](docs/AGENT_CONTEXT.md) § Code review on every PR.
+
+Repo review config lives under [`.greptile/`](.greptile/). It points reviewers at `docs/AGENT_CONTEXT.md` and encodes high-severity safety rules. Prefer updating `docs/AGENT_CONTEXT.md` + `.greptile/` together when standards change. Codex reads `AGENTS.md` and the same `docs/AGENT_CONTEXT.md` focus list.
 
 Durable lessons from review feedback live in [`docs/AGENT_LESSONS.md`](docs/AGENT_LESSONS.md). Agents append there via `/address-pr-feedback` when a comment catches a gap worth preventing next time; promote repeated or high-severity lessons into `docs/AGENT_CONTEXT.md`.

@@ -1,6 +1,6 @@
 # Agent context: rules, standards, and safety
 
-Canonical instructions for LLM coding agents (Cursor, Greptile, and similar). Keep this file accurate; prefer updating it over scattering one-off rules in chat.
+Canonical instructions for LLM coding agents (Cursor, Greptile, Codex, and similar). Keep this file accurate; prefer updating it over scattering one-off rules in chat.
 
 **Session bootstrap:** run `/start` (see [`.claude/skills/start/SKILL.md`](../.claude/skills/start/SKILL.md); Cursor resolves the same skill via `.cursor/skills/start`).  
 **Root pointer:** [`AGENTS.md`](../AGENTS.md).
@@ -163,9 +163,21 @@ These are hard constraints. If a user request conflicts with them, refuse or pro
 16. Club-scoped async UI (`clubId` in props) must ignore stale responses after the club changes or the effect cleans up.
 17. After a successful mutation, do not roll back optimistic UI when a follow-up refresh fails; report the refresh failure separately.
 
-### Review / Greptile focus
+### Code review on every PR
 
-When acting as a reviewer (including Greptile), prioritize:
+Every PR gets an AI review, tried in this order:
+
+1. **Greptile** reviews automatically. Give it about 15 minutes after the PR opens, after a push, or after an `@greptileai` tag.
+2. **Codex**, when Greptile is not available: it has not reviewed the current head within that window, or it replies that it can't (out of credits, reviews disabled, not installed). Post a top-level PR comment `@codex review`.
+3. If Codex is not available either (no reaction or review about 15 minutes after the tag, or it replies that it can't), stop and tell the operator. Do not merge on CI alone.
+
+Address every finding from whichever reviewer ran (`/address-pr-feedback`). When re-requesting review after a push, tag the reviewer that reviewed last (`@greptileai` or `@codex review`).
+
+**Review gate for merging** (when a workflow merges on review): Greptile gives 5/5 on the current head SHA; or, when Codex reviewed instead, Codex's latest review of the current head reports no major issues and every earlier Codex finding is fixed or declined with a reason. Reviews of an older head do not count.
+
+### Review focus
+
+When acting as a reviewer (including Greptile and Codex), prioritize:
 
 - AuthZ gaps (missing `verify*`, wrong role, clubId confusion)
 - Secret leakage and unsafe logging

@@ -98,7 +98,7 @@ After acknowledgment:
 /address-pr-feedback → fix PR review threads + docs/AGENT_LESSONS.md
 ```
 
-Greptile and similar review bots should use root `AGENTS.md`, `docs/AGENT_CONTEXT.md`, and `.greptile/` rather than this skill file.
+Greptile, Codex, and similar review bots should use root `AGENTS.md`, `docs/AGENT_CONTEXT.md`, and `.greptile/` rather than this skill file.
 
 ## Skill locations (keep in sync)
 

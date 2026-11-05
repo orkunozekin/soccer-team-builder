@@ -178,7 +178,7 @@ Runs **last** in the rebalance route, after GK shift and pin application. Pair m
 
 - Plan revised after owner feedback (admin ranking + questionnaire instead of 1–5 self-rating).
 - Owner decisions: one shared ranking per club; questionnaire in v1; match page gets only the admins-only strength card.
-- Workflow: one PR per step (Todos 1–5), each squash-merged after Greptile 5/5 on its head and green CI, before the next step starts.
+- Workflow: one PR per step (Todos 1–5), each squash-merged after a passing AI review on its head (Greptile 5/5, or a clean Codex review when Greptile is unavailable; see `docs/AGENT_CONTEXT.md` § Code review on every PR) and green CI, before the next step starts.
 
 ### Remaining work
 
