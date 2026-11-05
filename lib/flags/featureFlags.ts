@@ -6,6 +6,7 @@ export const FEATURE_FLAG_KEYS = [
   'pitch-lineup-view',
   'club-creation',
   'light-theme',
+  'skill-balanced-teams',
 ] as const
 
 export type FeatureFlagKey = (typeof FEATURE_FLAG_KEYS)[number]
@@ -15,6 +16,7 @@ export const FEATURE_FLAG_DEFAULTS: Record<FeatureFlagKey, boolean> = {
   'pitch-lineup-view': false,
   'club-creation': false,
   'light-theme': false,
+  'skill-balanced-teams': false,
 }
 
 /**
@@ -48,6 +50,9 @@ export function getLocalFeatureFlagOverrides(): Partial<
   }
   if (process.env.NEXT_PUBLIC_FF_LIGHT_THEME === 'true') {
     overrides['light-theme'] = true
+  }
+  if (process.env.NEXT_PUBLIC_FF_SKILL_BALANCED_TEAMS === 'true') {
+    overrides['skill-balanced-teams'] = true
   }
   return overrides
 }
