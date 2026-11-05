@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { cancelRSVPAPI, confirmRSVPAPI } from '@/lib/api/client'
+import { useFeatureFlag } from '@/lib/flags/useFeatureFlag'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useIsClubAdmin } from '@/lib/hooks/useClubMemberships'
 import { getUserRSVP } from '@/lib/services/rsvpService'
@@ -26,7 +27,13 @@ import { isProfileComplete } from '@/lib/utils/profile'
 import { hasMatchStarted } from '@/lib/utils/rsvpScheduler'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { useMatchStore } from '@/store/matchStore'
+import {
+  loadSkillAssessment,
+  saveSkillAssessment,
+  useSkillAssessment,
+} from '@/store/skillAssessmentStore'
 import { Match } from '@/types/match'
+import type { SkillAnswers } from '@/types/skill'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
 
@@ -68,6 +75,20 @@ export function RSVPButton({
   const [justRsvped, setJustRsvped] = useState(false)
 
   const dismissCelebration = useCallback(() => setShowCelebration(false), [])
+
+  const skillEnabled = useFeatureFlag('skill-balanced-teams')
+  const authUid = user?.uid ?? null
+  const skillAssessment = useSkillAssessment(skillEnabled ? authUid : null)
+  // Offer the questionnaire only once we know this player never answered;
+  // while loading or after a load error the modal behaves as before.
+  const showSkillStep =
+    skillEnabled &&
+    skillAssessment.loadStatus === 'loaded' &&
+    skillAssessment.assessment === null
+
+  useEffect(() => {
+    if (skillEnabled && authUid) void loadSkillAssessment(authUid)
+  }, [skillEnabled, authUid])
 
   const uid = currentUserId ?? user?.uid ?? null
   const userTeam = uid ? teams.find(t => t.playerIds.includes(uid)) : undefined
@@ -165,6 +186,15 @@ export function RSVPButton({
     setPositionModalOpen(true)
   }
 
+  const handleModalConfirm = (
+    pos: string | null,
+    skillAnswers?: SkillAnswers
+  ) => {
+    // Best-effort and independent of the RSVP: never awaited, never throws.
+    if (skillAnswers && user) void saveSkillAssessment(user.uid, skillAnswers)
+    return submitConfirmRSVP(pos)
+  }
+
   const handleProfileSaved = () => {
     setPositionModalOpen(true)
   }
@@ -255,7 +285,8 @@ export function RSVPButton({
         open={positionModalOpen}
         onOpenChange={setPositionModalOpen}
         defaultPosition={userData?.position ?? null}
-        onConfirm={pos => submitConfirmRSVP(pos)}
+        onConfirm={handleModalConfirm}
+        showSkillStep={showSkillStep}
         loading={loading}
         occupancy={
           Object.keys(positionOccupancy).length > 0
