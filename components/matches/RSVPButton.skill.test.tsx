@@ -220,4 +220,34 @@ describe('RSVPButton skill step', () => {
     ).toBeInTheDocument()
     expect(screen.queryByText(/save failed/i)).not.toBeInTheDocument()
   })
+
+  it('does not offer the questionnaire again while an earlier save is in flight', async () => {
+    const user = userEvent.setup()
+    flagMock.mockReturnValue(true)
+    getSkillMock.mockResolvedValue({ assessment: null })
+    saveSkillMock.mockReturnValue(new Promise(() => {}))
+    const { unmount } = render(<RSVPButton match={match} />)
+    await waitFor(() =>
+      expect(useSkillAssessmentStore.getState().loadStatus).toBe('loaded')
+    )
+
+    await openModal(user)
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+    for (const question of SKILL_QUESTIONNAIRE) {
+      await user.click(
+        screen.getByRole('radio', { name: question.options[0].label })
+      )
+    }
+    await user.click(screen.getByRole('button', { name: 'Confirm RSVP' }))
+    await waitFor(() => expect(saveSkillMock).toHaveBeenCalledTimes(1))
+    unmount()
+
+    // Another match while the first save is still pending.
+    render(<RSVPButton match={{ ...match, id: 'match2' }} />)
+    await openModal(user)
+    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Confirm RSVP' }))
+    expect(confirmRSVPAPIMock).toHaveBeenLastCalledWith('match2', 'ST')
+    expect(saveSkillMock).toHaveBeenCalledTimes(1)
+  })
 })

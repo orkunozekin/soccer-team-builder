@@ -48,9 +48,18 @@ export const useSkillAssessmentStore = create<SkillAssessmentState>(
   () => initialState
 )
 
+/**
+ * Tail of the save queue. Saves go out one at a time so the server's last
+ * write is always the latest save (the PUT overwrites unconditionally).
+ */
+let saveQueue: Promise<unknown> = Promise.resolve()
+
 export function resetSkillAssessmentStore() {
+  saveQueue = Promise.resolve()
   useSkillAssessmentStore.setState(initialState)
 }
+
+class SignedOutBeforeSendError extends Error {}
 
 function isSignedIn(uid: string) {
   return useAuthStore.getState().user?.uid === uid
@@ -118,6 +127,9 @@ export async function loadSkillAssessment(
 
 /**
  * Save `uid`'s answers. Never throws; resolves true when this save landed.
+ * Saves are queued behind any save still in flight, and a queued save is
+ * dropped if `uid` is no longer signed in when its turn comes (the request
+ * would otherwise carry the next account's token).
  * A successful save becomes the loaded state (superseding any load still in
  * flight). A failed save leaves the load state alone, so it never strands a
  * load in "loading".
@@ -143,8 +155,14 @@ export async function saveSkillAssessment(
     return false
   }
 
+  const send = saveQueue.then(() => {
+    if (!isSignedIn(uid)) throw new SignedOutBeforeSendError()
+    return saveMySkillAssessmentAPI(answers)
+  })
+  saveQueue = send.catch(() => undefined)
+
   try {
-    const { assessment } = await saveMySkillAssessmentAPI(answers)
+    const { assessment } = await send
     if (!canWrite()) return false
     useSkillAssessmentStore.setState(current => ({
       assessment,

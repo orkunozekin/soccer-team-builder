@@ -80,11 +80,13 @@ export function RSVPButton({
   const authUid = user?.uid ?? null
   const skillAssessment = useSkillAssessment(skillEnabled ? authUid : null)
   // Offer the questionnaire only once we know this player never answered;
-  // while loading or after a load error the modal behaves as before.
+  // while loading, after a load error, or while an earlier save is still in
+  // flight, the modal behaves as before.
   const showSkillStep =
     skillEnabled &&
     skillAssessment.loadStatus === 'loaded' &&
-    skillAssessment.assessment === null
+    skillAssessment.assessment === null &&
+    skillAssessment.saveStatus !== 'saving'
 
   useEffect(() => {
     if (skillEnabled && authUid) void loadSkillAssessment(authUid)

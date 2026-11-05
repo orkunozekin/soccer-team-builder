@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   clearSkillAssessmentSaveStatus,
@@ -160,7 +160,7 @@ describe('skillAssessmentStore', () => {
     expect(useSkillAssessmentStore.getState().loadStatus).toBe('loaded')
   })
 
-  it('only the latest save writes', async () => {
+  it('sends overlapping saves one at a time, in order; the latest wins', async () => {
     getMock.mockResolvedValue({ assessment: null })
     await loadSkillAssessment('userA')
 
@@ -175,14 +175,22 @@ describe('skillAssessmentStore', () => {
       success: true,
       assessment: dto(ANSWERS_B),
     })
-    await saveSkillAssessment('userA', ANSWERS_B)
+    const pendingSecond = saveSkillAssessment('userA', ANSWERS_B)
+
+    // The second PUT waits for the first, so the server's last write is B.
+    await Promise.resolve()
+    expect(saveMock).toHaveBeenCalledTimes(1)
+    expect(saveMock).toHaveBeenLastCalledWith(ANSWERS_A)
 
     first.resolve({ success: true, assessment: dto(ANSWERS_A) })
     await expect(pendingFirst).resolves.toBe(false)
+    await expect(pendingSecond).resolves.toBe(true)
+    expect(saveMock).toHaveBeenCalledTimes(2)
+    expect(saveMock).toHaveBeenLastCalledWith(ANSWERS_B)
 
-    expect(useSkillAssessmentStore.getState().assessment?.answers).toEqual(
-      ANSWERS_B
-    )
+    const state = useSkillAssessmentStore.getState()
+    expect(state.assessment?.answers).toEqual(ANSWERS_B)
+    expect(state.saveStatus).toBe('saved')
   })
 
   it('a stale save failure cannot clear a newer save state', async () => {
@@ -203,10 +211,33 @@ describe('skillAssessmentStore', () => {
     first.reject(new Error('late failure'))
     await pendingFirst
     expect(useSkillAssessmentStore.getState().saveStatus).toBe('saving')
+    await waitFor(() => expect(saveMock).toHaveBeenCalledTimes(2))
 
     second.resolve({ success: true, assessment: dto(ANSWERS_B) })
     await pendingSecond
     expect(useSkillAssessmentStore.getState().saveStatus).toBe('saved')
+  })
+
+  it('never sends a queued save after its user signed out', async () => {
+    getMock.mockResolvedValue({ assessment: null })
+    await loadSkillAssessment('userA')
+
+    const first = deferred<{
+      success: boolean
+      assessment: SkillAssessmentDTO
+    }>()
+    saveMock.mockReturnValueOnce(first.promise)
+    const pendingFirst = saveSkillAssessment('userA', ANSWERS_A)
+    const pendingSecond = saveSkillAssessment('userA', ANSWERS_B)
+    await waitFor(() => expect(saveMock).toHaveBeenCalledTimes(1))
+
+    signIn('userB')
+    first.resolve({ success: true, assessment: dto(ANSWERS_A) })
+    await expect(pendingFirst).resolves.toBe(false)
+    await expect(pendingSecond).resolves.toBe(false)
+
+    // Sent now, the queued PUT would carry userB's token.
+    expect(saveMock).toHaveBeenCalledTimes(1)
   })
 
   it('drops a save that lands after an account switch', async () => {
