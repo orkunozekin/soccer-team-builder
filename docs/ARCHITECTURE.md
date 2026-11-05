@@ -17,6 +17,7 @@ UI Components → API Client → Next.js API Routes → Firebase Services → Fi
 - ✅ Team generation algorithm (`/api/teams/generate`)
 - ✅ Player transfers with validation (`/api/teams/transfer`)
 - ✅ Match creation with validation (`/api/matches`)
+- ✅ Skill ranking and skills questionnaire (`/api/clubs/[clubId]/skill-ranking`, `/api/users/me/skill-assessment`); see [Private skill data](#private-skill-data)
 
 **Why:** These operations contain business logic that shouldn't be exposed to clients:
 
@@ -73,6 +74,20 @@ UI Components → API Client → Next.js API Routes → Firebase Services → Fi
 - `POST /api/teams/generate` - Generate teams for a match
 - `POST /api/teams/transfer` - Transfer player between teams/bench
 - `POST /api/matches` - Create a new match
+- `POST /api/teams/rebalance` - Club admins: rebalance a match's teams. With the `skill-balanced-teams` flag on (evaluated server-side), the response adds `strength: { teams: [{ teamNumber, total, average, size }], unratedCount, playerCount }`
+- `GET/PUT /api/users/me/skill-assessment` - Signed-in player: read/save their own skills questionnaire (`verifyAuth`; flag off → 403)
+- `GET/PUT /api/clubs/[clubId]/skill-ranking` - Club admins (`verifyClubAdmin`): read the club ranking plus active members with questionnaire hints; save `{ tiers, version }` (409 when another admin saved first; flag off → 403)
+
+### Private skill data
+
+Behind the `skill-balanced-teams` flag. Both collections are **API / Admin SDK only**: `firestore.rules` denies all client reads and writes, and skill data never goes on `users` or `clubMemberships` (both are readable by other players). Lookups are by doc id, so no composite indexes.
+
+| Collection / doc             | Contents                                                                                                   | Who can reach it (via API)                                               |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `clubSkillRankings/{clubId}` | `tiers` (`top`/`strong`/`average`/`developing`, uids strongest first), `version`, `updatedBy`, `updatedAt` | Club admins of that club; saves are version-checked in a transaction     |
+| `skillAssessments/{userId}`  | Questionnaire `answers` (four 1–3 values), `updatedAt`                                                     | The player; admins of a club the player actively belongs to (as a score) |
+
+Club admins edit the ranking on `/c/[slug]/roster` (`SkillRankingBoard`). The rebalance route reads both collections to compute effective scores (ranking, else questionnaire, else default).
 
 ### Benefits
 
