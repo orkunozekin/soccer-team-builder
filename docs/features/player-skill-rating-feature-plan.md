@@ -9,7 +9,7 @@ Plan to give each club a private, admin-maintained skill ranking of its players,
 | Status | in-progress |
 | Owner session | — |
 | Last updated | 2026-11-05 |
-| Related PR / branch | `orkun/confident-franklin-t55hwy` |
+| Related PR / branch | Step 1: [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137) (`orkun/skill-step-1-foundation`) |
 
 ## Why not a 1–5 self-rating
 
@@ -179,16 +179,19 @@ Runs **last** in the rebalance route, after GK shift and pin application. Pair m
 - Plan revised after owner feedback (admin ranking + questionnaire instead of 1–5 self-rating).
 - Owner decisions: one shared ranking per club; questionnaire in v1; match page gets only the admins-only strength card.
 - Workflow: one PR per step (Todos 1–5), each squash-merged after a passing AI review on its head (Greptile 5/5, or a clean Codex review when Greptile is unavailable; see `docs/AGENT_CONTEXT.md` § Code review on every PR) and green CI, before the next step starts.
+- **Step 1 (in review, [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137)):** flag `skill-balanced-teams` (default false, `NEXT_PUBLIC_FF_SKILL_BALANCED_TEAMS` override, `.env.sample`); `types/skill.ts`; `lib/skill/scoring.ts` (`SKILL_QUESTIONNAIRE`, `SKILL_TIER_LABELS`/`SKILL_TIER_VALUES`, `parseSkillAnswers`, `validateSkillTiers` for saves, `normalizeStoredSkillTiers` for reads, `assessmentScore`, `rankingScores`, `computeEffectiveSkillScores` → `{ scoreByUserId, unratedUserIds }`); `lib/teams/balanceTeamsBySkill.ts` (`balanceTeamsBySkill`, `summarizeTeamStrength` → `{ teams: [{ teamNumber, total, average, size }], unratedCount }`, rounded to 2 decimals). Colocated Vitest tests.
+- Balancer note: greedy seed + best-improvement pairwise swaps (per Design) is a local search, not exhaustive; on random small pairs it occasionally lands up to ~1 point above the brute-force optimum. Accepted for v1 per the plan.
 
 ### Remaining work
 
-- Step 1 (Foundation), then Steps 2–5 in order.
+- Step 1: pass review on #137, then merge (coordinator).
+- Then Step 2 (Storage + APIs): reuse `parseSkillAnswers` / `validateSkillTiers` (pass active member uids) in the routes and `normalizeStoredSkillTiers` when reading `clubSkillRankings`. Steps 3–5 in order.
 
 ### Run ledger
 
 | Step | Session | PR | Status |
 |------|---------|----|--------|
-| 1 | — | — | not started |
+| 1 | Claude Code (cloud) | [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137) | in review |
 | 2 | — | — | not started |
 | 3 | — | — | not started |
 | 4 | — | — | not started |
