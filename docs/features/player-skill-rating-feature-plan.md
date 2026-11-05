@@ -4,12 +4,12 @@ Plan to give each club a private, admin-maintained skill ranking of its players,
 
 ## Status
 
-| Field               | Value                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status              | in-progress                                                                                                                                                                                                                                                                                                                                                                                                            |
-| Owner session       | —                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| Last updated        | 2026-11-05                                                                                                                                                                                                                                                                                                                                                                                                             |
-| Related PR / branch | Step 1: [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137) (merged, `b87260b`); Step 2: [#138](https://github.com/orkunozekin/soccer-team-builder/pull/138) (merged, `19285be`); Step 3: [#139](https://github.com/orkunozekin/soccer-team-builder/pull/139) (merged, `6703c7f`); Step 4: `orkun/skill-step-4-questionnaire-ui` ([#140](https://github.com/orkunozekin/soccer-team-builder/pull/140)) |
+| Field               | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Status              | done when [#141](https://github.com/orkunozekin/soccer-team-builder/pull/141) merges                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Owner session       | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Last updated        | 2026-11-05                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Related PR / branch | Step 1: [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137) (merged, `b87260b`); Step 2: [#138](https://github.com/orkunozekin/soccer-team-builder/pull/138) (merged, `19285be`); Step 3: [#139](https://github.com/orkunozekin/soccer-team-builder/pull/139) (merged, `6703c7f`); Step 4: [#140](https://github.com/orkunozekin/soccer-team-builder/pull/140) (merged, `94a5d27`); Step 5: `orkun/skill-step-5-ranking-board` ([#141](https://github.com/orkunozekin/soccer-team-builder/pull/141)) |
 
 ## Why not a 1–5 self-rating
 
@@ -154,14 +154,14 @@ Runs **last** in the rebalance route, after GK shift and pin application. Pair m
 
 ## Acceptance criteria
 
-- [ ] Flag off: rebalance output unchanged (existing route tests pass); no new UI visible.
-- [ ] Player can answer/edit the questionnaire from RSVP (skippable) and profile.
-- [ ] Club admins can tier and order members, save, and see a conflict message when another admin saved first; non-admins get 403; other clubs unreachable.
-- [ ] Client Firestore cannot read either collection.
-- [ ] Flag on: rebalance keeps roster membership, sizes, GK coverage and pins; only the outfield split within each pair changes.
-- [ ] Balancer tests: optimal gap on small cases, locked players never move, odd team untouched, deterministic.
-- [ ] Admins-only strength card shows after a skill rebalance; players never see it.
-- [ ] `yarn lint`, `yarn test:run`, `yarn build` pass.
+- [x] Flag off: rebalance output unchanged (existing route tests pass); no new UI visible. _(Route tests; flag-off tests for profile, RSVP modal and roster page.)_
+- [x] Player can answer/edit the questionnaire from RSVP (skippable) and profile. _(Component tests; not checked manually against emulators.)_
+- [x] Club admins can tier and order members, save, and see a conflict message when another admin saved first; non-admins get 403; other clubs unreachable. _(Route tests for 401/403/409 and club scoping; `SkillRankingBoard` tests for tiering, ordering, save and the conflict UI. Not checked manually against emulators.)_
+- [ ] Client Firestore cannot read either collection. _(`firestore.rules` has `allow read, write: if false` for both; not exercised against the rules emulator here, and production needs the `firestore.rules` deploy.)_
+- [x] Flag on: rebalance keeps roster membership, sizes, GK coverage and pins; only the outfield split within each pair changes. _(Route + balancer tests; emulator run on a seeded match not done here.)_
+- [x] Balancer tests: optimal gap on small cases, locked players never move, odd team untouched, deterministic.
+- [x] Admins-only strength card shows after a skill rebalance; players never see it. _(`SkillStrengthCard` + `MatchDetailView` tests.)_
+- [ ] `yarn lint`, `yarn test:run`, `yarn build` pass. _(Lint and tests pass. `yarn build` compiles, lints and type-checks, but in the Step 5 container static prerender failed with `auth/invalid-api-key` because there was no Firebase env; needs a run with real env, e.g. the Vercel preview.)_
 
 ## Later
 
@@ -197,18 +197,25 @@ Runs **last** in the rebalance route, after GK shift and pin application. Pair m
   - `MatchDetailView`: summary in component state keyed by `matchId`, rendered above `TeamsDisplay` only when `canManageMatch`; cleared on dismiss, on a size-only rebalance, and before any other roster-changing refetch (transfers, drag-and-drop, RSVP changes, match edits, Restore RSVP order) so it never shows stale totals.
   - Tests: route (flag off unchanged, no `clubId` skip, flag on even split + `strength`, pins/GK never move, no new pins, load failure fallback), card, button callback, `MatchDetailView` admin-only card.
 
-- **Step 4 (in review, branch `orkun/skill-step-4-questionnaire-ui`, PR [#140](https://github.com/orkunozekin/soccer-team-builder/pull/140)):**
+- **Step 4 (merged, [#140](https://github.com/orkunozekin/soccer-team-builder/pull/140), `94a5d27`):**
   - [`components/skill/SkillQuestionnaire.tsx`](../../components/skill/SkillQuestionnaire.tsx): controlled form over `SKILL_QUESTIONNAIRE` (fieldset/legend per question, native radios inside ≥44px labels, `useId` names so instances never share selection, theme tokens) + `isSkillQuestionnaireComplete`.
   - [`store/skillAssessmentStore.ts`](../../store/skillAssessmentStore.ts): uid-scoped Zustand store shared by RSVP and profile. `loadSkillAssessment(uid, { force? })` loads once per uid (re-fetches after an error); `saveSkillAssessment(uid, answers)` never throws, returns whether it landed. Separate load/save generations; a uid switch drops everything and bumps both; writes re-check the store uid and the auth uid. A landed save becomes the loaded state and supersedes any load in flight; a failed save leaves the load state alone (no stuck "loading"). A result dropped because the uid signed out resets status to idle so a later sign-in reloads. `useSkillAssessment(uid)` reads as idle/empty for any other uid.
   - Profile: flag on → "Skill questionnaire" `ProfileSection` with [`ProfileSkillQuestionnaire`](../../components/skill/ProfileSkillQuestionnaire.tsx) (keyed by uid): "Only club admins see your answers.", Save enabled only when complete, saved/error status, Retry on load error; syncs answers saved elsewhere until the player edits.
   - RSVP: `RSVPButton` loads the store when the flag is on; `RSVPPositionModal` gets `showSkillStep` (flag on, loaded, no assessment) → Next → "Your game" (Back, Skip, Confirm RSVP enabled when complete). Step and answers reset on open. Answers are saved fire-and-forget alongside `confirmRSVPAPI` (never awaited, never surfaced as an RSVP error); Skip saves nothing. Loading or load error → modal behaves as before. Dialog is capped at `100dvh - 2rem` and scrolls.
   - Tests: questionnaire form, store guards (uid switch, sign-out, superseded load/save, stale failure), profile page (flag off/on, save, completeness, error, retry), modal (flag-off path unchanged, step 2, Skip, Back, reset on reopen), RSVPButton with the real modal + store (flag off, answered, load error, Skip, failed save doesn't block RSVP).
 
+- **Step 5 (done when [#141](https://github.com/orkunozekin/soccer-team-builder/pull/141) merges, branch `orkun/skill-step-5-ranking-board`):**
+  - [`components/skill/SkillRankingBoard.tsx`](../../components/skill/SkillRankingBoard.tsx) on `/c/[slug]/roster` below `ClubAdminRoster` when `skill-balanced-teams` is on: Top/Strong/Average/Developing (numbered, strongest first) + Unranked (active members in no tier). Row: name, position · "Questionnaire 2.8 / 4" or "No questionnaire", tier `Select` (incl. Unranked; appends to the end of the target tier), move up/down (`aria-label`s, disabled at the ends). Save ranking / Discard changes, "Unsaved changes" indicator, "Ranking saved." status; 409 → conflict message + Reload, Save disabled until reloaded; other errors show the server's sanitized message. Loading skeleton, retryable load error, generation ref drops stale load/save responses (club change, reload, unmount), state resets per `clubId`, one save in flight (rows disabled while saving). Rows wrap at 320px.
+  - [`lib/skill/tierMoves.ts`](../../lib/skill/tierMoves.ts): pure tier-move helpers + unit tests.
+  - Tests: board (groups, tier change + reorder + save `{ tiers, version }`, in-flight save, discard, 409 + reload, other errors, load retry, stale club, in-flight save after a club change) and roster page (flag off → no board, no API call).
+  - `docs/ARCHITECTURE.md`: skill routes and a "Private skill data" section for both collections.
+  - Visual check: an isolated render (esbuild bundle of the real component with a stubbed API client, repo Tailwind/globals.css) in Playwright at 320/390px, dark and light: no horizontal overflow, no clipped controls. No in-app or emulator capture.
+
 ### Remaining work
 
-- Step 4: pass review on PR [#140](https://github.com/orkunozekin/soccer-team-builder/pull/140), then merge (coordinator).
-- Then Step 5 (ranking board + docs).
-- Deploy note: `firestore.rules` must be deployed for the deny blocks (no new indexes; lookups are by doc id).
+- Merge [#141](https://github.com/orkunozekin/soccer-team-builder/pull/141) after review (coordinator). Then the feature is code-complete.
+- Production rollout (manual, not done by agents): create the `skill-balanced-teams` LaunchDarkly flag (default off) and deploy `firestore.rules` (deny blocks; no new indexes, lookups are by doc id).
+- Manual checks not done here: emulator run of the board, questionnaire and rebalance with the flag on vs off; rules-emulator check that clients can't read either collection; `yarn build` with real env.
 
 ### Run ledger
 
@@ -217,8 +224,8 @@ Runs **last** in the rebalance route, after GK shift and pin application. Pair m
 | 1    | Claude Code (cloud) | [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137) | merged (`b87260b`) |
 | 2    | Claude Code (cloud) | [#138](https://github.com/orkunozekin/soccer-team-builder/pull/138) | merged (`19285be`) |
 | 3    | Claude Code (cloud) | [#139](https://github.com/orkunozekin/soccer-team-builder/pull/139) | merged (`6703c7f`) |
-| 4    | Claude Code (cloud) | [#140](https://github.com/orkunozekin/soccer-team-builder/pull/140) | in review          |
-| 5    | —                   | —                                                                   | not started        |
+| 4    | Claude Code (cloud) | [#140](https://github.com/orkunozekin/soccer-team-builder/pull/140) | merged (`94a5d27`) |
+| 5    | Claude Code (cloud) | [#141](https://github.com/orkunozekin/soccer-team-builder/pull/141) | in review          |
 
 ### Blockers / risks
 
@@ -227,6 +234,6 @@ Runs **last** in the rebalance route, after GK shift and pin application. Pair m
 
 ### Pointers for the next agent
 
-- Start at: the first step in the Run ledger that is not merged.
+- Start at: the first step in the Run ledger that is not merged; after #141 merges, only the rollout items in Remaining work are left (see Later for v2 ideas).
 - Do not: store skill data on `users`/`clubMemberships`; write skill moves into `manualTeamAssignments`; change `expandTeamsForMatch`; let skill affect roster membership; work beyond your step.
 - Verify with: `yarn test:run`, `yarn lint`, `npx tsc --noEmit`; emulator rebalance on a seeded match with the flag on vs off (Step 3+).
