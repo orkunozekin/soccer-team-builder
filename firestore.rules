@@ -120,6 +120,16 @@ service cloud.firestore {
          isClubAdmin(resource.data.clubId));
     }
 
+    // Skill data is private (admin ranking, player questionnaire). Clients never
+    // touch these directly; API routes use the Admin SDK and enforce access.
+    match /clubSkillRankings/{clubId} {
+      allow read, write: if false;
+    }
+
+    match /skillAssessments/{userId} {
+      allow read, write: if false;
+    }
+
     // Audit logs: super user read-only; writes via Firebase Admin SDK only
     match /auditLogs/{logId} {
       allow read: if isSuperUser();

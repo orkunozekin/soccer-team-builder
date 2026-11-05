@@ -162,15 +162,18 @@ export async function verifyClubMember(
   clubId: string | null | undefined
 ): Promise<{
   uid: string | null
+  /** Verified token email; null or absent when unauthenticated or missing. */
+  email?: string | null
   isMember: boolean
   isSuperUser: boolean
   membership: ClubMembership | null
   error: string | null
 }> {
-  const { uid, error } = await verifyAuth(request)
+  const { uid, email, error } = await verifyAuth(request)
   if (error || !uid) {
     return {
       uid: null,
+      email: null,
       isMember: false,
       isSuperUser: false,
       membership: null,
@@ -181,6 +184,7 @@ export async function verifyClubMember(
   if (uid === 'fallback') {
     return {
       uid,
+      email,
       isMember: false,
       isSuperUser: false,
       membership: null,
@@ -193,6 +197,7 @@ export async function verifyClubMember(
       const superUser = (await isGlobalSuperUser(uid)) === true
       return {
         uid,
+        email,
         isMember: superUser,
         isSuperUser: superUser,
         membership: null,
@@ -205,11 +210,12 @@ export async function verifyClubMember(
       clubId
     )
     const isMember = isSuperUser || membership != null
-    return { uid, isMember, isSuperUser, membership, error: null }
+    return { uid, email, isMember, isSuperUser, membership, error: null }
   } catch (err: any) {
     console.error('Club member verification error:', err)
     return {
       uid,
+      email,
       isMember: false,
       isSuperUser: false,
       membership: null,
@@ -227,6 +233,8 @@ export async function verifyClubAdmin(
   clubId: string | null | undefined
 ): Promise<{
   uid: string | null
+  /** Verified token email; null or absent when unauthenticated or missing. */
+  email?: string | null
   isClubAdmin: boolean
   isSuperUser: boolean
   membership: ClubMembership | null
@@ -236,6 +244,7 @@ export async function verifyClubAdmin(
   if (result.error || !result.uid) {
     return {
       uid: result.uid,
+      email: result.email,
       isClubAdmin: false,
       isSuperUser: false,
       membership: null,
@@ -246,6 +255,7 @@ export async function verifyClubAdmin(
   if (result.isSuperUser) {
     return {
       uid: result.uid,
+      email: result.email,
       isClubAdmin: true,
       isSuperUser: true,
       membership: result.membership,
@@ -256,6 +266,7 @@ export async function verifyClubAdmin(
   const isClubAdmin = result.membership?.role === 'club_admin'
   return {
     uid: result.uid,
+    email: result.email,
     isClubAdmin,
     isSuperUser: false,
     membership: result.membership,

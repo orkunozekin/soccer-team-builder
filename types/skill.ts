@@ -58,3 +58,25 @@ export interface TeamStrengthSummary {
   teams: TeamStrength[]
   unratedCount: number
 }
+
+/** A player's stored questionnaire, as returned by the API. */
+export interface SkillAssessmentDTO {
+  answers: SkillAnswers
+  /** ISO timestamp, or null when the stored doc has none. */
+  updatedAt: string | null
+}
+
+/** A club's ranking, as returned by the API (`version` is 0 when unsaved). */
+export interface ClubSkillRankingDTO {
+  tiers: SkillRankingTiers
+  version: number
+}
+
+/** An active club member as listed on the admin ranking board. */
+export interface SkillRankingMemberDTO {
+  userId: string
+  displayName: string
+  position: string | null
+  /** Questionnaire score on the 1–4 scale, or null without a questionnaire. */
+  assessmentScore: number | null
+}
