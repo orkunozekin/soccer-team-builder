@@ -1,6 +1,6 @@
 ---
 name: address-pr-feedback
-description: Fetch PR review comments, triage and fix feedback (AI review bots first, then humans), reply/resolve threads, record durable lessons, and re-tag @greptileai after Greptile feedback is addressed. Use when the user runs /address-pr-feedback, asks to address PR comments, fix Greptile/Bugbot/review feedback, or resolve review threads on a pull request.
+description: Fetch PR review comments, triage and fix feedback (AI review bots first, then humans), reply/resolve threads, record durable lessons, and re-request review from the AI reviewer that reviewed last (@greptileai, or @codex review when Greptile is unavailable). Use when the user runs /address-pr-feedback, asks to address PR comments, fix Greptile/Codex/Bugbot/review feedback, or resolve review threads on a pull request.
 ---
 
 # /address-pr-feedback
@@ -12,7 +12,7 @@ Works in Cursor, Claude Code, and other Agent Skills–compatible tools via `/ad
 ## When to run
 
 - User invokes `/address-pr-feedback`
-- User asks to address PR comments, Greptile/Bugbot/review bot feedback, or resolve review threads
+- User asks to address PR comments, Greptile/Codex/Bugbot/review bot feedback, or resolve review threads
 - After a review bot posts on the active PR and the user wants fixes applied
 
 ## Where this skill lives
@@ -40,7 +40,7 @@ PR feedback progress:
 - [ ] 5. Record durable lessons
 - [ ] 6. Commit and push
 - [ ] 7. Reply / resolve threads
-- [ ] 8. Re-tag @greptileai (when Greptile feedback was addressed)
+- [ ] 8. Re-request AI review (@greptileai, or @codex review when Codex reviewed)
 - [ ] 9. Summarize
 ```
 
@@ -66,7 +66,7 @@ Use `gh` / GitHub APIs (or the host agent’s PR tools) to list comments. Prefer
 
 **Order:** AI review bots first, then human reviewers.
 
-Treat as bots when the author looks like an automated reviewer, including (non-exhaustive): Greptile, Bugbot / Cursor Bugbot, CodeRabbit, Copilot review bots, similar `*[bot]` accounts.
+Treat as bots when the author looks like an automated reviewer, including (non-exhaustive): Greptile, Codex (`chatgpt-codex-connector`), Bugbot / Cursor Bugbot, CodeRabbit, Copilot review bots, similar `*[bot]` accounts.
 
 For each item, classify:
 
@@ -106,7 +106,7 @@ Entry shape (append under Lessons):
 ```markdown
 ### YYYY-MM-DD — short title
 
-- **Source:** PR #N · Greptile | Bugbot | human:@login
+- **Source:** PR #N · Greptile | Codex | Bugbot | human:@login
 - **Gap:** what slipped past
 - **Going forward:** concrete rule or check
 - **Pointers:** `path/` or pattern to remember
@@ -130,33 +130,33 @@ Only after the fix (or an intentional no-change decision) is on the PR remote:
 
 Never resolve a human thread by default. Never resolve a bot thread for a code fix that is still only local / unpushed.
 
-### 8. Re-tag @greptileai
+### 8. Re-request AI review
 
-When this run addressed **any** Greptile feedback (fixed, declined with reason, or clarified), post a top-level PR comment that mentions `@greptileai` so Greptile re-reviews the latest push.
+Re-request review from the AI reviewer that reviewed last, **after** commit/push and bot thread replies/resolves:
 
-Do this **after** commit/push and bot thread replies/resolves.
-
-Comment shape (keep it short):
-
-```markdown
-@greptileai please re-review — addressed prior Greptile feedback on this PR.
-```
+| Reviewed last | Top-level PR comment |
+|---------------|----------------------|
+| Greptile | `@greptileai please re-review — addressed prior Greptile feedback on this PR.` |
+| Codex | `@codex review` (optionally one line on what changed) |
 
 Optionally add one line naming what changed (e.g. “restore now uses only persisted transfers; button awaits refresh”).
 
-Skip this step only when Greptile left no comments on the PR (or all Greptile threads were already obsolete/outdated with no action taken).
+**Greptile unavailable → Codex.** If Greptile has not reviewed the PR's current head about 15 minutes after the PR opened, a push, or an `@greptileai` tag, or it replies that it can't review (out of credits, reviews disabled), post `@codex review` instead and treat Codex as the reviewer from then on. If Codex is also unavailable (no reaction or review about 15 minutes after the tag, or it replies that it can't), stop and tell the operator; do not treat CI alone as a review. Full order: `docs/AGENT_CONTEXT.md` § Code review on every PR.
+
+Skip this step only when no AI reviewer left comments on the PR (or all its threads were already obsolete/outdated with no action taken).
 
 Prefer the host’s PR comment tool (`ManagePullRequest` `post_comment`, or `gh pr comment`) so the mention is a real PR issue comment, not an inline review reply.
 
 ### 9. Summarize
 
-Reply to the operator with: PR link, items fixed, items skipped/declined, items waiting on confirmation, lessons appended (if any), and whether `@greptileai` was re-tagged.
+Reply to the operator with: PR link, items fixed, items skipped/declined, items waiting on confirmation, lessons appended (if any), and which reviewer was re-tagged (`@greptileai` or `@codex review`).
 
 ## Anti-patterns
 
 - Resolving human comments without an explicit ask
 - Resolving bot threads before the fix is committed and pushed to the PR
-- Addressing Greptile feedback without posting a follow-up `@greptileai` re-review comment
+- Addressing AI review feedback without re-tagging the reviewer that reviewed last (`@greptileai` or `@codex review`)
+- Waiting indefinitely on Greptile instead of falling back to `@codex review` after about 15 minutes
 - Blindly applying every bot suggestion (especially if it fights AuthZ, emulators-only, or sanitize-error rules)
 - Huge refactors justified as “addressing review”
 - Skipping `AGENT_LESSONS.md` when a real recurring gap was found
@@ -167,6 +167,6 @@ Reply to the operator with: PR link, items fixed, items skipped/declined, items 
 
 ```
 /start → … implement on a PR …
-/address-pr-feedback → fix review threads + lessons + @greptileai re-tag
+/address-pr-feedback → fix review threads + lessons + re-tag @greptileai / @codex review
 /handoff → (optional) refresh feature plan if the PR is feature work
 ```
