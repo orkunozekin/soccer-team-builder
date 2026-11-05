@@ -318,7 +318,12 @@ export async function verifyCanCreateInvite(
 
     const clubSnap = await adminDb.collection('clubs').doc(clubId).get()
     if (!clubSnap.exists) {
-      return { uid, allowed: false, createdByRole: null, error: 'Club not found' }
+      return {
+        uid,
+        allowed: false,
+        createdByRole: null,
+        error: 'Club not found',
+      }
     }
 
     const allowPlayerInvites = Boolean(
@@ -343,9 +348,7 @@ export async function verifyCanCreateInvite(
 /**
  * Load clubId from a match document (Admin SDK).
  */
-export async function getMatchClubId(
-  matchId: string
-): Promise<string | null> {
+export async function getMatchClubId(matchId: string): Promise<string | null> {
   const adminDb = getAdminDb()
   if (!adminDb) return null
   const snap = await adminDb.collection('matches').doc(matchId).get()
@@ -400,6 +403,8 @@ export async function verifyClubAdminForMatch(
   matchId: string
 ): Promise<{
   uid: string | null
+  /** Verified token email when the caller authenticated; may be absent. */
+  email?: string | null
   isClubAdmin: boolean
   isSuperUser: boolean
   clubId: string | null
@@ -433,12 +438,12 @@ export async function verifyClubAdminForMatch(
   }
 
   const raw = snap.data()?.clubId
-  const clubId =
-    typeof raw === 'string' && raw.length > 0 ? raw : null
+  const clubId = typeof raw === 'string' && raw.length > 0 ? raw : null
 
   const result = await verifyClubAdmin(request, clubId)
   return {
     uid: result.uid,
+    email: result.email,
     isClubAdmin: result.isClubAdmin,
     isSuperUser: result.isSuperUser,
     clubId,

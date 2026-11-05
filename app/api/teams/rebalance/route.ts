@@ -3,14 +3,72 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyClubAdminForMatch } from '@/lib/api/auth'
 import { teamPaletteEntry } from '@/lib/constants/teamColors'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { evaluateFeatureFlag } from '@/lib/flags/evaluateFeatureFlag'
 import { auditLog } from '@/lib/services/auditService'
+import { getEffectiveSkillScoresForClub } from '@/lib/skill/skillStoreAdmin'
+import {
+  balanceTeamsBySkill,
+  summarizeTeamStrength,
+} from '@/lib/teams/balanceTeamsBySkill'
 import { getUsersByIdsAdmin } from '@/lib/users/getUsersByIdsAdmin'
 import {
   applyPersistedTransfersKeepingBalance,
   isGoalkeeper,
   shiftGoalkeepersOntoTeamsWithoutGk,
 } from '@/lib/utils/teamGenerator'
+import type { RebalanceStrengthSummary } from '@/types/skill'
 import type { User } from '@/types/user'
+
+type RebalancedTeam = { teamNumber: number; playerIds: string[] }
+
+/**
+ * Skill pass for a club match with `skill-balanced-teams` on: swaps unlocked
+ * players within each matchup pair to even total skill. Never touches
+ * `manualTeamAssignments`. Returns null (caller keeps the size-balanced teams)
+ * when the flag is off or skill data cannot be loaded.
+ */
+async function balanceBySkillIfEnabled(
+  adminDb: NonNullable<ReturnType<typeof getAdminDb>>,
+  input: {
+    clubId: string
+    uid: string
+    email: string | null
+    teams: RebalancedTeam[]
+    locked: ReadonlySet<string>
+  }
+): Promise<{
+  teams: RebalancedTeam[]
+  strength: RebalanceStrengthSummary
+} | null> {
+  try {
+    const enabled = await evaluateFeatureFlag('skill-balanced-teams', {
+      key: input.uid,
+      email: input.email,
+    })
+    if (!enabled) return null
+
+    const uids = input.teams.flatMap(t => t.playerIds)
+    const { scoreByUserId, unratedUserIds } =
+      await getEffectiveSkillScoresForClub(adminDb, input.clubId, uids)
+    const balanced = balanceTeamsBySkill(
+      input.teams,
+      scoreByUserId,
+      input.locked
+    )
+    const summary = summarizeTeamStrength(
+      balanced,
+      scoreByUserId,
+      unratedUserIds
+    )
+    return {
+      teams: balanced,
+      strength: { ...summary, playerCount: uids.length },
+    }
+  } catch (err) {
+    console.error('Skill rebalance skipped; keeping size-balanced teams:', err)
+    return null
+  }
+}
 
 function timestampToDate(t: Timestamp | Date | null | undefined): Date | null {
   if (!t) return null
@@ -52,6 +110,8 @@ export async function POST(request: NextRequest) {
 
     const {
       uid,
+      email,
+      clubId,
       isClubAdmin,
       error: authError,
       matchExists,
@@ -254,13 +314,25 @@ export async function POST(request: NextRequest) {
         users
       )
     replacements.push(...gkReplacements)
-    const finalTeams = applyPersistedTransfersKeepingBalance(
+    const sizeBalancedTeams = applyPersistedTransfersKeepingBalance(
       teamsWithKeepers,
       persisted,
       maxSizeByTeamNumber,
       rsvpAtByUserId,
       new Set(gkCandidates)
     )
+    // Skill runs last: goalkeepers and admin-pinned players stay put, so GK
+    // coverage, pins and pair sizes are unchanged.
+    const skillResult = clubId
+      ? await balanceBySkillIfEnabled(adminDb, {
+          clubId,
+          uid,
+          email: email ?? null,
+          teams: sizeBalancedTeams,
+          locked: new Set([...gkCandidates, ...Object.keys(persisted)]),
+        })
+      : null
+    const finalTeams = skillResult?.teams ?? sizeBalancedTeams
     const finalByNumber = new Map(
       finalTeams.map(t => [t.teamNumber, t.playerIds])
     )
@@ -315,6 +387,7 @@ export async function POST(request: NextRequest) {
         teamsRebalanced: teams.length,
         assignedCounts: finalAssigned.map(a => a.length),
         replacementCount: replacements.length,
+        skillBalanced: skillResult != null,
       },
     })
 
@@ -325,6 +398,7 @@ export async function POST(request: NextRequest) {
       benchCount: 0,
       rosterLimit,
       replacements,
+      ...(skillResult ? { strength: skillResult.strength } : {}),
     })
   } catch (error: any) {
     console.error('Error rebalancing teams:', error)

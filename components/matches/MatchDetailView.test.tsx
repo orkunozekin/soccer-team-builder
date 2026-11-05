@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { MatchDetailView } from './MatchDetailView'
 
@@ -6,7 +7,9 @@ const routerMock = {
   push: vi.fn(),
 }
 
-const paramsMock = vi.fn(() => ({ matchId: 'match1' }))
+const paramsMock = vi.fn<() => Record<string, string>>(() => ({
+  matchId: 'match1',
+}))
 
 vi.mock('next/navigation', () => ({
   useRouter: () => routerMock,
@@ -81,8 +84,20 @@ vi.mock('@/components/matches/MatchDetails', () => ({
 }))
 
 vi.mock('@/components/teams/TeamsDisplay', () => ({
-  TeamsDisplay: ({ users }: { users: { uid: string }[] }) => (
-    <div>TeamsDisplayMock:{users.length}</div>
+  TeamsDisplay: ({
+    users,
+    headerActions,
+    onTeamsChanged,
+  }: {
+    users: { uid: string }[]
+    headerActions?: React.ReactNode
+    onTeamsChanged?: () => void
+  }) => (
+    <div>
+      TeamsDisplayMock:{users.length}
+      {headerActions}
+      <button onClick={() => onTeamsChanged?.()}>MoveTeamPlayerMock</button>
+    </div>
   ),
 }))
 
@@ -99,7 +114,26 @@ vi.mock('@/components/admin/PlayerTransfer', () => ({
 }))
 
 vi.mock('@/components/admin/RebalanceTeamsButton', () => ({
-  RebalanceTeamsButton: () => <button>RebalanceTeamsButtonMock</button>,
+  RebalanceTeamsButton: ({
+    onSkillBalanced,
+  }: {
+    onSkillBalanced?: (summary: unknown) => void
+  }) => (
+    <button
+      onClick={() =>
+        onSkillBalanced?.({
+          teams: [
+            { teamNumber: 1, total: 10, average: 2.5, size: 4 },
+            { teamNumber: 2, total: 9.5, average: 2.38, size: 4 },
+          ],
+          unratedCount: 2,
+          playerCount: 8,
+        })
+      }
+    >
+      RebalanceTeamsButtonMock
+    </button>
+  ),
 }))
 
 vi.mock('@/components/admin/RsvpOrderCard', () => ({
@@ -327,5 +361,72 @@ describe('MatchDetailView', () => {
 
     expect(await screen.findByText('MatchDetailsMock:2')).toBeInTheDocument()
     expect(screen.getByText('TeamsDisplayMock:2')).toBeInTheDocument()
+  })
+
+  it('shows the skill strength card to admins after a skill rebalance', async () => {
+    const user = userEvent.setup()
+    const adminState = {
+      isClubAdmin: true,
+      isSuperUser: false,
+      loading: false,
+      error: null,
+      refresh: refreshClubMembershipsMock,
+    }
+    useIsClubAdminMock.mockReturnValue(adminState)
+    paramsMock.mockReturnValue({ matchId: 'match1', slug: 'fc-test' })
+    getMatchMock.mockResolvedValueOnce({ ...mockMatch(), clubId: 'club1' })
+    getMatchRSVPsMock.mockResolvedValueOnce([])
+    getMatchTeamsMock.mockResolvedValueOnce([
+      mockTeam('t1'),
+      { ...mockTeam('t2'), teamNumber: 2, name: 'Team 2', playerIds: [] },
+    ])
+    getUsersByIdsMock.mockResolvedValue([])
+
+    const { rerender } = render(<MatchDetailView backLink={backLink} />)
+    await user.click(await screen.findByText('RebalanceTeamsButtonMock'))
+
+    expect(screen.getByText('Balanced by skill')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Rank players' })).toHaveAttribute(
+      'href',
+      '/c/fc-test/roster'
+    )
+
+    // Losing manage permission hides it immediately.
+    useIsClubAdminMock.mockReturnValue({ ...adminState, isClubAdmin: false })
+    rerender(<MatchDetailView backLink={backLink} />)
+    expect(screen.queryByText('Balanced by skill')).not.toBeInTheDocument()
+
+    useIsClubAdminMock.mockReturnValue(adminState)
+    rerender(<MatchDetailView backLink={backLink} />)
+    expect(screen.getByText('Balanced by skill')).toBeInTheDocument()
+    await user.click(
+      screen.getByRole('button', { name: /dismiss skill balance summary/i })
+    )
+    expect(screen.queryByText('Balanced by skill')).not.toBeInTheDocument()
+  })
+
+  it('clears the skill strength card after another roster change', async () => {
+    const user = userEvent.setup()
+    useIsClubAdminMock.mockReturnValue({
+      isClubAdmin: true,
+      isSuperUser: false,
+      loading: false,
+      error: null,
+      refresh: refreshClubMembershipsMock,
+    })
+    getMatchMock.mockResolvedValue({ ...mockMatch(), clubId: 'club1' })
+    getMatchRSVPsMock.mockResolvedValue([])
+    getMatchTeamsMock.mockResolvedValue([
+      mockTeam('t1'),
+      { ...mockTeam('t2'), teamNumber: 2, name: 'Team 2', playerIds: [] },
+    ])
+    getUsersByIdsMock.mockResolvedValue([])
+
+    render(<MatchDetailView backLink={backLink} />)
+    await user.click(await screen.findByText('RebalanceTeamsButtonMock'))
+    expect(screen.getByText('Balanced by skill')).toBeInTheDocument()
+
+    await user.click(screen.getByText('MoveTeamPlayerMock'))
+    expect(screen.queryByText('Balanced by skill')).not.toBeInTheDocument()
   })
 })
