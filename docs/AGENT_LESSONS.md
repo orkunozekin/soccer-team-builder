@@ -299,3 +299,11 @@ Skip: one-off typos, formatting already covered by Prettier/ESLint, and PR-speci
 - **Going forward:** Grep every `setUserData(` call when adding a new profile writer. After an async profile write, merge with `useAuthStore.getState().mergeUserData(uid, patch)`. It merges into the profile as it is now, and only if it still belongs to `uid`. Never write back a spread of a snapshot taken before an `await`.
 - **Pointers:** `store/authStore.ts` (`mergeUserData`), `components/profile/ProfileForm.tsx`, `components/profile/ProfileCompleteModal.tsx`, `components/profile/ProfileClubsSection.tsx`, `lib/hooks/useClubWorkspace.ts`, `lib/theme/saveThemePreference.ts`
 - **Promoted:** AGENT_CONTEXT.md → §3 Async state, races, and transactions; `.greptile/rules.md`
+
+### 2026-11-05 — A generation guard doesn't order server writes
+
+- **Source:** PR #140 · Codex
+- **Gap:** `saveSkillAssessment` guarded local state with a request id, but two overlapping saves (a slow RSVP-step save, then the step offered again on the next match) were both sent. The PUT overwrites unconditionally, so if the first landed last Firestore kept the older answers while the store showed the newer ones. Simply queuing them would add a second risk: a save sent after an account switch carries the new user's token.
+- **Going forward:** One in-flight save per document: queue saves, re-check the signed-in uid right before each queued request is sent, and hide the entry point while a save is pending. Test the order of the API calls, not just the final store state.
+- **Pointers:** `store/skillAssessmentStore.ts` (`saveQueue`), `components/matches/RSVPButton.tsx` (`showSkillStep`), `store/skillAssessmentStore.test.ts`
+- **Promoted:** AGENT_CONTEXT.md → §3 Async state, races, and transactions; `.greptile/rules.md`
