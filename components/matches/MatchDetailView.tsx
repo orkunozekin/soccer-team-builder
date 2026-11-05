@@ -9,6 +9,7 @@ import { PlayerTransfer } from '@/components/admin/PlayerTransfer'
 import { RebalanceTeamsButton } from '@/components/admin/RebalanceTeamsButton'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { MatchDetails } from '@/components/matches/MatchDetails'
+import { SkillStrengthCard } from '@/components/skill/SkillStrengthCard'
 import { TeamsDisplay } from '@/components/teams/TeamsDisplay'
 import { BackLink } from '@/components/ui/back-link'
 import { useIsClubAdmin } from '@/lib/hooks/useClubMemberships'
@@ -18,6 +19,7 @@ import { getMatchRSVPs } from '@/lib/services/rsvpService'
 import { getMatchTeams } from '@/lib/services/teamService'
 import { getUsersByIds } from '@/lib/services/userService'
 import { hasCheckInWindowStarted } from '@/lib/utils/checkIn'
+import { clubRosterPath } from '@/lib/utils/clubPaths'
 import { isMatchReadOnly } from '@/lib/utils/matchAccess'
 import {
   buildRosterPlaceholders,
@@ -25,6 +27,7 @@ import {
   mergeRosterProfiles,
 } from '@/lib/utils/matchParticipants'
 import { useMatchStore } from '@/store/matchStore'
+import type { RebalanceStrengthSummary } from '@/types/skill'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
 
@@ -59,6 +62,7 @@ export function MatchDetailView({
   const router = useRouter()
   const params = useParams()
   const matchId = paramToString(params?.matchId)
+  const clubSlug = paramToString(params?.slug)
   const { user, userData } = useAuth()
   const userId = user?.uid
   const { currentMatch, setCurrentMatch, matchRSVPs, setMatchRSVPs } =
@@ -78,6 +82,11 @@ export function MatchDetailView({
   const [loadingMatch, setLoadingMatch] = useState(true)
   const [teams, setTeams] = useState<Team[]>([])
   const [rosterUsers, setRosterUsers] = useState<User[]>([])
+  // Last skill rebalance result, keyed by match; in memory only, admins only.
+  const [skillSummary, setSkillSummary] = useState<{
+    matchId: string
+    summary: RebalanceStrengthSummary
+  } | null>(null)
   const fetchGen = useRef(0)
   const refetchGen = useRef(0)
   const usersWithMatchPosition = useMemo(() => {
@@ -282,6 +291,13 @@ export function MatchDetailView({
 
           {hasTeamsPanel && (
             <div className="min-w-0 space-y-6">
+              {canManageMatch && skillSummary?.matchId === matchId && (
+                <SkillStrengthCard
+                  summary={skillSummary.summary}
+                  rosterHref={clubSlug ? clubRosterPath(clubSlug) : null}
+                  onDismiss={() => setSkillSummary(null)}
+                />
+              )}
               <TeamsDisplay
                 matchId={matchId}
                 teams={teams}
@@ -297,6 +313,9 @@ export function MatchDetailView({
                   canManageMatch && teams.length >= 2 ? (
                     <RebalanceTeamsButton
                       matchId={matchId}
+                      onSkillBalanced={summary =>
+                        setSkillSummary(summary ? { matchId, summary } : null)
+                      }
                       onDone={refetchMatchRoster}
                       size="sm"
                       showError="inline"
@@ -322,7 +341,11 @@ export function MatchDetailView({
               matchId={matchId}
               matchRSVPs={matchRSVPs}
               users={rosterUsers}
-              onRestoreComplete={refetchMatchRoster}
+              onRestoreComplete={async () => {
+                // Restore RSVP order undoes a skill rebalance.
+                setSkillSummary(null)
+                await refetchMatchRoster()
+              }}
             />
           </div>
         )}

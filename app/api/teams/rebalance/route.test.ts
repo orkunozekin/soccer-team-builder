@@ -3,9 +3,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { POST } from './route'
 import { verifyClubAdminForMatch } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
+import { evaluateFeatureFlag } from '@/lib/flags/evaluateFeatureFlag'
+import { auditLog } from '@/lib/services/auditService'
+import { getEffectiveSkillScoresForClub } from '@/lib/skill/skillStoreAdmin'
 
 vi.mock('@/lib/api/auth', () => ({
   verifyClubAdminForMatch: vi.fn(),
+}))
+
+vi.mock('@/lib/flags/evaluateFeatureFlag', () => ({
+  evaluateFeatureFlag: vi.fn(),
+}))
+
+vi.mock('@/lib/skill/skillStoreAdmin', () => ({
+  getEffectiveSkillScoresForClub: vi.fn(),
+}))
+
+vi.mock('@/lib/services/auditService', () => ({
+  auditLog: vi.fn(),
 }))
 
 vi.mock('@/lib/firebase/admin', () => ({
@@ -201,6 +216,9 @@ function makeRequest(matchId = 'match1') {
 
 describe('POST /api/teams/rebalance', () => {
   beforeEach(() => {
+    vi.mocked(evaluateFeatureFlag).mockReset().mockResolvedValue(false)
+    vi.mocked(getEffectiveSkillScoresForClub).mockReset()
+    vi.mocked(auditLog).mockReset()
     vi.mocked(verifyClubAdminForMatch).mockResolvedValue({
       uid: 'admin1',
       isClubAdmin: true,
@@ -553,5 +571,193 @@ describe('POST /api/teams/rebalance', () => {
     expect(byNumber(3)).toContain('p24')
     expect(byNumber(4)).not.toContain('p23')
     expect(byNumber(4)).not.toContain('p24')
+  })
+})
+
+describe('POST /api/teams/rebalance (skill-balanced-teams)', () => {
+  // RSVP order: gk1, p2..p8. Size balance alone gives Team 1 = gk1,p2,p3,p4
+  // (2+4+4+4 = 14) and Team 2 = p5..p8 (1+1+1+1 = 4).
+  const ids = ['gk1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8']
+  const scores = new Map<string, number>([
+    ['gk1', 2],
+    ['p2', 4],
+    ['p3', 4],
+    ['p4', 4],
+    ['p5', 1],
+    ['p6', 1],
+    ['p7', 1],
+    ['p8', 1],
+  ])
+
+  function setup(manualTeamAssignments: Record<string, number> = {}) {
+    const rsvps = ids.map((id, index) => {
+      const rsvp = makeRsvpDoc(
+        `r${index}`,
+        id,
+        new Date(Date.UTC(2024, 0, 1, 0, index))
+      )
+      rsvp.data.position = id === 'gk1' ? 'GK' : 'ST'
+      return rsvp
+    })
+    const repos = createRebalanceMockRepos({
+      rsvps,
+      users: ids.map(id => makeUserDoc(id, id === 'gk1' ? 'GK' : 'ST')),
+      teams: [
+        makeTeamDoc('team1', 1, ids.slice(0, 4)),
+        makeTeamDoc('team2', 2, ids.slice(4)),
+      ],
+      match: {
+        id: 'match1',
+        data: { clubId: 'club1', manualTeamAssignments },
+      },
+    })
+    vi.mocked(getAdminDb).mockReturnValue(repos.adminDb as never)
+    return repos
+  }
+
+  const rosterOf = (
+    repos: ReturnType<typeof setup>,
+    teamNumber: number
+  ): string[] =>
+    (repos.getTeams().find(t => t.data.teamNumber === teamNumber)?.data
+      .playerIds as string[]) ?? []
+
+  const totalOf = (playerIds: string[]) =>
+    playerIds.reduce((sum, id) => sum + (scores.get(id) ?? 0), 0)
+
+  beforeEach(() => {
+    vi.mocked(evaluateFeatureFlag).mockReset().mockResolvedValue(false)
+    vi.mocked(getEffectiveSkillScoresForClub)
+      .mockReset()
+      .mockResolvedValue({ scoreByUserId: scores, unratedUserIds: ['p8'] })
+    vi.mocked(auditLog).mockReset()
+    vi.mocked(verifyClubAdminForMatch).mockResolvedValue({
+      uid: 'admin1',
+      email: 'admin1@example.com',
+      isClubAdmin: true,
+      matchExists: true,
+      isSuperUser: false,
+      clubId: 'club1',
+      error: null,
+    })
+  })
+
+  it('keeps the size-balanced result and omits strength when the flag is off', async () => {
+    const repos = setup()
+    const response = await POST(makeRequest())
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(evaluateFeatureFlag).toHaveBeenCalledWith('skill-balanced-teams', {
+      key: 'admin1',
+      email: 'admin1@example.com',
+    })
+    expect(getEffectiveSkillScoresForClub).not.toHaveBeenCalled()
+    expect(body).not.toHaveProperty('strength')
+    expect(rosterOf(repos, 1)).toEqual(ids.slice(0, 4))
+    expect(rosterOf(repos, 2)).toEqual(ids.slice(4))
+    expect(vi.mocked(auditLog).mock.calls[0]?.[0].metadata).toMatchObject({
+      skillBalanced: false,
+    })
+  })
+
+  it('skips skill balancing for a match without a clubId', async () => {
+    vi.mocked(evaluateFeatureFlag).mockResolvedValue(true)
+    vi.mocked(verifyClubAdminForMatch).mockResolvedValue({
+      uid: 'admin1',
+      isClubAdmin: true,
+      matchExists: true,
+      isSuperUser: true,
+      clubId: null,
+      error: null,
+    })
+    const repos = setup()
+    const response = await POST(makeRequest())
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(evaluateFeatureFlag).not.toHaveBeenCalled()
+    expect(getEffectiveSkillScoresForClub).not.toHaveBeenCalled()
+    expect(body).not.toHaveProperty('strength')
+    expect(rosterOf(repos, 1)).toEqual(ids.slice(0, 4))
+  })
+
+  it('swaps players within the pair to even skill and reports strength', async () => {
+    vi.mocked(evaluateFeatureFlag).mockResolvedValue(true)
+    const repos = setup()
+    const response = await POST(makeRequest())
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(getEffectiveSkillScoresForClub).toHaveBeenCalledWith(
+      repos.adminDb,
+      'club1',
+      expect.arrayContaining(ids)
+    )
+    const team1 = rosterOf(repos, 1)
+    const team2 = rosterOf(repos, 2)
+    // Same players, same sizes; only the split changed.
+    expect(body.assignedCounts).toEqual([4, 4])
+    expect([...team1, ...team2].sort()).toEqual([...ids].sort())
+    // gk1 is locked on Team 1; best split is 2+4+1+1 = 8 vs 4+4+1+1 = 10.
+    expect(team1).toContain('gk1')
+    expect(totalOf(team1)).toBe(8)
+    expect(totalOf(team2)).toBe(10)
+    expect(body.strength).toEqual({
+      teams: [
+        { teamNumber: 1, total: 8, average: 2, size: 4 },
+        { teamNumber: 2, total: 10, average: 2.5, size: 4 },
+      ],
+      unratedCount: 1,
+      playerCount: 8,
+    })
+    expect(repos.getMatchData().manualTeamAssignments).toEqual({})
+    expect(vi.mocked(auditLog).mock.calls[0]?.[0].metadata).toMatchObject({
+      skillBalanced: true,
+      assignedCounts: [4, 4],
+    })
+  })
+
+  it('never moves pinned players or goalkeepers and adds no pins', async () => {
+    vi.mocked(evaluateFeatureFlag).mockResolvedValue(true)
+    // p3 and p4 pinned to Team 1 would otherwise be swapped out.
+    const pins = { p3: 1, p4: 1 }
+    const repos = setup(pins)
+    const response = await POST(makeRequest())
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    const team1 = rosterOf(repos, 1)
+    const team2 = rosterOf(repos, 2)
+    expect(team1).toEqual(expect.arrayContaining(['gk1', 'p3', 'p4']))
+    expect(team2).toContain('p2')
+    expect(team1).toHaveLength(4)
+    expect(team2).toHaveLength(4)
+    expect(body.strength.teams.map((t: { size: number }) => t.size)).toEqual([
+      4, 4,
+    ])
+    expect(repos.getMatchData().manualTeamAssignments).toEqual(pins)
+  })
+
+  it('falls back to the size-balanced result when skill data fails to load', async () => {
+    vi.mocked(evaluateFeatureFlag).mockResolvedValue(true)
+    vi.mocked(getEffectiveSkillScoresForClub).mockRejectedValue(
+      new Error('firestore unavailable')
+    )
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const repos = setup()
+    const response = await POST(makeRequest())
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.success).toBe(true)
+    expect(body).not.toHaveProperty('strength')
+    expect(rosterOf(repos, 1)).toEqual(ids.slice(0, 4))
+    expect(rosterOf(repos, 2)).toEqual(ids.slice(4))
+    expect(errorSpy).toHaveBeenCalled()
+    expect(vi.mocked(auditLog).mock.calls[0]?.[0].metadata).toMatchObject({
+      skillBalanced: false,
+    })
+    errorSpy.mockRestore()
   })
 })

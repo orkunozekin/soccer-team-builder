@@ -4,12 +4,12 @@ Plan to give each club a private, admin-maintained skill ranking of its players,
 
 ## Status
 
-| Field | Value |
-|-------|-------|
-| Status | in-progress |
-| Owner session | — |
-| Last updated | 2026-11-05 |
-| Related PR / branch | Step 1: [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137) (merged, `b87260b`); Step 2: `orkun/skill-step-2-storage-apis` ([#138](https://github.com/orkunozekin/soccer-team-builder/pull/138)) |
+| Field               | Value                                                                                                                                                                                                                                              |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Status              | in-progress                                                                                                                                                                                                                                        |
+| Owner session       | —                                                                                                                                                                                                                                                  |
+| Last updated        | 2026-11-05                                                                                                                                                                                                                                         |
+| Related PR / branch | Step 1: [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137) (merged, `b87260b`); Step 2: [#138](https://github.com/orkunozekin/soccer-team-builder/pull/138) (merged, `19285be`); Step 3: `orkun/skill-step-3-rebalance` (PR_LINK) |
 
 ## Why not a 1–5 self-rating
 
@@ -62,12 +62,12 @@ Implemented as five sequential steps, one PR each. Each step merges before the n
 
 Each answer scores 1–3. Copy describes what happens, not how long someone has played.
 
-| Key | Question | 1 | 2 | 3 |
-|-----|----------|---|---|---|
-| `firstTouch` | A firm pass comes to you. Usually… | It often gets away from me | I control it, but need a second touch | It's under control and I'm already turning or passing |
-| `passing` | Passing to a teammate about 20 m away on the ground… | I often miss the target | I usually reach them | I hit them at the right pace, either foot |
-| `fitness` | Over a 60-minute game… | I need regular breaks | I keep going with a few breaks | I'm running hard until the end |
-| `gameSense` | Before the ball reaches you… | I decide what to do once I have it | I sometimes know my next pass | I've already checked where the space and my next pass are |
+| Key          | Question                                             | 1                                  | 2                                     | 3                                                         |
+| ------------ | ---------------------------------------------------- | ---------------------------------- | ------------------------------------- | --------------------------------------------------------- |
+| `firstTouch` | A firm pass comes to you. Usually…                   | It often gets away from me         | I control it, but need a second touch | It's under control and I'm already turning or passing     |
+| `passing`    | Passing to a teammate about 20 m away on the ground… | I often miss the target            | I usually reach them                  | I hit them at the right pace, either foot                 |
+| `fitness`    | Over a 60-minute game…                               | I need regular breaks              | I keep going with a few breaks        | I'm running hard until the end                            |
+| `gameSense`  | Before the ball reaches you…                         | I decide what to do once I have it | I sometimes know my next pass         | I've already checked where the space and my next pass are |
 
 `assessmentScore = 1 + (mean(answers) − 1) × 1.5` → range 1–4, the same scale as tiers.
 
@@ -83,10 +83,10 @@ The rebalance response reports how many players fell back to the default (`unrat
 
 ### Data model
 
-| Collection / doc | Fields | Access |
-|------------------|--------|--------|
-| `clubSkillRankings/{clubId}` | `clubId`, `tiers: { top: uid[], strong: uid[], average: uid[], developing: uid[] }` (ordered strongest first), `version: number`, `updatedBy`, `updatedAt` | Club admins via API |
-| `skillAssessments/{userId}` | `userId`, `answers: { firstTouch, passing, fitness, gameSense }` (1–3 each), `updatedAt` | Owner via API; admins of a club the user actively belongs to via API |
+| Collection / doc             | Fields                                                                                                                                                     | Access                                                               |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `clubSkillRankings/{clubId}` | `clubId`, `tiers: { top: uid[], strong: uid[], average: uid[], developing: uid[] }` (ordered strongest first), `version: number`, `updatedBy`, `updatedAt` | Club admins via API                                                  |
+| `skillAssessments/{userId}`  | `userId`, `answers: { firstTouch, passing, fitness, gameSense }` (1–3 each), `updatedAt`                                                                   | Owner via API; admins of a club the user actively belongs to via API |
 
 One doc per club keeps the ranking atomic and small (a club has tens of players). Rules deny all client reads/writes for both collections; everything goes through API routes with the Admin SDK. Lookups are by doc id only, so **no composite index**.
 
@@ -94,13 +94,13 @@ One doc per club keeps the ranking atomic and small (a club has tens of players)
 
 ### API
 
-| Route | Auth | Behavior |
-|-------|------|----------|
-| `GET /api/users/me/skill-assessment` | `verifyAuth` | `{ assessment: { answers, updatedAt } \| null }` |
-| `PUT /api/users/me/skill-assessment` | `verifyAuth` | body `{ answers }` (each 1–3; validate with Zod or a parse helper) → upsert |
-| `GET /api/clubs/[clubId]/skill-ranking` | `verifyClubAdmin` | `{ ranking: { tiers, version }, members: [{ userId, displayName, position, assessmentScore }] }`. Ranked uids no longer active members are dropped from the response. |
+| Route                                   | Auth              | Behavior                                                                                                                                                                 |
+| --------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /api/users/me/skill-assessment`    | `verifyAuth`      | `{ assessment: { answers, updatedAt } \| null }`                                                                                                                         |
+| `PUT /api/users/me/skill-assessment`    | `verifyAuth`      | body `{ answers }` (each 1–3; validate with Zod or a parse helper) → upsert                                                                                              |
+| `GET /api/clubs/[clubId]/skill-ranking` | `verifyClubAdmin` | `{ ranking: { tiers, version }, members: [{ userId, displayName, position, assessmentScore }] }`. Ranked uids no longer active members are dropped from the response.    |
 | `PUT /api/clubs/[clubId]/skill-ranking` | `verifyClubAdmin` | body `{ tiers, version }`; uids must be active members, no duplicates; transaction + version check (`409` on conflict); audit `club.skill_ranking_updated` (counts only) |
-| `POST /api/teams/rebalance` | unchanged | flag on → response adds `strength: { teams: [{ teamNumber, total, average, size }], unratedCount }` |
+| `POST /api/teams/rebalance`             | unchanged         | flag on → response adds `strength: { teams: [{ teamNumber, total, average, size }], unratedCount }`                                                                      |
 
 ### Balancer
 
@@ -131,26 +131,26 @@ Runs **last** in the rebalance route, after GK shift and pin application. Pair m
 
 ## Files to touch
 
-| Path | Change |
-|------|--------|
-| `lib/flags/featureFlags.ts`, `.env.sample` | new flag |
-| `types/skill.ts` | types |
-| `lib/skill/scoring.ts` (+ test) | questionnaire, tiers, scoring, validation |
-| `lib/teams/balanceTeamsBySkill.ts` (+ test) | balancer |
-| `firestore.rules` | deny client access to the two collections |
-| `app/api/users/me/skill-assessment/route.ts` (+ test) | self questionnaire |
-| `app/api/clubs/[clubId]/skill-ranking/route.ts` (+ test) | admin ranking |
-| `app/api/teams/rebalance/route.ts` (+ test) | flag, balancer, `strength` |
-| `lib/api/client.ts` | client helpers |
-| `types/auditLog.ts` | `club.skill_ranking_updated` |
-| `components/skill/SkillQuestionnaire.tsx` (+ test) | form |
-| `components/skill/SkillRankingBoard.tsx` (+ test) | admin board |
-| `components/skill/SkillStrengthCard.tsx` | admins-only card |
-| `components/matches/RSVPPositionModal.tsx`, `RSVPButton.tsx` | optional step |
-| `app/profile/page.tsx` | profile section |
-| `app/c/[slug]/roster/page.tsx` | mount board |
-| `components/admin/RebalanceTeamsButton.tsx` | show card |
-| `docs/ARCHITECTURE.md` | collections + routes |
+| Path                                                         | Change                                    |
+| ------------------------------------------------------------ | ----------------------------------------- |
+| `lib/flags/featureFlags.ts`, `.env.sample`                   | new flag                                  |
+| `types/skill.ts`                                             | types                                     |
+| `lib/skill/scoring.ts` (+ test)                              | questionnaire, tiers, scoring, validation |
+| `lib/teams/balanceTeamsBySkill.ts` (+ test)                  | balancer                                  |
+| `firestore.rules`                                            | deny client access to the two collections |
+| `app/api/users/me/skill-assessment/route.ts` (+ test)        | self questionnaire                        |
+| `app/api/clubs/[clubId]/skill-ranking/route.ts` (+ test)     | admin ranking                             |
+| `app/api/teams/rebalance/route.ts` (+ test)                  | flag, balancer, `strength`                |
+| `lib/api/client.ts`                                          | client helpers                            |
+| `types/auditLog.ts`                                          | `club.skill_ranking_updated`              |
+| `components/skill/SkillQuestionnaire.tsx` (+ test)           | form                                      |
+| `components/skill/SkillRankingBoard.tsx` (+ test)            | admin board                               |
+| `components/skill/SkillStrengthCard.tsx`                     | admins-only card                          |
+| `components/matches/RSVPPositionModal.tsx`, `RSVPButton.tsx` | optional step                             |
+| `app/profile/page.tsx`                                       | profile section                           |
+| `app/c/[slug]/roster/page.tsx`                               | mount board                               |
+| `components/admin/RebalanceTeamsButton.tsx`                  | show card                                 |
+| `docs/ARCHITECTURE.md`                                       | collections + routes                      |
 
 ## Acceptance criteria
 
@@ -181,7 +181,7 @@ Runs **last** in the rebalance route, after GK shift and pin application. Pair m
 - Workflow: one PR per step (Todos 1–5), each squash-merged after a passing AI review on its head (Greptile 5/5, or a clean Codex review when Greptile is unavailable; see `docs/AGENT_CONTEXT.md` § Code review on every PR) and green CI, before the next step starts.
 - **Step 1 (merged, [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137), `b87260b`):** flag `skill-balanced-teams` (default false, `NEXT_PUBLIC_FF_SKILL_BALANCED_TEAMS` override, `.env.sample`); `types/skill.ts`; `lib/skill/scoring.ts` (`SKILL_QUESTIONNAIRE`, `SKILL_TIER_LABELS`/`SKILL_TIER_VALUES`, `parseSkillAnswers`, `validateSkillTiers` for saves, `normalizeStoredSkillTiers` for reads, `assessmentScore`, `rankingScores`, `computeEffectiveSkillScores` → `{ scoreByUserId, unratedUserIds }`); `lib/teams/balanceTeamsBySkill.ts` (`balanceTeamsBySkill`, `summarizeTeamStrength` → `{ teams: [{ teamNumber, total, average, size }], unratedCount }`, rounded to 2 decimals). Colocated Vitest tests.
 - Balancer note: greedy seed + best-improvement pairwise swaps (per Design) is a local search, not exhaustive; on random small pairs it occasionally lands up to ~1 point above the brute-force optimum. Accepted for v1 per the plan.
-- **Step 2 (in review, [#138](https://github.com/orkunozekin/soccer-team-builder/pull/138)):**
+- **Step 2 (merged, [#138](https://github.com/orkunozekin/soccer-team-builder/pull/138), `19285be`):**
   - `firestore.rules`: `allow read, write: if false` for `clubSkillRankings/{clubId}` and `skillAssessments/{userId}`.
   - [`lib/skill/skillStoreAdmin.ts`](../../lib/skill/skillStoreAdmin.ts) (Admin SDK, takes `adminDb`): `getSkillAssessment`, `saveSkillAssessment`, `getSkillAnswersForUsers` (chunked `getAll`, malformed answers skipped), `getClubSkillRanking(adminDb, clubId, allowedUids?)` → `{ tiers, version }` (0 when missing), `saveClubSkillRanking` (transaction; returns `{ ok: true, version }` or `{ ok: false, conflict: true, currentVersion }`), `getEffectiveSkillScoresForClub(adminDb, clubId, uids)` → `EffectiveSkillScores`.
   - `GET/PUT /api/users/me/skill-assessment` (`verifyAuth`, `'fallback'` → 401, flag off → 403, invalid answers → 400).
@@ -189,21 +189,29 @@ Runs **last** in the rebalance route, after GK shift and pin application. Pair m
   - DTO types in `types/skill.ts` (`SkillAssessmentDTO`, `ClubSkillRankingDTO`, `SkillRankingMemberDTO`). Client helpers in `lib/api/client.ts`: `getMySkillAssessmentAPI`, `saveMySkillAssessmentAPI`, `getClubSkillRankingAPI`, `saveClubSkillRankingAPI` (errors carry `status`, e.g. 409, and `code`).
   - Tests: store unit tests (version check, chunking, normalization) and route tests for both routes.
 
+- **Step 3 (in review, PR_LINK):**
+  - `POST /api/teams/rebalance`: unchanged pipeline, then for a match with `clubId`, `balanceBySkillIfEnabled` evaluates `skill-balanced-teams` server-side (`{ key: uid, email }`; `verifyClubAdminForMatch` now also returns the verified token `email`), loads `getEffectiveSkillScoresForClub` for the uids on the size-balanced teams, and runs `balanceTeamsBySkill` last with locked = goalkeeper candidates + uids in `manualTeamAssignments`. Response adds `strength: { teams, unratedCount, playerCount }`; audit `team.rebalanced` metadata adds `skillBalanced`. Flag off, no `clubId`, or any skill load/flag error (logged) → size-balanced result, no `strength`. Skill moves are never written to `manualTeamAssignments`.
+  - `RebalanceStrengthSummary` type (`types/skill.ts`); `rebalanceTeamsAPI` return type gains optional `strength`.
+  - `RebalanceTeamsButton`: optional `onSkillBalanced(summary | null)`, called before `onDone`.
+  - `components/skill/SkillStrengthCard.tsx`: "Balanced by skill" + "Admins only" + dismiss; per-team bar (relative to the largest total) + total (1 decimal); unrated note with "Rank players" → `clubRosterPath(slug)` when the route has a `slug`.
+  - `MatchDetailView`: summary in component state keyed by `matchId`, rendered above `TeamsDisplay` only when `canManageMatch`; cleared on dismiss, on a size-only rebalance, and after Restore RSVP order (which undoes the skill split).
+  - Tests: route (flag off unchanged, no `clubId` skip, flag on even split + `strength`, pins/GK never move, no new pins, load failure fallback), card, button callback, `MatchDetailView` admin-only card.
+
 ### Remaining work
 
-- Step 2: pass review on [#138](https://github.com/orkunozekin/soccer-team-builder/pull/138), then merge (coordinator).
-- Then Step 3 (skill-aware rebalance): in the rebalance route, after `verifyClubAdminForMatch`, evaluate `skill-balanced-teams` server-side and call `getEffectiveSkillScoresForClub(adminDb, clubId, rosterUids)` from `lib/skill/skillStoreAdmin.ts`; pass `scoreByUserId` to `balanceTeamsBySkill` (locked = GKs + pinned) and `unratedUserIds.length` to `summarizeTeamStrength`. A match without `clubId` (pre-backfill) has no ranking: skip skill balancing. Steps 4–5 in order.
+- Step 3: pass review on PR_LINK, then merge (coordinator).
+- Then Step 4 (questionnaire UI), then Step 5 (ranking board + docs), in order.
 - Deploy note: `firestore.rules` must be deployed for the deny blocks (no new indexes; lookups are by doc id).
 
 ### Run ledger
 
-| Step | Session | PR | Status |
-|------|---------|----|--------|
-| 1 | Claude Code (cloud) | [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137) | merged (`b87260b`) |
-| 2 | Claude Code (cloud) | [#138](https://github.com/orkunozekin/soccer-team-builder/pull/138) | in review |
-| 3 | — | — | not started |
-| 4 | — | — | not started |
-| 5 | — | — | not started |
+| Step | Session             | PR                                                                  | Status             |
+| ---- | ------------------- | ------------------------------------------------------------------- | ------------------ |
+| 1    | Claude Code (cloud) | [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137) | merged (`b87260b`) |
+| 2    | Claude Code (cloud) | [#138](https://github.com/orkunozekin/soccer-team-builder/pull/138) | merged (`19285be`) |
+| 3    | Claude Code (cloud) | PR_LINK                                                             | in review          |
+| 4    | —                   | —                                                                   | not started        |
+| 5    | —                   | —                                                                   | not started        |
 
 ### Blockers / risks
 

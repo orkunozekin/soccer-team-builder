@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import { Button, type ButtonProps } from '@/components/ui/button'
 import { rebalanceTeamsAPI } from '@/lib/api/client'
+import type { RebalanceStrengthSummary } from '@/types/skill'
 
 export function RebalanceTeamsButton({
   matchId,
   onDone,
+  onSkillBalanced,
   variant = 'default',
   size = 'sm',
   className,
@@ -14,6 +16,8 @@ export function RebalanceTeamsButton({
 }: {
   matchId: string
   onDone: () => void
+  /** Called before `onDone` with the skill summary, or null when the server balanced by size only. */
+  onSkillBalanced?: (summary: RebalanceStrengthSummary | null) => void
   variant?: ButtonProps['variant']
   size?: ButtonProps['size']
   className?: string
@@ -26,7 +30,8 @@ export function RebalanceTeamsButton({
     setError(null)
     setLoading(true)
     try {
-      await rebalanceTeamsAPI(matchId)
+      const result = await rebalanceTeamsAPI(matchId)
+      onSkillBalanced?.(result?.strength ?? null)
       onDone()
     } catch {
       setError('Failed to rebalance teams')

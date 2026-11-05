@@ -22,6 +22,7 @@ import type {
 } from '@/types/club'
 import type {
   ClubSkillRankingDTO,
+  RebalanceStrengthSummary,
   SkillAnswers,
   SkillAssessmentDTO,
   SkillRankingMemberDTO,
@@ -376,6 +377,8 @@ export async function rebalanceTeamsAPI(matchId: string): Promise<{
   benchCount: number
   rosterLimit: number
   replacements: Array<{ insertedGK: string; removedPlayer: string }>
+  /** Present only when the server balanced this club match by skill. */
+  strength?: RebalanceStrengthSummary
 }> {
   const response = await apiRequest('/teams/rebalance', {
     method: 'POST',

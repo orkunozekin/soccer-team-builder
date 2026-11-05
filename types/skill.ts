@@ -59,6 +59,12 @@ export interface TeamStrengthSummary {
   unratedCount: number
 }
 
+/** `strength` on a skill-balanced rebalance response (admins only). */
+export interface RebalanceStrengthSummary extends TeamStrengthSummary {
+  /** Players placed on teams (the denominator for `unratedCount`). */
+  playerCount: number
+}
+
 /** A player's stored questionnaire, as returned by the API. */
 export interface SkillAssessmentDTO {
   answers: SkillAnswers
