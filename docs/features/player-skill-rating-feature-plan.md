@@ -194,7 +194,7 @@ Runs **last** in the rebalance route, after GK shift and pin application. Pair m
   - `RebalanceStrengthSummary` type (`types/skill.ts`); `rebalanceTeamsAPI` return type gains optional `strength`.
   - `RebalanceTeamsButton`: optional `onSkillBalanced(summary | null)`, called before `onDone`.
   - `components/skill/SkillStrengthCard.tsx`: "Balanced by skill" + "Admins only" + dismiss; per-team bar (relative to the largest total) + total (1 decimal); unrated note with "Rank players" → `clubRosterPath(slug)` when the route has a `slug`.
-  - `MatchDetailView`: summary in component state keyed by `matchId`, rendered above `TeamsDisplay` only when `canManageMatch`; cleared on dismiss, on a size-only rebalance, and after Restore RSVP order (which undoes the skill split).
+  - `MatchDetailView`: summary in component state keyed by `matchId`, rendered above `TeamsDisplay` only when `canManageMatch`; cleared on dismiss, on a size-only rebalance, and before any other roster-changing refetch (transfers, drag-and-drop, RSVP changes, match edits, Restore RSVP order) so it never shows stale totals.
   - Tests: route (flag off unchanged, no `clubId` skip, flag on even split + `strength`, pins/GK never move, no new pins, load failure fallback), card, button callback, `MatchDetailView` admin-only card.
 
 ### Remaining work
