@@ -38,6 +38,7 @@ const context = () => ({ params: Promise.resolve({ clubId: 'club1' }) })
 function adminResult(overrides: Record<string, unknown> = {}) {
   return {
     uid: 'admin1',
+    email: 'admin@example.com',
     isClubAdmin: true,
     isSuperUser: false,
     membership: null,
@@ -111,6 +112,7 @@ describe('/api/clubs/[clubId]/skill-ranking', () => {
       expect((await PUT(putRequest({}), context())).status).toBe(403)
       expect(evaluateFeatureFlag).toHaveBeenCalledWith('skill-balanced-teams', {
         key: 'admin1',
+        email: 'admin@example.com',
       })
       expect(listMembershipsForClub).not.toHaveBeenCalled()
     })

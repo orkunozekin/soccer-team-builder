@@ -38,7 +38,10 @@ async function authorize(
   const { clubId } = await context.params
   if (!clubId) return deny('Club ID required', 400)
 
-  const { uid, isClubAdmin, error } = await verifyClubAdmin(request, clubId)
+  const { uid, email, isClubAdmin, error } = await verifyClubAdmin(
+    request,
+    clubId
+  )
   if (!uid || uid === 'fallback') return deny('Unauthorized', 401)
   // With a uid, an error means the membership lookup failed: retryable,
   // never "not an admin".
@@ -49,6 +52,7 @@ async function authorize(
 
   const enabled = await evaluateFeatureFlag('skill-balanced-teams', {
     key: uid,
+    email,
   })
   if (!enabled) return deny('Skill ranking is unavailable', 403)
 
