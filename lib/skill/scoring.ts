@@ -30,7 +30,7 @@ export const SKILL_QUESTIONNAIRE: readonly SkillQuestion[] = [
   },
   {
     key: 'passing',
-    prompt: 'Passing to a teammate about 20 m away on the ground…',
+    prompt: 'Passing to a teammate about 20 yards (18 m) away on the ground…',
     options: [
       { value: 1, label: 'I often miss the target' },
       { value: 2, label: 'I usually reach them' },

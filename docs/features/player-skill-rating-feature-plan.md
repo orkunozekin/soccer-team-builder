@@ -62,12 +62,12 @@ Implemented as five sequential steps, one PR each. Each step merges before the n
 
 Each answer scores 1–3. Copy describes what happens, not how long someone has played.
 
-| Key          | Question                                             | 1                                  | 2                                     | 3                                                         |
-| ------------ | ---------------------------------------------------- | ---------------------------------- | ------------------------------------- | --------------------------------------------------------- |
-| `firstTouch` | A firm pass comes to you. Usually…                   | It often gets away from me         | I control it, but need a second touch | It's under control and I'm already turning or passing     |
-| `passing`    | Passing to a teammate about 20 m away on the ground… | I often miss the target            | I usually reach them                  | I hit them at the right pace, either foot                 |
-| `fitness`    | Over a 60-minute game…                               | I need regular breaks              | I keep going with a few breaks        | I'm running hard until the end                            |
-| `gameSense`  | Before the ball reaches you…                         | I decide what to do once I have it | I sometimes know my next pass         | I've already checked where the space and my next pass are |
+| Key          | Question                                                        | 1                                  | 2                                     | 3                                                         |
+| ------------ | --------------------------------------------------------------- | ---------------------------------- | ------------------------------------- | --------------------------------------------------------- |
+| `firstTouch` | A firm pass comes to you. Usually…                              | It often gets away from me         | I control it, but need a second touch | It's under control and I'm already turning or passing     |
+| `passing`    | Passing to a teammate about 20 yards (18 m) away on the ground… | I often miss the target            | I usually reach them                  | I hit them at the right pace, either foot                 |
+| `fitness`    | Over a 60-minute game…                                          | I need regular breaks              | I keep going with a few breaks        | I'm running hard until the end                            |
+| `gameSense`  | Before the ball reaches you…                                    | I decide what to do once I have it | I sometimes know my next pass         | I've already checked where the space and my next pass are |
 
 `assessmentScore = 1 + (mean(answers) − 1) × 1.5` → range 1–4, the same scale as tiers.
 
