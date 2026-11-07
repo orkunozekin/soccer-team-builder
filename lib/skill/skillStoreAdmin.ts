@@ -1,7 +1,7 @@
 import { type Firestore, Timestamp } from 'firebase-admin/firestore'
 import {
   computeEffectiveSkillScores,
-  normalizeStoredSkillTiers,
+  normalizeStoredSkillRatings,
   parseSkillAnswers,
 } from '@/lib/skill/scoring'
 import type {
@@ -9,7 +9,7 @@ import type {
   EffectiveSkillScores,
   SkillAnswers,
   SkillAssessmentDTO,
-  SkillRankingTiers,
+  SkillRatings,
 } from '@/types/skill'
 
 /**
@@ -102,8 +102,9 @@ export async function getSkillAnswersForUsers(
 }
 
 /**
- * The club's ranking (normalized tiers + version; version 0 when unsaved).
- * Pass `allowedUserIds` to drop uids that are no longer active members.
+ * The club's admin ratings (normalized; version 0 when unsaved). Pass
+ * `allowedUserIds` to drop uids that are no longer active members. Docs
+ * saved by the earlier tier ranking have no `ratings` and read as unrated.
  */
 export async function getClubSkillRanking(
   adminDb: Firestore,
@@ -116,7 +117,7 @@ export async function getClubSkillRanking(
     .get()
   const data = snap.exists ? (snap.data() ?? {}) : {}
   return {
-    tiers: normalizeStoredSkillTiers(data.tiers, allowedUserIds),
+    ratings: normalizeStoredSkillRatings(data.ratings, allowedUserIds),
     version: storedVersion(data.version),
   }
 }
@@ -126,16 +127,16 @@ export type SaveClubSkillRankingResult =
   | { ok: false; conflict: true; currentVersion: number }
 
 /**
- * Save the club's ranking if the stored version still equals
- * `expectedVersion` (0 for a club that has never saved one). On success the
+ * Save the club's ratings if the stored version still equals
+ * `expectedVersion` (0 for a club that has never saved). On success the
  * version is incremented; otherwise nothing is written and a conflict is
- * returned. `tiers` must already be validated against active members.
+ * returned. `ratings` must already be validated against active members.
  */
 export async function saveClubSkillRanking(
   adminDb: Firestore,
   input: {
     clubId: string
-    tiers: SkillRankingTiers
+    ratings: SkillRatings
     expectedVersion: number
     updatedBy: string
   }
@@ -156,7 +157,7 @@ export async function saveClubSkillRanking(
       const version = currentVersion + 1
       tx.set(ref, {
         clubId: input.clubId,
-        tiers: input.tiers,
+        ratings: input.ratings,
         version,
         updatedBy: input.updatedBy,
         updatedAt: Timestamp.now(),
@@ -167,21 +168,14 @@ export async function saveClubSkillRanking(
 }
 
 /**
- * Effective skill score (ranking ?? questionnaire ?? default) for each uid in
- * a club. The stored ranking is used unfiltered so in-tier positions match
- * the saved order; ranked uids outside `userIds` are simply not scored.
+ * Effective skill score (admin rating ?? default) for each uid in a club.
+ * The questionnaire is not read while it is switched off.
  */
 export async function getEffectiveSkillScoresForClub(
   adminDb: Firestore,
   clubId: string,
   userIds: readonly string[]
 ): Promise<EffectiveSkillScores> {
-  const [ranking, answersByUserId] = await Promise.all([
-    getClubSkillRanking(adminDb, clubId),
-    getSkillAnswersForUsers(adminDb, userIds),
-  ])
-  return computeEffectiveSkillScores(userIds, {
-    tiers: ranking.tiers,
-    answersByUserId,
-  })
+  const ranking = await getClubSkillRanking(adminDb, clubId)
+  return computeEffectiveSkillScores(userIds, ranking.ratings)
 }

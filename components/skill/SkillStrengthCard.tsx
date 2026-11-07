@@ -80,8 +80,8 @@ export function SkillStrengthCard({
 
       {summary.unratedCount > 0 && (
         <p className="mt-3 text-sm text-muted-foreground">
-          {summary.unratedCount} of {summary.playerCount} players have no
-          ranking or questionnaire, so they count as average.
+          {summary.unratedCount} of {summary.playerCount} players aren’t rated
+          yet, so they count as 5.5.
           {rosterHref && (
             <>
               {' '}
@@ -89,7 +89,7 @@ export function SkillStrengthCard({
                 href={rosterHref}
                 className="font-medium text-foreground underline underline-offset-2"
               >
-                Rank players
+                Rate players
               </Link>
             </>
           )}

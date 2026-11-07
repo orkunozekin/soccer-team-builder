@@ -5,21 +5,16 @@ import { getAdminDb } from '@/lib/firebase/admin'
 import { evaluateFeatureFlag } from '@/lib/flags/evaluateFeatureFlag'
 import { auditLog } from '@/lib/services/auditService'
 import { listMembershipsForClub } from '@/lib/services/clubService'
-import { assessmentScore, validateSkillTiers } from '@/lib/skill/scoring'
+import { validateSkillRatings } from '@/lib/skill/scoring'
 import {
   getClubSkillRanking,
-  getSkillAnswersForUsers,
   saveClubSkillRanking,
 } from '@/lib/skill/skillStoreAdmin'
 import { getUsersByIdsAdmin } from '@/lib/users/getUsersByIdsAdmin'
-import {
-  SKILL_TIER_KEYS,
-  type SkillRankingMemberDTO,
-  type SkillTierKey,
-} from '@/types/skill'
+import type { SkillRankingMemberDTO } from '@/types/skill'
 
 const RANKING_CONFLICT_MESSAGE =
-  'Another admin changed the ranking. Reload to see their changes.'
+  'Another admin changed the ratings. Reload to see their changes.'
 
 type RouteContext = { params: Promise<{ clubId: string }> }
 
@@ -60,8 +55,8 @@ async function authorize(
 }
 
 /**
- * GET /api/clubs/[clubId]/skill-ranking — club admins only. The ranking
- * (former members dropped) plus every active member with a questionnaire hint.
+ * GET /api/clubs/[clubId]/skill-ranking — club admins only. The club's
+ * 1–10 ratings (former members dropped) plus every active member.
  */
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
@@ -78,24 +73,19 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     const memberships = await listMembershipsForClub(gate.clubId)
     const memberIds = memberships.map(m => m.userId)
-    const [users, answersByUserId, ranking] = await Promise.all([
+    const [users, ranking] = await Promise.all([
       getUsersByIdsAdmin(adminDb, memberIds),
-      getSkillAnswersForUsers(adminDb, memberIds),
       getClubSkillRanking(adminDb, gate.clubId, new Set(memberIds)),
     ])
     const positionByUserId = new Map(
       users.map(user => [user.uid, user.position ?? null])
     )
 
-    const members: SkillRankingMemberDTO[] = memberships.map(m => {
-      const answers = answersByUserId.get(m.userId)
-      return {
-        userId: m.userId,
-        displayName: m.displayName,
-        position: positionByUserId.get(m.userId) ?? null,
-        assessmentScore: answers ? assessmentScore(answers) : null,
-      }
-    })
+    const members: SkillRankingMemberDTO[] = memberships.map(m => ({
+      userId: m.userId,
+      displayName: m.displayName,
+      position: positionByUserId.get(m.userId) ?? null,
+    }))
 
     return NextResponse.json({ ranking, members })
   } catch (err: unknown) {
@@ -108,8 +98,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
 }
 
 /**
- * PUT /api/clubs/[clubId]/skill-ranking — body `{ tiers, version }`.
- * Ranked uids must be active members; `409` when another admin saved first.
+ * PUT /api/clubs/[clubId]/skill-ranking — body `{ ratings, version }`,
+ * ratings being uid → 1–10 for active members (absent = unrated);
+ * `409` when another admin saved first.
  */
 export async function PUT(request: NextRequest, context: RouteContext) {
   try {
@@ -138,8 +129,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
 
     const memberships = await listMembershipsForClub(gate.clubId)
-    const validation = validateSkillTiers(
-      body?.tiers,
+    const validation = validateSkillRatings(
+      body?.ratings,
       new Set(memberships.map(m => m.userId))
     )
     if (!validation.ok) {
@@ -148,7 +139,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     const result = await saveClubSkillRanking(adminDb, {
       clubId: gate.clubId,
-      tiers: validation.tiers,
+      ratings: validation.ratings,
       expectedVersion,
       updatedBy: gate.uid,
     })
@@ -159,9 +150,6 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       )
     }
 
-    const tierCounts = Object.fromEntries(
-      SKILL_TIER_KEYS.map(tier => [tier, validation.tiers[tier].length])
-    ) as Record<SkillTierKey, number>
     auditLog({
       action: 'club.skill_ranking_updated',
       actorUid: gate.uid,
@@ -169,15 +157,14 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       entityId: gate.clubId,
       source: 'api',
       metadata: {
-        rankedCount: SKILL_TIER_KEYS.reduce((n, t) => n + tierCounts[t], 0),
-        tierCounts,
+        ratedCount: Object.keys(validation.ratings).length,
         version: result.version,
       },
     })
 
     return NextResponse.json({
       success: true,
-      ranking: { tiers: validation.tiers, version: result.version },
+      ranking: { ratings: validation.ratings, version: result.version },
     })
   } catch (err: unknown) {
     console.error('Error saving skill ranking:', err)

@@ -40,10 +40,10 @@ describe('SkillStrengthCard', () => {
 
     expect(
       screen.getByText(
-        /3 of 14 players have no ranking or questionnaire, so they count as average\./
+        /3 of 14 players aren’t rated yet, so they count as 5\.5\./
       )
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Rank players' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Rate players' })).toHaveAttribute(
       'href',
       '/c/fc-test/roster'
     )
@@ -55,7 +55,7 @@ describe('SkillStrengthCard', () => {
     )
     expect(screen.getByText(/3 of 14 players/)).toBeInTheDocument()
     expect(
-      screen.queryByRole('link', { name: 'Rank players' })
+      screen.queryByRole('link', { name: 'Rate players' })
     ).not.toBeInTheDocument()
 
     rerender(
@@ -69,7 +69,7 @@ describe('SkillStrengthCard', () => {
       screen.queryByText(/players have no ranking/)
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('link', { name: 'Rank players' })
+      screen.queryByRole('link', { name: 'Rate players' })
     ).not.toBeInTheDocument()
   })
 

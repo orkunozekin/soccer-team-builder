@@ -6,10 +6,8 @@ import { getAdminDb } from '@/lib/firebase/admin'
 import { evaluateFeatureFlag } from '@/lib/flags/evaluateFeatureFlag'
 import { auditLog } from '@/lib/services/auditService'
 import { listMembershipsForClub } from '@/lib/services/clubService'
-import { emptySkillTiers } from '@/lib/skill/scoring'
 import {
   getClubSkillRanking,
-  getSkillAnswersForUsers,
   saveClubSkillRanking,
 } from '@/lib/skill/skillStoreAdmin'
 import { getUsersByIdsAdmin } from '@/lib/users/getUsersByIdsAdmin'
@@ -28,7 +26,6 @@ vi.mock('@/lib/users/getUsersByIdsAdmin', () => ({
 }))
 vi.mock('@/lib/skill/skillStoreAdmin', () => ({
   getClubSkillRanking: vi.fn(),
-  getSkillAnswersForUsers: vi.fn(),
   saveClubSkillRanking: vi.fn(),
 }))
 
@@ -124,36 +121,21 @@ describe('/api/clubs/[clubId]/skill-ranking', () => {
   })
 
   describe('GET', () => {
-    it('returns the ranking and active members with questionnaire hints', async () => {
-      const tiers = { ...emptySkillTiers(), top: ['b'] }
-      vi.mocked(getClubSkillRanking).mockResolvedValue({ tiers, version: 3 })
+    it('returns the ratings and the active members', async () => {
+      const ratings = { b: 7 } as const
+      vi.mocked(getClubSkillRanking).mockResolvedValue({ ratings, version: 3 })
       vi.mocked(getUsersByIdsAdmin).mockResolvedValue([
         { uid: 'a', position: 'MID' },
         { uid: 'b', position: null },
       ] as never)
-      vi.mocked(getSkillAnswersForUsers).mockResolvedValue(
-        new Map([
-          ['a', { firstTouch: 3, passing: 3, fitness: 3, gameSense: 3 }],
-        ]) as never
-      )
 
       const res = await GET(new NextRequest(URL), context())
       expect(res.status).toBe(200)
       await expect(res.json()).resolves.toEqual({
-        ranking: { tiers, version: 3 },
+        ranking: { ratings, version: 3 },
         members: [
-          {
-            userId: 'a',
-            displayName: 'Alex',
-            position: 'MID',
-            assessmentScore: 4,
-          },
-          {
-            userId: 'b',
-            displayName: 'Blair',
-            position: null,
-            assessmentScore: null,
-          },
+          { userId: 'a', displayName: 'Alex', position: 'MID' },
+          { userId: 'b', displayName: 'Blair', position: null },
         ],
       })
       // Former members are dropped by reading with the active-member set.
@@ -177,15 +159,17 @@ describe('/api/clubs/[clubId]/skill-ranking', () => {
   })
 
   describe('PUT', () => {
-    const tiers = { ...emptySkillTiers(), top: ['a'], developing: ['b'] }
+    const ratings = { a: 9, b: 2 }
 
     it.each([
-      ['missing version', { tiers }],
-      ['negative version', { tiers, version: -1 }],
-      ['fractional version', { tiers, version: 1.5 }],
-      ['missing tiers', { version: 0 }],
-      ['non-member uid', { tiers: { ...tiers, strong: ['x'] }, version: 0 }],
-      ['duplicate uid', { tiers: { ...tiers, strong: ['a'] }, version: 0 }],
+      ['missing version', { ratings }],
+      ['negative version', { ratings, version: -1 }],
+      ['fractional version', { ratings, version: 1.5 }],
+      ['missing ratings', { version: 0 }],
+      ['non-member uid', { ratings: { ...ratings, x: 5 }, version: 0 }],
+      ['rating above 10', { ratings: { a: 11 }, version: 0 }],
+      ['rating below 1', { ratings: { a: 0 }, version: 0 }],
+      ['fractional rating', { ratings: { a: 6.5 }, version: 0 }],
     ])('returns 400 for %s', async (_label, body) => {
       expect((await PUT(putRequest(body), context())).status).toBe(400)
       expect(saveClubSkillRanking).not.toHaveBeenCalled()
@@ -198,11 +182,11 @@ describe('/api/clubs/[clubId]/skill-ranking', () => {
         conflict: true,
         currentVersion: 5,
       })
-      const res = await PUT(putRequest({ tiers, version: 4 }), context())
+      const res = await PUT(putRequest({ ratings, version: 4 }), context())
       expect(res.status).toBe(409)
       await expect(res.json()).resolves.toEqual({
         error:
-          'Another admin changed the ranking. Reload to see their changes.',
+          'Another admin changed the ratings. Reload to see their changes.',
         code: 'version_conflict',
       })
       expect(auditLog).not.toHaveBeenCalled()
@@ -213,15 +197,15 @@ describe('/api/clubs/[clubId]/skill-ranking', () => {
         ok: true,
         version: 5,
       })
-      const res = await PUT(putRequest({ tiers, version: 4 }), context())
+      const res = await PUT(putRequest({ ratings, version: 4 }), context())
       expect(res.status).toBe(200)
       await expect(res.json()).resolves.toEqual({
         success: true,
-        ranking: { tiers, version: 5 },
+        ranking: { ratings, version: 5 },
       })
       expect(saveClubSkillRanking).toHaveBeenCalledWith(adminDb, {
         clubId: 'club1',
-        tiers,
+        ratings,
         expectedVersion: 4,
         updatedBy: 'admin1',
       })
@@ -232,8 +216,7 @@ describe('/api/clubs/[clubId]/skill-ranking', () => {
         entityId: 'club1',
         source: 'api',
         metadata: {
-          rankedCount: 2,
-          tierCounts: { top: 1, strong: 0, average: 0, developing: 1 },
+          ratedCount: 2,
           version: 5,
         },
       })

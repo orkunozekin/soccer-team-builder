@@ -1,10 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  RSVPPositionModal,
-  type SkillStepMode,
-} from '@/components/matches/RSVPPositionModal'
+import { RSVPPositionModal } from '@/components/matches/RSVPPositionModal'
 import { RSVPSuccessCelebration } from '@/components/matches/RSVPSuccessCelebration'
 import { PositionSelector } from '@/components/profile/PositionSelector'
 import { ProfileCompleteModal } from '@/components/profile/ProfileCompleteModal'
@@ -20,7 +17,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { cancelRSVPAPI, confirmRSVPAPI } from '@/lib/api/client'
-import { useFeatureFlag } from '@/lib/flags/useFeatureFlag'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useIsClubAdmin } from '@/lib/hooks/useClubMemberships'
 import { getUserRSVP } from '@/lib/services/rsvpService'
@@ -30,13 +26,7 @@ import { isProfileComplete } from '@/lib/utils/profile'
 import { hasMatchStarted } from '@/lib/utils/rsvpScheduler'
 import { isGoalkeeper } from '@/lib/utils/teamGenerator'
 import { useMatchStore } from '@/store/matchStore'
-import {
-  loadSkillAssessment,
-  saveSkillAssessment,
-  useSkillAssessment,
-} from '@/store/skillAssessmentStore'
 import { Match } from '@/types/match'
-import type { SkillAnswers } from '@/types/skill'
 import { Team } from '@/types/team'
 import { User } from '@/types/user'
 
@@ -78,34 +68,6 @@ export function RSVPButton({
   const [justRsvped, setJustRsvped] = useState(false)
 
   const dismissCelebration = useCallback(() => setShowCelebration(false), [])
-
-  const skillEnabled = useFeatureFlag('skill-balanced-teams')
-  const authUid = user?.uid ?? null
-  const skillAssessment = useSkillAssessment(skillEnabled ? authUid : null)
-  const [skillSaveError, setSkillSaveError] = useState<string | null>(null)
-  // The questionnaire is required once. Leave it out only when we know the
-  // player answered; wait while loading or while an earlier save is still in
-  // flight; after a load error ask again rather than let the RSVP through.
-  const skillStep: SkillStepMode = !skillEnabled
-    ? 'none'
-    : skillAssessment.saveStatus === 'saving'
-      ? 'checking'
-      : skillAssessment.loadStatus === 'loaded' &&
-          skillAssessment.assessment !== null
-        ? 'none'
-        : skillAssessment.loadStatus === 'loaded' ||
-            skillAssessment.loadStatus === 'error'
-          ? 'required'
-          : 'checking'
-
-  useEffect(() => {
-    if (skillEnabled && authUid) void loadSkillAssessment(authUid)
-  }, [skillEnabled, authUid])
-
-  // A save error belongs to one attempt; start each RSVP attempt clean.
-  useEffect(() => {
-    if (positionModalOpen) setSkillSaveError(null)
-  }, [positionModalOpen])
 
   const uid = currentUserId ?? user?.uid ?? null
   const userTeam = uid ? teams.find(t => t.playerIds.includes(uid)) : undefined
@@ -203,27 +165,6 @@ export function RSVPButton({
     setPositionModalOpen(true)
   }
 
-  const handleModalConfirm = async (
-    pos: string | null,
-    skillAnswers?: SkillAnswers
-  ): Promise<boolean | void> => {
-    if (skillAnswers) {
-      if (!user) return false
-      // Required: the answers must be saved before the RSVP is sent.
-      setSkillSaveError(null)
-      setLoading(true)
-      const saved = await saveSkillAssessment(user.uid, skillAnswers)
-      setLoading(false)
-      if (!saved) {
-        setSkillSaveError(
-          'Couldn’t save your answers, so you’re not RSVP’d yet. Please try again.'
-        )
-        return false
-      }
-    }
-    return submitConfirmRSVP(pos)
-  }
-
   const handleProfileSaved = () => {
     setPositionModalOpen(true)
   }
@@ -314,9 +255,7 @@ export function RSVPButton({
         open={positionModalOpen}
         onOpenChange={setPositionModalOpen}
         defaultPosition={userData?.position ?? null}
-        onConfirm={handleModalConfirm}
-        skillStep={skillStep}
-        skillError={skillSaveError}
+        onConfirm={pos => submitConfirmRSVP(pos)}
         loading={loading}
         occupancy={
           Object.keys(positionOccupancy).length > 0

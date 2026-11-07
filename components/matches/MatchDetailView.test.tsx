@@ -386,7 +386,7 @@ describe('MatchDetailView', () => {
     await user.click(await screen.findByText('RebalanceTeamsButtonMock'))
 
     expect(screen.getByText('Balanced by skill')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Rank players' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Rate players' })).toHaveAttribute(
       'href',
       '/c/fc-test/roster'
     )

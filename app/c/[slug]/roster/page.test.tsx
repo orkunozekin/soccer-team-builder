@@ -43,18 +43,8 @@ describe('ClubRosterPage', () => {
     vi.clearAllMocks()
     flagMock.mockImplementation(() => false)
     vi.mocked(getClubSkillRankingAPI).mockResolvedValue({
-      ranking: {
-        tiers: { top: ['u1'], strong: [], average: [], developing: [] },
-        version: 1,
-      },
-      members: [
-        {
-          userId: 'u1',
-          displayName: 'Alice',
-          position: null,
-          assessmentScore: null,
-        },
-      ],
+      ranking: { ratings: { u1: 7 }, version: 1 },
+      members: [{ userId: 'u1', displayName: 'Alice', position: null }],
     })
   })
 
@@ -62,7 +52,7 @@ describe('ClubRosterPage', () => {
     render(<ClubRosterPage />)
 
     expect(screen.getByText('Roster for c1')).toBeInTheDocument()
-    expect(screen.queryByText('Skill ranking')).not.toBeInTheDocument()
+    expect(screen.queryByText('Player ratings')).not.toBeInTheDocument()
     expect(getClubSkillRankingAPI).not.toHaveBeenCalled()
   })
 
@@ -73,7 +63,7 @@ describe('ClubRosterPage', () => {
     expect(await screen.findByText('Alice')).toBeInTheDocument()
     expect(getClubSkillRankingAPI).toHaveBeenCalledWith('c1')
     const roster = screen.getByText('Roster for c1')
-    const board = screen.getByText('Skill ranking')
+    const board = screen.getByText('Player ratings')
     expect(
       roster.compareDocumentPosition(board) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy()

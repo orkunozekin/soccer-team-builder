@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -17,31 +16,31 @@ import {
   getClubSkillRankingAPI,
   saveClubSkillRankingAPI,
 } from '@/lib/api/client'
-import { SKILL_TIER_LABELS, emptySkillTiers } from '@/lib/skill/scoring'
 import {
-  type SkillBoardGroup,
-  type TierMoveDirection,
-  keepSkillTierMembers,
-  moveToSkillTier,
-  moveWithinSkillTier,
-  skillTiersEqual,
-  unrankedSkillMemberIds,
-} from '@/lib/skill/tierMoves'
+  keepRatedMembers,
+  setSkillRating,
+  skillRatingsEqual,
+} from '@/lib/skill/ratingEdits'
 import {
-  SKILL_TIER_KEYS,
-  type SkillRankingMemberDTO,
-  type SkillRankingTiers,
+  MAX_SKILL_RATING,
+  MIN_SKILL_RATING,
+  isSkillRating,
+} from '@/lib/skill/scoring'
+import type {
+  SkillRankingMemberDTO,
+  SkillRating,
+  SkillRatings,
 } from '@/types/skill'
 
 export const SKILL_RANKING_CONFLICT_MESSAGE =
-  'Another admin changed the ranking. Reload to see their changes.'
+  'Another admin changed the ratings. Reload to see their changes.'
 
-const GROUPS: readonly SkillBoardGroup[] = [...SKILL_TIER_KEYS, 'unranked']
+const NOT_RATED = 'none'
 
-const GROUP_LABELS: Record<SkillBoardGroup, string> = {
-  ...SKILL_TIER_LABELS,
-  unranked: 'Unranked',
-}
+const RATING_OPTIONS = Array.from(
+  { length: MAX_SKILL_RATING - MIN_SKILL_RATING + 1 },
+  (_, i) => String(MIN_SKILL_RATING + i)
+)
 
 type LoadStatus = 'loading' | 'error' | 'loaded'
 
@@ -49,25 +48,20 @@ function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback
 }
 
-function questionnaireHint(score: number | null): string {
-  return score === null
-    ? 'No questionnaire'
-    : `Questionnaire ${score.toFixed(1)} / 4`
-}
-
 /**
- * Club admins' shared skill ranking (tiers ordered strongest first). Callers
- * must render it only for club admins with `skill-balanced-teams` on.
+ * Club admins rate each active member from 1 to 10; Rebalance uses the
+ * ratings. Callers must render it only for club admins with
+ * `skill-balanced-teams` on.
  */
 export function SkillRankingBoard({ clubId }: { clubId: string }) {
   const [loadStatus, setLoadStatus] = useState<LoadStatus>('loading')
   const [loadError, setLoadError] = useState('')
   const [members, setMembers] = useState<SkillRankingMemberDTO[]>([])
   const [saved, setSaved] = useState<{
-    tiers: SkillRankingTiers
+    ratings: SkillRatings
     version: number
   } | null>(null)
-  const [draft, setDraft] = useState<SkillRankingTiers>(emptySkillTiers)
+  const [draft, setDraft] = useState<SkillRatings>({})
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [conflict, setConflict] = useState(false)
@@ -84,13 +78,13 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
     void getClubSkillRankingAPI(targetClubId)
       .then(res => {
         if (gen !== genRef.current) return
-        const tiers = keepSkillTierMembers(
-          res.ranking.tiers,
+        const ratings = keepRatedMembers(
+          res.ranking.ratings,
           res.members.map(m => m.userId)
         )
         setMembers(res.members)
-        setSaved({ tiers, version: res.ranking.version })
-        setDraft(tiers)
+        setSaved({ ratings, version: res.ranking.version })
+        setDraft(ratings)
         setConflict(false)
         setSaveError('')
         setJustSaved(false)
@@ -98,7 +92,7 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
       })
       .catch((err: unknown) => {
         if (gen !== genRef.current) return
-        setLoadError(errorMessage(err, 'Failed to load skill ranking'))
+        setLoadError(errorMessage(err, 'Failed to load player ratings'))
         setLoadStatus('error')
       })
   }, [])
@@ -106,7 +100,7 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
   useEffect(() => {
     setMembers([])
     setSaved(null)
-    setDraft(emptySkillTiers())
+    setDraft({})
     setSaving(false)
     savingRef.current = false
     setSaveError('')
@@ -118,29 +112,29 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
     }
   }, [clubId, load])
 
-  const memberById = useMemo(
-    () => new Map(members.map(m => [m.userId, m])),
+  const sortedMembers = useMemo(
+    () =>
+      [...members].sort((a, b) =>
+        a.displayName.localeCompare(b.displayName, undefined, {
+          sensitivity: 'base',
+        })
+      ),
     [members]
   )
-  const dirty = saved !== null && !skillTiersEqual(draft, saved.tiers)
+  const dirty = saved !== null && !skillRatingsEqual(draft, saved.ratings)
+  const ratedCount = members.filter(m => draft[m.userId] !== undefined).length
 
-  const edit = (next: SkillRankingTiers) => {
-    setDraft(next)
+  const handleRatingChange = (userId: string, rating: SkillRating | null) => {
+    setDraft(current => setSkillRating(current, userId, rating))
     setJustSaved(false)
     setSaveError('')
   }
 
-  const handleTierChange = (userId: string, target: SkillBoardGroup) => {
-    edit(moveToSkillTier(draft, userId, target))
-  }
-
-  const handleMove = (userId: string, direction: TierMoveDirection) => {
-    edit(moveWithinSkillTier(draft, userId, direction))
-  }
-
   const handleDiscard = () => {
     if (!saved) return
-    edit(saved.tiers)
+    setDraft(saved.ratings)
+    setJustSaved(false)
+    setSaveError('')
   }
 
   const handleSave = async () => {
@@ -153,20 +147,20 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
     setJustSaved(false)
     try {
       const res = await saveClubSkillRankingAPI(clubId, {
-        tiers: draft,
+        ratings: draft,
         version: saved.version,
       })
       if (gen !== genRef.current) return
-      const tiers = keepSkillTierMembers(res.ranking.tiers, memberIds)
-      setSaved({ tiers, version: res.ranking.version })
-      setDraft(tiers)
+      const ratings = keepRatedMembers(res.ranking.ratings, memberIds)
+      setSaved({ ratings, version: res.ranking.version })
+      setDraft(ratings)
       setJustSaved(true)
     } catch (err: unknown) {
       if (gen !== genRef.current) return
       if ((err as { status?: number }).status === 409) {
         setConflict(true)
       } else {
-        setSaveError(errorMessage(err, 'Failed to save skill ranking'))
+        setSaveError(errorMessage(err, 'Failed to save player ratings'))
       }
     } finally {
       if (gen === genRef.current) {
@@ -183,7 +177,7 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
           id="skill-ranking-title"
           className="flex-1 whitespace-nowrap text-base font-semibold text-foreground"
         >
-          Skill ranking
+          Player ratings
         </h2>
         {dirty && <StatusPill tone="neutral">Unsaved changes</StatusPill>}
         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -191,8 +185,8 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
         </span>
       </div>
       <p className="text-sm text-muted-foreground">
-        Rebalance teams uses this ranking. Order each tier strongest first;
-        unranked players are placed by their questionnaire.
+        Rate each player from 1 to 10. Rebalance teams uses these ratings;
+        unrated players count as 5.5.
       </p>
     </div>
   )
@@ -205,11 +199,12 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
         aria-busy="true"
       >
         {header}
-        <div className="space-y-3 px-4 py-4" aria-label="Loading skill ranking">
-          <Skeleton className="h-4 w-24" />
+        <div
+          className="space-y-3 px-4 py-4"
+          aria-label="Loading player ratings"
+        >
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-4 w-24" />
           <Skeleton className="h-12 w-full" />
         </div>
       </Card>
@@ -230,7 +225,6 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
     )
   }
 
-  const memberIds = members.map(m => m.userId)
   const controlsDisabled = saving || conflict
 
   return (
@@ -239,59 +233,25 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
 
       {members.length === 0 ? (
         <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-          No active members to rank yet.
+          No active members to rate yet.
         </p>
       ) : (
-        <div className="divide-y divide-border">
-          {GROUPS.map(group => {
-            const ids =
-              group === 'unranked'
-                ? unrankedSkillMemberIds(draft, memberIds)
-                : draft[group]
-            const rows = ids.flatMap(uid => {
-              const member = memberById.get(uid)
-              return member ? [member] : []
-            })
-            const headingId = `skill-group-${group}`
-            return (
-              <section key={group} aria-labelledby={headingId}>
-                <h3
-                  id={headingId}
-                  className="flex items-center gap-2 bg-muted/40 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                >
-                  {GROUP_LABELS[group]}
-                  <span className="font-normal">({rows.length})</span>
-                </h3>
-                {rows.length === 0 ? (
-                  <p className="px-4 py-3 text-sm text-muted-foreground">
-                    {group === 'unranked'
-                      ? 'Everyone is ranked.'
-                      : 'No players in this tier.'}
-                  </p>
-                ) : (
-                  <ol className="divide-y divide-border">
-                    {rows.map((member, index) => (
-                      <RankingRow
-                        key={member.userId}
-                        member={member}
-                        group={group}
-                        index={index}
-                        count={rows.length}
-                        disabled={controlsDisabled}
-                        onTierChange={target =>
-                          handleTierChange(member.userId, target)
-                        }
-                        onMove={direction =>
-                          handleMove(member.userId, direction)
-                        }
-                      />
-                    ))}
-                  </ol>
-                )}
-              </section>
-            )
-          })}
-        </div>
+        <>
+          <p className="bg-muted/40 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {ratedCount} of {members.length} rated
+          </p>
+          <ul className="divide-y divide-border">
+            {sortedMembers.map(member => (
+              <RatingRow
+                key={member.userId}
+                member={member}
+                rating={draft[member.userId] ?? null}
+                disabled={controlsDisabled}
+                onChange={rating => handleRatingChange(member.userId, rating)}
+              />
+            ))}
+          </ul>
+        </>
       )}
 
       <div className="space-y-3 border-t border-border px-4 py-3">
@@ -318,10 +278,10 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
             type="button"
             onClick={() => void handleSave()}
             loading={saving}
-            aria-label="Save ranking"
+            aria-label="Save ratings"
             disabled={!dirty || conflict}
           >
-            Save ranking
+            Save ratings
           </Button>
           <Button
             type="button"
@@ -333,7 +293,7 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
           </Button>
           <p className="min-w-0 text-sm" role="status" aria-live="polite">
             {justSaved && !dirty && (
-              <span className="text-success">Ranking saved.</span>
+              <span className="text-success">Ratings saved.</span>
             )}
             {saveError && <span className="text-danger">{saveError}</span>}
           </p>
@@ -343,92 +303,53 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
   )
 }
 
-function RankingRow({
+function RatingRow({
   member,
-  group,
-  index,
-  count,
+  rating,
   disabled,
-  onTierChange,
-  onMove,
+  onChange,
 }: {
   member: SkillRankingMemberDTO
-  group: SkillBoardGroup
-  index: number
-  count: number
+  rating: SkillRating | null
   disabled: boolean
-  onTierChange: (target: SkillBoardGroup) => void
-  onMove: (direction: TierMoveDirection) => void
+  onChange: (rating: SkillRating | null) => void
 }) {
-  const ranked = group !== 'unranked'
   const name = member.displayName
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
-      <div className="flex min-w-[10rem] flex-1 items-start gap-3">
-        {ranked && (
-          <span
-            className="w-6 shrink-0 pt-0.5 text-right font-mono text-sm text-muted-foreground"
-            aria-hidden="true"
-          >
-            {index + 1}
-          </span>
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="break-words text-sm font-medium text-foreground">
-            {name}
-          </div>
-          <div className="break-words text-xs text-muted-foreground">
-            {[member.position, questionnaireHint(member.assessmentScore)]
-              .filter(Boolean)
-              .join(' · ')}
-          </div>
+      <div className="min-w-[10rem] flex-1">
+        <div className="break-words text-sm font-medium text-foreground">
+          {name}
         </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Select
-          value={group}
-          onValueChange={(value: SkillBoardGroup) => onTierChange(value)}
-          disabled={disabled}
-        >
-          <SelectTrigger
-            className="h-9 w-[8.5rem] shrink-0"
-            aria-label={`Tier for ${name}`}
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {GROUPS.map(option => (
-              <SelectItem key={option} value={option}>
-                {GROUP_LABELS[option]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {ranked && (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              aria-label={`Move ${name} up`}
-              disabled={disabled || index === 0}
-              onClick={() => onMove('up')}
-            >
-              <ArrowUp className="h-4 w-4" aria-hidden="true" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              aria-label={`Move ${name} down`}
-              disabled={disabled || index === count - 1}
-              onClick={() => onMove('down')}
-            >
-              <ArrowDown className="h-4 w-4" aria-hidden="true" />
-            </Button>
-          </>
+        {member.position && (
+          <div className="break-words text-xs text-muted-foreground">
+            {member.position}
+          </div>
         )}
       </div>
+      <Select
+        value={rating === null ? NOT_RATED : String(rating)}
+        onValueChange={value => {
+          const next = Number(value)
+          onChange(isSkillRating(next) ? next : null)
+        }}
+        disabled={disabled}
+      >
+        <SelectTrigger
+          className="h-11 w-[8.5rem] shrink-0 sm:h-9"
+          aria-label={`Rating for ${name}`}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NOT_RATED}>Not rated</SelectItem>
+          {RATING_OPTIONS.map(option => (
+            <SelectItem key={option} value={option}>
+              {option}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </li>
   )
 }

@@ -2,16 +2,14 @@ import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_SKILL,
   SKILL_QUESTIONNAIRE,
-  SKILL_TIER_LABELS,
-  SKILL_TIER_VALUES,
   assessmentScore,
   computeEffectiveSkillScores,
-  normalizeStoredSkillTiers,
+  isSkillRating,
+  normalizeStoredSkillRatings,
   parseSkillAnswers,
-  rankingScores,
-  validateSkillTiers,
+  validateSkillRatings,
 } from './scoring'
-import { SKILL_QUESTION_KEYS, SKILL_TIER_KEYS } from '@/types/skill'
+import { SKILL_QUESTION_KEYS } from '@/types/skill'
 
 const validAnswers = { firstTouch: 1, passing: 2, fitness: 3, gameSense: 2 }
 
@@ -32,18 +30,6 @@ describe('SKILL_QUESTIONNAIRE', () => {
     expect(SKILL_QUESTIONNAIRE[3].options[2].label).toBe(
       "I've already checked where the space and my next pass are"
     )
-  })
-})
-
-describe('tier constants', () => {
-  it('labels and values every tier', () => {
-    expect(SKILL_TIER_KEYS.map(t => SKILL_TIER_LABELS[t])).toEqual([
-      'Top',
-      'Strong',
-      'Average',
-      'Developing',
-    ])
-    expect(SKILL_TIER_KEYS.map(t => SKILL_TIER_VALUES[t])).toEqual([4, 3, 2, 1])
   })
 })
 
@@ -75,73 +61,6 @@ describe('parseSkillAnswers', () => {
   })
 })
 
-describe('validateSkillTiers', () => {
-  const allowed = new Set(['a', 'b', 'c', 'd'])
-  const empty = { top: [], strong: [], average: [], developing: [] }
-
-  it('accepts valid tiers and returns a copy', () => {
-    const input = { ...empty, top: ['a', 'b'], developing: ['c'] }
-    const result = validateSkillTiers(input, allowed)
-    expect(result).toEqual({
-      ok: true,
-      tiers: { top: ['a', 'b'], strong: [], average: [], developing: ['c'] },
-    })
-    if (result.ok) expect(result.tiers.top).not.toBe(input.top)
-  })
-
-  it('accepts an empty ranking', () => {
-    expect(validateSkillTiers(empty, allowed)).toEqual({
-      ok: true,
-      tiers: empty,
-    })
-  })
-
-  it.each([
-    ['null', null],
-    ['an array', []],
-    ['a missing tier', { top: [], strong: [], average: [] }],
-    ['an unknown tier', { ...empty, elite: [] }],
-    ['a non-array tier', { ...empty, top: 'a' }],
-    ['a non-string id', { ...empty, top: [1] }],
-    ['an empty id', { ...empty, top: [''] }],
-    ['a duplicate within a tier', { ...empty, top: ['a', 'a'] }],
-    ['a duplicate across tiers', { ...empty, top: ['a'], average: ['a'] }],
-    ['a uid outside the allowed set', { ...empty, strong: ['zed'] }],
-  ])('rejects %s', (_label, input) => {
-    const result = validateSkillTiers(input, allowed)
-    expect(result.ok).toBe(false)
-  })
-})
-
-describe('normalizeStoredSkillTiers', () => {
-  it('returns empty tiers for non-objects', () => {
-    const empty = { top: [], strong: [], average: [], developing: [] }
-    expect(normalizeStoredSkillTiers(null)).toEqual(empty)
-    expect(normalizeStoredSkillTiers('x')).toEqual(empty)
-    expect(normalizeStoredSkillTiers([])).toEqual(empty)
-  })
-
-  it('drops bad entries, keeps the first placement and ignores unknown tiers', () => {
-    expect(
-      normalizeStoredSkillTiers({
-        top: ['a', 1, '', 'b'],
-        strong: 'not-a-list',
-        average: ['b', 'c', 'c'],
-        elite: ['z'],
-      })
-    ).toEqual({ top: ['a', 'b'], strong: [], average: ['c'], developing: [] })
-  })
-
-  it('filters to allowed uids when given', () => {
-    expect(
-      normalizeStoredSkillTiers(
-        { top: ['a', 'gone'], developing: ['b'] },
-        new Set(['a', 'b'])
-      )
-    ).toEqual({ top: ['a'], strong: [], average: [], developing: ['b'] })
-  })
-})
-
 describe('assessmentScore', () => {
   it('maps the 1–3 mean onto 1–4', () => {
     const all = (v: 1 | 2 | 3) => ({
@@ -164,80 +83,71 @@ describe('assessmentScore', () => {
   })
 })
 
-describe('rankingScores', () => {
-  it('uses the tier value alone for a single player', () => {
-    const scores = rankingScores({
-      top: ['a'],
-      strong: [],
-      average: [],
-      developing: [],
-    })
-    expect(scores.get('a')).toBe(4)
+describe('isSkillRating', () => {
+  it('accepts whole numbers 1–10 only', () => {
+    expect([1, 5, 10].every(isSkillRating)).toBe(true)
+    expect([0, 11, 5.5, '7', null, Number.NaN].some(isSkillRating)).toBe(false)
+  })
+})
+
+describe('validateSkillRatings', () => {
+  const members = new Set(['a', 'b', 'c'])
+
+  it('accepts ratings for members and returns a copy', () => {
+    const input = { a: 9, c: 1 }
+    const result = validateSkillRatings(input, members)
+    expect(result).toEqual({ ok: true, ratings: { a: 9, c: 1 } })
+    if (result.ok) expect(result.ratings).not.toBe(input)
   })
 
-  it('spreads players from +0.4 to −0.4 within a tier', () => {
-    const scores = rankingScores({
-      top: [],
-      strong: ['a', 'b', 'c'],
-      average: ['d', 'e'],
-      developing: [],
+  it('accepts an empty object (nobody rated)', () => {
+    expect(validateSkillRatings({}, members)).toEqual({
+      ok: true,
+      ratings: {},
     })
-    expect(scores.get('a')).toBeCloseTo(3.4)
-    expect(scores.get('b')).toBeCloseTo(3)
-    expect(scores.get('c')).toBeCloseTo(2.6)
-    expect(scores.get('d')).toBeCloseTo(2.4)
-    expect(scores.get('e')).toBeCloseTo(1.6)
   })
 
-  it('never lets the weakest of a tier fall to the next tier’s best', () => {
-    const scores = rankingScores({
-      top: ['a', 'b'],
-      strong: ['c', 'd'],
-      average: [],
-      developing: [],
-    })
-    expect(scores.get('b')!).toBeGreaterThan(scores.get('c')!)
+  it.each([
+    ['null', null],
+    ['an array', [5]],
+    ['zero', { a: 0 }],
+    ['eleven', { a: 11 }],
+    ['a fraction', { a: 6.5 }],
+    ['a numeric string', { a: '6' }],
+    ['a non-member', { zed: 5 }],
+  ])('rejects %s', (_label, input) => {
+    expect(validateSkillRatings(input, members).ok).toBe(false)
+  })
+})
+
+describe('normalizeStoredSkillRatings', () => {
+  it('drops invalid entries and, when given, non-members', () => {
+    expect(
+      normalizeStoredSkillRatings({ a: 7, b: 12, c: 'x', gone: 3 })
+    ).toEqual({ a: 7, gone: 3 })
+    expect(
+      normalizeStoredSkillRatings({ a: 7, gone: 3 }, new Set(['a']))
+    ).toEqual({ a: 7 })
+  })
+
+  it('reads a doc saved by the old tier ranking as unrated', () => {
+    expect(normalizeStoredSkillRatings(undefined)).toEqual({})
   })
 })
 
 describe('computeEffectiveSkillScores', () => {
-  it('prefers ranking, then questionnaire, then the default', () => {
-    const result = computeEffectiveSkillScores(['ranked', 'quiz', 'none'], {
-      tiers: {
-        top: ['ranked', 'quiz'],
-        strong: [],
-        average: [],
-        developing: [],
-      },
-      answersByUserId: new Map([
-        [
-          'quiz',
-          { firstTouch: 1, passing: 1, fitness: 1, gameSense: 1 } as const,
-        ],
-      ]),
+  it('uses the admin rating, else the 5.5 default', () => {
+    const result = computeEffectiveSkillScores(['rated', 'none'], {
+      rated: 8,
     })
-    expect(result.scoreByUserId.get('ranked')).toBeCloseTo(4.4)
-    expect(result.scoreByUserId.get('quiz')).toBeCloseTo(3.6)
+    expect(result.scoreByUserId.get('rated')).toBe(8)
     expect(result.scoreByUserId.get('none')).toBe(DEFAULT_SKILL)
+    expect(DEFAULT_SKILL).toBe(5.5)
     expect(result.unratedUserIds).toEqual(['none'])
   })
 
-  it('uses the questionnaire when the player is unranked', () => {
-    const result = computeEffectiveSkillScores(['quiz'], {
-      tiers: null,
-      answersByUserId: new Map([
-        [
-          'quiz',
-          { firstTouch: 3, passing: 3, fitness: 3, gameSense: 3 } as const,
-        ],
-      ]),
-    })
-    expect(result.scoreByUserId.get('quiz')).toBe(4)
-    expect(result.unratedUserIds).toEqual([])
-  })
-
-  it('counts each unrated uid once', () => {
-    const result = computeEffectiveSkillScores(['x', 'x', 'y'], {})
+  it('treats everyone as unrated without ratings, counting each uid once', () => {
+    const result = computeEffectiveSkillScores(['x', 'x', 'y'], null)
     expect(result.unratedUserIds).toEqual(['x', 'y'])
     expect(result.scoreByUserId.size).toBe(2)
   })

@@ -1,19 +1,18 @@
 import {
   type EffectiveSkillScores,
   SKILL_QUESTION_KEYS,
-  SKILL_TIER_KEYS,
   type SkillAnswerValue,
   type SkillAnswers,
   type SkillQuestion,
-  type SkillRankingTiers,
-  type SkillTierKey,
+  type SkillRating,
+  type SkillRatings,
 } from '@/types/skill'
 
-/** Score for players with neither a ranking nor a questionnaire. */
-export const DEFAULT_SKILL = 2.5
+export const MIN_SKILL_RATING = 1
+export const MAX_SKILL_RATING = 10
 
-/** Max offset added/subtracted by position within a tier (keeps tiers from overlapping). */
-export const TIER_POSITION_SPREAD = 0.4
+/** Score for players a club admin hasn't rated: the middle of the 1–10 scale. */
+export const DEFAULT_SKILL = 5.5
 
 export const SKILL_QUESTIONNAIRE: readonly SkillQuestion[] = [
   {
@@ -60,20 +59,6 @@ export const SKILL_QUESTIONNAIRE: readonly SkillQuestion[] = [
   },
 ]
 
-export const SKILL_TIER_LABELS: Record<SkillTierKey, string> = {
-  top: 'Top',
-  strong: 'Strong',
-  average: 'Average',
-  developing: 'Developing',
-}
-
-export const SKILL_TIER_VALUES: Record<SkillTierKey, number> = {
-  top: 4,
-  strong: 3,
-  average: 2,
-  developing: 1,
-}
-
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -100,85 +85,65 @@ export function parseSkillAnswers(input: unknown): SkillAnswers | null {
   return answers as SkillAnswers
 }
 
-export type SkillTiersValidationResult =
-  | { ok: true; tiers: SkillRankingTiers }
+export function isSkillRating(value: unknown): value is SkillRating {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= MIN_SKILL_RATING &&
+    value <= MAX_SKILL_RATING
+  )
+}
+
+export type SkillRatingsValidationResult =
+  | { ok: true; ratings: SkillRatings }
   | { ok: false; error: string }
 
 /**
- * Validate untrusted ranking tiers for a save. Requires exactly the four tier
- * keys, each an array of uid strings; a uid may appear once across all tiers
- * and must be in `allowedUserIds` (e.g. the club's active members).
+ * Validate untrusted ratings for a save: an object of uid → integer 1–10.
+ * Every uid must be in `allowedUserIds` (the club's active members). Players
+ * left out are unrated.
  */
-export function validateSkillTiers(
+export function validateSkillRatings(
   input: unknown,
   allowedUserIds: ReadonlySet<string>
-): SkillTiersValidationResult {
+): SkillRatingsValidationResult {
   if (!isPlainObject(input)) {
-    return { ok: false, error: 'Tiers must be an object' }
+    return { ok: false, error: 'Ratings must be an object' }
   }
-  const unknownKey = Object.keys(input).find(
-    key => !(SKILL_TIER_KEYS as readonly string[]).includes(key)
-  )
-  if (unknownKey !== undefined) {
-    return { ok: false, error: 'Unknown tier' }
-  }
-
-  const seen = new Set<string>()
-  const tiers = emptySkillTiers()
-  for (const tier of SKILL_TIER_KEYS) {
-    const list = input[tier]
-    if (!Array.isArray(list)) {
-      return { ok: false, error: 'Each tier must be a list of players' }
+  const ratings: SkillRatings = {}
+  for (const [uid, value] of Object.entries(input)) {
+    if (!uid) return { ok: false, error: 'Invalid player id' }
+    if (!isSkillRating(value)) {
+      return { ok: false, error: 'Ratings must be whole numbers from 1 to 10' }
     }
-    for (const uid of list) {
-      if (typeof uid !== 'string' || uid.length === 0) {
-        return { ok: false, error: 'Invalid player id' }
-      }
-      if (seen.has(uid)) {
-        return { ok: false, error: 'A player can only be ranked once' }
-      }
-      if (!allowedUserIds.has(uid)) {
-        return { ok: false, error: 'Only active club members can be ranked' }
-      }
-      seen.add(uid)
-      tiers[tier].push(uid)
+    if (!allowedUserIds.has(uid)) {
+      return { ok: false, error: 'Only active club members can be rated' }
     }
+    ratings[uid] = value
   }
-  return { ok: true, tiers }
-}
-
-export function emptySkillTiers(): SkillRankingTiers {
-  return { top: [], strong: [], average: [], developing: [] }
+  return { ok: true, ratings }
 }
 
 /**
- * Lenient normalizer for tiers read from storage. Missing or malformed tiers
- * become empty, non-string / empty ids are dropped, and a uid listed more than
- * once keeps only its first (strongest) placement. When `allowedUserIds` is
- * given, uids outside it (e.g. former members) are dropped.
+ * Lenient normalizer for ratings read from storage: entries that aren't an
+ * integer 1–10 are dropped, and when `allowedUserIds` is given, so are uids
+ * outside it (e.g. former members).
  */
-export function normalizeStoredSkillTiers(
+export function normalizeStoredSkillRatings(
   input: unknown,
   allowedUserIds?: ReadonlySet<string>
-): SkillRankingTiers {
-  const tiers = emptySkillTiers()
-  if (!isPlainObject(input)) return tiers
-  const seen = new Set<string>()
-  for (const tier of SKILL_TIER_KEYS) {
-    const list = input[tier]
-    if (!Array.isArray(list)) continue
-    for (const uid of list) {
-      if (typeof uid !== 'string' || uid.length === 0) continue
-      if (seen.has(uid)) continue
-      if (allowedUserIds && !allowedUserIds.has(uid)) continue
-      seen.add(uid)
-      tiers[tier].push(uid)
-    }
+): SkillRatings {
+  const ratings: SkillRatings = {}
+  if (!isPlainObject(input)) return ratings
+  for (const [uid, value] of Object.entries(input)) {
+    if (!uid || !isSkillRating(value)) continue
+    if (allowedUserIds && !allowedUserIds.has(uid)) continue
+    ratings[uid] = value
   }
-  return tiers
+  return ratings
 }
 
-/** Map questionnaire answers onto the 1–4 tier scale: 1 + (mean − 1) × 1.5. */
+/** Questionnaire score on a 1–4 scale: 1 + (mean − 1) × 1.5 (questionnaire is off for now). */
 export function assessmentScore(answers: SkillAnswers): number {
   const sum = SKILL_QUESTION_KEYS.reduce((acc, key) => acc + answers[key], 0)
   const mean = sum / SKILL_QUESTION_KEYS.length
@@ -186,51 +151,21 @@ export function assessmentScore(answers: SkillAnswers): number {
 }
 
 /**
- * Score every ranked uid: tier value plus an in-tier offset that runs from
- * +0.4 (strongest) to −0.4 (weakest), so order matters without crossing tiers.
- * Expects normalized tiers (no duplicates); a repeated uid keeps its first score.
- */
-export function rankingScores(tiers: SkillRankingTiers): Map<string, number> {
-  const scores = new Map<string, number>()
-  for (const tier of SKILL_TIER_KEYS) {
-    const list = tiers[tier]
-    const n = list.length
-    list.forEach((uid, i) => {
-      if (scores.has(uid)) return
-      const offset =
-        n > 1
-          ? TIER_POSITION_SPREAD - (2 * TIER_POSITION_SPREAD * i) / (n - 1)
-          : 0
-      scores.set(uid, SKILL_TIER_VALUES[tier] + offset)
-    })
-  }
-  return scores
-}
-
-/**
- * Effective score per uid: ranking ?? questionnaire ?? DEFAULT_SKILL.
- * `unratedUserIds` lists uids (in input order) that fell back to the default.
+ * Effective score per uid: the club admin's rating, or DEFAULT_SKILL when the
+ * player isn't rated. `unratedUserIds` lists (in input order) who fell back.
+ * The questionnaire is not used for balancing while it is switched off.
  */
 export function computeEffectiveSkillScores(
   userIds: readonly string[],
-  sources: {
-    tiers?: SkillRankingTiers | null
-    answersByUserId?: ReadonlyMap<string, SkillAnswers>
-  }
+  ratings: SkillRatings | null | undefined
 ): EffectiveSkillScores {
-  const ranked = sources.tiers ? rankingScores(sources.tiers) : new Map()
   const scoreByUserId = new Map<string, number>()
   const unratedUserIds: string[] = []
   for (const uid of userIds) {
     if (scoreByUserId.has(uid)) continue
-    const rankScore = ranked.get(uid)
-    if (rankScore !== undefined) {
-      scoreByUserId.set(uid, rankScore)
-      continue
-    }
-    const answers = sources.answersByUserId?.get(uid)
-    if (answers) {
-      scoreByUserId.set(uid, assessmentScore(answers))
+    const rating = ratings?.[uid]
+    if (rating !== undefined) {
+      scoreByUserId.set(uid, rating)
       continue
     }
     scoreByUserId.set(uid, DEFAULT_SKILL)
