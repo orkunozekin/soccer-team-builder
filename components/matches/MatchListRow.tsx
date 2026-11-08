@@ -28,7 +28,7 @@ export function MatchListRow({
     : null
 
   return (
-    <li className="flex items-center gap-2 border-b border-border">
+    <li className="flex items-center gap-2">
       <Link
         href={href}
         className="flex min-w-0 flex-1 items-center gap-4 rounded-lg py-3.5 outline-none transition-colors hover:bg-turf/60 focus-visible:ring-2 focus-visible:ring-ring"
