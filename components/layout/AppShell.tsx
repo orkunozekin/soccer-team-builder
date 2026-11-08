@@ -14,6 +14,7 @@ import { ClubWorkspaceStatus } from '@/components/layout/ClubWorkspaceStatus'
 import { Navigation } from '@/components/layout/Navigation'
 import { PlatformAdminNav } from '@/components/layout/PlatformAdminNav'
 import { ProfileBadge } from '@/components/layout/ProfileBadge'
+import { SiteFooter } from '@/components/layout/SiteFooter'
 import { Wordmark } from '@/components/layout/Wordmark'
 import { NavLoadingSkeleton } from '@/components/LoadingSkeleton'
 import {
@@ -32,6 +33,7 @@ import { clubMatchesPath } from '@/lib/utils/clubPaths'
 /**
  * Signed-in workspace: club switcher + club/admin/account nav (desktop rail,
  * mobile sheet) and a sign-out footer. Signed-out users keep the centered header.
+ * Every state ends with the site footer, pinned to the bottom on short pages.
  */
 export function AppShell({ children }: { children?: React.ReactNode }) {
   const { user, userData, loading } = useAuth()
@@ -41,23 +43,25 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   if (loading) {
     return (
-      <>
+      <div className="flex min-h-dvh flex-col">
         <div className="sticky top-0 z-20 mb-4">
           <NavLoadingSkeleton />
         </div>
-        {children}
-      </>
+        <div className="min-w-0 flex-1">{children}</div>
+        <SiteFooter />
+      </div>
     )
   }
 
   if (!user) {
     return (
-      <>
+      <div className="flex min-h-dvh flex-col">
         <div className="sticky top-0 z-20 mb-4">
           <Navigation />
         </div>
-        {children}
-      </>
+        <div className="min-w-0 flex-1">{children}</div>
+        <SiteFooter />
+      </div>
     )
   }
 
@@ -185,6 +189,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           </p>
         ) : null}
         <div className="min-w-0 flex-1">{children}</div>
+        <SiteFooter />
       </div>
     </div>
   )
