@@ -4,12 +4,24 @@ Plan to give each club a private, admin-maintained skill ranking of its players,
 
 ## Status
 
-| Field               | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status              | done when [#141](https://github.com/orkunozekin/soccer-team-builder/pull/141) merges                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Owner session       | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| Last updated        | 2026-11-05                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Related PR / branch | Step 1: [#137](https://github.com/orkunozekin/soccer-team-builder/pull/137) (merged, `b87260b`); Step 2: [#138](https://github.com/orkunozekin/soccer-team-builder/pull/138) (merged, `19285be`); Step 3: [#139](https://github.com/orkunozekin/soccer-team-builder/pull/139) (merged, `6703c7f`); Step 4: [#140](https://github.com/orkunozekin/soccer-team-builder/pull/140) (merged, `94a5d27`); Step 5: `orkun/skill-step-5-ranking-board` ([#141](https://github.com/orkunozekin/soccer-team-builder/pull/141)) |
+| Field               | Value                                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------------ |
+| Status              | done (v1 shipped in #137–#141); changed to admin 1–10 ratings, questionnaire off (see below)           |
+| Owner session       | —                                                                                                      |
+| Last updated        | 2026-11-07                                                                                             |
+| Related PR / branch | #137–#141 (v1), #142 (required questionnaire), #143 (yards wording), `orkun/confident-franklin-t55hwy` |
+
+## Change (2026-11-07): admins rate players 1–10; questionnaire off
+
+Owner decision after v1: club admins rate every player themselves on a **1–10** scale, replacing the four-tier ranking, and the skills questionnaire is **switched off for now**.
+
+- **Data:** `clubSkillRankings/{clubId}` now stores `ratings: { [uid]: 1–10 }` (absent = unrated) plus the same `version`, `updatedBy`, `updatedAt`. A doc saved by the old tier ranking reads as unrated (its `version` still counts for the conflict check).
+- **Score:** `effective = admin rating ?? 5.5` (the middle of the scale). The questionnaire is not read for balancing.
+- **API:** `PUT /api/clubs/[clubId]/skill-ranking` takes `{ ratings, version }`; each value must be a whole number 1–10 for an active member. 409 on a stale version, as before.
+- **UI:** the roster page board is now "Player ratings": every active member alphabetically with a "Not rated / 1–10" picker. The RSVP questionnaire step and the profile questionnaire section are removed; the questionnaire API, store and components stay in the codebase (tested, unused) so it can come back.
+- **Verified** with `lib/skill/skillRatings.emulator.test.ts` against the Firestore emulator: save, 409 on a stale save, 400 on out-of-range, and rebalance splitting 10/9/8/7 + 4/3/2/1 into 22–22.
+
+The sections below describe v1 (tiers + questionnaire) and are kept for history.
 
 ## Why not a 1–5 self-rating
 
@@ -62,12 +74,12 @@ Implemented as five sequential steps, one PR each. Each step merges before the n
 
 Each answer scores 1–3. Copy describes what happens, not how long someone has played.
 
-| Key          | Question                                             | 1                                  | 2                                     | 3                                                         |
-| ------------ | ---------------------------------------------------- | ---------------------------------- | ------------------------------------- | --------------------------------------------------------- |
-| `firstTouch` | A firm pass comes to you. Usually…                   | It often gets away from me         | I control it, but need a second touch | It's under control and I'm already turning or passing     |
-| `passing`    | Passing to a teammate about 20 m away on the ground… | I often miss the target            | I usually reach them                  | I hit them at the right pace, either foot                 |
-| `fitness`    | Over a 60-minute game…                               | I need regular breaks              | I keep going with a few breaks        | I'm running hard until the end                            |
-| `gameSense`  | Before the ball reaches you…                         | I decide what to do once I have it | I sometimes know my next pass         | I've already checked where the space and my next pass are |
+| Key          | Question                                                        | 1                                  | 2                                     | 3                                                         |
+| ------------ | --------------------------------------------------------------- | ---------------------------------- | ------------------------------------- | --------------------------------------------------------- |
+| `firstTouch` | A firm pass comes to you. Usually…                              | It often gets away from me         | I control it, but need a second touch | It's under control and I'm already turning or passing     |
+| `passing`    | Passing to a teammate about 20 yards (18 m) away on the ground… | I often miss the target            | I usually reach them                  | I hit them at the right pace, either foot                 |
+| `fitness`    | Over a 60-minute game…                                          | I need regular breaks              | I keep going with a few breaks        | I'm running hard until the end                            |
+| `gameSense`  | Before the ball reaches you…                                    | I decide what to do once I have it | I sometimes know my next pass         | I've already checked where the space and my next pass are |
 
 `assessmentScore = 1 + (mean(answers) − 1) × 1.5` → range 1–4, the same scale as tiers.
 
@@ -225,7 +237,7 @@ Runs **last** in the rebalance route, after GK shift and pin application. Pair m
 | 2    | Claude Code (cloud) | [#138](https://github.com/orkunozekin/soccer-team-builder/pull/138) | merged (`19285be`) |
 | 3    | Claude Code (cloud) | [#139](https://github.com/orkunozekin/soccer-team-builder/pull/139) | merged (`6703c7f`) |
 | 4    | Claude Code (cloud) | [#140](https://github.com/orkunozekin/soccer-team-builder/pull/140) | merged (`94a5d27`) |
-| 5    | Claude Code (cloud) | [#141](https://github.com/orkunozekin/soccer-team-builder/pull/141) | in review          |
+| 5    | Claude Code (cloud) | [#141](https://github.com/orkunozekin/soccer-team-builder/pull/141) | merged (`86caf60`) |
 
 ### Blockers / risks
 

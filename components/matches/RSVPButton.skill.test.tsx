@@ -1,13 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RSVPButton } from './RSVPButton'
-import { SKILL_QUESTIONNAIRE } from '@/lib/skill/scoring'
 import { useAuthStore } from '@/store/authStore'
-import {
-  resetSkillAssessmentStore,
-  useSkillAssessmentStore,
-} from '@/store/skillAssessmentStore'
+import { resetSkillAssessmentStore } from '@/store/skillAssessmentStore'
 import type { Match } from '@/types/match'
 
 // Real RSVPPositionModal + real skill assessment store; only the network,
@@ -86,17 +82,13 @@ const match: Match = {
   updatedAt: new Date(),
 }
 
-const SAVED = {
-  answers: { firstTouch: 2, passing: 2, fitness: 2, gameSense: 2 },
-  updatedAt: '2026-11-01T00:00:00.000Z',
-}
-
 async function openModal(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: /i'm in/i }))
   expect(screen.getByText('Select your position')).toBeInTheDocument()
 }
 
-describe('RSVPButton skill step', () => {
+// The questionnaire is switched off for now: admins rate players instead.
+describe('RSVPButton with skill-balanced-teams on', () => {
   beforeEach(() => {
     confirmRSVPAPIMock.mockReset()
     getSkillMock.mockReset()
@@ -111,183 +103,22 @@ describe('RSVPButton skill step', () => {
     })
   })
 
-  it('flag off: no questionnaire load, confirms from the position step', async () => {
-    const user = userEvent.setup()
-    flagMock.mockReturnValue(false)
-    render(<RSVPButton match={match} />)
+  it.each([true, false])(
+    'never asks the questionnaire (flag %s): confirms from the position step',
+    async flagOn => {
+      const user = userEvent.setup()
+      flagMock.mockReturnValue(flagOn)
+      getSkillMock.mockResolvedValue({ assessment: null })
+      render(<RSVPButton match={match} />)
 
-    await openModal(user)
-    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Confirm RSVP' }))
+      await openModal(user)
+      expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
+      await user.click(screen.getByRole('button', { name: 'Confirm RSVP' }))
 
-    expect(confirmRSVPAPIMock).toHaveBeenCalledWith('match1', 'ST')
-    expect(getSkillMock).not.toHaveBeenCalled()
-    expect(saveSkillMock).not.toHaveBeenCalled()
-  })
-
-  it('flag on, already answered: no skill step', async () => {
-    const user = userEvent.setup()
-    flagMock.mockReturnValue(true)
-    getSkillMock.mockResolvedValue({ assessment: SAVED })
-    render(<RSVPButton match={match} />)
-    await waitFor(() =>
-      expect(useSkillAssessmentStore.getState().loadStatus).toBe('loaded')
-    )
-
-    await openModal(user)
-    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Confirm RSVP' }))
-    expect(confirmRSVPAPIMock).toHaveBeenCalledWith('match1', 'ST')
-  })
-
-  async function answerAllWith(
-    user: ReturnType<typeof userEvent.setup>,
-    optionIndex: 0 | 1 | 2
-  ) {
-    for (const question of SKILL_QUESTIONNAIRE) {
-      await user.click(
-        screen.getByRole('radio', {
-          name: question.options[optionIndex].label,
-        })
-      )
+      expect(confirmRSVPAPIMock).toHaveBeenCalledWith('match1', 'ST')
+      expect(getSkillMock).not.toHaveBeenCalled()
+      expect(saveSkillMock).not.toHaveBeenCalled()
+      expect(screen.queryByText('Your game')).toBeNull()
     }
-  }
-
-  const ALL_THREES = { firstTouch: 3, passing: 3, fitness: 3, gameSense: 3 }
-
-  it('flag on, never answered: no Skip; answers are saved before the RSVP is sent', async () => {
-    const user = userEvent.setup()
-    flagMock.mockReturnValue(true)
-    getSkillMock.mockResolvedValue({ assessment: null })
-    let resolveSave!: (value: unknown) => void
-    saveSkillMock.mockReturnValue(
-      new Promise(resolve => {
-        resolveSave = resolve
-      })
-    )
-    render(<RSVPButton match={match} />)
-    await waitFor(() =>
-      expect(useSkillAssessmentStore.getState().loadStatus).toBe('loaded')
-    )
-
-    await openModal(user)
-    expect(screen.queryByRole('button', { name: 'Confirm RSVP' })).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Next' }))
-    expect(screen.getByText('Your game')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Skip' })).toBeNull()
-    expect(screen.getByRole('button', { name: 'Confirm RSVP' })).toBeDisabled()
-
-    await answerAllWith(user, 2)
-    await user.click(screen.getByRole('button', { name: 'Confirm RSVP' }))
-    expect(saveSkillMock).toHaveBeenCalledWith(ALL_THREES)
-    // The RSVP waits for the save.
-    expect(confirmRSVPAPIMock).not.toHaveBeenCalled()
-
-    resolveSave({
-      assessment: { answers: ALL_THREES, updatedAt: '2026-11-05T00:00:00Z' },
-    })
-    await waitFor(() =>
-      expect(confirmRSVPAPIMock).toHaveBeenCalledWith('match1', 'ST')
-    )
-    expect(
-      await screen.findByRole('button', { name: /cancel rsvp/i })
-    ).toBeInTheDocument()
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  })
-
-  it('a failed save blocks the RSVP, keeps the modal open, and a retry RSVPs', async () => {
-    const user = userEvent.setup()
-    flagMock.mockReturnValue(true)
-    getSkillMock.mockResolvedValue({ assessment: null })
-    saveSkillMock.mockRejectedValueOnce(new Error('save failed'))
-    render(<RSVPButton match={match} />)
-    await waitFor(() =>
-      expect(useSkillAssessmentStore.getState().loadStatus).toBe('loaded')
-    )
-
-    await openModal(user)
-    await user.click(screen.getByRole('button', { name: 'Next' }))
-    await answerAllWith(user, 2)
-    await user.click(screen.getByRole('button', { name: 'Confirm RSVP' }))
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      /couldn’t save your answers/i
-    )
-    expect(confirmRSVPAPIMock).not.toHaveBeenCalled()
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(
-      screen.getByRole('radio', {
-        name: SKILL_QUESTIONNAIRE[0].options[2].label,
-      })
-    ).toBeChecked()
-
-    saveSkillMock.mockResolvedValueOnce({
-      assessment: { answers: ALL_THREES, updatedAt: '2026-11-05T00:00:00Z' },
-    })
-    await user.click(screen.getByRole('button', { name: 'Confirm RSVP' }))
-    await waitFor(() =>
-      expect(confirmRSVPAPIMock).toHaveBeenCalledWith('match1', 'ST')
-    )
-    expect(saveSkillMock).toHaveBeenCalledTimes(2)
-  })
-
-  it('flag on, load failed: still requires the questionnaire', async () => {
-    const user = userEvent.setup()
-    flagMock.mockReturnValue(true)
-    getSkillMock.mockRejectedValue(new Error('down'))
-    saveSkillMock.mockResolvedValue({
-      assessment: { answers: ALL_THREES, updatedAt: '2026-11-05T00:00:00Z' },
-    })
-    render(<RSVPButton match={match} />)
-    await waitFor(() =>
-      expect(useSkillAssessmentStore.getState().loadStatus).toBe('error')
-    )
-
-    await openModal(user)
-    expect(screen.queryByRole('button', { name: 'Confirm RSVP' })).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Next' }))
-    await answerAllWith(user, 2)
-    await user.click(screen.getByRole('button', { name: 'Confirm RSVP' }))
-    await waitFor(() =>
-      expect(confirmRSVPAPIMock).toHaveBeenCalledWith('match1', 'ST')
-    )
-    expect(saveSkillMock).toHaveBeenCalledWith(ALL_THREES)
-  })
-
-  it('flag on, still loading: cannot RSVP until we know whether the player answered', async () => {
-    const user = userEvent.setup()
-    flagMock.mockReturnValue(true)
-    getSkillMock.mockReturnValue(new Promise(() => {}))
-    render(<RSVPButton match={match} />)
-
-    await openModal(user)
-    expect(screen.getByRole('button', { name: /next/i })).toBeDisabled()
-    expect(screen.queryByRole('button', { name: 'Confirm RSVP' })).toBeNull()
-    expect(confirmRSVPAPIMock).not.toHaveBeenCalled()
-  })
-
-  it('waits for an earlier save still in flight instead of letting the RSVP through', async () => {
-    const user = userEvent.setup()
-    flagMock.mockReturnValue(true)
-    getSkillMock.mockResolvedValue({ assessment: null })
-    saveSkillMock.mockReturnValue(new Promise(() => {}))
-    const { unmount } = render(<RSVPButton match={match} />)
-    await waitFor(() =>
-      expect(useSkillAssessmentStore.getState().loadStatus).toBe('loaded')
-    )
-
-    await openModal(user)
-    await user.click(screen.getByRole('button', { name: 'Next' }))
-    await answerAllWith(user, 0)
-    await user.click(screen.getByRole('button', { name: 'Confirm RSVP' }))
-    await waitFor(() => expect(saveSkillMock).toHaveBeenCalledTimes(1))
-    unmount()
-
-    // Another match while the first save is still pending.
-    render(<RSVPButton match={{ ...match, id: 'match2' }} />)
-    await openModal(user)
-    expect(screen.getByRole('button', { name: /next/i })).toBeDisabled()
-    expect(confirmRSVPAPIMock).not.toHaveBeenCalled()
-    expect(saveSkillMock).toHaveBeenCalledTimes(1)
-  })
+  )
 })

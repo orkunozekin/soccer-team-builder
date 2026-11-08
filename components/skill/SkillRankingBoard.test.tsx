@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -12,7 +12,7 @@ import {
 import type {
   ClubSkillRankingDTO,
   SkillRankingMemberDTO,
-  SkillRankingTiers,
+  SkillRatings,
 } from '@/types/skill'
 
 vi.mock('@/lib/api/client', () => ({
@@ -25,46 +25,42 @@ type RankingResponse = {
   members: SkillRankingMemberDTO[]
 }
 
-function tiers(partial: Partial<SkillRankingTiers> = {}): SkillRankingTiers {
-  return { top: [], strong: [], average: [], developing: [], ...partial }
-}
-
 function member(
   userId: string,
   displayName: string,
-  extra: Partial<SkillRankingMemberDTO> = {}
+  position: string | null = null
 ): SkillRankingMemberDTO {
-  return {
-    userId,
-    displayName,
-    position: null,
-    assessmentScore: null,
-    ...extra,
-  }
+  return { userId, displayName, position }
 }
 
-function response(): RankingResponse {
+function response(ratings: SkillRatings = { u1: 8, u3: 4 }): RankingResponse {
   return {
-    ranking: {
-      tiers: tiers({ top: ['u1', 'u2'], average: ['u3'] }),
-      version: 3,
-    },
+    ranking: { ratings, version: 3 },
     members: [
-      member('u1', 'Alice', { position: 'ST', assessmentScore: 2.75 }),
-      member('u2', 'Bob', { position: 'GK' }),
+      member('u2', 'Bob', 'GK'),
+      member('u1', 'Alice', 'ST'),
+      member('u4', 'Dan'),
       member('u3', 'Cara'),
-      member('u4', 'Dan', { assessmentScore: 1 }),
     ],
   }
 }
 
-function group(name: string) {
-  return screen.getByRole('region', { name: new RegExp(`^${name}`) })
+function ratingBox(name: string) {
+  return screen.getByRole('combobox', { name: `Rating for ${name}` })
 }
 
-function namesIn(name: string) {
-  return within(group(name))
-    .queryAllByRole('listitem')
+async function rate(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+  option: string
+) {
+  await user.click(ratingBox(name))
+  await user.click(await screen.findByRole('option', { name: option }))
+}
+
+function rowNames() {
+  return screen
+    .getAllByRole('listitem')
     .map(li => li.querySelector('.font-medium')?.textContent)
 }
 
@@ -93,106 +89,115 @@ describe('SkillRankingBoard', () => {
     vi.mocked(getClubSkillRankingAPI).mockResolvedValue(response())
   })
 
-  it('renders tier groups and unranked members from the API', async () => {
+  it('lists members alphabetically with their 1–10 rating or Not rated', async () => {
     render(<SkillRankingBoard clubId="c1" />)
 
     expect(await screen.findByText('Alice')).toBeInTheDocument()
     expect(getClubSkillRankingAPI).toHaveBeenCalledWith('c1')
-    expect(namesIn('Top')).toEqual(['Alice', 'Bob'])
-    expect(namesIn('Strong')).toEqual([])
-    expect(namesIn('Average')).toEqual(['Cara'])
-    expect(namesIn('Unranked')).toEqual(['Dan'])
-    expect(
-      within(group('Strong')).getByText('No players in this tier.')
-    ).toBeInTheDocument()
-    expect(screen.getByText('ST · Questionnaire 2.8 / 4')).toBeInTheDocument()
-    expect(screen.getByText('GK · No questionnaire')).toBeInTheDocument()
-    expect(screen.getByText('Questionnaire 1.0 / 4')).toBeInTheDocument()
-
-    expect(screen.getByRole('button', { name: 'Move Alice up' })).toBeDisabled()
-    expect(
-      screen.getByRole('button', { name: 'Move Alice down' })
-    ).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'Move Bob down' })).toBeDisabled()
-    expect(
-      screen.queryByRole('button', { name: 'Move Dan up' })
-    ).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save ranking' })).toBeDisabled()
+    expect(rowNames()).toEqual(['Alice', 'Bob', 'Cara', 'Dan'])
+    expect(ratingBox('Alice')).toHaveTextContent('8')
+    expect(ratingBox('Cara')).toHaveTextContent('4')
+    expect(ratingBox('Bob')).toHaveTextContent('Not rated')
+    expect(screen.getByText('2 of 4 rated')).toBeInTheDocument()
+    expect(screen.getByText('GK')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save ratings' })).toBeDisabled()
     expect(
       screen.getByRole('button', { name: 'Discard changes' })
     ).toBeDisabled()
   })
 
-  it('saves a tier change and reorder as { tiers, version }', async () => {
+  it('offers Not rated and every value from 1 to 10', async () => {
+    const user = userEvent.setup()
+    render(<SkillRankingBoard clubId="c1" />)
+    await screen.findByText('Alice')
+
+    await user.click(ratingBox('Bob'))
+    const options = (await screen.findAllByRole('option')).map(
+      o => o.textContent
+    )
+    expect(options).toEqual([
+      'Not rated',
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+      '9',
+      '10',
+    ])
+  })
+
+  it('saves rating changes as { ratings, version }, including clearing one', async () => {
     const user = userEvent.setup()
     vi.mocked(saveClubSkillRankingAPI).mockImplementation(
       async (_c, input) => ({
         success: true,
-        ranking: { tiers: input.tiers, version: 4 },
+        ranking: { ratings: input.ratings, version: 4 },
       })
     )
     render(<SkillRankingBoard clubId="c1" />)
     await screen.findByText('Alice')
 
-    await user.click(screen.getByRole('combobox', { name: 'Tier for Dan' }))
-    await user.click(await screen.findByRole('option', { name: 'Top' }))
-    expect(namesIn('Top')).toEqual(['Alice', 'Bob', 'Dan'])
-    expect(namesIn('Unranked')).toEqual([])
+    await rate(user, 'Bob', '10')
+    await rate(user, 'Cara', 'Not rated')
     expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+    expect(screen.getByText('2 of 4 rated')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Move Dan up' }))
-    expect(namesIn('Top')).toEqual(['Alice', 'Dan', 'Bob'])
-
-    await user.click(screen.getByRole('combobox', { name: 'Tier for Cara' }))
-    await user.click(await screen.findByRole('option', { name: 'Unranked' }))
-    expect(namesIn('Unranked')).toEqual(['Cara'])
-
-    await user.click(screen.getByRole('button', { name: 'Save ranking' }))
+    await user.click(screen.getByRole('button', { name: 'Save ratings' }))
 
     expect(saveClubSkillRankingAPI).toHaveBeenCalledTimes(1)
     expect(saveClubSkillRankingAPI).toHaveBeenCalledWith('c1', {
-      tiers: tiers({ top: ['u1', 'u4', 'u2'] }),
+      ratings: { u1: 8, u2: 10 },
       version: 3,
     })
-    expect(await screen.findByText('Ranking saved.')).toBeInTheDocument()
+    expect(await screen.findByText('Ratings saved.')).toBeInTheDocument()
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save ranking' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save ratings' })).toBeDisabled()
 
     // The next save carries the version the last save returned.
-    await user.click(screen.getByRole('button', { name: 'Move Bob up' }))
-    await user.click(screen.getByRole('button', { name: 'Save ranking' }))
+    await rate(user, 'Dan', '1')
+    await user.click(screen.getByRole('button', { name: 'Save ratings' }))
     expect(saveClubSkillRankingAPI).toHaveBeenLastCalledWith('c1', {
-      tiers: tiers({ top: ['u1', 'u2', 'u4'] }),
+      ratings: { u1: 8, u2: 10, u4: 1 },
       version: 4,
     })
   })
 
-  it('disables Save and row controls while a save is in flight', async () => {
+  it('treats picking the same rating back as no change', async () => {
+    const user = userEvent.setup()
+    render(<SkillRankingBoard clubId="c1" />)
+    await screen.findByText('Alice')
+
+    await rate(user, 'Alice', '3')
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+    await rate(user, 'Alice', '8')
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save ratings' })).toBeDisabled()
+  })
+
+  it('disables Save and rating pickers while a save is in flight', async () => {
     const user = userEvent.setup()
     const save = deferred<Awaited<ReturnType<typeof saveClubSkillRankingAPI>>>()
     vi.mocked(saveClubSkillRankingAPI).mockReturnValue(save.promise)
     render(<SkillRankingBoard clubId="c1" />)
     await screen.findByText('Alice')
 
-    await user.click(screen.getByRole('button', { name: 'Move Bob up' }))
-    await user.click(screen.getByRole('button', { name: 'Save ranking' }))
+    await rate(user, 'Bob', '6')
+    await user.click(screen.getByRole('button', { name: 'Save ratings' }))
 
-    expect(screen.getByRole('button', { name: 'Save ranking' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Move Alice up' })).toBeDisabled()
-    expect(
-      screen.getByRole('combobox', { name: 'Tier for Dan' })
-    ).toBeDisabled()
-    await user.click(screen.getByRole('button', { name: 'Save ranking' }))
+    expect(screen.getByRole('button', { name: 'Save ratings' })).toBeDisabled()
+    expect(ratingBox('Dan')).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Save ratings' }))
     expect(saveClubSkillRankingAPI).toHaveBeenCalledTimes(1)
 
     save.resolve({
       success: true,
-      ranking: {
-        tiers: tiers({ top: ['u2', 'u1'], average: ['u3'] }),
-        version: 4,
-      },
+      ranking: { ratings: { u1: 8, u2: 6, u3: 4 }, version: 4 },
     })
-    expect(await screen.findByText('Ranking saved.')).toBeInTheDocument()
+    expect(await screen.findByText('Ratings saved.')).toBeInTheDocument()
   })
 
   it('discards local edits', async () => {
@@ -200,13 +205,12 @@ describe('SkillRankingBoard', () => {
     render(<SkillRankingBoard clubId="c1" />)
     await screen.findByText('Alice')
 
-    await user.click(screen.getByRole('button', { name: 'Move Alice down' }))
-    expect(namesIn('Top')).toEqual(['Bob', 'Alice'])
+    await rate(user, 'Alice', '2')
+    expect(ratingBox('Alice')).toHaveTextContent('2')
 
     await user.click(screen.getByRole('button', { name: 'Discard changes' }))
-    expect(namesIn('Top')).toEqual(['Alice', 'Bob'])
+    expect(ratingBox('Alice')).toHaveTextContent('8')
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save ranking' })).toBeDisabled()
     expect(saveClubSkillRankingAPI).not.toHaveBeenCalled()
   })
 
@@ -221,33 +225,34 @@ describe('SkillRankingBoard', () => {
     render(<SkillRankingBoard clubId="c1" />)
     await screen.findByText('Alice')
 
-    await user.click(screen.getByRole('button', { name: 'Move Bob up' }))
-    await user.click(screen.getByRole('button', { name: 'Save ranking' }))
+    await rate(user, 'Bob', '7')
+    await user.click(screen.getByRole('button', { name: 'Save ratings' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       SKILL_RANKING_CONFLICT_MESSAGE
     )
-    expect(screen.getByRole('button', { name: 'Save ranking' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save ratings' })).toBeDisabled()
+    expect(ratingBox('Dan')).toBeDisabled()
 
     vi.mocked(getClubSkillRankingAPI).mockResolvedValueOnce({
-      ranking: { tiers: tiers({ strong: ['u1'] }), version: 5 },
+      ranking: { ratings: { u1: 5 }, version: 5 },
       members: response().members,
     })
     await user.click(screen.getByRole('button', { name: 'Reload' }))
 
-    await waitFor(() => expect(namesIn('Strong')).toEqual(['Alice']))
+    await waitFor(() => expect(ratingBox('Alice')).toHaveTextContent('5'))
+    expect(ratingBox('Bob')).toHaveTextContent('Not rated')
     expect(getClubSkillRankingAPI).toHaveBeenCalledTimes(2)
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 
     vi.mocked(saveClubSkillRankingAPI).mockResolvedValueOnce({
       success: true,
-      ranking: { tiers: tiers({ top: ['u1'] }), version: 6 },
+      ranking: { ratings: { u1: 9 }, version: 6 },
     })
-    await user.click(screen.getByRole('combobox', { name: 'Tier for Alice' }))
-    await user.click(await screen.findByRole('option', { name: 'Top' }))
-    await user.click(screen.getByRole('button', { name: 'Save ranking' }))
+    await rate(user, 'Alice', '9')
+    await user.click(screen.getByRole('button', { name: 'Save ratings' }))
     expect(saveClubSkillRankingAPI).toHaveBeenLastCalledWith('c1', {
-      tiers: tiers({ top: ['u1'] }),
+      ratings: { u1: 9 },
       version: 5,
     })
   })
@@ -255,32 +260,41 @@ describe('SkillRankingBoard', () => {
   it('shows the server message for other save errors and keeps edits', async () => {
     const user = userEvent.setup()
     vi.mocked(saveClubSkillRankingAPI).mockRejectedValue(
-      Object.assign(new Error('Only active club members can be ranked'), {
+      Object.assign(new Error('Only active club members can be rated'), {
         status: 400,
       })
     )
     render(<SkillRankingBoard clubId="c1" />)
     await screen.findByText('Alice')
 
-    await user.click(screen.getByRole('button', { name: 'Move Bob up' }))
-    await user.click(screen.getByRole('button', { name: 'Save ranking' }))
+    await rate(user, 'Bob', '7')
+    await user.click(screen.getByRole('button', { name: 'Save ratings' }))
 
     expect(
-      await screen.findByText('Only active club members can be ranked')
+      await screen.findByText('Only active club members can be rated')
     ).toBeInTheDocument()
-    expect(namesIn('Top')).toEqual(['Bob', 'Alice'])
-    expect(screen.getByRole('button', { name: 'Save ranking' })).toBeEnabled()
+    expect(ratingBox('Bob')).toHaveTextContent('7')
+    expect(screen.getByRole('button', { name: 'Save ratings' })).toBeEnabled()
+  })
+
+  it('drops stored ratings for people who are no longer members', async () => {
+    vi.mocked(getClubSkillRankingAPI).mockResolvedValue(
+      response({ u1: 8, gone: 3 })
+    )
+    render(<SkillRankingBoard clubId="c1" />)
+    expect(await screen.findByText('1 of 4 rated')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save ratings' })).toBeDisabled()
   })
 
   it('shows a retryable load error', async () => {
     const user = userEvent.setup()
     vi.mocked(getClubSkillRankingAPI).mockRejectedValueOnce(
-      new Error('Failed to load skill ranking')
+      new Error('Failed to load player ratings')
     )
     render(<SkillRankingBoard clubId="c1" />)
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Failed to load skill ranking'
+      'Failed to load player ratings'
     )
     await user.click(screen.getByRole('button', { name: 'Retry' }))
     expect(await screen.findByText('Alice')).toBeInTheDocument()
@@ -292,7 +306,7 @@ describe('SkillRankingBoard', () => {
     vi.mocked(getClubSkillRankingAPI)
       .mockReturnValueOnce(first.promise)
       .mockResolvedValueOnce({
-        ranking: { tiers: tiers({ developing: ['z1'] }), version: 1 },
+        ranking: { ratings: { z1: 2 }, version: 1 },
         members: [member('z1', 'Zoe')],
       })
 
@@ -302,7 +316,7 @@ describe('SkillRankingBoard', () => {
     expect(await screen.findByText('Zoe')).toBeInTheDocument()
     expect(getClubSkillRankingAPI).toHaveBeenLastCalledWith('c2')
     first.resolve(response())
-    await waitFor(() => expect(namesIn('Developing')).toEqual(['Zoe']))
+    await waitFor(() => expect(rowNames()).toEqual(['Zoe']))
     expect(screen.queryByText('Alice')).not.toBeInTheDocument()
   })
 
@@ -313,22 +327,22 @@ describe('SkillRankingBoard', () => {
     vi.mocked(getClubSkillRankingAPI)
       .mockResolvedValueOnce(response())
       .mockResolvedValueOnce({
-        ranking: { tiers: tiers(), version: 0 },
+        ranking: { ratings: {}, version: 0 },
         members: [member('z1', 'Zoe')],
       })
 
     const { rerender } = render(<SkillRankingBoard clubId="c1" />)
     await screen.findByText('Alice')
-    await user.click(screen.getByRole('button', { name: 'Move Bob up' }))
-    await user.click(screen.getByRole('button', { name: 'Save ranking' }))
+    await rate(user, 'Bob', '7')
+    await user.click(screen.getByRole('button', { name: 'Save ratings' }))
 
     rerender(<SkillRankingBoard clubId="c2" />)
     expect(await screen.findByText('Zoe')).toBeInTheDocument()
     save.reject(Object.assign(new Error('conflict'), { status: 409 }))
 
-    await waitFor(() => expect(namesIn('Unranked')).toEqual(['Zoe']))
+    await waitFor(() => expect(ratingBox('Zoe')).toHaveTextContent('Not rated'))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save ranking' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save ratings' })).toBeDisabled()
   })
 })

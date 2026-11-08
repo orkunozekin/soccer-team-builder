@@ -26,7 +26,7 @@ import type {
   SkillAnswers,
   SkillAssessmentDTO,
   SkillRankingMemberDTO,
-  SkillRankingTiers,
+  SkillRatings,
 } from '@/types/skill'
 import type { ThemePreference } from '@/types/user'
 
@@ -973,7 +973,7 @@ export async function getClubSkillRankingAPI(clubId: string): Promise<{
  */
 export async function saveClubSkillRankingAPI(
   clubId: string,
-  input: { tiers: SkillRankingTiers; version: number }
+  input: { ratings: SkillRatings; version: number }
 ): Promise<{ success: boolean; ranking: ClubSkillRankingDTO }> {
   const response = await apiRequest(
     `/clubs/${encodeURIComponent(clubId)}/skill-ranking`,

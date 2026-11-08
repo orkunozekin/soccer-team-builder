@@ -6,7 +6,7 @@ import {
   getSkillAssessment,
   saveClubSkillRanking,
 } from './skillStoreAdmin'
-import { DEFAULT_SKILL, emptySkillTiers } from '@/lib/skill/scoring'
+import { DEFAULT_SKILL } from '@/lib/skill/scoring'
 
 vi.mock('firebase-admin/firestore', () => ({
   Timestamp: {
@@ -63,10 +63,10 @@ function createDb(store: Store) {
 const answers = { firstTouch: 3, passing: 3, fitness: 3, gameSense: 3 }
 
 describe('skillStoreAdmin', () => {
-  let tiers: ReturnType<typeof emptySkillTiers>
+  let ratings: Record<string, number>
 
   beforeEach(() => {
-    tiers = { ...emptySkillTiers(), top: ['a'], average: ['b'] }
+    ratings = { a: 9, b: 4 }
   })
 
   it('returns null for a missing or malformed assessment', async () => {
@@ -90,30 +90,37 @@ describe('skillStoreAdmin', () => {
     expect(result.has('u1')).toBe(false)
   })
 
-  it('returns empty tiers and version 0 when the club has no ranking', async () => {
+  it('returns no ratings and version 0 when the club has none', async () => {
     const { adminDb } = createDb({})
     await expect(getClubSkillRanking(adminDb, 'club1')).resolves.toEqual({
-      tiers: emptySkillTiers(),
+      ratings: {},
       version: 0,
+    })
+  })
+
+  it('reads a doc saved by the old tier ranking as unrated, keeping its version', async () => {
+    const { adminDb } = createDb({
+      clubSkillRankings: { club1: { tiers: { top: ['a'] }, version: 3 } },
+    })
+    await expect(getClubSkillRanking(adminDb, 'club1')).resolves.toEqual({
+      ratings: {},
+      version: 3,
     })
   })
 
   it('drops uids outside the allowed set when reading', async () => {
     const { adminDb } = createDb({
-      clubSkillRankings: { club1: { tiers, version: 3 } },
+      clubSkillRankings: { club1: { ratings, version: 3 } },
     })
     const ranking = await getClubSkillRanking(adminDb, 'club1', new Set(['b']))
-    expect(ranking).toEqual({
-      tiers: { ...emptySkillTiers(), average: ['b'] },
-      version: 3,
-    })
+    expect(ranking).toEqual({ ratings: { b: 4 }, version: 3 })
   })
 
-  it('saves the first ranking at expected version 0', async () => {
+  it('saves the first ratings at expected version 0', async () => {
     const { adminDb, writes } = createDb({})
     const result = await saveClubSkillRanking(adminDb, {
       clubId: 'club1',
-      tiers,
+      ratings: ratings as never,
       expectedVersion: 0,
       updatedBy: 'admin1',
     })
@@ -121,17 +128,17 @@ describe('skillStoreAdmin', () => {
     expect(writes).toHaveLength(1)
     expect(writes[0]).toMatchObject({
       path: 'clubSkillRankings/club1',
-      data: { clubId: 'club1', tiers, version: 1, updatedBy: 'admin1' },
+      data: { clubId: 'club1', ratings, version: 1, updatedBy: 'admin1' },
     })
   })
 
   it('increments the version when the expected version matches', async () => {
     const { adminDb } = createDb({
-      clubSkillRankings: { club1: { tiers: emptySkillTiers(), version: 4 } },
+      clubSkillRankings: { club1: { ratings: {}, version: 4 } },
     })
     const result = await saveClubSkillRanking(adminDb, {
       clubId: 'club1',
-      tiers,
+      ratings: ratings as never,
       expectedVersion: 4,
       updatedBy: 'admin1',
     })
@@ -140,11 +147,11 @@ describe('skillStoreAdmin', () => {
 
   it('returns a conflict and writes nothing on a stale version', async () => {
     const { adminDb, writes } = createDb({
-      clubSkillRankings: { club1: { tiers: emptySkillTiers(), version: 2 } },
+      clubSkillRankings: { club1: { ratings: {}, version: 2 } },
     })
     const result = await saveClubSkillRanking(adminDb, {
       clubId: 'club1',
-      tiers,
+      ratings: ratings as never,
       expectedVersion: 1,
       updatedBy: 'admin1',
     })
@@ -152,9 +159,9 @@ describe('skillStoreAdmin', () => {
     expect(writes).toHaveLength(0)
   })
 
-  it('computes effective scores from ranking, questionnaire and default', async () => {
+  it('scores rated players by their rating and ignores the questionnaire', async () => {
     const { adminDb } = createDb({
-      clubSkillRankings: { club1: { tiers, version: 1 } },
+      clubSkillRankings: { club1: { ratings, version: 1 } },
       skillAssessments: { c: { answers } },
     })
     const result = await getEffectiveSkillScoresForClub(adminDb, 'club1', [
@@ -162,9 +169,9 @@ describe('skillStoreAdmin', () => {
       'c',
       'd',
     ])
-    expect(result.scoreByUserId.get('a')).toBe(4)
-    expect(result.scoreByUserId.get('c')).toBe(4)
+    expect(result.scoreByUserId.get('a')).toBe(9)
+    expect(result.scoreByUserId.get('c')).toBe(DEFAULT_SKILL)
     expect(result.scoreByUserId.get('d')).toBe(DEFAULT_SKILL)
-    expect(result.unratedUserIds).toEqual(['d'])
+    expect(result.unratedUserIds).toEqual(['c', 'd'])
   })
 })

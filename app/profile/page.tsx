@@ -7,7 +7,6 @@ import { AttendanceStatsCard } from '@/components/profile/AttendanceStatsCard'
 import { EmailUpdateForm } from '@/components/profile/EmailUpdateForm'
 import { PasswordUpdateForm } from '@/components/profile/PasswordUpdateForm'
 import { ProfileForm } from '@/components/profile/ProfileForm'
-import { ProfileSkillQuestionnaire } from '@/components/skill/ProfileSkillQuestionnaire'
 import {
   Accordion,
   AccordionContent,
@@ -16,7 +15,6 @@ import {
 } from '@/components/ui/accordion'
 import { Card } from '@/components/ui/card'
 import { hasPasswordProvider } from '@/lib/firebase/auth'
-import { useFeatureFlag } from '@/lib/flags/useFeatureFlag'
 import { useAuth } from '@/lib/hooks/useAuth'
 
 function ProfileSection({
@@ -58,7 +56,6 @@ export default function ProfilePage() {
   const { user, userData, loading } = useAuth()
   const userId = user?.uid
   const showAccountSecurity = Boolean(user && hasPasswordProvider(user))
-  const skillQuestionnaireEnabled = useFeatureFlag('skill-balanced-teams')
 
   useEffect(() => {
     if (!loading && !userId) {
@@ -119,16 +116,6 @@ export default function ProfilePage() {
         >
           <ProfileForm />
         </ProfileSection>
-
-        {skillQuestionnaireEnabled && (
-          <ProfileSection
-            value="skill-questionnaire"
-            title="Skill questionnaire"
-            description="Helps admins balance teams by skill"
-          >
-            <ProfileSkillQuestionnaire key={userId} uid={userId} />
-          </ProfileSection>
-        )}
 
         {showAccountSecurity && (
           <>

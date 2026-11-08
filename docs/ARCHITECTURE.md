@@ -17,7 +17,7 @@ UI Components → API Client → Next.js API Routes → Firebase Services → Fi
 - ✅ Team generation algorithm (`/api/teams/generate`)
 - ✅ Player transfers with validation (`/api/teams/transfer`)
 - ✅ Match creation with validation (`/api/matches`)
-- ✅ Skill ranking and skills questionnaire (`/api/clubs/[clubId]/skill-ranking`, `/api/users/me/skill-assessment`); see [Private skill data](#private-skill-data)
+- ✅ Admin player ratings, 1–10 (`/api/clubs/[clubId]/skill-ranking`); skills questionnaire API kept but switched off in the UI (`/api/users/me/skill-assessment`); see [Private skill data](#private-skill-data)
 
 **Why:** These operations contain business logic that shouldn't be exposed to clients:
 
@@ -75,19 +75,19 @@ UI Components → API Client → Next.js API Routes → Firebase Services → Fi
 - `POST /api/teams/transfer` - Transfer player between teams/bench
 - `POST /api/matches` - Create a new match
 - `POST /api/teams/rebalance` - Club admins: rebalance a match's teams. With the `skill-balanced-teams` flag on (evaluated server-side), the response adds `strength: { teams: [{ teamNumber, total, average, size }], unratedCount, playerCount }`
-- `GET/PUT /api/users/me/skill-assessment` - Signed-in player: read/save their own skills questionnaire (`verifyAuth`; flag off → 403)
-- `GET/PUT /api/clubs/[clubId]/skill-ranking` - Club admins (`verifyClubAdmin`): read the club ranking plus active members with questionnaire hints; save `{ tiers, version }` (409 when another admin saved first; flag off → 403)
+- `GET/PUT /api/users/me/skill-assessment` - Signed-in player: read/save their own skills questionnaire (`verifyAuth`; flag off → 403). Not used by the UI while the questionnaire is off
+- `GET/PUT /api/clubs/[clubId]/skill-ranking` - Club admins (`verifyClubAdmin`): read the club's 1–10 ratings plus active members; save `{ ratings, version }` (whole numbers 1–10, active members only; 409 when another admin saved first; flag off → 403)
 
 ### Private skill data
 
 Behind the `skill-balanced-teams` flag. Both collections are **API / Admin SDK only**: `firestore.rules` denies all client reads and writes, and skill data never goes on `users` or `clubMemberships` (both are readable by other players). Lookups are by doc id, so no composite indexes.
 
-| Collection / doc             | Contents                                                                                                   | Who can reach it (via API)                                               |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `clubSkillRankings/{clubId}` | `tiers` (`top`/`strong`/`average`/`developing`, uids strongest first), `version`, `updatedBy`, `updatedAt` | Club admins of that club; saves are version-checked in a transaction     |
-| `skillAssessments/{userId}`  | Questionnaire `answers` (four 1–3 values), `updatedAt`                                                     | The player; admins of a club the player actively belongs to (as a score) |
+| Collection / doc             | Contents                                                                                   | Who can reach it (via API)                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `clubSkillRankings/{clubId}` | `ratings` (uid → whole number 1–10; absent = unrated), `version`, `updatedBy`, `updatedAt` | Club admins of that club; saves are version-checked in a transaction     |
+| `skillAssessments/{userId}`  | Questionnaire `answers` (four 1–3 values), `updatedAt`                                     | The player; admins of a club the player actively belongs to (as a score) |
 
-Club admins edit the ranking on `/c/[slug]/roster` (`SkillRankingBoard`). The rebalance route reads both collections to compute effective scores (ranking, else questionnaire, else default).
+Club admins rate players on `/c/[slug]/roster` (`SkillRankingBoard`, "Player ratings"). The rebalance route scores each player by their admin rating, else 5.5; the questionnaire collection is not read while the questionnaire is off.
 
 ### Benefits
 
