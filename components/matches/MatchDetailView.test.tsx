@@ -522,6 +522,24 @@ describe('MatchDetailView', () => {
       ).not.toBeInTheDocument()
     })
 
+    it('offers a retry when the ratings fail to load', async () => {
+      const user = userEvent.setup()
+      setupRatedMatch({})
+      getClubSkillRankingMock.mockRejectedValueOnce(new Error('offline'))
+      render(<MatchDetailView backLink={backLink} />)
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        "Couldn't load player ratings."
+      )
+      expect(
+        screen.queryByRole('button', { name: /^Rate players/ })
+      ).not.toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: 'Retry' }))
+      expect(await rateButton()).toHaveTextContent('2 of 2 not rated yet')
+      expect(getClubSkillRankingMock).toHaveBeenCalledTimes(2)
+    })
+
     it('hides the CTA once every player is rated', async () => {
       setupRatedMatch({ user1: 7, user2: 3 })
       render(<MatchDetailView backLink={backLink} />)

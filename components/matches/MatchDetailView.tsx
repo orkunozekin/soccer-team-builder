@@ -17,6 +17,7 @@ import { RatePlayersButton } from '@/components/skill/RatePlayersButton'
 import { SkillStrengthCard } from '@/components/skill/SkillStrengthCard'
 import { TeamsDisplay } from '@/components/teams/TeamsDisplay'
 import { BackLink } from '@/components/ui/back-link'
+import { Button } from '@/components/ui/button'
 import { useFeatureFlag } from '@/lib/flags/useFeatureFlag'
 import { useIsClubAdmin } from '@/lib/hooks/useClubMemberships'
 import { useAuth } from '@/lib/hooks/useAuth'
@@ -345,6 +346,24 @@ export function MatchDetailView({
                   totalCount={rateablePlayers.length}
                   onClick={() => setRatingSheetOpen(true)}
                 />
+              )}
+              {ratingClubId && clubRatings.status === 'error' && (
+                <div
+                  role="alert"
+                  className="flex flex-wrap items-center gap-2 rounded-2xl border border-border px-3 py-2.5 text-sm text-muted-foreground"
+                >
+                  <span className="min-w-0 flex-1">
+                    Couldn&apos;t load player ratings.
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={clubRatings.retry}
+                  >
+                    Retry
+                  </Button>
+                </div>
               )}
               {canManageMatch && skillSummary?.matchId === matchId && (
                 <SkillStrengthCard

@@ -64,6 +64,10 @@ export function useClubSkillRatings(clubId: string | null) {
     }
   }, [clubId, load])
 
+  const retry = useCallback(() => {
+    if (clubId) load(clubId)
+  }, [clubId, load])
+
   /** Adopt the merged ratings a save returned. */
   const applySaved = useCallback(
     (ranking: ClubSkillRankingDTO) => {
@@ -83,6 +87,7 @@ export function useClubSkillRatings(clubId: string | null) {
     status: mine ? state.status : ('idle' as const),
     ratings: mine ? state.ratings : EMPTY.ratings,
     memberIds: mine ? state.memberIds : EMPTY.memberIds,
+    retry,
     applySaved,
   }
 }
