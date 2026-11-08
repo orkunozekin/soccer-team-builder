@@ -1,10 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  SKILL_RANKING_CONFLICT_MESSAGE,
-  SkillRankingBoard,
-} from './SkillRankingBoard'
+import { SkillRankingBoard } from './SkillRankingBoard'
 import {
   getClubSkillRankingAPI,
   saveClubSkillRankingAPI,
@@ -130,13 +127,23 @@ describe('SkillRankingBoard', () => {
     ])
   })
 
-  it('saves rating changes as { ratings, version }, including clearing one', async () => {
+  it('saves only the changes, including clearing one', async () => {
     const user = userEvent.setup()
+    let stored: Record<string, number> = { u1: 8, u3: 4 }
+    let version = 3
     vi.mocked(saveClubSkillRankingAPI).mockImplementation(
-      async (_c, input) => ({
-        success: true,
-        ranking: { ratings: input.ratings, version: 4 },
-      })
+      async (_c, changes) => {
+        stored = { ...stored }
+        for (const [uid, rating] of Object.entries(changes)) {
+          if (rating === null) delete stored[uid]
+          else stored[uid] = rating
+        }
+        version += 1
+        return {
+          success: true,
+          ranking: { ratings: stored as never, version },
+        }
+      }
     )
     render(<SkillRankingBoard clubId="c1" />)
     await screen.findByText('Alice')
@@ -150,20 +157,17 @@ describe('SkillRankingBoard', () => {
 
     expect(saveClubSkillRankingAPI).toHaveBeenCalledTimes(1)
     expect(saveClubSkillRankingAPI).toHaveBeenCalledWith('c1', {
-      ratings: { u1: 8, u2: 10 },
-      version: 3,
+      u2: 10,
+      u3: null,
     })
     expect(await screen.findByText('Ratings saved.')).toBeInTheDocument()
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save ratings' })).toBeDisabled()
 
-    // The next save carries the version the last save returned.
+    // The next save sends only what changed since the last save.
     await rate(user, 'Dan', '1')
     await user.click(screen.getByRole('button', { name: 'Save ratings' }))
-    expect(saveClubSkillRankingAPI).toHaveBeenLastCalledWith('c1', {
-      ratings: { u1: 8, u2: 10, u4: 1 },
-      version: 4,
-    })
+    expect(saveClubSkillRankingAPI).toHaveBeenLastCalledWith('c1', { u4: 1 })
   })
 
   it('treats picking the same rating back as no change', async () => {
@@ -214,47 +218,24 @@ describe('SkillRankingBoard', () => {
     expect(saveClubSkillRankingAPI).not.toHaveBeenCalled()
   })
 
-  it('shows the conflict message on 409 and keeps Save off until reloaded', async () => {
+  it('shows ratings another admin saved meanwhile after saving', async () => {
     const user = userEvent.setup()
-    vi.mocked(saveClubSkillRankingAPI).mockRejectedValue(
-      Object.assign(new Error(SKILL_RANKING_CONFLICT_MESSAGE), {
-        status: 409,
-        code: 'version_conflict',
-      })
-    )
+    vi.mocked(saveClubSkillRankingAPI).mockResolvedValue({
+      success: true,
+      // Merged on the server: this admin's u2 plus another admin's u4.
+      ranking: { ratings: { u1: 8, u2: 7, u3: 4, u4: 9 }, version: 5 },
+    })
     render(<SkillRankingBoard clubId="c1" />)
     await screen.findByText('Alice')
 
     await rate(user, 'Bob', '7')
     await user.click(screen.getByRole('button', { name: 'Save ratings' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      SKILL_RANKING_CONFLICT_MESSAGE
-    )
-    expect(screen.getByRole('button', { name: 'Save ratings' })).toBeDisabled()
-    expect(ratingBox('Dan')).toBeDisabled()
-
-    vi.mocked(getClubSkillRankingAPI).mockResolvedValueOnce({
-      ranking: { ratings: { u1: 5 }, version: 5 },
-      members: response().members,
-    })
-    await user.click(screen.getByRole('button', { name: 'Reload' }))
-
-    await waitFor(() => expect(ratingBox('Alice')).toHaveTextContent('5'))
-    expect(ratingBox('Bob')).toHaveTextContent('Not rated')
-    expect(getClubSkillRankingAPI).toHaveBeenCalledTimes(2)
+    expect(await screen.findByText('Ratings saved.')).toBeInTheDocument()
+    expect(saveClubSkillRankingAPI).toHaveBeenCalledWith('c1', { u2: 7 })
+    expect(ratingBox('Dan')).toHaveTextContent('9')
+    expect(screen.getByText('4 of 4 rated')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-
-    vi.mocked(saveClubSkillRankingAPI).mockResolvedValueOnce({
-      success: true,
-      ranking: { ratings: { u1: 9 }, version: 6 },
-    })
-    await rate(user, 'Alice', '9')
-    await user.click(screen.getByRole('button', { name: 'Save ratings' }))
-    expect(saveClubSkillRankingAPI).toHaveBeenLastCalledWith('c1', {
-      ratings: { u1: 9 },
-      version: 5,
-    })
   })
 
   it('shows the server message for other save errors and keeps edits', async () => {

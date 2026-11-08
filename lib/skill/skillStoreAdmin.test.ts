@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  applyClubSkillRatingChanges,
   getClubSkillRanking,
   getEffectiveSkillScoresForClub,
   getSkillAnswersForUsers,
   getSkillAssessment,
-  saveClubSkillRanking,
 } from './skillStoreAdmin'
 import { DEFAULT_SKILL } from '@/lib/skill/scoring'
 
@@ -116,47 +116,54 @@ describe('skillStoreAdmin', () => {
     expect(ranking).toEqual({ ratings: { b: 4 }, version: 3 })
   })
 
-  it('saves the first ratings at expected version 0', async () => {
+  it('creates the doc with the first changes at version 1', async () => {
     const { adminDb, writes } = createDb({})
-    const result = await saveClubSkillRanking(adminDb, {
+    const result = await applyClubSkillRatingChanges(adminDb, {
       clubId: 'club1',
-      ratings: ratings as never,
-      expectedVersion: 0,
+      changes: { a: 9, b: 4 },
       updatedBy: 'admin1',
     })
-    expect(result).toEqual({ ok: true, version: 1 })
-    expect(writes).toHaveLength(1)
+    expect(result).toEqual({ ratings: { a: 9, b: 4 }, version: 1 })
     expect(writes[0]).toMatchObject({
       path: 'clubSkillRankings/club1',
-      data: { clubId: 'club1', ratings, version: 1, updatedBy: 'admin1' },
+      data: {
+        clubId: 'club1',
+        ratings: { a: 9, b: 4 },
+        version: 1,
+        updatedBy: 'admin1',
+      },
     })
   })
 
-  it('increments the version when the expected version matches', async () => {
+  it('merges changes into the stored ratings and clears with null', async () => {
     const { adminDb } = createDb({
-      clubSkillRankings: { club1: { ratings: {}, version: 4 } },
+      clubSkillRankings: {
+        club1: { ratings: { a: 9, b: 4, c: 6 }, version: 4 },
+      },
     })
-    const result = await saveClubSkillRanking(adminDb, {
+    const result = await applyClubSkillRatingChanges(adminDb, {
       clubId: 'club1',
-      ratings: ratings as never,
-      expectedVersion: 4,
-      updatedBy: 'admin1',
+      changes: { b: 7, c: null, d: 2 },
+      updatedBy: 'admin2',
     })
-    expect(result).toEqual({ ok: true, version: 5 })
+    expect(result).toEqual({ ratings: { a: 9, b: 7, d: 2 }, version: 5 })
   })
 
-  it('returns a conflict and writes nothing on a stale version', async () => {
-    const { adminDb, writes } = createDb({
-      clubSkillRankings: { club1: { ratings: {}, version: 2 } },
+  it('lets the later of two admins win for the same player only', async () => {
+    const { adminDb } = createDb({
+      clubSkillRankings: { club1: { ratings: { a: 5 }, version: 1 } },
     })
-    const result = await saveClubSkillRanking(adminDb, {
+    await applyClubSkillRatingChanges(adminDb, {
       clubId: 'club1',
-      ratings: ratings as never,
-      expectedVersion: 1,
+      changes: { a: 8, b: 3 },
       updatedBy: 'admin1',
     })
-    expect(result).toEqual({ ok: false, conflict: true, currentVersion: 2 })
-    expect(writes).toHaveLength(0)
+    const result = await applyClubSkillRatingChanges(adminDb, {
+      clubId: 'club1',
+      changes: { a: 2 },
+      updatedBy: 'admin2',
+    })
+    expect(result).toEqual({ ratings: { a: 2, b: 3 }, version: 3 })
   })
 
   it('scores rated players by their rating and ignores the questionnaire', async () => {

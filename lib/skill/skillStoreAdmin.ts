@@ -9,7 +9,7 @@ import type {
   EffectiveSkillScores,
   SkillAnswers,
   SkillAssessmentDTO,
-  SkillRatings,
+  SkillRatingChanges,
 } from '@/types/skill'
 
 /**
@@ -122,49 +122,43 @@ export async function getClubSkillRanking(
   }
 }
 
-export type SaveClubSkillRankingResult =
-  | { ok: true; version: number }
-  | { ok: false; conflict: true; currentVersion: number }
-
 /**
- * Save the club's ratings if the stored version still equals
- * `expectedVersion` (0 for a club that has never saved). On success the
- * version is incremented; otherwise nothing is written and a conflict is
- * returned. `ratings` must already be validated against active members.
+ * Apply an admin's rating changes on top of the stored ratings, in a
+ * transaction. Only the players in `changes` are touched, so two admins
+ * saving at once both land; if both changed the same player, the later save
+ * wins. A null change clears that player's rating. `changes` must already be
+ * validated. Returns the merged ratings and the new version.
  */
-export async function saveClubSkillRanking(
+export async function applyClubSkillRatingChanges(
   adminDb: Firestore,
   input: {
     clubId: string
-    ratings: SkillRatings
-    expectedVersion: number
+    changes: SkillRatingChanges
     updatedBy: string
   }
-): Promise<SaveClubSkillRankingResult> {
+): Promise<ClubSkillRankingDTO> {
   const ref = adminDb
     .collection(CLUB_SKILL_RANKINGS_COLLECTION)
     .doc(input.clubId)
   // The callback may retry; it only returns its outcome (no outer state).
-  return adminDb.runTransaction(
-    async (tx): Promise<SaveClubSkillRankingResult> => {
-      const snap = await tx.get(ref)
-      const currentVersion = snap.exists
-        ? storedVersion(snap.data()?.version)
-        : 0
-      if (currentVersion !== input.expectedVersion) {
-        return { ok: false, conflict: true, currentVersion }
-      }
-      const version = currentVersion + 1
-      tx.set(ref, {
-        clubId: input.clubId,
-        ratings: input.ratings,
-        version,
-        updatedBy: input.updatedBy,
-        updatedAt: Timestamp.now(),
-      })
-      return { ok: true, version }
+  return adminDb.runTransaction(async (tx): Promise<ClubSkillRankingDTO> => {
+    const snap = await tx.get(ref)
+    const data = snap.exists ? (snap.data() ?? {}) : {}
+    const ratings = normalizeStoredSkillRatings(data.ratings)
+    for (const [uid, rating] of Object.entries(input.changes)) {
+      if (rating === null) delete ratings[uid]
+      else ratings[uid] = rating
     }
-  )
+    const version = storedVersion(data.version) + 1
+    tx.set(ref, {
+      clubId: input.clubId,
+      ratings,
+      version,
+      updatedBy: input.updatedBy,
+      updatedAt: Timestamp.now(),
+    })
+    return { ratings, version }
+  })
 }
 
 /**

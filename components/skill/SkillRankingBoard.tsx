@@ -17,6 +17,7 @@ import {
   saveClubSkillRankingAPI,
 } from '@/lib/api/client'
 import {
+  diffSkillRatings,
   keepRatedMembers,
   setSkillRating,
   skillRatingsEqual,
@@ -31,9 +32,6 @@ import type {
   SkillRating,
   SkillRatings,
 } from '@/types/skill'
-
-export const SKILL_RANKING_CONFLICT_MESSAGE =
-  'Another admin changed the ratings. Reload to see their changes.'
 
 const NOT_RATED = 'none'
 
@@ -64,7 +62,6 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
   const [draft, setDraft] = useState<SkillRatings>({})
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
-  const [conflict, setConflict] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
   // Bumped on every load, club change and unmount; responses from an older
   // generation are dropped.
@@ -85,7 +82,6 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
         setMembers(res.members)
         setSaved({ ratings, version: res.ranking.version })
         setDraft(ratings)
-        setConflict(false)
         setSaveError('')
         setJustSaved(false)
         setLoadStatus('loaded')
@@ -104,7 +100,6 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
     setSaving(false)
     savingRef.current = false
     setSaveError('')
-    setConflict(false)
     setJustSaved(false)
     load(clubId)
     return () => {
@@ -138,7 +133,7 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
   }
 
   const handleSave = async () => {
-    if (!saved || !dirty || conflict || savingRef.current) return
+    if (!saved || !dirty || savingRef.current) return
     const gen = genRef.current
     const memberIds = members.map(m => m.userId)
     savingRef.current = true
@@ -146,10 +141,12 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
     setSaveError('')
     setJustSaved(false)
     try {
-      const res = await saveClubSkillRankingAPI(clubId, {
-        ratings: draft,
-        version: saved.version,
-      })
+      // Only this admin's changes are sent; the response is the merged
+      // ratings, including any another admin saved meanwhile.
+      const res = await saveClubSkillRankingAPI(
+        clubId,
+        diffSkillRatings(saved.ratings, draft)
+      )
       if (gen !== genRef.current) return
       const ratings = keepRatedMembers(res.ranking.ratings, memberIds)
       setSaved({ ratings, version: res.ranking.version })
@@ -157,11 +154,7 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
       setJustSaved(true)
     } catch (err: unknown) {
       if (gen !== genRef.current) return
-      if ((err as { status?: number }).status === 409) {
-        setConflict(true)
-      } else {
-        setSaveError(errorMessage(err, 'Failed to save player ratings'))
-      }
+      setSaveError(errorMessage(err, 'Failed to save player ratings'))
     } finally {
       if (gen === genRef.current) {
         savingRef.current = false
@@ -186,7 +179,8 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
       </div>
       <p className="text-sm text-muted-foreground">
         Rate each player from 1 to 10. Rebalance teams uses these ratings;
-        unrated players count as 5.5.
+        unrated players count as 5.5. If two admins rate the same player, the
+        later save wins.
       </p>
     </div>
   )
@@ -225,7 +219,7 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
     )
   }
 
-  const controlsDisabled = saving || conflict
+  const controlsDisabled = saving
 
   return (
     <Card className="overflow-hidden" aria-labelledby="skill-ranking-title">
@@ -255,31 +249,13 @@ export function SkillRankingBoard({ clubId }: { clubId: string }) {
       )}
 
       <div className="space-y-3 border-t border-border px-4 py-3">
-        {conflict && (
-          <div
-            role="alert"
-            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md bg-danger-wash/20 p-3 text-sm text-danger"
-          >
-            <p className="min-w-[12rem] flex-1">
-              {SKILL_RANKING_CONFLICT_MESSAGE}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => load(clubId)}
-            >
-              Reload
-            </Button>
-          </div>
-        )}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <Button
             type="button"
             onClick={() => void handleSave()}
             loading={saving}
             aria-label="Save ratings"
-            disabled={!dirty || conflict}
+            disabled={!dirty}
           >
             Save ratings
           </Button>

@@ -19,6 +19,9 @@ export type SkillRating = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
 /** A club's ratings keyed by uid; unrated players are absent. */
 export type SkillRatings = Record<string, SkillRating>
 
+/** Ratings an admin changed, keyed by uid; null clears a rating. */
+export type SkillRatingChanges = Record<string, SkillRating | null>
+
 export interface SkillQuestionOption {
   value: SkillAnswerValue
   label: string
