@@ -15,4 +15,12 @@ describe('SiteFooter', () => {
       '© 2027 Studio Artemis LLC. All rights reserved.'
     )
   })
+
+  it('links the company name to the Studio Artemis site in a new tab', () => {
+    render(<SiteFooter />)
+    const link = screen.getByRole('link', { name: 'Studio Artemis LLC' })
+    expect(link).toHaveAttribute('href', 'https://studioartemis.io')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+  })
 })
