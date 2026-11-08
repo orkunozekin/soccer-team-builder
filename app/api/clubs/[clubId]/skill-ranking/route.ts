@@ -5,16 +5,13 @@ import { getAdminDb } from '@/lib/firebase/admin'
 import { evaluateFeatureFlag } from '@/lib/flags/evaluateFeatureFlag'
 import { auditLog } from '@/lib/services/auditService'
 import { listMembershipsForClub } from '@/lib/services/clubService'
-import { validateSkillRatings } from '@/lib/skill/scoring'
+import { validateSkillRatingChanges } from '@/lib/skill/scoring'
 import {
+  applyClubSkillRatingChanges,
   getClubSkillRanking,
-  saveClubSkillRanking,
 } from '@/lib/skill/skillStoreAdmin'
 import { getUsersByIdsAdmin } from '@/lib/users/getUsersByIdsAdmin'
-import type { SkillRankingMemberDTO } from '@/types/skill'
-
-const RANKING_CONFLICT_MESSAGE =
-  'Another admin changed the ratings. Reload to see their changes.'
+import type { ClubSkillRankingDTO, SkillRankingMemberDTO } from '@/types/skill'
 
 type RouteContext = { params: Promise<{ clubId: string }> }
 
@@ -98,27 +95,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
 }
 
 /**
- * PUT /api/clubs/[clubId]/skill-ranking — body `{ ratings, version }`,
- * ratings being uid → 1–10 for active members (absent = unrated);
- * `409` when another admin saved first.
+ * PATCH /api/clubs/[clubId]/skill-ranking — body `{ changes }`: uid → 1–10, or
+ * null to clear. Only those players change, so concurrent admin saves both
+ * land; for the same player the later save wins.
  */
-export async function PUT(request: NextRequest, context: RouteContext) {
+export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const gate = await authorize(request, context)
     if (!gate.ok) return gate.response
 
     const body = await request.json().catch(() => null)
-    const expectedVersion = body?.version
-    if (
-      typeof expectedVersion !== 'number' ||
-      !Number.isInteger(expectedVersion) ||
-      expectedVersion < 0
-    ) {
-      return NextResponse.json(
-        { error: 'A valid ranking version is required' },
-        { status: 400 }
-      )
-    }
 
     const adminDb = getAdminDb()
     if (!adminDb) {
@@ -129,27 +115,19 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
 
     const memberships = await listMembershipsForClub(gate.clubId)
-    const validation = validateSkillRatings(
-      body?.ratings,
-      new Set(memberships.map(m => m.userId))
-    )
+    const memberIds = new Set(memberships.map(m => m.userId))
+    const validation = validateSkillRatingChanges(body?.changes, memberIds)
     if (!validation.ok) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
-    const result = await saveClubSkillRanking(adminDb, {
+    const merged = await applyClubSkillRatingChanges(adminDb, {
       clubId: gate.clubId,
-      ratings: validation.ratings,
-      expectedVersion,
+      changes: validation.changes,
       updatedBy: gate.uid,
     })
-    if (!result.ok) {
-      return NextResponse.json(
-        { error: RANKING_CONFLICT_MESSAGE, code: 'version_conflict' },
-        { status: 409 }
-      )
-    }
 
+    const values = Object.values(validation.changes)
     auditLog({
       action: 'club.skill_ranking_updated',
       actorUid: gate.uid,
@@ -157,14 +135,18 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       entityId: gate.clubId,
       source: 'api',
       metadata: {
-        ratedCount: Object.keys(validation.ratings).length,
-        version: result.version,
+        ratedCount: values.filter(v => v !== null).length,
+        clearedCount: values.filter(v => v === null).length,
+        version: merged.version,
       },
     })
 
+    const ratings = Object.fromEntries(
+      Object.entries(merged.ratings).filter(([uid]) => memberIds.has(uid))
+    ) as ClubSkillRankingDTO['ratings']
     return NextResponse.json({
       success: true,
-      ranking: { ratings: validation.ratings, version: result.version },
+      ranking: { ratings, version: merged.version },
     })
   } catch (err: unknown) {
     console.error('Error saving skill ranking:', err)

@@ -76,7 +76,7 @@ UI Components → API Client → Next.js API Routes → Firebase Services → Fi
 - `POST /api/matches` - Create a new match
 - `POST /api/teams/rebalance` - Club admins: rebalance a match's teams. With the `skill-balanced-teams` flag on (evaluated server-side), the response adds `strength: { teams: [{ teamNumber, total, average, size }], unratedCount, playerCount }`
 - `GET/PUT /api/users/me/skill-assessment` - Signed-in player: read/save their own skills questionnaire (`verifyAuth`; flag off → 403). Not used by the UI while the questionnaire is off
-- `GET/PUT /api/clubs/[clubId]/skill-ranking` - Club admins (`verifyClubAdmin`): read the club's 1–10 ratings plus active members; save `{ ratings, version }` (whole numbers 1–10, active members only; 409 when another admin saved first; flag off → 403)
+- `GET/PATCH /api/clubs/[clubId]/skill-ranking` - Club admins (`verifyClubAdmin`): read the club's 1–10 ratings plus active members; save `{ changes: { [uid]: 1–10 | null } }` (only changed players; `null` clears; ratings for active members only), merged in a transaction so the later save wins per player; flag off → 403. Used by the roster page board and the match page Rate players sheet
 
 ### Private skill data
 

@@ -5,6 +5,7 @@ import {
   type SkillAnswers,
   type SkillQuestion,
   type SkillRating,
+  type SkillRatingChanges,
   type SkillRatings,
 } from '@/types/skill'
 
@@ -94,34 +95,41 @@ export function isSkillRating(value: unknown): value is SkillRating {
   )
 }
 
-export type SkillRatingsValidationResult =
-  | { ok: true; ratings: SkillRatings }
+export type SkillRatingChangesValidationResult =
+  | { ok: true; changes: SkillRatingChanges }
   | { ok: false; error: string }
 
 /**
- * Validate untrusted ratings for a save: an object of uid → integer 1–10.
- * Every uid must be in `allowedUserIds` (the club's active members). Players
- * left out are unrated.
+ * Validate untrusted rating changes: an object of uid → integer 1–10, or null
+ * to clear. A rating can only be set for one of `allowedUserIds` (the club's
+ * active members); clearing is allowed for any uid, so a former member's old
+ * rating can be removed. At least one change is required.
  */
-export function validateSkillRatings(
+export function validateSkillRatingChanges(
   input: unknown,
   allowedUserIds: ReadonlySet<string>
-): SkillRatingsValidationResult {
+): SkillRatingChangesValidationResult {
   if (!isPlainObject(input)) {
-    return { ok: false, error: 'Ratings must be an object' }
+    return { ok: false, error: 'Changes must be an object' }
   }
-  const ratings: SkillRatings = {}
-  for (const [uid, value] of Object.entries(input)) {
+  const entries = Object.entries(input)
+  if (entries.length === 0) return { ok: false, error: 'Nothing to save' }
+  const changes: SkillRatingChanges = {}
+  for (const [uid, value] of entries) {
     if (!uid) return { ok: false, error: 'Invalid player id' }
+    if (value === null) {
+      changes[uid] = null
+      continue
+    }
     if (!isSkillRating(value)) {
       return { ok: false, error: 'Ratings must be whole numbers from 1 to 10' }
     }
     if (!allowedUserIds.has(uid)) {
       return { ok: false, error: 'Only active club members can be rated' }
     }
-    ratings[uid] = value
+    changes[uid] = value
   }
-  return { ok: true, ratings }
+  return { ok: true, changes }
 }
 
 /**

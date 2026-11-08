@@ -7,7 +7,7 @@ import {
   isSkillRating,
   normalizeStoredSkillRatings,
   parseSkillAnswers,
-  validateSkillRatings,
+  validateSkillRatingChanges,
 } from './scoring'
 import { SKILL_QUESTION_KEYS } from '@/types/skill'
 
@@ -90,33 +90,31 @@ describe('isSkillRating', () => {
   })
 })
 
-describe('validateSkillRatings', () => {
+describe('validateSkillRatingChanges', () => {
   const members = new Set(['a', 'b', 'c'])
 
-  it('accepts ratings for members and returns a copy', () => {
-    const input = { a: 9, c: 1 }
-    const result = validateSkillRatings(input, members)
-    expect(result).toEqual({ ok: true, ratings: { a: 9, c: 1 } })
-    if (result.ok) expect(result.ratings).not.toBe(input)
+  it('accepts ratings for members and null to clear', () => {
+    expect(validateSkillRatingChanges({ a: 9, b: null }, members)).toEqual({
+      ok: true,
+      changes: { a: 9, b: null },
+    })
   })
 
-  it('accepts an empty object (nobody rated)', () => {
-    expect(validateSkillRatings({}, members)).toEqual({
-      ok: true,
-      ratings: {},
-    })
+  it('lets a former member be cleared but not rated', () => {
+    expect(validateSkillRatingChanges({ gone: null }, members).ok).toBe(true)
+    expect(validateSkillRatingChanges({ gone: 4 }, members).ok).toBe(false)
   })
 
   it.each([
     ['null', null],
     ['an array', [5]],
+    ['an empty object', {}],
     ['zero', { a: 0 }],
     ['eleven', { a: 11 }],
     ['a fraction', { a: 6.5 }],
     ['a numeric string', { a: '6' }],
-    ['a non-member', { zed: 5 }],
   ])('rejects %s', (_label, input) => {
-    expect(validateSkillRatings(input, members).ok).toBe(false)
+    expect(validateSkillRatingChanges(input, members).ok).toBe(false)
   })
 })
 

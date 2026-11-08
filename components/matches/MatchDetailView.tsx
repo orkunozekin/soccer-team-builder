@@ -9,15 +9,22 @@ import { PlayerTransfer } from '@/components/admin/PlayerTransfer'
 import { RebalanceTeamsButton } from '@/components/admin/RebalanceTeamsButton'
 import { PageLoadingSkeleton } from '@/components/LoadingSkeleton'
 import { MatchDetails } from '@/components/matches/MatchDetails'
+import {
+  type MatchRatingPlayer,
+  MatchRatingSheet,
+} from '@/components/skill/MatchRatingSheet'
+import { RatePlayersButton } from '@/components/skill/RatePlayersButton'
 import { SkillStrengthCard } from '@/components/skill/SkillStrengthCard'
 import { TeamsDisplay } from '@/components/teams/TeamsDisplay'
 import { BackLink } from '@/components/ui/back-link'
+import { useFeatureFlag } from '@/lib/flags/useFeatureFlag'
 import { useIsClubAdmin } from '@/lib/hooks/useClubMemberships'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getMatch } from '@/lib/services/matchService'
 import { getMatchRSVPs } from '@/lib/services/rsvpService'
 import { getMatchTeams } from '@/lib/services/teamService'
 import { getUsersByIds } from '@/lib/services/userService'
+import { useClubSkillRatings } from '@/lib/skill/useClubSkillRatings'
 import { hasCheckInWindowStarted } from '@/lib/utils/checkIn'
 import { clubRosterPath } from '@/lib/utils/clubPaths'
 import { isMatchReadOnly } from '@/lib/utils/matchAccess'
@@ -103,6 +110,40 @@ export function MatchDetailView({
       }
     })
   }, [rosterUsers, matchRSVPs])
+
+  // Admin player ratings (skill-balanced-teams): loaded only for club admins
+  // of a club match. Every RSVP'd player is on a team, so teams list them.
+  const skillBalancedTeams = useFeatureFlag('skill-balanced-teams')
+  const ratingClubId =
+    canManageMatch && skillBalancedTeams ? (match?.clubId ?? null) : null
+  const clubRatings = useClubSkillRatings(ratingClubId)
+  const [ratingSheetOpen, setRatingSheetOpen] = useState(false)
+  const ratingPlayers = useMemo<MatchRatingPlayer[]>(() => {
+    const userById = new Map(usersWithMatchPosition.map(u => [u.uid, u]))
+    return [...teams]
+      .sort((a, b) => a.teamNumber - b.teamNumber)
+      .flatMap(team =>
+        team.playerIds.map(uid => {
+          const u = userById.get(uid)
+          return {
+            userId: uid,
+            displayName: u?.displayName?.trim() || 'Player',
+            position: u?.position ?? null,
+            teamName: team.name || `Team ${team.teamNumber}`,
+            teamColor: team.color,
+          }
+        })
+      )
+  }, [teams, usersWithMatchPosition])
+  const rateablePlayers = ratingPlayers.filter(p =>
+    clubRatings.memberIds.has(p.userId)
+  )
+  const unratedCount = rateablePlayers.filter(
+    p => clubRatings.ratings[p.userId] === undefined
+  ).length
+  // Shown only while at least one player on this match is unrated.
+  const showRatePlayers =
+    !!ratingClubId && clubRatings.status === 'loaded' && unratedCount > 0
 
   useEffect(() => {
     if (!matchId || !userId) return
@@ -298,6 +339,13 @@ export function MatchDetailView({
 
           {hasTeamsPanel && (
             <div className="min-w-0 space-y-6">
+              {showRatePlayers && (
+                <RatePlayersButton
+                  unratedCount={unratedCount}
+                  totalCount={rateablePlayers.length}
+                  onClick={() => setRatingSheetOpen(true)}
+                />
+              )}
               {canManageMatch && skillSummary?.matchId === matchId && (
                 <SkillStrengthCard
                   summary={skillSummary.summary}
@@ -341,6 +389,22 @@ export function MatchDetailView({
             </div>
           )}
         </div>
+
+        {ratingClubId && (
+          <MatchRatingSheet
+            open={ratingSheetOpen}
+            onOpenChange={setRatingSheetOpen}
+            clubId={ratingClubId}
+            players={ratingPlayers}
+            ratings={clubRatings.ratings}
+            memberIds={clubRatings.memberIds}
+            onSaved={ranking => {
+              clubRatings.applySaved(ranking)
+              // Totals from an earlier rebalance no longer match the ratings.
+              setSkillSummary(null)
+            }}
+          />
+        )}
 
         {canManageMatch && matchId && (
           <div className="mt-4">

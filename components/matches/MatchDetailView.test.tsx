@@ -38,6 +38,21 @@ vi.mock('@/lib/hooks/useClubMemberships', () => ({
   }),
 }))
 
+const flagMock = vi.fn((_key: string) => false)
+vi.mock('@/lib/flags/useFeatureFlag', () => ({
+  useFeatureFlag: (key: string) => flagMock(key),
+  useFeatureFlagReady: () => true,
+}))
+
+const getClubSkillRankingMock = vi.fn()
+const saveClubSkillRankingMock = vi.fn()
+vi.mock('@/lib/api/client', () => ({
+  getClubSkillRankingAPI: (...args: unknown[]) =>
+    getClubSkillRankingMock(...args),
+  saveClubSkillRankingAPI: (...args: unknown[]) =>
+    saveClubSkillRankingMock(...args),
+}))
+
 const matchStoreState = {
   currentMatch: null as any,
   matchRSVPs: [] as any[],
@@ -189,6 +204,7 @@ function mockRsvp(userId = 'user1') {
 describe('MatchDetailView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    flagMock.mockImplementation(() => false)
     matchStoreState.currentMatch = null
     matchStoreState.matchRSVPs = []
     paramsMock.mockReturnValue({ matchId: 'match1' })
@@ -428,5 +444,113 @@ describe('MatchDetailView', () => {
 
     await user.click(screen.getByText('MoveTeamPlayerMock'))
     expect(screen.queryByText('Balanced by skill')).not.toBeInTheDocument()
+  })
+
+  describe('Rate players', () => {
+    const adminState = {
+      isClubAdmin: true,
+      isSuperUser: false,
+      loading: false,
+      error: null,
+      refresh: refreshClubMembershipsMock,
+    }
+
+    function setupRatedMatch(ratings: Record<string, number>) {
+      useIsClubAdminMock.mockReturnValue(adminState)
+      flagMock.mockImplementation(key => key === 'skill-balanced-teams')
+      getMatchMock.mockResolvedValue({ ...mockMatch(), clubId: 'club1' })
+      getMatchRSVPsMock.mockResolvedValue([
+        mockRsvp('user1'),
+        mockRsvp('user2'),
+      ])
+      getMatchTeamsMock.mockResolvedValue([
+        mockTeam('t1'),
+        {
+          ...mockTeam('t2'),
+          teamNumber: 2,
+          name: 'Team 2',
+          color: 'blue',
+          playerIds: ['user2'],
+        },
+      ])
+      getUsersByIdsMock.mockResolvedValue([
+        { uid: 'user1', displayName: 'Alice', position: 'ST' },
+        { uid: 'user2', displayName: 'Bob', position: 'GK' },
+      ])
+      getClubSkillRankingMock.mockResolvedValue({
+        success: true,
+        ranking: { ratings, version: 1 },
+        members: [
+          { userId: 'user1', displayName: 'Alice', position: 'ST' },
+          { userId: 'user2', displayName: 'Bob', position: 'GK' },
+        ],
+      })
+    }
+
+    const rateButton = () =>
+      screen.findByRole('button', { name: /^Rate players/ })
+
+    it('shows admins the CTA while a player is unrated, and saves from the sheet', async () => {
+      const user = userEvent.setup()
+      setupRatedMatch({ user1: 7 })
+      saveClubSkillRankingMock.mockResolvedValue({
+        success: true,
+        ranking: { ratings: { user1: 7, user2: 4 }, version: 2 },
+      })
+      render(<MatchDetailView backLink={backLink} />)
+
+      const cta = await rateButton()
+      expect(cta).toHaveTextContent('1 of 2 not rated yet')
+      expect(getClubSkillRankingMock).toHaveBeenCalledWith('club1')
+
+      await user.click(cta)
+      expect(await screen.findByRole('dialog')).toBeInTheDocument()
+      expect(screen.getByText('Team 2 · GK')).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: /^Bob/ }))
+      await user.click(screen.getByRole('radio', { name: '4' }))
+      await user.click(screen.getByRole('button', { name: 'Save ratings' }))
+
+      expect(saveClubSkillRankingMock).toHaveBeenCalledWith('club1', {
+        user2: 4,
+      })
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      )
+      // Everyone is rated now, so the CTA goes away.
+      expect(
+        screen.queryByRole('button', { name: /^Rate players/ })
+      ).not.toBeInTheDocument()
+    })
+
+    it('hides the CTA once every player is rated', async () => {
+      setupRatedMatch({ user1: 7, user2: 3 })
+      render(<MatchDetailView backLink={backLink} />)
+
+      await waitFor(() =>
+        expect(getClubSkillRankingMock).toHaveBeenCalledWith('club1')
+      )
+      expect(await screen.findByText('TeamsDisplayMock:2')).toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: /^Rate players/ })
+      ).not.toBeInTheDocument()
+    })
+
+    it.each([
+      ['a regular player', { isClubAdmin: false }, true],
+      ['an admin with the flag off', {}, false],
+    ])('hides the CTA from %s', async (_label, override, flagOn) => {
+      setupRatedMatch({})
+      useIsClubAdminMock.mockReturnValue({ ...adminState, ...override })
+      flagMock.mockImplementation(
+        key => flagOn && key === 'skill-balanced-teams'
+      )
+      render(<MatchDetailView backLink={backLink} />)
+
+      expect(await screen.findByText('TeamsDisplayMock:2')).toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: /^Rate players/ })
+      ).not.toBeInTheDocument()
+      expect(getClubSkillRankingMock).not.toHaveBeenCalled()
+    })
   })
 })

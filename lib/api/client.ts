@@ -26,7 +26,7 @@ import type {
   SkillAnswers,
   SkillAssessmentDTO,
   SkillRankingMemberDTO,
-  SkillRatings,
+  SkillRatingChanges,
 } from '@/types/skill'
 import type { ThemePreference } from '@/types/user'
 
@@ -971,13 +971,14 @@ export async function getClubSkillRankingAPI(clubId: string): Promise<{
  * Club admins: save the ranking loaded at `version`. Rejects with
  * `status === 409` when another admin saved first (reload, then retry).
  */
+/** Save only the ratings this admin changed (null clears one). */
 export async function saveClubSkillRankingAPI(
   clubId: string,
-  input: { ratings: SkillRatings; version: number }
+  changes: SkillRatingChanges
 ): Promise<{ success: boolean; ranking: ClubSkillRankingDTO }> {
   const response = await apiRequest(
     `/clubs/${encodeURIComponent(clubId)}/skill-ranking`,
-    { method: 'PUT', body: JSON.stringify(input) }
+    { method: 'PATCH', body: JSON.stringify({ changes }) }
   )
   if (!response.ok) {
     await throwApiError(response, 'Failed to save skill ranking')

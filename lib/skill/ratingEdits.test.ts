@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  diffSkillRatings,
   keepRatedMembers,
   setSkillRating,
   skillRatingsEqual,
@@ -33,5 +34,14 @@ describe('skillRatingsEqual', () => {
     expect(skillRatingsEqual({ a: 7, b: 3 }, { b: 3, a: 7 })).toBe(true)
     expect(skillRatingsEqual({ a: 7 }, { a: 8 })).toBe(false)
     expect(skillRatingsEqual({ a: 7 }, { a: 7, b: 3 })).toBe(false)
+  })
+})
+
+describe('diffSkillRatings', () => {
+  it('lists new, changed and cleared ratings only', () => {
+    expect(
+      diffSkillRatings({ a: 5, b: 7, c: 2 }, { a: 5, b: 9, d: 4 })
+    ).toEqual({ b: 9, c: null, d: 4 })
+    expect(diffSkillRatings({ a: 5 }, { a: 5 })).toEqual({})
   })
 })

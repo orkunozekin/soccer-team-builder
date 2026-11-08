@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { type Firestore, Timestamp } from 'firebase-admin/firestore'
 import { NextRequest } from 'next/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { GET, PUT } from '@/app/api/clubs/[clubId]/skill-ranking/route'
+import { GET, PATCH } from '@/app/api/clubs/[clubId]/skill-ranking/route'
 import { POST as rebalance } from '@/app/api/teams/rebalance/route'
 import { getAdminDb } from '@/lib/firebase/admin'
 
@@ -44,12 +44,12 @@ describe.skipIf(!emulator)('Admin 1–10 ratings on Firestore emulator', () => {
 
   const context = () => ({ params: Promise.resolve({ clubId }) })
   const url = () => `http://localhost/api/clubs/${clubId}/skill-ranking`
-  const put = (body: object) =>
-    PUT(
+  const patch = (changes: object) =>
+    PATCH(
       new NextRequest(url(), {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ changes }),
       }),
       context()
     )
@@ -120,7 +120,7 @@ describe.skipIf(!emulator)('Admin 1–10 ratings on Firestore emulator', () => {
     await batch.commit()
   })
 
-  it('saves ratings, rejects a stale save, and rebalances by them', async () => {
+  it('saves ratings, merges a second admin, and rebalances by them', async () => {
     // Fresh club: no ratings yet.
     const initial = await (await GET(new NextRequest(url()), context())).json()
     expect(initial.ranking).toEqual({ ratings: {}, version: 0 })
@@ -129,7 +129,7 @@ describe.skipIf(!emulator)('Admin 1–10 ratings on Firestore emulator', () => {
     const ratings = Object.fromEntries(
       ids.map((id, i) => [id, [10, 9, 8, 7, 4, 3, 2, 1][i]])
     )
-    const saved = await put({ ratings, version: 0 })
+    const saved = await patch(ratings)
     expect(saved.status).toBe(200)
     expect((await saved.json()).ranking.version).toBe(1)
 
@@ -141,17 +141,23 @@ describe.skipIf(!emulator)('Admin 1–10 ratings on Firestore emulator', () => {
       updatedBy: 'admin1',
     })
 
-    // A second admin still holding version 0 can't overwrite it.
-    const stale = await put({ ratings: { [ids[0]]: 1 }, version: 0 })
-    expect(stale.status).toBe(409)
+    // Another admin changes one player and clears another: only those move,
+    // and their later save wins for those players.
+    const second = await patch({ [ids[7]]: 2, [ids[6]]: null })
+    expect(second.status).toBe(200)
+    const { [ids[6]]: _cleared, ...rest } = ratings
+    expect((await second.json()).ranking).toEqual({
+      ratings: { ...rest, [ids[7]]: 2 },
+      version: 2,
+    })
+    // Put the original values back for the rebalance check below.
+    expect((await patch({ [ids[7]]: 1, [ids[6]]: 2 })).status).toBe(200)
     expect(
       (await db.doc(`clubSkillRankings/${clubId}`).get()).data()?.ratings
     ).toEqual(ratings)
 
     // Out-of-range ratings are refused.
-    expect((await put({ ratings: { [ids[0]]: 11 }, version: 1 })).status).toBe(
-      400
-    )
+    expect((await patch({ [ids[0]]: 11 })).status).toBe(400)
 
     const res = await rebalance(
       new NextRequest('http://localhost/api/teams/rebalance', {
@@ -187,7 +193,7 @@ describe.skipIf(!emulator)('Admin 1–10 ratings on Firestore emulator', () => {
   })
 
   it('counts unrated players as 5.5', async () => {
-    await put({ ratings: { [ids[0]]: 10 }, version: 0 })
+    await patch({ [ids[0]]: 10 })
     const res = await rebalance(
       new NextRequest('http://localhost/api/teams/rebalance', {
         method: 'POST',

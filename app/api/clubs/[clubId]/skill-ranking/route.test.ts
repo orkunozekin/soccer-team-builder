@@ -1,14 +1,14 @@
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { GET, PUT } from './route'
+import { GET, PATCH } from './route'
 import { verifyClubAdmin } from '@/lib/api/auth'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { evaluateFeatureFlag } from '@/lib/flags/evaluateFeatureFlag'
 import { auditLog } from '@/lib/services/auditService'
 import { listMembershipsForClub } from '@/lib/services/clubService'
 import {
+  applyClubSkillRatingChanges,
   getClubSkillRanking,
-  saveClubSkillRanking,
 } from '@/lib/skill/skillStoreAdmin'
 import { getUsersByIdsAdmin } from '@/lib/users/getUsersByIdsAdmin'
 
@@ -25,8 +25,8 @@ vi.mock('@/lib/users/getUsersByIdsAdmin', () => ({
   getUsersByIdsAdmin: vi.fn(),
 }))
 vi.mock('@/lib/skill/skillStoreAdmin', () => ({
+  applyClubSkillRatingChanges: vi.fn(),
   getClubSkillRanking: vi.fn(),
-  saveClubSkillRanking: vi.fn(),
 }))
 
 const URL = 'http://localhost/api/clubs/club1/skill-ranking'
@@ -44,8 +44,8 @@ function adminResult(overrides: Record<string, unknown> = {}) {
   }
 }
 
-function putRequest(body: unknown) {
-  return new NextRequest(URL, { method: 'PUT', body: JSON.stringify(body) })
+function patchRequest(body: unknown) {
+  return new NextRequest(URL, { method: 'PATCH', body: JSON.stringify(body) })
 }
 
 const memberships = [
@@ -74,7 +74,7 @@ describe('/api/clubs/[clubId]/skill-ranking', () => {
         }) as never
       )
       expect((await GET(new NextRequest(URL), context())).status).toBe(401)
-      expect((await PUT(putRequest({}), context())).status).toBe(401)
+      expect((await PATCH(patchRequest({}), context())).status).toBe(401)
     })
 
     it('returns 503 (retryable) when the membership lookup fails', async () => {
@@ -86,7 +86,7 @@ describe('/api/clubs/[clubId]/skill-ranking', () => {
       )
       const res = await GET(new NextRequest(URL), context())
       expect(res.status).toBe(503)
-      expect((await PUT(putRequest({}), context())).status).toBe(503)
+      expect((await PATCH(patchRequest({}), context())).status).toBe(503)
       expect(listMembershipsForClub).not.toHaveBeenCalled()
     })
 
@@ -95,7 +95,7 @@ describe('/api/clubs/[clubId]/skill-ranking', () => {
         adminResult({ isClubAdmin: false }) as never
       )
       expect((await GET(new NextRequest(URL), context())).status).toBe(403)
-      expect((await PUT(putRequest({}), context())).status).toBe(403)
+      expect((await PATCH(patchRequest({}), context())).status).toBe(403)
       expect(evaluateFeatureFlag).not.toHaveBeenCalled()
     })
 
@@ -106,7 +106,7 @@ describe('/api/clubs/[clubId]/skill-ranking', () => {
       await expect(res.json()).resolves.toEqual({
         error: 'Skill ranking is unavailable',
       })
-      expect((await PUT(putRequest({}), context())).status).toBe(403)
+      expect((await PATCH(patchRequest({}), context())).status).toBe(403)
       expect(evaluateFeatureFlag).toHaveBeenCalledWith('skill-balanced-teams', {
         key: 'admin1',
         email: 'admin@example.com',
@@ -158,55 +158,38 @@ describe('/api/clubs/[clubId]/skill-ranking', () => {
     })
   })
 
-  describe('PUT', () => {
-    const ratings = { a: 9, b: 2 }
-
+  describe('PATCH', () => {
     it.each([
-      ['missing version', { ratings }],
-      ['negative version', { ratings, version: -1 }],
-      ['fractional version', { ratings, version: 1.5 }],
-      ['missing ratings', { version: 0 }],
-      ['non-member uid', { ratings: { ...ratings, x: 5 }, version: 0 }],
-      ['rating above 10', { ratings: { a: 11 }, version: 0 }],
-      ['rating below 1', { ratings: { a: 0 }, version: 0 }],
-      ['fractional rating', { ratings: { a: 6.5 }, version: 0 }],
+      ['missing changes', {}],
+      ['empty changes', { changes: {} }],
+      ['non-member rating', { changes: { x: 5 } }],
+      ['rating above 10', { changes: { a: 11 } }],
+      ['rating below 1', { changes: { a: 0 } }],
+      ['fractional rating', { changes: { a: 6.5 } }],
     ])('returns 400 for %s', async (_label, body) => {
-      expect((await PUT(putRequest(body), context())).status).toBe(400)
-      expect(saveClubSkillRanking).not.toHaveBeenCalled()
+      expect((await PATCH(patchRequest(body), context())).status).toBe(400)
+      expect(applyClubSkillRatingChanges).not.toHaveBeenCalled()
       expect(auditLog).not.toHaveBeenCalled()
     })
 
-    it('returns 409 with a clear message on a version conflict', async () => {
-      vi.mocked(saveClubSkillRanking).mockResolvedValue({
-        ok: false,
-        conflict: true,
-        currentVersion: 5,
-      })
-      const res = await PUT(putRequest({ ratings, version: 4 }), context())
-      expect(res.status).toBe(409)
-      await expect(res.json()).resolves.toEqual({
-        error:
-          'Another admin changed the ratings. Reload to see their changes.',
-        code: 'version_conflict',
-      })
-      expect(auditLog).not.toHaveBeenCalled()
-    })
-
-    it('saves, audits counts only, and returns the new version', async () => {
-      vi.mocked(saveClubSkillRanking).mockResolvedValue({
-        ok: true,
+    it('applies only the changes, audits counts, and returns merged ratings for members', async () => {
+      vi.mocked(applyClubSkillRatingChanges).mockResolvedValue({
+        ratings: { a: 9, b: 6, gone: 3 },
         version: 5,
       })
-      const res = await PUT(putRequest({ ratings, version: 4 }), context())
+      const res = await PATCH(
+        patchRequest({ changes: { a: 9, b: null } }),
+        context()
+      )
       expect(res.status).toBe(200)
       await expect(res.json()).resolves.toEqual({
         success: true,
-        ranking: { ratings, version: 5 },
+        // The former member's stored rating isn't returned.
+        ranking: { ratings: { a: 9, b: 6 }, version: 5 },
       })
-      expect(saveClubSkillRanking).toHaveBeenCalledWith(adminDb, {
+      expect(applyClubSkillRatingChanges).toHaveBeenCalledWith(adminDb, {
         clubId: 'club1',
-        ratings,
-        expectedVersion: 4,
+        changes: { a: 9, b: null },
         updatedBy: 'admin1',
       })
       expect(auditLog).toHaveBeenCalledWith({
@@ -215,10 +198,18 @@ describe('/api/clubs/[clubId]/skill-ranking', () => {
         entityType: 'club',
         entityId: 'club1',
         source: 'api',
-        metadata: {
-          ratedCount: 2,
-          version: 5,
-        },
+        metadata: { ratedCount: 1, clearedCount: 1, version: 5 },
+      })
+    })
+
+    it('returns a sanitized 500 when the save fails', async () => {
+      vi.mocked(applyClubSkillRatingChanges).mockRejectedValue(
+        new Error('10 ABORTED: too much contention')
+      )
+      const res = await PATCH(patchRequest({ changes: { a: 4 } }), context())
+      expect(res.status).toBe(500)
+      await expect(res.json()).resolves.toEqual({
+        error: 'Failed to save skill ranking',
       })
     })
   })

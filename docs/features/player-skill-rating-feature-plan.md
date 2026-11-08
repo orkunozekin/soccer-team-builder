@@ -4,12 +4,18 @@ Plan to give each club a private, admin-maintained skill ranking of its players,
 
 ## Status
 
-| Field               | Value                                                                                                  |
-| ------------------- | ------------------------------------------------------------------------------------------------------ |
-| Status              | done (v1 shipped in #137–#141); changed to admin 1–10 ratings, questionnaire off (see below)           |
-| Owner session       | —                                                                                                      |
-| Last updated        | 2026-11-07                                                                                             |
-| Related PR / branch | #137–#141 (v1), #142 (required questionnaire), #143 (yards wording), `orkun/confident-franklin-t55hwy` |
+| Field               | Value                                                                                                                  |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Status              | done (v1 shipped in #137–#141); changed to admin 1–10 ratings, questionnaire off; rate from the match page (see below) |
+| Owner session       | —                                                                                                                      |
+| Last updated        | 2026-11-08                                                                                                             |
+| Related PR / branch | #137–#141 (v1), #142 (required questionnaire), #143 (yards wording), `orkun/confident-franklin-t55hwy`                 |
+
+## Change (2026-11-08): rate players from the match page; later save wins
+
+- **Match page CTA:** club admins (and super users) with `skill-balanced-teams` on see a "Rate players" button at the top of the teams panel while at least one player on the match's teams is unrated. It opens a bottom sheet (`components/skill/MatchRatingSheet.tsx`) listing every player on the teams, unrated first, with team and position, an All / Unrated filter, and a 1–10 picker per row. Players who aren't active club members are listed but can't be rated. Ratings are club-wide, the same ones as the roster page.
+- **API:** `PUT` with a version check is replaced by `PATCH /api/clubs/[clubId]/skill-ranking` with `{ changes: { [uid]: 1–10 | null } }`. Only changed players are sent; `null` clears a rating. The server merges them into the stored ratings in a transaction and returns the merged ratings. There is no 409 any more: if two admins rate the same player, the later save wins, and players only one of them touched are kept. The roster page board sends changes the same way.
+- **Verified** with `lib/skill/skillRatings.emulator.test.ts` against the Firestore emulator: save, a second admin's partial save merged (change + clear), 400 on out-of-range, and the 22–22 rebalance.
 
 ## Change (2026-11-07): admins rate players 1–10; questionnaire off
 
