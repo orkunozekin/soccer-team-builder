@@ -28,6 +28,7 @@ These are the recommendations this plan is built on. Items marked **(confirm)** 
    - First-game players fill teams 1–2 first. If more first-game players RSVP than Game 1 holds, the overflow goes to Game 2 as today.
    - Second-game players go to teams 3+.
    - **No Game 2 yet** (total confirmed ≤ `2 × teamSize`): second-game players are placed on teams 1–2 *after* every first-game player, and the UI says "No 2nd game yet: you're on Team X; arriving late is fine". **(confirm)**
+   - **Game 2 over capacity** (e.g. 25 confirmed at size 11 → 3 teams, but 12 pick 2nd game): team count is not raised for preference; the extra second-game players spill into Game 1 vacancies, latest RSVP spills first, and get the same "arriving late is fine" badge. Total capacity (`teams × teamSize`) always covers everyone, so spill always has a slot. Re-run spill on every placement so a later first-game RSVP can push a spilled second-game player back to Game 2 when room opens there. **(confirm)**
 4. **Promotions don't override preference.** When a Game 1 spot opens (cancellation backfill from [rsvp-cancellation-order](./rsvp-cancellation-order-feature-plan.md), GK shifting), promote eligible first-game players only. A second-game player is promoted only when no first-game candidate exists. **(confirm)**
 5. **Admin pins win.** `manualTeamAssignments` and admin transfers override preference, as they already override RSVP order.
 6. **Team size bounds:** 3–11 (5-a-side to full-sided). Changing a match's size after teams exist runs the existing regenerate path, keeping saved admin pins.
@@ -48,7 +49,7 @@ These are the recommendations this plan is built on. Items marked **(confirm)** 
 
 7. Add `gamePreference?: 'first' | 'second'` to `RSVP` / `RSVPFirestore` (missing = `'first'`). Map it in every RSVP reader (`expandTeamsForMatch` mapping, services, admin lists).
 8. `POST /api/rsvp` accepts `gamePreference`; `PATCH /api/rsvp` allows the owner (or a club admin) to change it per rule 7.
-9. Generator: split the sorted pool into first/second before filling. Update `generateTeamsWithReplacements`, `assignUnassignedPlayersToTeams`, `shiftGoalkeepersOntoTeamsWithoutGk`, `enforceTeamMaxSizes` overflow, and the cancellation-backfill candidate filter. Table-driven tests for: no Game 2, exact boundary (`2 × teamSize` and `+1`), all-second, GK only in Game 2, admin pin against preference, preference flip after teams exist.
+9. Generator: split the sorted pool into first/second before filling. Update `generateTeamsWithReplacements`, `assignUnassignedPlayersToTeams`, `shiftGoalkeepersOntoTeamsWithoutGk`, `enforceTeamMaxSizes` overflow, and the cancellation-backfill candidate filter. Table-driven tests for: no Game 2, Game 2 over capacity (spill), exact boundary (`2 × teamSize` and `+1`), all-second, GK only in Game 2, admin pin against preference, preference flip after teams exist.
 10. RSVP UI: segmented "1st game / 2nd game" next to the RSVP button with helper text "2nd game happens when more than N players RSVP". Changeable while RSVP is open.
 11. Teams UI: group `TeamsDisplay` / `TeamToggle` under "Game 1" and "Game 2" headers; badge second-game players in `RsvpOrderCard` and rosters; show "No 2nd game yet" state.
 12. LaunchDarkly flag (e.g. `game-preference-rsvp`) gates 8's new body field in the UI and all of 10–11. Server accepts the field regardless, so turning the flag off just stops new second-game picks.
@@ -145,6 +146,7 @@ flowchart TD
 - [ ] Changing a match's team size regenerates teams and keeps admin pins.
 - [ ] A player RSVPs "2nd game" with 25 confirmed at size 11: they land on team 3+, even if they RSVPed before some Game 1 players.
 - [ ] Same player with only 18 confirmed: they're on team 1 or 2, after all first-game players, and the UI shows "No 2nd game yet".
+- [ ] 25 confirmed at size 11 with 12 picking "2nd game": 3 teams; team 3 holds the 11 earliest second-game RSVPs, the latest one spills into Game 1 with the late-arrival badge; no team exceeds `teamSize`.
 - [ ] Cancellation in Game 1 promotes a first-game player from Game 2 before any second-game player.
 - [ ] Player saves "2nd game" for the Wednesday slot; next Wednesday's match pre-selects it; Monday's stays "1st game"; one-off matches stay "1st game".
 - [ ] Preference UI hidden when the flag is off; server still accepts and honors stored values.
@@ -152,7 +154,7 @@ flowchart TD
 
 ## Open questions
 
-1. **When there's no Game 2**, should second-game players go on teams 1–2 (recommended, as late arrivals) or onto a short/empty team 3 so admins can see them separately?
+1. **When there's no Game 2, or Game 2 is full**, should extra second-game players spill onto teams 1–2 (recommended, as late arrivals) or should preference add teams (e.g. a short 4th team) so admins see them separately?
 2. **How does Game 2 actually run** with 3 teams (winner stays?) vs 4 teams (T3 v T4)? v1 only needs "teams 1–2 vs 3+", but if 3-team days rotate, a "2nd game" player might really mean "join whoever plays second", which would change rule 1.
 3. **Remember by schedule slot or by weekday?** Slot is precise (handles two Wednesday slots) but is lost if the admin deletes and recreates the schedule. Weekday is simpler for players. Plan assumes slot.
 4. **Should team size cap the match** (e.g. "max 3 teams, then waitlist")? Parked under Later.
