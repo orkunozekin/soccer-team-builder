@@ -14,6 +14,11 @@ vi.mock('@/lib/hooks/useClubMemberships', () => ({
   useClubMemberships: () => ({ refresh: refreshMock }),
 }))
 
+const invitesCheckbox = () =>
+  screen.getByRole('checkbox', { name: /players can invite/i })
+const conductCheckbox = () =>
+  screen.getByRole('checkbox', { name: /require the code of conduct/i })
+
 describe('ClubSettingsPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -34,7 +39,7 @@ describe('ClubSettingsPanel', () => {
       />
     )
 
-    await user.click(screen.getByRole('checkbox'))
+    await user.click(invitesCheckbox())
 
     await waitFor(() => {
       expect(updateClubAPI).toHaveBeenCalledWith('c1', {
@@ -61,12 +66,12 @@ describe('ClubSettingsPanel', () => {
       />
     )
 
-    await user.click(screen.getByRole('checkbox'))
+    await user.click(invitesCheckbox())
 
     expect(
       await screen.findByText(/Saved, but failed to refresh clubs/i)
     ).toBeInTheDocument()
-    expect(screen.getByRole('checkbox')).toBeChecked()
+    expect(invitesCheckbox()).toBeChecked()
   })
 
   it('resets the checkbox when clubId or initial value changes', () => {
@@ -77,7 +82,7 @@ describe('ClubSettingsPanel', () => {
         initialAllowPlayerInvites={false}
       />
     )
-    expect(screen.getByRole('checkbox')).not.toBeChecked()
+    expect(invitesCheckbox()).not.toBeChecked()
 
     rerender(
       <ClubSettingsPanel
@@ -86,6 +91,57 @@ describe('ClubSettingsPanel', () => {
         initialAllowPlayerInvites={true}
       />
     )
-    expect(screen.getByRole('checkbox')).toBeChecked()
+    expect(invitesCheckbox()).toBeChecked()
+  })
+
+  it('turns on the code of conduct requirement via PATCH', async () => {
+    const user = userEvent.setup()
+    vi.mocked(updateClubAPI).mockResolvedValue({
+      success: true,
+      club: {} as never,
+    })
+    refreshMock.mockResolvedValue(undefined)
+
+    render(
+      <ClubSettingsPanel
+        clubId="c1"
+        clubName="Alpha FC"
+        initialAllowPlayerInvites={true}
+        initialRequireCodeOfConduct={false}
+      />
+    )
+
+    await user.click(conductCheckbox())
+
+    await waitFor(() => {
+      expect(updateClubAPI).toHaveBeenCalledWith('c1', {
+        settings: { requireCodeOfConduct: true },
+      })
+    })
+    expect(conductCheckbox()).toBeChecked()
+    expect(invitesCheckbox()).toBeChecked()
+    expect(
+      screen.getByRole('link', { name: /code of conduct/i })
+    ).toHaveAttribute('href', '/code-of-conduct')
+  })
+
+  it('reverts the code of conduct checkbox when the save fails', async () => {
+    const user = userEvent.setup()
+    vi.mocked(updateClubAPI).mockRejectedValue(new Error('Nope'))
+
+    render(
+      <ClubSettingsPanel
+        clubId="c1"
+        clubName="Alpha FC"
+        initialAllowPlayerInvites={false}
+        initialRequireCodeOfConduct={true}
+      />
+    )
+
+    await user.click(conductCheckbox())
+
+    expect(await screen.findByText('Nope')).toBeInTheDocument()
+    expect(conductCheckbox()).toBeChecked()
+    expect(refreshMock).not.toHaveBeenCalled()
   })
 })

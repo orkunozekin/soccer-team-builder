@@ -3,6 +3,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth, verifyClubAdminForMatch } from '@/lib/api/auth'
 import { sanitizeErrorForClient } from '@/lib/api/sanitizeError'
 import { logUserError, userErrorResponse } from '@/lib/audit/logUserError'
+import {
+  CODE_OF_CONDUCT_REQUIRED_CODE,
+  CODE_OF_CONDUCT_REQUIRED_MESSAGE,
+} from '@/lib/conduct/codeOfConduct'
+import { checkCodeOfConductForRsvp } from '@/lib/conduct/conductStoreAdmin'
 import { getAdminDb } from '@/lib/firebase/admin'
 import { acquireMatchLock } from '@/lib/locks/matchLock'
 import { ensureMatchRsvpStateSeeded } from '@/lib/matches/syncMatchRsvpCounts'
@@ -174,6 +179,38 @@ export async function POST(request: NextRequest) {
         matchId,
         targetUid: effectiveUid,
       })
+    }
+
+    // Clubs can require members to agree to the code of conduct before their
+    // first RSVP. An admin adding someone else is the admin's call, so skip it.
+    if (!requesterIsAdmin) {
+      const matchClubId = matchSnap.data()?.clubId
+      const clubId =
+        typeof matchClubId === 'string' && matchClubId ? matchClubId : null
+      const conduct = await checkCodeOfConductForRsvp(adminDb, {
+        clubId,
+        matchId,
+        userId: effectiveUid,
+        acceptVersion: body?.acceptCodeOfConductVersion,
+      })
+      if (!conduct.ok) {
+        return rsvpFailed(uid, 403, CODE_OF_CONDUCT_REQUIRED_MESSAGE, {
+          code: CODE_OF_CONDUCT_REQUIRED_CODE,
+          matchId,
+          targetUid: effectiveUid,
+        })
+      }
+      if (conduct.agreedNow) {
+        auditLog({
+          action: 'user.code_of_conduct_agreed',
+          actorUid: uid,
+          entityType: 'user',
+          entityId: effectiveUid,
+          matchId,
+          source: 'api',
+          metadata: { clubId },
+        })
+      }
     }
 
     const lock = await acquireMatchLock(adminDb, matchId)

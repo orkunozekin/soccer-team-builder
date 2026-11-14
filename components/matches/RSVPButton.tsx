@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { cancelRSVPAPI, confirmRSVPAPI } from '@/lib/api/client'
+import { CODE_OF_CONDUCT_REQUIRED_CODE } from '@/lib/conduct/codeOfConduct'
+import { useCodeOfConductStatus } from '@/lib/conduct/useCodeOfConductStatus'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useIsClubAdmin } from '@/lib/hooks/useClubMemberships'
 import { getUserRSVP } from '@/lib/services/rsvpService'
@@ -66,6 +68,12 @@ export function RSVPButton({
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
   const [justRsvped, setJustRsvped] = useState(false)
+  const [modalError, setModalError] = useState<string | null>(null)
+  // Sent again if the member retries from the goalkeeper-cap picker.
+  const [acceptedConductVersion, setAcceptedConductVersion] = useState<
+    string | null
+  >(null)
+  const conduct = useCodeOfConductStatus(user?.uid ?? null, match.clubId)
 
   const dismissCelebration = useCallback(() => setShowCelebration(false), [])
 
@@ -90,14 +98,27 @@ export function RSVPButton({
     }
   }, [user, match.id, matchRSVPs])
 
-  const submitConfirmRSVP = async (positionOverride?: string | null) => {
-    if (!user || !match.rsvpOpen) return
+  /** Resolves false when the RSVP modal should stay open. */
+  const submitConfirmRSVP = async (
+    positionOverride?: string | null,
+    acceptCodeOfConductVersion?: string | null
+  ): Promise<boolean> => {
+    if (!user || !match.rsvpOpen) return true
     setLoading(true)
     setError('')
+    setModalError(null)
     setShowPositionPickerForGkBlock(false)
+    if (acceptCodeOfConductVersion) {
+      setAcceptedConductVersion(acceptCodeOfConductVersion)
+    }
     try {
       const { rsvpId, regenerated, position, jerseyNumber } =
-        await confirmRSVPAPI(match.id, positionOverride)
+        acceptCodeOfConductVersion
+          ? await confirmRSVPAPI(match.id, positionOverride, null, {
+              acceptCodeOfConductVersion,
+            })
+          : await confirmRSVPAPI(match.id, positionOverride)
+      if (acceptCodeOfConductVersion) conduct.markAgreed()
       const newRSVP = {
         id: rsvpId,
         matchId: match.id,
@@ -121,8 +142,17 @@ export function RSVPButton({
       if (regenerated && onTeamsRegenerated) {
         await onTeamsRegenerated()
       }
+      return true
     } catch (err: any) {
       const message = err.message || 'Failed to update RSVP'
+      if (err?.code === CODE_OF_CONDUCT_REQUIRED_CODE) {
+        // The club turned the requirement on after we checked; ask now.
+        conduct.markRequired()
+        setAcceptedConductVersion(null)
+        setModalError(message)
+        setPositionModalOpen(true)
+        return false
+      }
       setError(message)
       if (message.includes('RSVP is closed') && onMatchRefetch) {
         await onMatchRefetch()
@@ -132,6 +162,7 @@ export function RSVPButton({
         setShowPositionPickerForGkBlock(true)
         setPositionForRsvp(null)
       }
+      return true
     } finally {
       setLoading(false)
     }
@@ -162,6 +193,7 @@ export function RSVPButton({
       return
     }
 
+    setModalError(null)
     setPositionModalOpen(true)
   }
 
@@ -171,7 +203,7 @@ export function RSVPButton({
 
   const handleRsvpWithPosition = () => {
     if (positionForRsvp && !isGoalkeeper(positionForRsvp)) {
-      submitConfirmRSVP(positionForRsvp)
+      submitConfirmRSVP(positionForRsvp, acceptedConductVersion)
     }
   }
 
@@ -255,8 +287,12 @@ export function RSVPButton({
         open={positionModalOpen}
         onOpenChange={setPositionModalOpen}
         defaultPosition={userData?.position ?? null}
-        onConfirm={pos => submitConfirmRSVP(pos)}
+        onConfirm={(pos, _skillAnswers, conductVersion) =>
+          submitConfirmRSVP(pos, conductVersion)
+        }
         loading={loading}
+        conductStep={conduct.mode}
+        error={modalError}
         occupancy={
           Object.keys(positionOccupancy).length > 0
             ? positionOccupancy

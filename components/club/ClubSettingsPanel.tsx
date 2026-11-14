@@ -1,46 +1,53 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { updateClubAPI } from '@/lib/api/client'
 import { useClubMemberships } from '@/lib/hooks/useClubMemberships'
+
+type ToggleSetting = 'allowPlayerInvites' | 'requireCodeOfConduct'
 
 export function ClubSettingsPanel({
   clubId,
   clubName,
   initialAllowPlayerInvites,
+  initialRequireCodeOfConduct = false,
 }: {
   clubId: string
   clubName: string
   initialAllowPlayerInvites: boolean
+  initialRequireCodeOfConduct?: boolean
 }) {
   const { refresh } = useClubMemberships()
-  const [allowPlayerInvites, setAllowPlayerInvites] = useState(
-    initialAllowPlayerInvites
-  )
+  const [values, setValues] = useState<Record<ToggleSetting, boolean>>({
+    allowPlayerInvites: initialAllowPlayerInvites,
+    requireCodeOfConduct: initialRequireCodeOfConduct,
+  })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    setAllowPlayerInvites(initialAllowPlayerInvites)
+    setValues({
+      allowPlayerInvites: initialAllowPlayerInvites,
+      requireCodeOfConduct: initialRequireCodeOfConduct,
+    })
     setBusy(false)
     setError('')
     setSaved(false)
-  }, [clubId, initialAllowPlayerInvites])
+  }, [clubId, initialAllowPlayerInvites, initialRequireCodeOfConduct])
 
-  const handleToggle = async (next: boolean) => {
+  const handleToggle = async (setting: ToggleSetting, next: boolean) => {
     setBusy(true)
     setError('')
     setSaved(false)
-    const previous = allowPlayerInvites
-    setAllowPlayerInvites(next)
+    const previous = values[setting]
+    setValues(current => ({ ...current, [setting]: next }))
     try {
-      await updateClubAPI(clubId, {
-        settings: { allowPlayerInvites: next },
-      })
+      await updateClubAPI(clubId, { settings: { [setting]: next } })
     } catch (err) {
-      setAllowPlayerInvites(previous)
+      setValues(current => ({ ...current, [setting]: previous }))
       setError(err instanceof Error ? err.message : 'Failed to update settings')
       setBusy(false)
       return
@@ -81,9 +88,11 @@ export function ClubSettingsPanel({
         <input
           type="checkbox"
           className="mt-1"
-          checked={allowPlayerInvites}
+          checked={values.allowPlayerInvites}
           disabled={busy}
-          onChange={e => void handleToggle(e.target.checked)}
+          onChange={e =>
+            void handleToggle('allowPlayerInvites', e.target.checked)
+          }
         />
         <span>
           <span className="font-medium text-foreground">
@@ -95,6 +104,39 @@ export function ClubSettingsPanel({
           </span>
         </span>
       </label>
+
+      <div className="flex items-start gap-3 text-sm text-mist">
+        <input
+          id="require-code-of-conduct"
+          type="checkbox"
+          className="mt-1"
+          checked={values.requireCodeOfConduct}
+          disabled={busy}
+          onChange={e =>
+            void handleToggle('requireCodeOfConduct', e.target.checked)
+          }
+        />
+        <span>
+          <label
+            htmlFor="require-code-of-conduct"
+            className="font-medium text-foreground"
+          >
+            Require the code of conduct
+          </label>
+          <span className="mt-0.5 block text-muted-foreground">
+            When on, members must agree to the{' '}
+            <Link
+              href="/code-of-conduct"
+              target="_blank"
+              className="underline underline-offset-2"
+            >
+              code of conduct
+            </Link>{' '}
+            before their next RSVP. Each member agrees once, and an agreement
+            counts for every club.
+          </span>
+        </span>
+      </div>
 
       {saved && <p className="text-sm text-success-bright">Saved.</p>}
     </div>

@@ -21,7 +21,7 @@ function membership(
       id: clubId,
       name,
       slug: clubId,
-      settings: { allowPlayerInvites: false },
+      settings: { allowPlayerInvites: false, requireCodeOfConduct: false },
     },
   }
 }

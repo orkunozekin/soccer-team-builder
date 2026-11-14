@@ -31,6 +31,7 @@ function membership(
       slug: overrides.slug ?? clubId,
       settings: {
         allowPlayerInvites: overrides.allowPlayerInvites ?? false,
+        requireCodeOfConduct: false,
       },
     },
   }

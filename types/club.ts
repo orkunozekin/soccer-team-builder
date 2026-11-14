@@ -7,6 +7,11 @@ export type ClubInviteCreatorRole = 'club_admin' | 'player' | 'super_user'
 export interface ClubSettings {
   /** When true, players (not only club admins) may create invites. Default false. */
   allowPlayerInvites: boolean
+  /**
+   * When true, members must agree to the code of conduct before their first
+   * RSVP to this club's matches. Default false.
+   */
+  requireCodeOfConduct: boolean
 }
 
 export interface Club {

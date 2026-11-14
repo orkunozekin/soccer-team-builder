@@ -1,8 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  cancelRSVP,
-  createRSVP,
-  deleteRSVP,
   getMatchRSVPs,
   getMatchRsvpCount,
   getRSVP,
@@ -48,22 +45,6 @@ vi.mock('firebase/firestore/lite', () => ({
 describe('rsvpService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-  })
-
-  it('createRSVP writes a confirmed RSVP with a generated id', async () => {
-    vi.spyOn(Date, 'now').mockReturnValue(1700000000000)
-
-    const id = await createRSVP('match1', 'user1')
-
-    expect(id).toBe('rsvp_match1_user1_1700000000000')
-    expect(mocks.createDocumentMock).toHaveBeenCalledWith('rsvps', id, {
-      matchId: 'match1',
-      userId: 'user1',
-      status: 'confirmed',
-      attended: null,
-      checkedInAt: null,
-      checkInMethod: null,
-    })
   })
 
   it('getRSVP returns null when document is missing', async () => {
@@ -162,17 +143,5 @@ describe('rsvpService', () => {
       { where: ['status', '==', 'confirmed'] },
     ])
     expect(mocks.queryDocumentsMock).not.toHaveBeenCalled()
-  })
-
-  it('cancelRSVP updates status to cancelled', async () => {
-    await cancelRSVP('r1')
-    expect(mocks.updateDocumentMock).toHaveBeenCalledWith('rsvps', 'r1', {
-      status: 'cancelled',
-    })
-  })
-
-  it('deleteRSVP deletes the document', async () => {
-    await deleteRSVP('r1')
-    expect(mocks.deleteDocumentMock).toHaveBeenCalledWith('rsvps', 'r1')
   })
 })

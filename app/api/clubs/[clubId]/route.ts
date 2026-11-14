@@ -80,8 +80,16 @@ export async function PATCH(
       typeof body?.settings?.allowPlayerInvites === 'boolean'
         ? body.settings.allowPlayerInvites
         : undefined
+    const requireCodeOfConduct =
+      typeof body?.settings?.requireCodeOfConduct === 'boolean'
+        ? body.settings.requireCodeOfConduct
+        : undefined
 
-    if (name === undefined && allowPlayerInvites === undefined) {
+    if (
+      name === undefined &&
+      allowPlayerInvites === undefined &&
+      requireCodeOfConduct === undefined
+    ) {
       return NextResponse.json(
         { error: 'No updates provided' },
         { status: 400 }
@@ -91,9 +99,9 @@ export async function PATCH(
     const club = await updateClub(clubId, {
       name,
       settings:
-        allowPlayerInvites === undefined
+        allowPlayerInvites === undefined && requireCodeOfConduct === undefined
           ? undefined
-          : { allowPlayerInvites },
+          : { allowPlayerInvites, requireCodeOfConduct },
     })
 
     auditLog({
@@ -102,13 +110,12 @@ export async function PATCH(
       entityType: 'club',
       entityId: clubId,
       source: 'api',
-      metadata: { name, allowPlayerInvites },
+      metadata: { name, allowPlayerInvites, requireCodeOfConduct },
     })
 
     return NextResponse.json({ success: true, club })
   } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : 'Failed to update club'
+    const message = err instanceof Error ? err.message : 'Failed to update club'
     const status = message === 'Club not found' ? 404 : 500
     console.error('Error updating club:', err)
     return NextResponse.json(

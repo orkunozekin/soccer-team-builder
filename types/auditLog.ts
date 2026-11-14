@@ -12,6 +12,7 @@ export type AuditAction =
   | 'user.role_changed'
   | 'user.role_change_failed'
   | 'user.deleted'
+  | 'user.code_of_conduct_agreed'
   | 'rsvp.confirmed'
   | 'rsvp.failed'
   | 'rsvp.cancelled'
@@ -113,6 +114,7 @@ export const ALL_AUDIT_ACTIONS: readonly AuditAction[] = [
   'user.role_changed',
   'user.role_change_failed',
   'user.deleted',
+  'user.code_of_conduct_agreed',
   'rsvp.confirmed',
   'rsvp.failed',
   'rsvp.cancelled',
