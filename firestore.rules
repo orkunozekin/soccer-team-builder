@@ -130,6 +130,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Code of conduct agreements: written by the RSVP API when a member agrees.
+    match /codeOfConductAgreements/{userId} {
+      allow read, write: if false;
+    }
+
     // Audit logs: super user read-only; writes via Firebase Admin SDK only
     match /auditLogs/{logId} {
       allow read: if isSuperUser();

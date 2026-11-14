@@ -3,6 +3,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { RSVPPositionModal, type SkillStepMode } from './RSVPPositionModal'
+import { CODE_OF_CONDUCT_VERSION } from '@/lib/conduct/codeOfConduct'
+import type { CodeOfConductStepMode } from '@/lib/conduct/useCodeOfConductStatus'
 import { SKILL_QUESTIONNAIRE } from '@/lib/skill/scoring'
 
 vi.mock('@/components/profile/PositionSelector', () => ({
@@ -12,10 +14,14 @@ vi.mock('@/components/profile/PositionSelector', () => ({
 function Harness({
   skillStep,
   skillError,
+  conductStep,
+  error,
   onConfirm,
 }: {
   skillStep?: SkillStepMode
   skillError?: string | null
+  conductStep?: CodeOfConductStepMode
+  error?: string | null
   onConfirm: (...args: unknown[]) => void | boolean | Promise<void | boolean>
 }) {
   const [open, setOpen] = useState(false)
@@ -31,6 +37,8 @@ function Harness({
         onConfirm={onConfirm}
         skillStep={skillStep}
         skillError={skillError}
+        conductStep={conductStep}
+        error={error}
       />
     </>
   )
@@ -175,5 +183,106 @@ describe('RSVPPositionModal', () => {
         name: SKILL_QUESTIONNAIRE[0].options[0].label,
       })
     ).not.toBeChecked()
+  })
+
+  describe('code of conduct step', () => {
+    it('requires ticking the box, then confirms with the current version', async () => {
+      const user = userEvent.setup()
+      const onConfirm = vi.fn()
+      render(<Harness conductStep="required" onConfirm={onConfirm} />)
+
+      await user.click(screen.getByRole('button', { name: 'Open modal' }))
+      await user.click(screen.getByRole('button', { name: 'Next' }))
+
+      expect(screen.getByText('Code of conduct')).toBeInTheDocument()
+      expect(screen.getByText('Respect everyone')).toBeInTheDocument()
+      const confirm = screen.getByRole('button', { name: 'Confirm RSVP' })
+      expect(confirm).toBeDisabled()
+
+      await user.click(
+        screen.getByRole('checkbox', { name: /i agree to follow/i })
+      )
+      await user.click(confirm)
+      expect(onConfirm).toHaveBeenCalledWith(
+        'ST',
+        undefined,
+        CODE_OF_CONDUCT_VERSION
+      )
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('waits on the position step while still checking', async () => {
+      const user = userEvent.setup()
+      render(<Harness conductStep="checking" onConfirm={vi.fn()} />)
+      await user.click(screen.getByRole('button', { name: 'Open modal' }))
+      expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+      expect(
+        screen.queryByRole('button', { name: 'Confirm RSVP' })
+      ).not.toBeInTheDocument()
+    })
+
+    it('comes after the skill step and Back returns to it', async () => {
+      const user = userEvent.setup()
+      const onConfirm = vi.fn()
+      render(
+        <Harness
+          skillStep="required"
+          conductStep="required"
+          onConfirm={onConfirm}
+        />
+      )
+      await user.click(screen.getByRole('button', { name: 'Open modal' }))
+      await user.click(screen.getByRole('button', { name: 'Next' }))
+      expect(screen.getByText('Your game')).toBeInTheDocument()
+      const next = screen.getByRole('button', { name: 'Next' })
+      expect(next).toBeDisabled()
+      await answerAll(user)
+      await user.click(next)
+      expect(screen.getByText('Code of conduct')).toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: 'Back' }))
+      expect(screen.getByText('Your game')).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Next' }))
+      await user.click(
+        screen.getByRole('checkbox', { name: /i agree to follow/i })
+      )
+      await user.click(screen.getByRole('button', { name: 'Confirm RSVP' }))
+      expect(onConfirm).toHaveBeenCalledWith(
+        'ST',
+        expect.objectContaining({ firstTouch: 2 }),
+        CODE_OF_CONDUCT_VERSION
+      )
+    })
+
+    it('starts unticked each time the modal opens', async () => {
+      const user = userEvent.setup()
+      render(<Harness conductStep="required" onConfirm={() => false} />)
+      await user.click(screen.getByRole('button', { name: 'Open modal' }))
+      await user.click(screen.getByRole('button', { name: 'Next' }))
+      await user.click(
+        screen.getByRole('checkbox', { name: /i agree to follow/i })
+      )
+      await user.click(screen.getByRole('button', { name: 'Close' }))
+      await user.click(screen.getByRole('button', { name: 'Open modal' }))
+      await user.click(screen.getByRole('button', { name: 'Next' }))
+      expect(
+        screen.getByRole('checkbox', { name: /i agree to follow/i })
+      ).not.toBeChecked()
+    })
+
+    it('shows an error passed in on any step', async () => {
+      const user = userEvent.setup()
+      render(
+        <Harness
+          conductStep="required"
+          error="Agree to the code of conduct to RSVP."
+          onConfirm={vi.fn()}
+        />
+      )
+      await user.click(screen.getByRole('button', { name: 'Open modal' }))
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Agree to the code of conduct to RSVP.'
+      )
+    })
   })
 })

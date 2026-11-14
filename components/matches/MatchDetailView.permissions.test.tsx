@@ -100,7 +100,7 @@ function membership(role: 'player' | 'club_admin'): ClubMembershipWithClub {
       id: 'club1',
       name: 'Club One',
       slug: 'club-one',
-      settings: { allowPlayerInvites: false },
+      settings: { allowPlayerInvites: false, requireCodeOfConduct: false },
     },
   }
 }

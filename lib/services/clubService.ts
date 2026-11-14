@@ -18,6 +18,7 @@ import type {
 
 const DEFAULT_SETTINGS: ClubSettings = {
   allowPlayerInvites: false,
+  requireCodeOfConduct: false,
 }
 
 /** URL-safe slug: lowercase letters, numbers, hyphens */
@@ -44,16 +45,17 @@ function mapClub(id: string, data: Record<string, any>): Club {
       allowPlayerInvites: Boolean(
         data.settings?.allowPlayerInvites ?? DEFAULT_SETTINGS.allowPlayerInvites
       ),
+      requireCodeOfConduct: Boolean(
+        data.settings?.requireCodeOfConduct ??
+        DEFAULT_SETTINGS.requireCodeOfConduct
+      ),
     },
     createdAt: data.createdAt?.toDate?.() ?? new Date(),
     updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
   }
 }
 
-function mapMembership(
-  id: string,
-  data: Record<string, any>
-): ClubMembership {
+function mapMembership(id: string, data: Record<string, any>): ClubMembership {
   return {
     id,
     clubId: data.clubId as string,
@@ -75,7 +77,11 @@ async function assertUniqueClubName(
   const trimmed = name.trim()
   const nameLower = trimmed.toLowerCase()
   const [byLower, byExact] = await Promise.all([
-    adminDb.collection('clubs').where('nameLower', '==', nameLower).limit(5).get(),
+    adminDb
+      .collection('clubs')
+      .where('nameLower', '==', nameLower)
+      .limit(5)
+      .get(),
     adminDb.collection('clubs').where('name', '==', trimmed).limit(5).get(),
   ])
   const seen = new Set<string>()
@@ -128,6 +134,9 @@ export async function createClub(input: {
   const settings: ClubSettings = {
     allowPlayerInvites:
       input.settings?.allowPlayerInvites ?? DEFAULT_SETTINGS.allowPlayerInvites,
+    requireCodeOfConduct:
+      input.settings?.requireCodeOfConduct ??
+      DEFAULT_SETTINGS.requireCodeOfConduct,
   }
 
   await clubRef.set({
@@ -214,6 +223,9 @@ export async function updateClub(
       allowPlayerInvites:
         updates.settings.allowPlayerInvites ??
         Boolean(current.allowPlayerInvites),
+      requireCodeOfConduct:
+        updates.settings.requireCodeOfConduct ??
+        Boolean(current.requireCodeOfConduct),
     }
   }
 
@@ -296,9 +308,7 @@ export async function listMembershipsForClub(
     .where('status', '==', 'active')
     .get()
 
-  const memberships = snap.docs.map(doc =>
-    mapMembership(doc.id, doc.data())
-  )
+  const memberships = snap.docs.map(doc => mapMembership(doc.id, doc.data()))
 
   // Batch-fetch user docs (sequential gets are too slow for large clubs).
   // Firestore getAll caps around 100 refs per call.
@@ -744,7 +754,12 @@ export async function previewInviteByCode(
 }
 
 export type RedeemInviteResult =
-  | { ok: true; membership: ClubMembership; alreadyMember: boolean; clubId: string }
+  | {
+      ok: true
+      membership: ClubMembership
+      alreadyMember: boolean
+      clubId: string
+    }
   | { ok: false; error: string; status: number }
 
 /**
@@ -818,9 +833,7 @@ export async function redeemInvite(input: {
         userId: input.userId,
         role: 'player' as const,
         status: 'active' as const,
-        joinedAt: existing.exists
-          ? (existing.data()?.joinedAt ?? now)
-          : now,
+        joinedAt: existing.exists ? (existing.data()?.joinedAt ?? now) : now,
         updatedAt: now,
       }
       tx.set(membershipRef, membershipData, { merge: true })
@@ -856,9 +869,7 @@ export async function redeemInvite(input: {
       return {
         ok: false,
         error:
-          err instanceof Error
-            ? err.message
-            : 'Invalid or expired invite code',
+          err instanceof Error ? err.message : 'Invalid or expired invite code',
         status: 400,
       }
     }

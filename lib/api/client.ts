@@ -20,6 +20,7 @@ import type {
   ClubMembershipWithClub,
   ClubMembershipWithUser,
 } from '@/types/club'
+import type { CodeOfConductStatusDTO } from '@/types/conduct'
 import type {
   ClubSkillRankingDTO,
   RebalanceStrengthSummary,
@@ -99,7 +100,11 @@ export async function confirmRSVPAPI(
   matchId: string,
   position?: string | null,
   /** When set (admin only), RSVP is created for this user instead of the authenticated user. */
-  impersonateUserId?: string | null
+  impersonateUserId?: string | null,
+  options: {
+    /** The code of conduct version the player just agreed to, if any. */
+    acceptCodeOfConductVersion?: string | null
+  } = {}
 ): Promise<{
   rsvpId: string
   regenerated: boolean
@@ -110,9 +115,13 @@ export async function confirmRSVPAPI(
     matchId: string
     position?: string | null
     impersonateUserId?: string
+    acceptCodeOfConductVersion?: string
   } = { matchId }
   if (position !== undefined) body.position = position
   if (impersonateUserId) body.impersonateUserId = impersonateUserId
+  if (options.acceptCodeOfConductVersion) {
+    body.acceptCodeOfConductVersion = options.acceptCodeOfConductVersion
+  }
   const response = await apiRequest('/rsvp', {
     method: 'POST',
     body: JSON.stringify(body),
@@ -120,8 +129,7 @@ export async function confirmRSVPAPI(
   })
 
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to confirm RSVP')
+    await throwApiError(response, 'Failed to confirm RSVP')
   }
 
   return response.json()
@@ -762,7 +770,10 @@ export async function createClubAPI(input: {
 
 export async function updateClubAPI(
   clubId: string,
-  updates: { name?: string; settings?: { allowPlayerInvites?: boolean } }
+  updates: {
+    name?: string
+    settings?: { allowPlayerInvites?: boolean; requireCodeOfConduct?: boolean }
+  }
 ): Promise<{ success: boolean; club: Club }> {
   const response = await apiRequest(`/clubs/${clubId}`, {
     method: 'PATCH',
@@ -924,6 +935,23 @@ async function throwApiError(
   err.status = response.status
   if (body.code) err.code = body.code
   throw err
+}
+
+/**
+ * The signed-in member's code of conduct agreement, and whether `clubId`
+ * requires one they haven't given yet.
+ */
+export async function getMyCodeOfConductStatusAPI(
+  clubId: string
+): Promise<CodeOfConductStatusDTO> {
+  const response = await apiRequest(
+    `/users/me/code-of-conduct?clubId=${encodeURIComponent(clubId)}`,
+    { method: 'GET' }
+  )
+  if (!response.ok) {
+    await throwApiError(response, 'Failed to load code of conduct status')
+  }
+  return response.json()
 }
 
 /** The signed-in player's skill questionnaire (null when not answered). */

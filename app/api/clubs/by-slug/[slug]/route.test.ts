@@ -62,7 +62,7 @@ describe('GET /api/clubs/by-slug/[slug]', () => {
       name: 'Alpha',
       slug: 'alpha',
       createdBy: 'u1',
-      settings: { allowPlayerInvites: false },
+      settings: { allowPlayerInvites: false, requireCodeOfConduct: false },
       createdAt: new Date(),
       updatedAt: new Date(),
     })
@@ -93,7 +93,7 @@ describe('GET /api/clubs/by-slug/[slug]', () => {
       name: 'Alpha',
       slug: 'alpha',
       createdBy: 'u1',
-      settings: { allowPlayerInvites: false },
+      settings: { allowPlayerInvites: false, requireCodeOfConduct: false },
       createdAt: new Date(),
       updatedAt: new Date(),
     })
@@ -124,7 +124,7 @@ describe('GET /api/clubs/by-slug/[slug]', () => {
       id: 'c1',
       name: 'Alpha',
       slug: 'alpha',
-      settings: { allowPlayerInvites: false },
+      settings: { allowPlayerInvites: false, requireCodeOfConduct: false },
     })
   })
 })

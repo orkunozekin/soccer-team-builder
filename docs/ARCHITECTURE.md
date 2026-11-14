@@ -77,6 +77,8 @@ UI Components → API Client → Next.js API Routes → Firebase Services → Fi
 - `POST /api/teams/rebalance` - Club admins: rebalance a match's teams. With the `skill-balanced-teams` flag on (evaluated server-side), the response adds `strength: { teams: [{ teamNumber, total, average, size }], unratedCount, playerCount }`
 - `GET/PUT /api/users/me/skill-assessment` - Signed-in player: read/save their own skills questionnaire (`verifyAuth`; flag off → 403). Not used by the UI while the questionnaire is off
 - `GET/PATCH /api/clubs/[clubId]/skill-ranking` - Club admins (`verifyClubAdmin`): read the club's 1–10 ratings plus active members; save `{ changes: { [uid]: 1–10 | null } }` (only changed players; `null` clears; ratings for active members only), merged in a transaction so the later save wins per player; flag off → 403. Used by the roster page board and the match page Rate players sheet
+- `GET /api/users/me/code-of-conduct?clubId=` - Signed-in member (`verifyClubMember`): `{ required, agreement }`, where `required` is true when the club opted in and the caller hasn't agreed yet. Non-members get 404; a failed membership lookup is a 500
+- `POST /api/rsvp` - When the match's club has `settings.requireCodeOfConduct`, a member who hasn't agreed gets 403 `{ code: 'CODE_OF_CONDUCT_REQUIRED' }`. Sending `acceptCodeOfConductVersion` equal to the current `CODE_OF_CONDUCT_VERSION` records the agreement and continues. Skipped when a club admin RSVPs on behalf of someone else
 
 ### Private skill data
 
@@ -88,6 +90,16 @@ Behind the `skill-balanced-teams` flag. Both collections are **API / Admin SDK o
 | `skillAssessments/{userId}`  | Questionnaire `answers` (four 1–3 values), `updatedAt`                                     | The player; admins of a club the player actively belongs to (as a score) |
 
 Club admins rate players on `/c/[slug]/roster` (`SkillRankingBoard`, "Player ratings"). The rebalance route scores each player by their admin rating, else 5.5; the questionnaire collection is not read while the questionnaire is off.
+
+### Code of conduct agreements
+
+Clubs opt in with `clubs/{clubId}.settings.requireCodeOfConduct` (default false; set on `/c/[slug]/settings`). The text lives in code (`lib/conduct/codeOfConduct.ts`) and is shown at `/code-of-conduct` and in the RSVP modal. A member agrees once and it counts for every club.
+
+| Collection / doc                   | Contents                                                                   | Who can reach it                                                     |
+| ---------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `codeOfConductAgreements/{userId}` | `userId`, `version`, `agreedAt`, and the `clubId` / `matchId` it came from | Written by `POST /api/rsvp`; read by the member via the status route |
+
+`firestore.rules` denies all client access. Lookups are by doc id, so no composite index.
 
 ### Benefits
 
