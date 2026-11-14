@@ -1,12 +1,9 @@
 import { where } from 'firebase/firestore/lite'
 import {
-  createDocument,
-  deleteDocument,
   getCollectionCount,
   getDocument,
   queryDocuments,
   timestampToDate,
-  updateDocument,
 } from '@/lib/firebase/firestore'
 import { normalizeJerseyNumber } from '@/lib/utils/jerseyNumber'
 import { CheckInMethod, RSVP, RSVPStatus } from '@/types/rsvp'
@@ -28,24 +25,6 @@ function mapRsvpDoc(rsvp: Record<string, unknown>): RSVP {
     rsvpAt: timestampToDate(rsvp.rsvpAt as never) || new Date(),
     updatedAt: timestampToDate(rsvp.updatedAt as never) || new Date(),
   }
-}
-
-export const createRSVP = async (
-  matchId: string,
-  userId: string
-): Promise<string> => {
-  const rsvpId = `rsvp_${matchId}_${userId}_${Date.now()}`
-  const rsvpData = {
-    matchId,
-    userId,
-    status: 'confirmed' as RSVPStatus,
-    attended: null,
-    checkedInAt: null,
-    checkInMethod: null,
-  }
-
-  await createDocument('rsvps', rsvpId, rsvpData)
-  return rsvpId
 }
 
 export const getRSVP = async (rsvpId: string): Promise<RSVP | null> => {
@@ -95,12 +74,4 @@ export const getMatchRsvpCount = async (matchId: string): Promise<number> => {
     where('matchId', '==', matchId),
     where('status', '==', 'confirmed'),
   ])
-}
-
-export const cancelRSVP = async (rsvpId: string): Promise<void> => {
-  await updateDocument('rsvps', rsvpId, { status: 'cancelled' as RSVPStatus })
-}
-
-export const deleteRSVP = async (rsvpId: string): Promise<void> => {
-  await deleteDocument('rsvps', rsvpId)
 }

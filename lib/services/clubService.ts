@@ -217,16 +217,14 @@ export async function updateClub(
     patch.nameLower = name.toLowerCase()
     patch.slug = slug
   }
-  if (updates.settings) {
-    const current = snap.data()?.settings ?? DEFAULT_SETTINGS
-    patch.settings = {
-      allowPlayerInvites:
-        updates.settings.allowPlayerInvites ??
-        Boolean(current.allowPlayerInvites),
-      requireCodeOfConduct:
-        updates.settings.requireCodeOfConduct ??
-        Boolean(current.requireCodeOfConduct),
-    }
+  // Write only the settings that were sent, as dotted paths, so two admins
+  // changing different settings at once don't overwrite each other.
+  if (typeof updates.settings?.allowPlayerInvites === 'boolean') {
+    patch['settings.allowPlayerInvites'] = updates.settings.allowPlayerInvites
+  }
+  if (typeof updates.settings?.requireCodeOfConduct === 'boolean') {
+    patch['settings.requireCodeOfConduct'] =
+      updates.settings.requireCodeOfConduct
   }
 
   await ref.update(patch)

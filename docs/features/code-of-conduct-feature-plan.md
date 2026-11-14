@@ -56,6 +56,8 @@ Agreements are per user, not per club: one agreement covers every club. They are
 
 - **Admins RSVPing someone else skip the check.** It's the admin's decision to add a walk-in. An admin RSVPing themselves is asked like anyone else.
 - **The agreement is recorded even if the RSVP then fails** (e.g. goalkeeper cap). The member did agree; the retry from the goalkeeper picker resends the version anyway.
+- **Clients can't write RSVPs directly.** `firestore.rules` used to let a member create or revive their own RSVP doc, which would skip the API's checks. RSVP writes are now API-only; the unused client helpers `createRSVP` / `cancelRSVP` / `deleteRSVP` are removed.
+- **Club settings are written as dotted paths** (`settings.requireCodeOfConduct`) so two admins changing different settings at once don't overwrite each other.
 - **No LaunchDarkly flag.** The per-club setting is already off by default.
 
 ## Files

@@ -61,12 +61,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // RSVPs (top-level collection used by client): same policy as subcollection
+    // RSVPs: clients read; every write goes through /api/rsvp (Admin SDK) so the
+    // server's checks (RSVP open, goalkeeper cap, code of conduct, counters)
+    // can't be skipped by writing the doc directly.
     match /rsvps/{rsvpId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isSignedIn() &&
-        (resource.data.userId == request.auth.uid || isSuperUser());
+      allow write: if false;
     }
 
     // Saved locations: members can read; club admins / super users write via API preferred
@@ -95,9 +95,7 @@ service cloud.firestore {
 
       match /rsvps/{rsvpId} {
         allow read: if isSignedIn();
-        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-        allow update, delete: if isSignedIn() &&
-          (request.resource.data.userId == request.auth.uid || isSuperUser());
+        allow write: if false;
       }
 
       match /teams/{teamId} {
