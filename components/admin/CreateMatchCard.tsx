@@ -103,8 +103,6 @@ export function CreateMatchCard({
     }
   }
 
-  const today = new Date().toISOString().split('T')[0]
-
   return (
     <Card className="w-full max-w-xl">
       <CardHeader>
@@ -134,7 +132,7 @@ export function CreateMatchCard({
               onTimeChange={setTime}
               datePlaceholder="Select date"
               disabled={loading}
-              minDate={new Date(today + 'T12:00:00')}
+              minDate={new Date()}
               timeStep={900}
             />
 
